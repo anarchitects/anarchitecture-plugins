@@ -1,90 +1,124 @@
-# AnarchitecturePlugins
+# Anarchitects Plugins
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+**Nx plugins for Rails** (more frameworks later).  
+Goal: deliver a **native Nx DX** for Rails by mapping Nx targets to Ruby/Rails tools under the hood.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+- `nx serve <app>` → `rails server`
+- `nx lint <app>` → `rubocop` (or `standardrb`, configurable)
+- `nx test <app>` → `rspec` (if present) else `rails test`
+- `nx format` → `prettier` with `@prettier/plugin-ruby`
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+All of this is wired with **Project Crystal** so targets are **inferred** wherever possible.
 
-## Finish your CI setup
+## Features
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/7fzTQyrL6y)
+### Generators
 
+- `@anarchitects/rails:app` – scaffold a Rails app into `apps/<name>`
+  - optional flags: `--api-only`, `--postgres`, `--skip-javascript`, `--skip-active-record`, …
+  - sets up Nx project registration, tags, and inference
+  - writes `.prettierrc` with `@prettier/plugin-ruby`, sets up `.rubocop.yml` (opinionated defaults, overridable)
+- `@anarchitects/rails:model|controller|scaffold|migration` – wraps standard generators
+- `@anarchitects/rails:devise` – `devise:install` + wiring
 
-## Generate a library
+### Executors (native Nx targets)
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+- **serve** → `bundle exec rails server -p <port> -b <host>` (watch by Rails)
+- **lint** → `bundle exec rubocop` (or `standardrb` per config)
+- **test** → `bundle exec rspec` (if RSpec present), else `bundle exec rails test`
+- **db:migrate** → `bundle exec rails db:migrate`
+- **db:seed** → `bundle exec rails db:seed`
+- **bundle** → `bundle install`
+- **rake** → `bundle exec rake <task>`
+
+### Inference (Project Crystal)
+
+Rails projects are **auto-detected** by:
+
+- Presence of `Gemfile` + `bin/rails` + `config/application.rb`
+
+Inferred targets:
+
+- `serve`, `test`, `lint`, `build`(=bundle), `db:migrate`, `db:seed`
+- Test runner inference:
+  - `rspec` if Gemfile[lock] contains `rspec`
+  - else `rails test` (minitest/ActiveSupport)
+
+Linter inference:
+
+- `rubocop` if Gemfile[lock] contains `rubocop`
+- else `standardrb` if present
+- else no lint target inferred (until installed)
+
+## Usage
+
+```bash
+# Create a Rails app
+nx g @anarchitects/rails:app api --api-only --postgres
+
+# Run the server
+nx serve api --port=4001 --host=0.0.0.0
+
+# Lint with rubocop
+nx lint api
+
+# Test (uses rspec if installed)
+nx test api
+
+# Migrate DB
+nx run api:db:migrate
+
+# Run any rake task
+nx run api:rake db:schema:dump
 ```
 
-## Run tasks
+## Configurability
 
-To build the library use:
+- Linter: set "rails.linter": "rubocop" | "standardrb" in plugin options or your project.json.
+- Test framework: auto-detected; override via project options "testRunner": "rspec" | "rails".
+- Env: pass-through with --env or standard ENV variables.
 
-```sh
-npx nx build pkg1
+## Formatting (Prettier)
+
+We use Prettier with @prettier/plugin-ruby:
+
+```json
+// .prettierrc
+{
+  "plugins": ["@prettier/plugin-ruby"]
+}
 ```
 
-To run any task with Nx use:
+Run:
 
-```sh
-npx nx <target> <project-name>
+```bash
+nx format:write
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Development
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
+```bash
+yarn install
+yarn nx build rails
+yarn nx test rails
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+Try locally:
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+```bash
+nx g @anarchitects/rails:app demo-api
+nx serve demo-api
+nx lint demo-api
+nx test demo-api
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+## Roadmap
 
-```sh
-npx nx sync:check
-```
+- Inferred lint via rubocop or standardrb
+- Inferred test via RSpec/Minitest detection
+- Devise, Sidekiq, RBS support, RuboCop config generator
+- Multi-app workspaces (apps/\*) with shared gems via bundler groups
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+## License
 
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+MIT © Anarchitects
