@@ -21,5 +21,41 @@
         }
       }
     }
-  ]
+  ],
+  "release": {
+    "version": {
+      "preVersionCommand": "yarn dlx nx run-many -t build",
+      "conventionalCommits": true
+    },
+    "projectsRelationship": "independent",
+    "changelog": {
+      "projectChangelogs": {
+        "file": false,
+        "createRelease": "github"
+      }
+    },
+    "conventionalCommits": {
+      "types": {
+        "init": {
+          "semverBump": "none",
+          "message": "init: initial commit"
+        },
+        "docs": {
+          "semverBump": "none"
+        },
+        "chore": {
+          "semverBump": "none"
+        },
+        "style": {
+          "semverBump": "none"
+        },
+        "refactor": {
+          "semverBump": "patch"
+        },
+        "ci": {
+          "semverBump": "none"
+        }
+      }
+    }
+  }
 }
