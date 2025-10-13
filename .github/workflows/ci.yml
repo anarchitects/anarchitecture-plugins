@@ -1,17 +1,15 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    branches: [main, feat/**]
 
 permissions:
   actions: read
   contents: read
 
 jobs:
-  main:
+  pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +23,7 @@ jobs:
       # Run this command as early as possible, before dependencies are installed
       # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
       # Uncomment this line to enable task distribution
-      # - run: yarn dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+      - run: yarn dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       # Cache node_modules
       - uses: actions/setup-node@v4
@@ -34,10 +32,11 @@ jobs:
           cache: 'yarn'
 
       - run: yarn install --immutable
+      - uses: nrwl/nx-set-shas@v2
 
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: yarn nx-cloud record -- echo Hello World
-      - run: yarn nx run-many -t lint test build typecheck
+      - run: yarn nx-cloud record -- yarn nx format:check
+      - run: yarn nx affected -t lint test build typecheck
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: yarn nx fix-ci
         if: always()
