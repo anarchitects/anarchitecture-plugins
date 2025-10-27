@@ -15,9 +15,7 @@ export default async () => {
   // storage folder for the local registry
   const storage = './tmp/local-registry/storage';
   const manifestPath = 'packages/js/package.json';
-  const originalManifest = JSON.parse(
-    readFileSync(manifestPath, 'utf-8')
-  ) as {
+  const originalManifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
     version: string;
     publishConfig?: { provenance?: boolean };
   };
