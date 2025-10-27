@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "SecondaryEntryPointGeneratorSchema",
+  "title": "Secondary Entry Point",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Name of the project to extend."
+    },
+    "name": {
+      "type": "string",
+      "description": "Path-friendly name for the secondary entry point (relative to the project's src directory).",
+      "x-priority": "important"
+    },
+    "importPath": {
+      "type": "string",
+      "description": "Override the package name used in the exports field. Defaults to the project's package name."
+    },
+    "buildTarget": {
+      "type": "string",
+      "description": "Name of the build target to update.",
+      "default": "build"
+    },
+    "skipFormat": {
+      "type": "boolean",
+      "description": "Skip formatting files.",
+      "default": false
+    }
+  },
+  "required": ["project", "name"]
+}
