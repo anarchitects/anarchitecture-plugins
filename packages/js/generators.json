@@ -1,0 +1,12 @@
+{
+  "name": "anarchitects/nx-js",
+  "version": "0.0.1",
+  "extends": ["@nx/js"],
+  "generators": {
+    "secondary-entry-point": {
+      "factory": "./dist/generators/secondary-entry-point/generator",
+      "schema": "./dist/generators/secondary-entry-point/schema.json",
+      "description": "Add a secondary entry point to an existing @nx/js library."
+    }
+  }
+}

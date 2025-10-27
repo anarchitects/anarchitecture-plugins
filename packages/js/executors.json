@@ -1,0 +1,6 @@
+{
+  "name": "anarchitects/nx-js",
+  "version": "0.0.1",
+  "extends": ["@nx/js"],
+  "executors": {}
+}
