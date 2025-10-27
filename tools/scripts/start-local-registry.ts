@@ -8,13 +8,15 @@
 import { startLocalRegistry } from '@nx/js/plugins/jest/local-registry';
 import { releasePublish, releaseVersion } from 'nx/release';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 export default async () => {
   // local registry target to run
   const localRegistryTarget = '@anarchitecture-plugins/source:local-registry';
   // storage folder for the local registry
-  const storage = './tmp/local-registry/storage';
-  const manifestPath = 'packages/js/package.json';
+  const workspaceRoot = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
+  const storage = join(workspaceRoot, 'tmp/local-registry/storage');
+  const manifestPath = join(workspaceRoot, 'packages/js/package.json');
   const originalManifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
     version: string;
     publishConfig?: { provenance?: boolean };
