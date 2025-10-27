@@ -9,7 +9,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-js@workspace:packages/js"
   dependencies:
+    "@nx/devkit": "npm:21.6.4"
+    "@nx/js": "npm:21.6.4"
     tslib: "npm:^2.3.0"
+    typescript: "npm:~5.9.2"
   languageName: unknown
   linkType: soft
 
