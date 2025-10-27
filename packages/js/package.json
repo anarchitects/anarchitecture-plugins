@@ -79,9 +79,9 @@
     }
   },
   "dependencies": {
-    "tslib": "^2.3.0",
     "@nx/devkit": "21.6.4",
     "@nx/js": "21.6.4",
+    "tslib": "^2.3.0",
     "typescript": "~5.9.2"
   }
 }
