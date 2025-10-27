@@ -1,0 +1,87 @@
+{
+  "name": "@anarchitects/nx-js",
+  "version": "0.0.1",
+  "description": "Anarchitects Nx JS plugin with enhanced secondary entry point support.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/js"
+  },
+  "bugs": {
+    "url": "https://github.com/anarchitects/anarchitecture-plugins/issues"
+  },
+  "homepage": "https://github.com/anarchitects/anarchitecture-plugins#readme",
+  "exports": {
+    "./package.json": "./package.json",
+    "./generators.json": "./dist/generators.json",
+    "./executors.json": "./dist/executors.json",
+    ".": {
+      "@anarchitecture-plugins/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "generators": "./generators.json",
+  "executors": "./executors.json",
+  "files": [
+    "dist",
+    "generators.json",
+    "executors.json",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "nx": {
+    "name": "nx-js",
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "packages/js/dist",
+          "main": "packages/js/src/index.ts",
+          "tsConfig": "packages/js/tsconfig.lib.json",
+          "rootDir": "packages/js/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./packages/js/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            },
+            {
+              "input": "./packages/js/src",
+              "glob": "**/*.d.ts",
+              "output": "."
+            },
+            {
+              "input": "./packages/js",
+              "glob": "generators.json",
+              "output": "."
+            },
+            {
+              "input": "./packages/js",
+              "glob": "executors.json",
+              "output": "."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@nx/devkit": "21.6.4",
+    "@nx/js": "21.6.4",
+    "tslib": "^2.3.0",
+    "typescript": "~5.9.2"
+  }
+}
