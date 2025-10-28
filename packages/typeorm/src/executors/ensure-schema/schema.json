@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TypeORM Ensure Schema Executor",
+  "type": "object",
+  "properties": {
+    "projectRoot": {
+      "type": "string",
+      "description": "Project root when it cannot be inferred from the Nx project configuration."
+    },
+    "schema": {
+      "type": "string",
+      "description": "Database schema that should exist."
+    },
+    "dataSource": {
+      "type": "string",
+      "description": "Path to the TypeORM DataSource file. Inferred from the project when omitted."
+    },
+    "tsconfig": {
+      "type": "string",
+      "description": "Optional tsconfig used when loading a TypeScript DataSource file."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Revert Executor",
+  "type": "object",
+  "properties": {
+    "projectRoot": {
+      "type": "string",
+      "description": "Project root when it cannot be inferred from the Nx project configuration."
+    },
+    "dataSource": {
+      "type": "string",
+      "description": "Path to the TypeORM data source file used for migrations."
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of migrations to revert."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  }
+}
