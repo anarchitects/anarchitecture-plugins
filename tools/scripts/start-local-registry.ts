@@ -37,10 +37,7 @@ export default async () => {
 
     if (manifest.publishConfig) {
       manifest.publishConfig.provenance = false;
-      writeFileSync(
-        manifestPath,
-        `${JSON.stringify(manifest, null, 2)}\n`
-      );
+      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     }
 
     return snapshot;
