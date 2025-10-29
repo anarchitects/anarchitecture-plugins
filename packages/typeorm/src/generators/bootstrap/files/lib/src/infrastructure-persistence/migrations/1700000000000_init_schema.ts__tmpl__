@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { <%= classify(domain) %>_SCHEMA as SCHEMA } from '../schema';
+import { <%= className %>_SCHEMA as SCHEMA } from '../schema';
 
-export class Init<%= classify(domain) %>Schema1700000000000 implements MigrationInterface {
+export class Init<%= className %>Schema1700000000000 implements MigrationInterface {
   async up(q: QueryRunner): Promise<void> {
     await q.query(`CREATE SCHEMA IF NOT EXISTS "${SCHEMA}"`);
   }

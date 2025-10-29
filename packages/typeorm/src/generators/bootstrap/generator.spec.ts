@@ -7,7 +7,7 @@ import {
 import * as devkit from '@nx/devkit';
 import bootstrapGenerator from './generator.js';
 
-let createTreeWithEmptyWorkspace: any;
+let createTreeWithEmptyWorkspace: typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace'];
 
 describe('bootstrapGenerator', () => {
   let tree: Tree;
@@ -61,7 +61,7 @@ export class AppModule {}
     const moduleSource = tree.read('apps/api/src/app.module.ts', 'utf-8');
     expect(moduleSource).toBeDefined();
     expect(moduleSource).toContain(
-      "import { TypeOrmModule } from '@nestjs/typeorm'"
+      'import { TypeOrmModule } from "@nestjs/typeorm"'
     );
     expect(moduleSource).toContain('TypeOrmModule.forRootAsync');
     expect(moduleSource).toContain('makeRuntimeDataSource');

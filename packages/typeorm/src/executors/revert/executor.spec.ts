@@ -30,9 +30,13 @@ describe('revert executor', () => {
       },
     } as unknown as ExecutorContext;
 
+    const pmCommands = {
+      exec: 'pnpm exec',
+    } as ReturnType<typeof devkit.getPackageManagerCommand>;
+
     getPmSpy = jest
       .spyOn(devkit, 'getPackageManagerCommand')
-      .mockReturnValue({ exec: 'pnpm exec' } as any);
+      .mockReturnValue(pmCommands);
   });
 
   afterEach(() => {

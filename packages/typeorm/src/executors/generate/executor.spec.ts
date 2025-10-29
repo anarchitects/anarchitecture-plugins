@@ -39,9 +39,13 @@ describe('generate executor', () => {
       },
     } as unknown as ExecutorContext;
 
+    const pmCommands = {
+      exec: 'pnpm exec',
+    } as ReturnType<typeof devkit.getPackageManagerCommand>;
+
     getPmSpy = jest
       .spyOn(devkit, 'getPackageManagerCommand')
-      .mockReturnValue({ exec: 'pnpm exec' } as any);
+      .mockReturnValue(pmCommands);
   });
 
   afterEach(() => {
@@ -73,11 +77,11 @@ describe('generate executor', () => {
       'exec',
       'typeorm-ts-node-commonjs',
       'migration:generate',
-      join(outputPath, 'initial-migration'),
+      join(outputPath, 'Initial-Migration'),
       '-d',
       'apps/api/tools/typeorm/datasource.ts',
       '-n',
-      'initial-migration',
+      'Initial-Migration',
       '--pretty',
       '--drift-check',
       '--foo',

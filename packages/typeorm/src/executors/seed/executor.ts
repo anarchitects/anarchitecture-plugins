@@ -69,7 +69,7 @@ async function registerTsNode(
 
   try {
     await import('ts-node/register');
-  } catch (error) {
+  } catch {
     throw new Error(
       'ts-node is required to execute TypeScript seeds. Install it in your workspace.'
     );

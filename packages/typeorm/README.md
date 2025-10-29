@@ -7,11 +7,11 @@ bootstrap new projects without leaving `nx`.
 ## Purpose
 
 - Detect TypeORM-enabled projects and infer common Nx targets (run, revert,
-	seed, ensure-schema).
+  seed, ensure-schema).
 - Provide thin executors that proxy TypeORM CLI commands through the active
-	package manager.
+  package manager.
 - Scaffold applications or libraries with ready-to-use TypeORM wiring, seeds,
-	and migration directories via `nx g @anarchitects/nx-typeorm:bootstrap`.
+  and migration directories via `nx g @anarchitects/nx-typeorm:bootstrap`.
 
 ## Installation
 
@@ -72,11 +72,11 @@ making it easy to customize behavior.
 ## Functionality Overview
 
 - **Executors**: `generate`, `run`, `revert`, `ensure-schema`, and `seed` wrap
-	TypeORM commands with Nx-friendly ergonomics.
+  TypeORM commands with Nx-friendly ergonomics.
 - **Generator**: `bootstrap` lays down TypeORM config, seeds, migrations, and
-	Nest integration boilerplate.
+  Nest integration boilerplate.
 - **Inference**: Detects TypeORM projects and auto adds sensible default targets
-	when you run `nx graph` or `nx run` commands.
+  when you run `nx graph` or `nx run` commands.
 
 ## Tasks
 

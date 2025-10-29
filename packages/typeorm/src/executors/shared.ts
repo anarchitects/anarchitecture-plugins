@@ -116,7 +116,7 @@ export function schemaFilePath(projectRoot: string): string {
 }
 
 export function schemaNameFrom(contents: string): string | undefined {
-  const match = contents.match(/'=([^']+)'/);
+  const match = contents.match(/SCHEMA\s*=\s*['"]([^'"\s]+)['"]/);
   return match?.[1];
 }
 

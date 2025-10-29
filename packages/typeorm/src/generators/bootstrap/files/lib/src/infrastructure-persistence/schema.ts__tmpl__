@@ -1,1 +1,1 @@
-export const <%= classify(domain) %>_SCHEMA = '<%= schema %>';
+export const <%= className %>_SCHEMA = '<%= schema %>';

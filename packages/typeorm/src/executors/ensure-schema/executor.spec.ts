@@ -13,7 +13,10 @@ describe('ensure-schema executor', () => {
   beforeEach(() => {
     tempDir = mkdtempSync(join(process.cwd(), 'nx-typeorm-ensure-'));
     projectRoot = join(tempDir, 'libs/data');
-    dataSourcePath = join(projectRoot, 'tools/typeorm/datasource.migrations.js');
+    dataSourcePath = join(
+      projectRoot,
+      'tools/typeorm/datasource.migrations.js'
+    );
 
     mocks = createMocks();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,11 +27,10 @@ describe('ensure-schema executor', () => {
       dataSourcePath,
       `const mocks = globalThis.__ensureSchemaMocks;
 module.exports = {
-  default: {
-    initialize: (...args) => mocks.initialize(...args),
-    destroy: (...args) => mocks.destroy(...args),
-    createQueryRunner: (...args) => mocks.createQueryRunner(...args),
-  },
+  initialize: (...args) => mocks.initialize(...args),
+  destroy: (...args) => mocks.destroy(...args),
+  createQueryRunner: (...args) => mocks.createQueryRunner(...args),
+  options: { type: 'postgres' },
 };
 `
     );
@@ -129,7 +131,7 @@ module.exports = {
         },
         context
       )
-    ).rejects.toThrow('TypeORM DataSource not found');
+    ).rejects.toThrow('Unable to locate a TypeORM data source');
   });
 });
 

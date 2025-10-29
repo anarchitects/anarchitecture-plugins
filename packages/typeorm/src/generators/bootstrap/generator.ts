@@ -35,7 +35,7 @@ interface BootstrapGeneratorSchema {
   skipInstall?: boolean;
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const generatorDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATABASE = 'postgres';
 const runtimeImportPath = './typeorm.datasource';
 
@@ -72,7 +72,7 @@ export default async function bootstrapGenerator(
 
   await formatFiles(tree);
 
-  return tasks.length ? runTasksInSerial(...tasks) : () => {};
+  return tasks.length ? runTasksInSerial(...tasks) : () => undefined;
 }
 
 function prepareLibrary(
@@ -94,7 +94,7 @@ function prepareLibrary(
 
   generateFiles(
     tree,
-    join(__dirname, 'files', 'lib'),
+    join(generatorDir, 'files', 'lib'),
     projectRoot,
     templateOptions
   );
@@ -129,7 +129,7 @@ function prepareApplication(
   const database = options.db ?? DEFAULT_DATABASE;
   const projectName = names(options.project).fileName.replace(/-/g, '_');
 
-  generateFiles(tree, join(__dirname, 'files', 'app'), projectRoot, {
+  generateFiles(tree, join(generatorDir, 'files', 'app'), projectRoot, {
     tmpl: '',
     database,
     appDatabase: projectName,

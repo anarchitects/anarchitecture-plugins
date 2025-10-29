@@ -50,14 +50,29 @@ export default async function ensureSchema(
     const queryRunner = dataSource.createQueryRunner();
 
     try {
-      if (typeof (queryRunner as CreateSchemaCapable).createSchema === 'function') {
-        await (queryRunner as CreateSchemaCapable).createSchema(schemaName, true);
+      if (
+        typeof (queryRunner as CreateSchemaCapable).createSchema === 'function'
+      ) {
+        await (queryRunner as CreateSchemaCapable).createSchema(
+          schemaName,
+          true
+        );
         logger.info(`Ensured schema "${schemaName}" exists.`);
-      } else if (dataSource.options.type === 'mysql' || dataSource.options.type === 'mariadb') {
-        await queryRunner.query('CREATE DATABASE IF NOT EXISTS ??', [schemaName]);
+      } else if (
+        dataSource.options.type === 'mysql' ||
+        dataSource.options.type === 'mariadb'
+      ) {
+        await queryRunner.query('CREATE DATABASE IF NOT EXISTS ??', [
+          schemaName,
+        ]);
         logger.info(`Ensured database "${schemaName}" exists.`);
-      } else if (dataSource.options.type === 'sqlite' || dataSource.options.type === 'better-sqlite3') {
-        logger.info('SQLite does not support schemas; ensure-schema is a no-op.');
+      } else if (
+        dataSource.options.type === 'sqlite' ||
+        dataSource.options.type === 'better-sqlite3'
+      ) {
+        logger.info(
+          'SQLite does not support schemas; ensure-schema is a no-op.'
+        );
       } else {
         logger.warn(
           'Current TypeORM driver does not expose createSchema; skipping ensure-schema.'
@@ -107,7 +122,7 @@ async function registerTsNodeIfNeeded(
 
   try {
     await import('ts-node/register');
-  } catch (error) {
+  } catch {
     throw new Error(
       'ts-node is required to load TypeScript data sources. Install it in your workspace.'
     );
