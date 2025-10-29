@@ -1,0 +1,9 @@
+import { DataSource } from 'typeorm';
+
+export default new DataSource({
+  type: '<%= database %>',
+  url: process.env.DATABASE_URL,
+  entities: [],
+  migrations: ['dist/tools/typeorm/migrations/*.js'],
+  synchronize: false,
+});

@@ -5,8 +5,14 @@
 
 /// <reference path="registry.d.ts" />
 
-export default () => {
+export default async () => {
   if (global.stopLocalRegistry) {
-    global.stopLocalRegistry();
+    try {
+      await global.stopLocalRegistry();
+      console.log('Successfully stopped local registry');
+    } catch (error) {
+      console.warn('Failed to stop local registry:', error);
+      // Don't throw to avoid failing the teardown
+    }
   }
 };

@@ -1,0 +1,30 @@
+{
+  "executors": {
+    "generate": {
+      "implementation": "./executors/generate/executor",
+      "schema": "./executors/generate/schema.json"
+    },
+    "run": {
+      "implementation": "./executors/run/executor",
+      "schema": "./executors/run/schema.json"
+    },
+    "revert": {
+      "implementation": "./executors/revert/executor",
+      "schema": "./executors/revert/schema.json"
+    },
+    "ensure-schema": {
+      "implementation": "./executors/ensure-schema/executor",
+      "schema": "./executors/ensure-schema/schema.json"
+    },
+    "seed": {
+      "implementation": "./executors/seed/executor",
+      "schema": "./executors/seed/schema.json"
+    }
+  },
+  "generators": {
+    "bootstrap": {
+      "implementation": "./generators/bootstrap/generator",
+      "schema": "./generators/bootstrap/schema.json"
+    }
+  }
+}

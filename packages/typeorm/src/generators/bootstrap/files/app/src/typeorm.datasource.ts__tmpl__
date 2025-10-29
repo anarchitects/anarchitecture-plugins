@@ -1,0 +1,15 @@
+import { DataSource } from 'typeorm';
+
+export function makeRuntimeDataSource(): DataSource {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error('Missing DATABASE_URL');
+  }
+
+  return new DataSource({
+    type: '<%= database %>',
+    url,
+    synchronize: false,
+    logging: false,
+  });
+}

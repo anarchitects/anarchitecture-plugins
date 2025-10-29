@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Generate Executor",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Migration name used by TypeORM."
+    },
+    "projectRoot": {
+      "type": "string",
+      "description": "Project root when it cannot be inferred from the Nx project configuration."
+    },
+    "dataSource": {
+      "type": "string",
+      "description": "Path to the TypeORM data source file used for migrations."
+    },
+    "outputPath": {
+      "type": "string",
+      "description": "Directory where generated migrations will be placed."
+    },
+    "pretty": {
+      "type": "boolean",
+      "description": "Enable pretty printing for generated migrations.",
+      "default": true
+    },
+    "driftCheck": {
+      "type": "boolean",
+      "description": "Enable drift check before generating migrations."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  },
+  "required": ["name"]
+}

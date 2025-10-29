@@ -8,6 +8,12 @@
     },
     {
       "path": "./packages/js-e2e"
+    },
+    {
+      "path": "./packages/typeorm"
+    },
+    {
+      "path": "./packages/typeorm-e2e"
     }
   ]
 }

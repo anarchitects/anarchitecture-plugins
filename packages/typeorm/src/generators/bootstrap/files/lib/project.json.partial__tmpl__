@@ -1,0 +1,9 @@
+{
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "metadata": {
+    "typeorm": {
+      "schema": "<%= schema %>",
+      "domain": "<%= domain %>"
+    }
+  }
+}

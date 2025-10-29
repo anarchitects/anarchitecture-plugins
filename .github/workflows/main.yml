@@ -1,17 +1,17 @@
-name: Feature CI
+name: Main CI
 env:
   NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
 
 on:
   pull_request:
-    branches: [feat/**]
+    branches: [main]
 
 permissions:
   actions: read
   contents: read
 
 jobs:
-  feature-ci:
+  main-ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -25,7 +25,7 @@ jobs:
       # Run this command as early as possible, before dependencies are installed
       # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
       # Uncomment this line to enable task distribution
-      - run: yarn dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+      - run: yarn dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
 
       # Cache node_modules
       - uses: actions/setup-node@v5
@@ -36,9 +36,7 @@ jobs:
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v4
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      - run: yarn nx-cloud record -- yarn nx format:check
-      - run: yarn nx affected -t lint test build typecheck --exclude "$(yarn nx show projects | grep -- '-e2e$' | paste -sd, -)"
+      - run: yarn nx affected -t build e2e-ci
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: yarn nx fix-ci
         if: always()
