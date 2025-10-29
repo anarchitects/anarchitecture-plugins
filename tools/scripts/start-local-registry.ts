@@ -41,7 +41,9 @@ export default async () => {
       storage,
       verbose: false,
     });
+    console.log('Successfully started local registry');
   } catch (error) {
+    console.error('Failed to start local registry:', error);
     throw new Error(
       'Failed to start Verdaccio for e2e tests. Check that the local registry target exists or inspect the Verdaccio logs.'
     );
