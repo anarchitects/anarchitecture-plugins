@@ -1,8 +1,10 @@
 {
   "name": "@anarchitects/nx-typeorm",
   "version": "0.1.0",
+  "description": "Nx plugin providing TypeORM executors, generators, and schema management utilities.",
   "type": "module",
   "main": "dist/src/index.js",
+  "license": "Apache-2.0",
   "executors": "dist/src/index.json",
   "generators": "dist/src/index.json",
   "files": [
@@ -10,6 +12,15 @@
     "README.md",
     "!**/*.tsbuildinfo"
   ],
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/typeorm"
+  },
   "nx": {
     "name": "nx-typeorm",
     "plugins": [
