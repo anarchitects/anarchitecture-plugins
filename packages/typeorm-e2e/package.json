@@ -15,7 +15,7 @@
           "{projectRoot}/test-output/jest/coverage"
         ],
         "options": {
-          "jestConfig": "packages/typeorm-e2e/jest.config.ts",
+          "jestConfig": "packages/typeorm-e2e/jest.config.cts",
           "runInBand": true
         },
         "dependsOn": [

@@ -3,17 +3,18 @@
   "version": "0.0.1",
   "description": "Nx plugin providing TypeORM executors, generators, and schema management utilities.",
   "type": "module",
-  "main": "dist/src/index.js",
+  "main": "dist/index.js",
   "license": "Apache-2.0",
-  "executors": "dist/src/index.json",
-  "generators": "dist/src/index.json",
+  "executors": "dist/index.json",
+  "generators": "dist/index.json",
   "files": [
     "dist",
     "README.md",
     "!**/*.tsbuildinfo"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": false
   },
   "repository": {
     "type": "git",
@@ -24,7 +25,7 @@
     "name": "nx-typeorm",
     "plugins": [
       {
-        "plugin": "dist/src/plugins/typeorm.js"
+        "plugin": "dist/plugins/typeorm.js"
       }
     ],
     "targets": {

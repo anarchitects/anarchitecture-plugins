@@ -16,22 +16,42 @@ export default async () => {
   // storage folder for the local registry
   const workspaceRoot = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
   const storage = join(workspaceRoot, 'tmp/local-registry/storage');
-  const manifestPath = join(workspaceRoot, 'packages/js/package.json');
-  const originalManifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
-    version: string;
-    publishConfig?: { provenance?: boolean };
-  };
-  const originalVersion = originalManifest.version;
-  const originalProvenance = originalManifest.publishConfig?.provenance;
+  const manifestRecords = [
+    'packages/js/package.json',
+    'packages/typeorm/package.json',
+  ].map((relativePath) => {
+    const path = join(workspaceRoot, relativePath);
+    const manifest = JSON.parse(readFileSync(path, 'utf-8')) as {
+      version: string;
+      publishConfig?: { provenance?: boolean };
+    };
 
-  if (originalManifest.publishConfig) {
-    originalManifest.publishConfig.provenance = false;
-    writeFileSync(
-      manifestPath,
-      `${JSON.stringify(originalManifest, null, 2)}\n`
-    );
+    return {
+      path,
+      originalVersion: manifest.version,
+      originalProvenance: manifest.publishConfig?.provenance,
+      hadPublishConfig: !!manifest.publishConfig,
+    };
+  });
+
+  for (const record of manifestRecords) {
+    if (!record.hadPublishConfig) {
+      continue;
+    }
+
+    const manifest = JSON.parse(readFileSync(record.path, 'utf-8')) as {
+      version: string;
+      publishConfig?: { provenance?: boolean };
+    };
+
+    if (!manifest.publishConfig) {
+      continue;
+    }
+
+    manifest.publishConfig.provenance = false;
+
+    writeFileSync(record.path, `${JSON.stringify(manifest, null, 2)}\n`);
   }
-
   rmSync(storage, { recursive: true, force: true });
   const version = `0.0.0-e2e.${Date.now()}`;
 
@@ -68,18 +88,23 @@ export default async () => {
       firstRelease: true,
     });
   } finally {
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
-      version: string;
-      publishConfig?: { provenance?: boolean };
-    };
-    manifest.version = originalVersion;
-    if (manifest.publishConfig) {
-      if (typeof originalProvenance === 'undefined') {
-        delete manifest.publishConfig.provenance;
-      } else {
-        manifest.publishConfig.provenance = originalProvenance;
+    for (const record of manifestRecords) {
+      const manifest = JSON.parse(readFileSync(record.path, 'utf-8')) as {
+        version: string;
+        publishConfig?: { provenance?: boolean };
+      };
+
+      manifest.version = record.originalVersion;
+
+      if (manifest.publishConfig && record.hadPublishConfig) {
+        if (typeof record.originalProvenance === 'undefined') {
+          delete manifest.publishConfig.provenance;
+        } else {
+          manifest.publishConfig.provenance = record.originalProvenance;
+        }
       }
+
+      writeFileSync(record.path, `${JSON.stringify(manifest, null, 2)}\n`);
     }
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 };

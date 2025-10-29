@@ -60,9 +60,11 @@ describe('nx-typeorm', () => {
       }
     );
 
+    const libraryRoot = resolveLibraryRoot(projectDirectory, 'typeorm-lib');
     const schemaPath = join(
       projectDirectory,
-      'libs/typeorm-lib/src/infrastructure-persistence/schema.ts'
+      libraryRoot,
+      'src/infrastructure-persistence/schema.ts'
     );
     expect(existsSync(schemaPath)).toBe(true);
     const schemaContents = readFileSync(schemaPath, 'utf-8');
@@ -72,12 +74,13 @@ describe('nx-typeorm', () => {
 
     const migrationPath = join(
       projectDirectory,
-      'libs/typeorm-lib/src/infrastructure-persistence/migrations/1700000000000_init_schema.ts'
+      libraryRoot,
+      'src/infrastructure-persistence/migrations/1700000000000_init_schema.ts'
     );
     expect(existsSync(migrationPath)).toBe(true);
 
     const projectJson = JSON.parse(
-      readFileSync(join(projectDirectory, 'libs/typeorm-lib/project.json'), {
+      readFileSync(join(projectDirectory, libraryRoot, 'project.json'), {
         encoding: 'utf-8',
       })
     );
@@ -116,4 +119,22 @@ function createTestProject(projectName = 'test-project') {
   console.log(`Created test project in "${projectDirectory}"`);
 
   return projectDirectory;
+}
+
+function resolveLibraryRoot(projectDirectory: string, libraryName: string) {
+  const candidates = [
+    join('libs', libraryName),
+    join('packages', libraryName),
+    libraryName,
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(join(projectDirectory, candidate))) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Unable to locate generated library root for "${libraryName}".`
+  );
 }
