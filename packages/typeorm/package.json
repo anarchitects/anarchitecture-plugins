@@ -13,7 +13,6 @@
     "!**/*.tsbuildinfo"
   ],
   "publishConfig": {
-    "provenance": true,
     "access": "public"
   },
   "repository": {
