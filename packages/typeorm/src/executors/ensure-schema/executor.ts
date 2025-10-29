@@ -79,8 +79,12 @@ export default async function ensureSchema(
         );
       }
     } finally {
-      await queryRunner.release().catch((err) => {  
-        logger.error(`Failed to release query runner: ${err instanceof Error ? err.message : String(err)}`);  
+      await queryRunner.release().catch((err) => {
+        logger.error(
+          `Failed to release query runner: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
       });
     }
 
