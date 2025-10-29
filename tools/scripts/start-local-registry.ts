@@ -35,11 +35,17 @@ export default async () => {
   rmSync(storage, { recursive: true, force: true });
   const version = `0.0.0-e2e.${Date.now()}`;
 
-  global.stopLocalRegistry = await startLocalRegistry({
-    localRegistryTarget,
-    storage,
-    verbose: false,
-  });
+  try {
+    global.stopLocalRegistry = await startLocalRegistry({
+      localRegistryTarget,
+      storage,
+      verbose: false,
+    });
+  } catch (error) {
+    throw new Error(
+      'Failed to start Verdaccio for e2e tests. Check that the local registry target exists or inspect the Verdaccio logs.'
+    );
+  }
 
   try {
     await releaseVersion({
