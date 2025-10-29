@@ -1,0 +1,81 @@
+{
+  "name": "@anarchitects/nx-typeorm",
+  "version": "0.0.2",
+  "description": "Nx plugin providing TypeORM executors, generators, and schema management utilities.",
+  "type": "module",
+  "main": "dist/index.js",
+  "license": "Apache-2.0",
+  "executors": "dist/index.json",
+  "generators": "dist/index.json",
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/typeorm"
+  },
+  "nx": {
+    "name": "nx-typeorm",
+    "plugins": [
+      {
+        "plugin": "dist/plugins/typeorm.js"
+      }
+    ],
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "packages/typeorm/dist",
+          "main": "packages/typeorm/src/index.ts",
+          "tsConfig": "packages/typeorm/tsconfig.lib.json",
+          "rootDir": "packages/typeorm/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./packages/typeorm/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            }
+          ]
+        }
+      },
+      "test": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/typeorm/jest.config.cts",
+          "passWithNoTests": false
+        }
+      }
+    },
+    "tags": [
+      "type:plugin",
+      "domain:typeorm"
+    ]
+  },
+  "peerDependencies": {
+    "@nx/devkit": "^22.0.0",
+    "nx": "22.0.1",
+    "ts-morph": "^22.0.0",
+    "ts-node": "10.9.1",
+    "typeorm": "^0.3.20"
+  },
+  "dependencies": {
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "ts-morph": "^22.0.0"
+  }
+}

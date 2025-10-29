@@ -15,11 +15,16 @@ describe('nx-js', () => {
 
   afterAll(() => {
     if (projectDirectory) {
-      // Cleanup the test project
-      rmSync(projectDirectory, {
-        recursive: true,
-        force: true,
-      });
+      try {
+        // Cleanup the test project
+        rmSync(projectDirectory, {
+          recursive: true,
+          force: true,
+        });
+        console.log('Successfully cleaned up test project');
+      } catch (error) {
+        console.warn('Failed to clean up test project:', error);
+      }
     }
   });
 

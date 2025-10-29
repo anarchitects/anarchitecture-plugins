@@ -1,12 +1,12 @@
 {
-  "name": "nx-js-e2e",
+  "name": "nx-typeorm-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "projectType": "application",
-    "sourceRoot": "packages/js-e2e/src",
+    "sourceRoot": "packages/typeorm-e2e/src",
     "implicitDependencies": [
-      "nx-js"
+      "nx-typeorm"
     ],
     "targets": {
       "e2e": {
@@ -15,7 +15,7 @@
           "{projectRoot}/test-output/jest/coverage"
         ],
         "options": {
-          "jestConfig": "packages/js-e2e/jest.config.cts",
+          "jestConfig": "packages/typeorm-e2e/jest.config.cts",
           "runInBand": true
         },
         "dependsOn": [

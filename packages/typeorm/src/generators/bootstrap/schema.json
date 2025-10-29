@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BootstrapGenerator",
+  "title": "TypeORM Bootstrap Generator",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Name of the existing Nx project to wire up for TypeORM."
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain name used when scaffolding a library project."
+    },
+    "schema": {
+      "type": "string",
+      "description": "Database schema to use. Defaults to the provided domain."
+    },
+    "db": {
+      "type": "string",
+      "description": "Database type passed to TypeORM.",
+      "default": "postgres"
+    },
+    "withCompose": {
+      "type": "boolean",
+      "description": "Include a Docker Compose file for local Postgres development.",
+      "default": false
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "description": "Skip running package installations after updating dependencies.",
+      "default": false
+    }
+  },
+  "required": ["project"],
+  "additionalProperties": false
+}
