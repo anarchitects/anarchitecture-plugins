@@ -10,5 +10,5 @@
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "references": [],
-  "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }

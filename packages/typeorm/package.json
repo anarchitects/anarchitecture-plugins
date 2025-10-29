@@ -1,6 +1,6 @@
 {
   "name": "@anarchitects/nx-typeorm",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Nx plugin providing TypeORM executors, generators, and schema management utilities.",
   "type": "module",
   "main": "dist/src/index.js",
@@ -54,14 +54,14 @@
           "{projectRoot}/test-output/jest/coverage"
         ],
         "options": {
-          "jestConfig": "packages/typeorm/jest.config.cjs",
+          "jestConfig": "packages/typeorm/jest.config.cts",
           "passWithNoTests": false
         }
       }
     },
     "tags": [
       "type:plugin",
-      "domain: typeorm"
+      "domain:typeorm"
     ]
   },
   "peerDependencies": {

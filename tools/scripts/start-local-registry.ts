@@ -16,32 +16,21 @@ export default async () => {
   // storage folder for the local registry
   const workspaceRoot = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
   const storage = join(workspaceRoot, 'tmp/local-registry/storage');
-  const manifestPaths = [
-    join(workspaceRoot, 'packages/js/package.json'),
-    join(workspaceRoot, 'packages/typeorm/package.json'),
-  ];
+  const manifestPath = join(workspaceRoot, 'packages/js/package.json');
+  const originalManifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+    version: string;
+    publishConfig?: { provenance?: boolean };
+  };
+  const originalVersion = originalManifest.version;
+  const originalProvenance = originalManifest.publishConfig?.provenance;
 
-  const manifestSnapshots = manifestPaths.map((manifestPath) => {
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
-      version: string;
-      publishConfig?: { provenance?: boolean };
-    };
-
-    const snapshot = {
-      path: manifestPath,
-      version: manifest.version,
-      publishConfig: manifest.publishConfig
-        ? { ...manifest.publishConfig }
-        : undefined,
-    };
-
-    if (manifest.publishConfig) {
-      manifest.publishConfig.provenance = false;
-      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    }
-
-    return snapshot;
-  });
+  if (originalManifest.publishConfig) {
+    originalManifest.publishConfig.provenance = false;
+    writeFileSync(
+      manifestPath,
+      `${JSON.stringify(originalManifest, null, 2)}\n`
+    );
+  }
 
   rmSync(storage, { recursive: true, force: true });
   const version = `0.0.0-e2e.${Date.now()}`;
@@ -71,21 +60,18 @@ export default async () => {
       firstRelease: true,
     });
   } finally {
-    for (const snapshot of manifestSnapshots) {
-      const manifest = JSON.parse(readFileSync(snapshot.path, 'utf-8')) as {
-        version: string;
-        publishConfig?: { provenance?: boolean };
-      };
-
-      manifest.version = snapshot.version;
-
-      if (snapshot.publishConfig) {
-        manifest.publishConfig = { ...snapshot.publishConfig };
-      } else if (manifest.publishConfig) {
-        delete manifest.publishConfig;
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+      version: string;
+      publishConfig?: { provenance?: boolean };
+    };
+    manifest.version = originalVersion;
+    if (manifest.publishConfig) {
+      if (typeof originalProvenance === 'undefined') {
+        delete manifest.publishConfig.provenance;
+      } else {
+        manifest.publishConfig.provenance = originalProvenance;
       }
-
-      writeFileSync(snapshot.path, `${JSON.stringify(manifest, null, 2)}\n`);
     }
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 };

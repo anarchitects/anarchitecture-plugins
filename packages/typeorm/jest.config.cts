@@ -1,5 +1,4 @@
- 
-import { readFileSync } from 'fs';
+ import { readFileSync } from 'fs';
 
 // Reading the SWC compilation config for the spec files
 const swcJestConfig = JSON.parse(
@@ -11,7 +10,7 @@ swcJestConfig.swcrc = false;
 
 export default {
   displayName: 'nx-typeorm',
-  preset: '../../jest.preset.js',
+  preset: '../../jest.preset.cjs',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig],

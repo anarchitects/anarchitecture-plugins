@@ -1,5 +1,4 @@
-/* eslint-disable */
-import { readFileSync } from 'fs';
+ import { readFileSync } from 'fs';
 
 // Reading the SWC compilation config for the spec files
 const swcJestConfig = JSON.parse(
@@ -10,8 +9,8 @@ const swcJestConfig = JSON.parse(
 swcJestConfig.swcrc = false;
 
 export default {
-  displayName: 'nx-typeorm-e2e',
-  preset: '../../jest.preset.js',
+  displayName: 'nx-js-e2e',
+  preset: '../../jest.preset.cjs',
   transform: {
     '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig],
   },
