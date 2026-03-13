@@ -1,0 +1,34 @@
+{
+  "name": "nx-governance-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "projectType": "application",
+    "sourceRoot": "packages/governance-e2e/src",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/qa"
+      }
+    },
+    "tags": ["type:e2e", "domain:governance"],
+    "implicitDependencies": [
+      "nx-governance"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/governance-e2e/jest.config.cts",
+          "runInBand": true
+        },
+        "dependsOn": [
+          "^build"
+        ]
+      }
+    }
+  }
+}

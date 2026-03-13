@@ -23,6 +23,13 @@
   },
   "nx": {
     "name": "nx-typeorm",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/data"
+      }
+    },
+    "tags": ["type:plugin", "domain:typeorm"],
     "plugins": [
       {
         "plugin": "dist/plugins/typeorm.js"

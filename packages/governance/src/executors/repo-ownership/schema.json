@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Repo Ownership",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile to execute.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "cli"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found."
+    }
+  },
+  "additionalProperties": false
+}

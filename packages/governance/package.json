@@ -1,0 +1,78 @@
+{
+  "name": "@anarchitects/nx-governance",
+  "version": "0.0.1",
+  "description": "Nx governance plugin for workspace health, boundaries, ownership, and architecture reporting.",
+  "type": "module",
+  "main": "dist/index.js",
+  "license": "Apache-2.0",
+  "executors": "dist/index.json",
+  "generators": "dist/index.json",
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/governance"
+  },
+  "nx": {
+    "name": "nx-governance",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/architecture"
+      }
+    },
+    "plugins": [
+      {
+        "plugin": "dist/plugin/index.js"
+      }
+    ],
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "packages/governance/dist",
+          "main": "packages/governance/src/index.ts",
+          "tsConfig": "packages/governance/tsconfig.lib.json",
+          "rootDir": "packages/governance/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./packages/governance/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            }
+          ]
+        }
+      },
+      "test": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/governance/jest.config.cts",
+          "passWithNoTests": true
+        }
+      }
+    },
+    "tags": [
+      "type:plugin",
+      "domain:governance"
+    ]
+  },
+  "dependencies": {
+    "@nx/devkit": "22.5.4",
+    "tslib": "^2.6.2"
+  }
+}

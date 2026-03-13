@@ -5,6 +5,15 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@anarchitects/nx-governance@workspace:packages/governance":
+  version: 0.0.0-use.local
+  resolution: "@anarchitects/nx-governance@workspace:packages/governance"
+  dependencies:
+    "@nx/devkit": "npm:22.5.4"
+    tslib: "npm:^2.6.2"
+  languageName: unknown
+  linkType: soft
+
 "@anarchitects/nx-js@workspace:packages/js":
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-js@workspace:packages/js"
@@ -8584,6 +8593,12 @@ __metadata:
   checksum: 10c0/b6a0e5ea6754aacfdfe551c8c0f1b374eaf94d48b0a4e7eac666f879ecbc1892ef1d7c457e9b02eefad3fa1323ea1faebcba533eeab6582e24c9c503411bf879
   languageName: node
   linkType: hard
+
+"nx-governance-e2e@workspace:packages/governance-e2e":
+  version: 0.0.0-use.local
+  resolution: "nx-governance-e2e@workspace:packages/governance-e2e"
+  languageName: unknown
+  linkType: soft
 
 "nx-js-e2e@workspace:packages/js-e2e":
   version: 0.0.0-use.local

@@ -5,6 +5,13 @@
   "nx": {
     "projectType": "application",
     "sourceRoot": "packages/typeorm-e2e/src",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/qa"
+      }
+    },
+    "tags": ["type:e2e", "domain:typeorm"],
     "implicitDependencies": [
       "nx-typeorm"
     ],

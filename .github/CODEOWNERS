@@ -1,0 +1,12 @@
+# Workspace ownership
+* @anarchitects/platform
+
+# Plugin ownership
+/packages/js/ @anarchitects/js
+/packages/typeorm/ @anarchitects/data
+/packages/governance/ @anarchitects/architecture
+
+# End-to-end ownership
+/packages/js-e2e/ @anarchitects/qa
+/packages/typeorm-e2e/ @anarchitects/qa
+/packages/governance-e2e/ @anarchitects/qa
