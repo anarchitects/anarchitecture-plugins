@@ -39,7 +39,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "packageManager": "yarn@4.10.3",
+  "packageManager": "yarn@4.13.0",
   "dependencies": {
     "@nx/devkit": "22.5.4"
   },
