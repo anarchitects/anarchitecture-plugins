@@ -1,0 +1,30 @@
+{
+  "executors": {
+    "repo-health": {
+      "implementation": "./executors/repo-health/executor",
+      "schema": "./executors/repo-health/schema.json"
+    },
+    "repo-boundaries": {
+      "implementation": "./executors/repo-boundaries/executor",
+      "schema": "./executors/repo-boundaries/schema.json"
+    },
+    "repo-ownership": {
+      "implementation": "./executors/repo-ownership/executor",
+      "schema": "./executors/repo-ownership/schema.json"
+    },
+    "repo-architecture": {
+      "implementation": "./executors/repo-architecture/executor",
+      "schema": "./executors/repo-architecture/schema.json"
+    }
+  },
+  "generators": {
+    "init": {
+      "implementation": "./generators/init/generator",
+      "schema": "./generators/init/schema.json"
+    },
+    "eslint-integration": {
+      "implementation": "./generators/eslint-integration/generator",
+      "schema": "./generators/eslint-integration/schema.json"
+    }
+  }
+}

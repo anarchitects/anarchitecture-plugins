@@ -45,6 +45,12 @@
   },
   "nx": {
     "includedScripts": [],
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/platform"
+      }
+    },
     "targets": {
       "local-registry": {
         "executor": "@nx/js:verdaccio",
@@ -52,6 +58,46 @@
           "port": 4873,
           "config": ".verdaccio/config.yml",
           "storage": "tmp/local-registry/storage"
+        }
+      },
+      "repo-health": {
+        "executor": "@anarchitects/nx-governance:repo-health",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Run governance health assessment for the workspace."
+        }
+      },
+      "repo-boundaries": {
+        "executor": "@anarchitects/nx-governance:repo-boundaries",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Run governance boundary checks for the workspace."
+        }
+      },
+      "repo-ownership": {
+        "executor": "@anarchitects/nx-governance:repo-ownership",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Run governance ownership checks for the workspace."
+        }
+      },
+      "repo-architecture": {
+        "executor": "@anarchitects/nx-governance:repo-architecture",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Run governance architecture checks for the workspace."
         }
       }
     }

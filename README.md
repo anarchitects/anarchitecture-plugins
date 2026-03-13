@@ -1,123 +1,85 @@
-# Anarchitects Plugins
+# Anarchitects Nx Plugins
 
-**Nx plugins for Rails** (more frameworks later).  
-Goal: deliver a **native Nx DX** for Rails by mapping Nx targets to Ruby/Rails tools under the hood.
+Nx plugin monorepo for architecture, governance, and developer workflow automation.
 
-- `nx serve <app>` → `rails server`
-- `nx lint <app>` → `rubocop` (or `standardrb`, configurable)
-- `nx test <app>` → `rspec` (if present) else `rails test`
-- `nx format` → `prettier` with `@prettier/plugin-ruby`
+This repository publishes focused Nx plugins that improve monorepo maintainability through:
+- convention-over-configuration
+- inference-first targets (Project Crystal)
+- thin executors and safe generators
+- CI-friendly outputs and quality gates
 
-All of this is wired with **Project Crystal** so targets are **inferred** wherever possible.
+## Contributing
 
-## Features
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, quality gates, and contribution standards.
 
-### Generators
+## Repository Overview
 
-- `@anarchitects/rails:app` – scaffold a Rails app into `apps/<name>`
-  - optional flags: `--api-only`, `--postgres`, `--skip-javascript`, `--skip-active-record`, …
-  - sets up Nx project registration, tags, and inference
-  - writes `.prettierrc` with `@prettier/plugin-ruby`, sets up `.rubocop.yml` (opinionated defaults, overridable)
-- `@anarchitects/rails:model|controller|scaffold|migration` – wraps standard generators
-- `@anarchitects/rails:devise` – `devise:install` + wiring
+The workspace is organized as independent plugin packages under `packages/`.
 
-### Executors (native Nx targets)
+| Plugin | Package | Purpose |
+|---|---|---|
+| Nx Governance | `@anarchitects/nx-governance` | Workspace governance-as-code: boundaries, ownership, architecture health, and scored reports. |
+| Nx TypeORM | `@anarchitects/nx-typeorm` | TypeORM workflows for Nx: bootstrap, migration generate/run/revert, schema checks, and seeding. |
+| Nx JS | `@anarchitects/nx-js` | Extensions around `@nx/js`, including secondary entry point generation for libraries. |
 
-- **serve** → `bundle exec rails server -p <port> -b <host>` (watch by Rails)
-- **lint** → `bundle exec rubocop` (or `standardrb` per config)
-- **test** → `bundle exec rspec` (if RSpec present), else `bundle exec rails test`
-- **db:migrate** → `bundle exec rails db:migrate`
-- **db:seed** → `bundle exec rails db:seed`
-- **bundle** → `bundle install`
-- **rake** → `bundle exec rake <task>`
+## Plugin Documentation
 
-### Inference (Project Crystal)
+- Governance plugin: [packages/governance/README.md](packages/governance/README.md)
+- TypeORM plugin: [packages/typeorm/README.md](packages/typeorm/README.md)
+- JS plugin: [packages/js/README.md](packages/js/README.md)
 
-Rails projects are **auto-detected** by:
+## Install a Plugin
 
-- Presence of `Gemfile` + `bin/rails` + `config/application.rb`
-
-Inferred targets:
-
-- `serve`, `test`, `lint`, `build`(=bundle), `db:migrate`, `db:seed`
-- Test runner inference:
-  - `rspec` if Gemfile[lock] contains `rspec`
-  - else `rails test` (minitest/ActiveSupport)
-
-Linter inference:
-
-- `rubocop` if Gemfile[lock] contains `rubocop`
-- else `standardrb` if present
-- else no lint target inferred (until installed)
-
-## Usage
+Use `nx add` as the preferred Nx-native installation path.
 
 ```bash
-# Create a Rails app
-nx g @anarchitects/rails:app api --api-only --postgres
-
-# Run the server
-nx serve api --port=4001 --host=0.0.0.0
-
-# Lint with rubocop
-nx lint api
-
-# Test (uses rspec if installed)
-nx test api
-
-# Migrate DB
-nx run api:db:migrate
-
-# Run any rake task
-nx run api:rake db:schema:dump
+nx add @anarchitects/nx-governance
+nx add @anarchitects/nx-typeorm
+nx add @anarchitects/nx-js
 ```
 
-## Configurability
+If needed, you can also install with the package manager and run plugin generators explicitly.
 
-- Linter: set "rails.linter": "rubocop" | "standardrb" in plugin options or your project.json.
-- Test framework: auto-detected; override via project options "testRunner": "rspec" | "rails".
-- Env: pass-through with --env or standard ENV variables.
+## Workspace Development
 
-## Formatting (Prettier)
-
-We use Prettier with @prettier/plugin-ruby:
-
-```json
-// .prettierrc
-{
-  "plugins": ["@prettier/plugin-ruby"]
-}
-```
-
-Run:
-
-```bash
-nx format:write
-```
-
-## Development
+Install dependencies:
 
 ```bash
 yarn install
-yarn nx build rails
-yarn nx test rails
 ```
 
-Try locally:
+Run plugin tasks through Nx:
 
 ```bash
-nx g @anarchitects/rails:app demo-api
-nx serve demo-api
-nx lint demo-api
-nx test demo-api
+yarn nx build <project>
+yarn nx test <project>
+yarn nx lint <project>
 ```
 
-## Roadmap
+Examples:
 
-- Inferred lint via rubocop or standardrb
-- Inferred test via RSpec/Minitest detection
-- Devise, Sidekiq, RBS support, RuboCop config generator
-- Multi-app workspaces (apps/\*) with shared gems via bundler groups
+```bash
+yarn nx build nx-governance
+yarn nx test nx-typeorm
+yarn nx lint nx-js
+```
+
+Run affected checks before opening a PR:
+
+```bash
+yarn nx affected -t build,test,lint
+```
+
+## Design Principles
+
+All plugins in this monorepo should follow the same standards:
+- Prefer inference (`createNodesV2`) when behavior can be derived from conventions.
+- Keep executors deterministic and minimal; delegate heavy work to underlying tools.
+- Keep generators idempotent and non-destructive.
+- Preserve backward compatibility; provide migration support for behavioral changes.
+- Ship tests and docs with every user-facing change.
+
+See [AGENTS.md](AGENTS.md) and [.github/copilot-instructions.md](.github/copilot-instructions.md) for the full implementation playbook.
 
 ## License
 

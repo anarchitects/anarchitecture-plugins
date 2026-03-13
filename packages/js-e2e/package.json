@@ -5,6 +5,13 @@
   "nx": {
     "projectType": "application",
     "sourceRoot": "packages/js-e2e/src",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/qa"
+      }
+    },
+    "tags": ["type:e2e", "domain:js"],
     "implicitDependencies": [
       "nx-js"
     ],

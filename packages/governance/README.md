@@ -1,0 +1,513 @@
+# @anarchitects/nx-governance
+
+An Nx plugin that turns your workspace's own project graph into an **auditable, scored, and actionable governance report**. It evaluates architectural boundaries, team ownership, documentation coverage, and dependency health — and surfaces everything as structured CLI output or machine-readable JSON that can gate CI pipelines.
+
+---
+
+## Why governance-as-code?
+
+Large Nx monorepos accumulate structural debt silently: cross-domain imports slip in, projects lose clear owners, layer contracts erode over time. Traditional linting catches individual file violations but cannot reason about **workspace-level architecture intent** — which teams own which domains, which layers may depend on which, or whether the overall dependency topology is growing in complexity.
+
+`@anarchitects/nx-governance` introduces a **governance profile** — a single JSON file that declares architectural intent — and evaluates the entire workspace against it on every run. The result is a graded health score with per-metric breakdown, actionable violation details, and prioritized recommendations.
+
+---
+
+## Table of contents
+
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Concepts](#concepts)
+  - [Profiles](#profiles)
+  - [Boundary policy source](#boundary-policy-source)
+  - [Domain tags](#domain-tags)
+  - [Layer tags](#layer-tags)
+  - [Ownership signals](#ownership-signals)
+  - [Documentation signals](#documentation-signals)
+- [Generators](#generators)
+  - [init](#init-generator)
+  - [eslint-integration](#eslint-integration-generator)
+- [Executors](#executors)
+  - [repo-health](#repo-health)
+  - [repo-boundaries](#repo-boundaries)
+  - [repo-ownership](#repo-ownership)
+  - [repo-architecture](#repo-architecture)
+- [Reports explained](#reports-explained)
+  - [Health score and grade](#health-score-and-grade)
+  - [Metrics](#metrics)
+  - [Violations](#violations)
+  - [Recommendations](#recommendations)
+  - [Warnings](#warnings)
+  - [JSON output schema](#json-output-schema)
+- [Profile reference](#profile-reference)
+- [ESLint alignment](#eslint-alignment)
+- [CI integration](#ci-integration)
+
+---
+
+## Installation
+
+Use `nx add` — the standard Nx way to adopt a plugin. It installs the package and automatically runs the plugin's `init` generator in one step:
+
+```bash
+nx add @anarchitects/nx-governance
+```
+
+This is equivalent to installing the package and then running `nx g @anarchitects/nx-governance:init`, but without the manual steps. You will be prompted whether to also configure the ESLint integration (recommended).
+
+If you need to re-run the init generator later (e.g. to add the ESLint integration to an existing install):
+
+```bash
+nx g @anarchitects/nx-governance:init
+```
+
+---
+
+## Quick start
+
+```bash
+# 1. Install the plugin and scaffold governance configuration
+nx add @anarchitects/nx-governance
+
+# 2. Tag each project with its domain and layer (see Domain tags below)
+#    Add to each package.json > nx.tags:
+#    ["type:plugin", "domain:billing", "layer:feature"]
+
+# 3. Run the full workspace health check
+nx repo-health
+
+# 4. Drill into specific concerns
+nx repo-boundaries
+nx repo-ownership
+nx repo-architecture
+```
+
+---
+
+## Concepts
+
+### Profiles
+
+A **governance profile** is a JSON file at `tools/governance/profiles/<name>.json`. It is the single source of truth for what the workspace architecture *should* look like. Every run of any governance executor reads this file and evaluates the live project graph against it.
+
+The built-in preset is `angular-cleanup`, modelled on Angular workspace conventions (layered architecture, domain-driven boundaries). You can adjust every aspect of it by editing the JSON file — no TypeScript required.
+
+### Boundary policy source
+
+Every profile has a `boundaryPolicySource` setting:
+
+| Value | Behaviour |
+|---|---|
+| `"profile"` | The `allowedDomainDependencies` map in the profile JSON is the authoritative rule set. |
+| `"eslint"` | The runtime helper `tools/governance/eslint/dependency-constraints.mjs` is loaded at assessment time and its merged constraints are used as the primary rule set. The profile map acts as a fallback/override layer. A warning is surfaced in every report. |
+
+Use `"eslint"` when you want ESLint's `@nx/enforce-module-boundaries` and the governance report to share a single source of truth, eliminating drift between the two enforcement layers.
+
+### Domain tags
+
+Domains represent bounded business or technical areas. Tag each project in its `package.json`:
+
+```json
+{
+  "nx": {
+    "tags": ["type:plugin", "domain:billing"]
+  }
+}
+```
+
+The governance engine extracts the value after `domain:` and uses it to evaluate cross-domain dependency rules. Projects without a domain tag are not evaluated for domain-boundary violations — they participate in ownership and documentation checks only.
+
+### Layer tags
+
+Layers represent architectural tiers within a domain (e.g. Angular-style: `app → feature → ui → data-access → util`). Tag projects:
+
+```json
+{
+  "nx": {
+    "tags": ["domain:billing", "layer:feature"]
+  }
+}
+```
+
+The profile defines the ordered list of layers. A dependency from a project at position `i` to one at position `j < i` (i.e. a lower-index, higher-level layer) is flagged as a `layer-boundary` violation.
+
+### Ownership signals
+
+The plugin resolves ownership from two complementary sources and **merges** them:
+
+1. **Project metadata** — the `nx.metadata.ownership.team` field in a project's `package.json`:
+   ```json
+   { "nx": { "metadata": { "ownership": { "team": "@org/platform" } } } }
+   ```
+
+2. **CODEOWNERS** — `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` at the workspace root. The plugin parses this file and matches project roots against patterns using full glob semantics (anchored paths, wildcards, double-star). The *last matching rule* wins, consistent with how GitHub evaluates CODEOWNERS.
+
+When both sources provide information the ownership record is tagged `source: "merged"`. When only one is present the source is `"project-metadata"` or `"codeowners"` respectively. Projects with no ownership signal are tagged `source: "none"` and a violation is raised when `ownership.required: true` in the profile.
+
+### Documentation signals
+
+Documentation completeness is resolved from three places in priority order:
+
+1. `projectOverrides.<projectName>.documentation` in the profile JSON — useful for projects that carry documentation in non-standard locations.
+2. `nx.metadata.documentation` in the project's `package.json`.
+3. Absense of either results in `documentation: false` for that project.
+
+---
+
+## Generators
+
+### `init` generator
+
+Scaffolds governance configuration into any Nx workspace and registers the four root-level commands.
+
+```bash
+nx g @anarchitects/nx-governance:init
+```
+
+**What it does:**
+
+- Registers `@anarchitects/nx-governance` in `nx.json` plugins.
+- Writes the four root targets (`repo-health`, `repo-boundaries`, `repo-ownership`, `repo-architecture`) into the root `package.json > nx.targets`.
+- Creates `tools/governance/profiles/angular-cleanup.json` with sensible defaults (if it does not already exist).
+- Optionally runs the `eslint-integration` generator (prompted, default: yes).
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `configureEslint` | `boolean` | `true` | Generate the ESLint integration helper and wire it into `eslint.config.mjs`. |
+| `skipFormat` | `boolean` | `false` | Skip Prettier formatting of generated files. |
+
+---
+
+### `eslint-integration` generator
+
+Generates the **shared runtime policy module** that prevents drift between ESLint module-boundary enforcement and governance boundary rules.
+
+```bash
+nx g @anarchitects/nx-governance:eslint-integration
+```
+
+**What it does, in order:**
+
+1. **Migrates** any existing inline `depConstraints` array from `eslint.config.mjs` into `tools/governance/profiles/angular-cleanup.json`. This happens before ESLint is modified, making the profile the authoritative source first.
+2. **Writes** `tools/governance/eslint/dependency-constraints.mjs` — a pure ES module that reads all governance profile JSON files at import time, merges their `allowedDomainDependencies` maps, and exports a `governanceDepConstraints` array in the shape that `@nx/enforce-module-boundaries` expects.
+3. **Patches** `eslint.config.mjs` to import `governanceDepConstraints` from the helper and use it as the `depConstraints` value, replacing any previous inline array.
+
+After running this generator, adding or changing domain dependency rules in a profile JSON automatically updates both governance reports *and* ESLint enforcement on the next run — with no manual synchronisation required.
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `skipFormat` | `boolean` | `false` | Skip Prettier formatting of generated files. |
+
+---
+
+## Executors
+
+All four executors share the same options schema:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `profile` | `string` | `"angular-cleanup"` | Name of the governance profile to load from `tools/governance/profiles/`. |
+| `output` | `"cli"` \| `"json"` | `"cli"` | Output format. `cli` prints a human-readable report via Nx logger. `json` writes structured JSON to stdout. |
+| `failOnViolation` | `boolean` | `false` | Exit with a non-zero code when any violation is found. Use this to gate CI. |
+
+### `repo-health`
+
+**Intent:** Give a full workspace health overview — the "dashboard" view. Every metric is computed and combined into a single weighted score with a letter grade.
+
+```bash
+nx repo-health
+nx repo-health --output=json
+nx repo-health --failOnViolation
+```
+
+**Metrics included:** all six (Architectural Entropy, Dependency Complexity, Domain Integrity, Ownership Coverage, Documentation Completeness, Layer Integrity).
+
+**Use when:** you want a single number that summarises overall workspace quality, or when running a health gate in CI.
+
+---
+
+### `repo-boundaries`
+
+**Intent:** Focus exclusively on structural boundary violations — where the project graph breaks the declared domain and layer contracts.
+
+```bash
+nx repo-boundaries
+nx repo-boundaries --output=json --failOnViolation
+```
+
+**Metrics included:** Architectural Entropy, Domain Integrity, Layer Integrity.
+
+**Violations surfaced:**
+- `domain-boundary` (severity: `error`) — a project in domain A imports a project in domain B, and B is not listed in A's `allowedDomainDependencies`.
+- `layer-boundary` (severity: `warning`) — a project at layer position `i` imports a project at a higher-level layer position `j < i`.
+
+**Use when:** doing an architecture review, onboarding a new domain, or validating that a refactor did not introduce forbidden cross-domain imports.
+
+---
+
+### `repo-ownership`
+
+**Intent:** Report which projects lack a clear owner and surface the merged ownership map across metadata and CODEOWNERS.
+
+```bash
+nx repo-ownership
+nx repo-ownership --output=json
+```
+
+**Metrics included:** Ownership Coverage.
+
+**Violations surfaced:**
+- `ownership-presence` (severity: `warning`) — a project has neither an `ownership.team` metadata field nor a matching CODEOWNERS entry.
+
+**Use when:** running an incident post-mortem, onboarding a new team member, or auditing accountability across a growing monorepo.
+
+---
+
+### `repo-architecture`
+
+**Intent:** Report on structural complexity and entropy without the ownership signal — purely the architectural topology health.
+
+```bash
+nx repo-architecture
+nx repo-architecture --output=json
+```
+
+**Metrics included:** Architectural Entropy, Dependency Complexity, Domain Integrity.
+
+**Violations surfaced:** all violation types *except* `ownership-presence`.
+
+**Use when:** you want to track architectural drift over time and are not concerned with team assignment in this particular run.
+
+---
+
+## Reports explained
+
+### Health score and grade
+
+Every executor computes a **health score** from 0–100 and assigns a letter grade:
+
+| Score | Grade | Interpretation |
+|---|---|---|
+| 90–100 | A | Healthy — architecture aligns well with declared intent. |
+| 80–89 | B | Good — minor issues present, worth addressing. |
+| 70–79 | C | Acceptable — some structural debt accumulating. |
+| 60–69 | D | Concerning — multiple signals degraded. |
+| 0–59 | F | Critical — significant structural violations present. |
+
+The score is a **weighted average** of individual metric scores. Weights are configured per-profile under `metrics.*Weight`. Equal weights (0.2 each) are the default, meaning each metric contributes evenly. Raise a weight to make a particular concern more influential in the overall grade.
+
+Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON output.
+
+### Metrics
+
+| Metric id | Name | Direction | Formula |
+|---|---|---|---|
+| `architectural-entropy` | Architectural Entropy | lower is better | `(total violations) / max(total dependencies, 1)` → inverted to score |
+| `dependency-complexity` | Dependency Complexity | lower is better | `(total dependencies) / (projects × 4)` → inverted to score |
+| `domain-integrity` | Domain Integrity | lower is better | `(domain violations) / max(total dependencies, 1)` → inverted to score |
+| `ownership-coverage` | Ownership Coverage | higher is better | `(owned projects) / (total projects)` → direct score |
+| `documentation-completeness` | Documentation Completeness | higher is better | `(documented projects) / (total projects)` → direct score |
+| `layer-integrity` | Layer Integrity | lower is better | `(layer violations) / max(total dependencies, 1)` → inverted to score |
+
+All raw values are bounded to `[0, 1]` before scoring. "Lower is better" metrics are scored as `(1 − value) × 100`. "Higher is better" metrics are scored as `value × 100`.
+
+### Violations
+
+Each violation carries:
+
+| Field | Meaning |
+|---|---|
+| `id` | Unique identifier for the violation instance (e.g. `billing-payments-domain`). |
+| `ruleId` | One of `domain-boundary`, `layer-boundary`, `ownership-presence`. |
+| `project` | The source project name. |
+| `severity` | `error` for hard boundary breaks, `warning` for soft signals. |
+| `message` | Human-readable description of the specific violation. |
+| `details` | Structured data (source/target domain, layer order, dependency type). |
+| `recommendation` | Actionable guidance for resolving the violation. |
+
+### Recommendations
+
+Recommendations are generated automatically from the violation and metric set:
+
+| id | Trigger | Priority |
+|---|---|---|
+| `reduce-cross-domain-dependencies` | Any `domain-boundary` violation present | high |
+| `improve-ownership-coverage` | Any `ownership-presence` violation present | medium |
+| `reduce-dependency-complexity` | `dependency-complexity` metric score below 60 | medium |
+
+### Warnings
+
+Warnings appear when the assessment contains important context that is not itself a policy violation. The most common warning is:
+
+> *Boundary policy source is ESLint constraints (tools/governance/eslint/dependency-constraints.mjs). Profile allowedDomainDependencies is treated as fallback.*
+
+This is emitted whenever `boundaryPolicySource` is set to `"eslint"`, reminding consumers that the live boundary rules are being read from the ESLint helper rather than the static profile JSON.
+
+### JSON output schema
+
+When `--output=json` is used, the full `GovernanceAssessment` is written to stdout:
+
+```jsonc
+{
+  "profile": "angular-cleanup",
+  "warnings": ["..."],                 // runtime warnings
+  "workspace": {
+    "id": "workspace",
+    "projects": [
+      {
+        "name": "billing-api",
+        "root": "packages/billing-api",
+        "type": "library",
+        "tags": ["domain:billing", "layer:data-access"],
+        "domain": "billing",
+        "layer": "data-access",
+        "ownership": {
+          "team": "@org/billing",
+          "contacts": ["@org/billing"],
+          "source": "merged"           // "project-metadata" | "codeowners" | "merged" | "none"
+        }
+      }
+    ],
+    "dependencies": [
+      { "source": "billing-api", "target": "shared-utils", "type": "static" }
+    ]
+  },
+  "violations": [
+    {
+      "id": "billing-api-payments-api-domain",
+      "ruleId": "domain-boundary",
+      "project": "billing-api",
+      "severity": "error",
+      "message": "Project billing-api in domain billing depends on payments-api in domain payments.",
+      "details": { "sourceDomain": "billing", "targetDomain": "payments" },
+      "recommendation": "Move the dependency behind an API or adjust domain boundaries."
+    }
+  ],
+  "measurements": [
+    { "id": "ownership-coverage", "name": "Ownership Coverage", "value": 0.857, "score": 86, "maxScore": 100, "unit": "ratio" }
+  ],
+  "health": {
+    "score": 91,
+    "grade": "A",
+    "hotspots": []
+  },
+  "recommendations": [
+    { "id": "reduce-cross-domain-dependencies", "title": "Reduce cross-domain dependencies", "priority": "high", "reason": "..." }
+  ]
+}
+```
+
+---
+
+## Profile reference
+
+```jsonc
+// tools/governance/profiles/angular-cleanup.json
+{
+  // "profile" | "eslint"
+  // "eslint" reads boundary rules from tools/governance/eslint/dependency-constraints.mjs
+  "boundaryPolicySource": "eslint",
+
+  // Ordered layer hierarchy — lower index = higher architectural level
+  "layers": ["app", "feature", "ui", "data-access", "util"],
+
+  // Which domains may depend on which. An empty array means no cross-domain imports.
+  // Use "*" as source key for a wildcard rule applied to all domains.
+  // Use "*" as a value to allow any target domain.
+  "allowedDomainDependencies": {
+    "billing": ["shared"],
+    "payments": ["shared"],
+    "shared": []
+  },
+
+  "ownership": {
+    "required": true,          // raise ownership-presence violations when true
+    "metadataField": "ownership"
+  },
+
+  // Per-metric weight in the overall health score (must be > 0, relative scale)
+  "metrics": {
+    "architecturalEntropyWeight": 0.2,
+    "dependencyComplexityWeight": 0.2,
+    "domainIntegrityWeight": 0.2,
+    "ownershipCoverageWeight": 0.2,
+    "documentationCompletenessWeight": 0.2
+  },
+
+  // Per-project overrides — useful for projects that cannot carry tags or metadata
+  "projectOverrides": {
+    "legacy-monolith": {
+      "domain": "billing",
+      "layer": "app",
+      "ownershipTeam": "@org/billing",
+      "documentation": true
+    }
+  }
+}
+```
+
+---
+
+## ESLint alignment
+
+Running the `eslint-integration` generator creates a **shared runtime policy module** at `tools/governance/eslint/dependency-constraints.mjs`. This module:
+
+1. Reads all `tools/governance/profiles/*.json` files at import time.
+2. Merges their `allowedDomainDependencies` maps.
+3. Converts each `domain:X → [domain:Y, ...]` entry into an `@nx/enforce-module-boundaries` depConstraint object.
+4. Exports the resulting array as `governanceDepConstraints`.
+
+Your `eslint.config.mjs` imports and uses this export directly:
+
+```js
+import { governanceDepConstraints } from './tools/governance/eslint/dependency-constraints.mjs';
+
+export default [
+  // ...
+  {
+    files: ['**/*.ts', '**/*.js'],
+    rules: {
+      '@nx/enforce-module-boundaries': ['error', {
+        enforceBuildableLibDependency: true,
+        depConstraints: governanceDepConstraints,
+      }],
+    },
+  },
+];
+```
+
+**The consequence:** changing a domain rule in a profile JSON propagates automatically to both ESLint enforcement (on the next `lint` run) and governance reporting (on the next `repo-boundaries` run). No manual synchronisation, no drift.
+
+When `boundaryPolicySource` is `"eslint"` in a profile, the governance executor also imports this module at runtime to use the same resolved constraint set as the active boundary policy, ensuring reports and lint share identical semantics.
+
+---
+
+## CI integration
+
+To fail a pipeline when governance violations are present:
+
+```yaml
+# .github/workflows/ci.yml
+- name: Governance health gate
+  run: yarn nx repo-health --failOnViolation
+
+- name: Boundary enforcement gate
+  run: yarn nx repo-boundaries --failOnViolation
+```
+
+To archive the JSON report as a build artefact:
+
+```yaml
+- name: Generate governance report
+  run: yarn nx repo-health --output=json > governance-report.json
+
+- uses: actions/upload-artifact@v4
+  with:
+    name: governance-report
+    path: governance-report.json
+```
+
+To track health score trends over time, pipe the JSON output into your observability platform or store it alongside test coverage reports for historical comparison.

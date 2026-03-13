@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance ESLint Integration",
+  "type": "object",
+  "properties": {
+    "skipFormat": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip formatting files after generation."
+    }
+  },
+  "additionalProperties": false
+}

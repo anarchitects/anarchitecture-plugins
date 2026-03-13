@@ -21,3 +21,13 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+## Nx Plugin Implementation Workflow
+
+- Prefer Project Crystal inference (`createNodesV2`) for convention-based targets; avoid writing explicit targets unless strictly required.
+- Keep executors thin, deterministic, and tool-adapter focused. Heavy logic belongs in reusable utils.
+- Keep generators idempotent, non-destructive, and minimal. Merge existing config instead of replacing it.
+- Always preserve backward compatibility first. If behavior changes, provide migration logic and docs.
+- Validate every plugin change through Nx tasks (`build`, `test`, `lint`) using the package manager-prefixed Nx command.
+- Require tests for generators, executors, and inference behavior, including regression coverage for fixed bugs.
+- Document install path using `nx add` and explain inference conventions, defaults, and precedence rules.

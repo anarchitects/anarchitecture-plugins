@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Init",
+  "type": "object",
+  "properties": {
+    "configureEslint": {
+      "type": "boolean",
+      "default": true,
+      "description": "Generate runtime ESLint integration from all governance profiles.",
+      "x-prompt": "Generate ESLint module-boundary integration from governance profiles? (recommended)"
+    },
+    "skipFormat": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip formatting files after generation."
+    }
+  },
+  "additionalProperties": false
+}

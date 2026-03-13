@@ -1,151 +1,139 @@
-# Copilot Instructions — anarchitects-plugins (Rails)
+# Copilot Instructions - anarchitects-plugins (General Nx Plugin Approach)
 
 ## Goal
 
-Provide a **native Nx developer experience** for Rails:
+Provide a consistent, high-quality approach for building Nx plugins in this workspace:
 
-- `nx serve` == `rails server`
-- `nx lint` == `rubocop` (or `standardrb`, configurable/inferred)
-- `nx test` == `rspec` (if present) else `rails test`
-- `nx format` uses `prettier` with `@prettier/plugin-ruby`
-- Prefer **Project Crystal** to infer these targets automatically.
+- Native Nx developer experience first
+- Convention over configuration via Project Crystal inference
+- Thin executors and generators with clear responsibilities
+- Strong validation through unit and integration tests
+- Backward-compatible migrations for existing workspaces
 
-## Generators (what to create)
+## Core Principles
 
-- `packages/rails/src/generators/app` → wraps `rails new` into `apps/<name>`
-  - registers Nx project with tags: `framework:rails`, `lang:rb`
-  - writes `.prettierrc` with `@prettier/plugin-ruby`
-  - writes `.rubocop.yml` (sensible defaults)
-  - optional flags: `--api-only`, `--postgres`, `--skip-active-record`, etc.
-- Resource generators:
-  - `model`, `controller`, `scaffold`, `migration`
-  - `devise` → `rails g devise:install`
-- Ensure generators add minimal `project.json` only if inference can’t cover it.
+- Prefer inferred targets over generated explicit target config.
+- Keep plugin APIs stable: stable executor names, stable option names, stable command behavior.
+- Keep executors thin; delegate heavy work to the underlying toolchain.
+- Keep generators idempotent and safe to rerun.
+- Build migration paths before introducing breaking behavior changes.
 
-## Executors (how to run)
+## Standard Plugin Structure
 
-Implement small TS executors that shell out via `bundle exec`:
+- `src/generators/*`: scaffold and workspace configuration updates
+- `src/executors/*`: runtime command adapters
+- `src/plugin/index.ts`: Project Crystal inference (`createNodesV2`)
+- `src/utils/*`: parsing, detection, shared helpers
+- `src/migrations/*` (if needed): behavior-preserving upgrades
 
-- **serve**:
-  - `bundle exec rails server -p <port> -b <host>`
-  - read options from executor schema (`port`, `host`, `env`)
-- **lint**:
-  - If `rubocop` present → `bundle exec rubocop`
-  - Else if `standardrb` present → `bundle exec standardrb`
-  - Else fail with helpful message to install one
-- **test**:
-  - If `rspec` present → `bundle exec rspec`
-  - Else `bundle exec rails test`
-- **db:migrate** → `bundle exec rails db:migrate`
-- **db:seed** → `bundle exec rails db:seed`
-- **bundle** → `bundle install`
-- **rake** → `bundle exec rake <task>`
+## Generators (What to Build)
 
-Executors should:
+- Provide an `init` generator for one-command onboarding.
+- Add domain-specific generators only when they reduce repetitive user work.
+- Write only minimum config required; avoid duplicating inferred targets.
+- Detect existing files and merge non-destructively.
+- Keep generator side effects explicit and documented.
 
-- Forward stdio (inherit), exit non-zero on failure.
-- Be idempotent (safe to re-run with Nx caching disabled for IO tasks).
-- Accept arbitrary extra args when useful (e.g., `nx run api:rake my:task`).
+Generator requirements:
+
+- Input schema with defaults and validation
+- Clear dry-run style logging where appropriate
+- Idempotent behavior when rerun
+- Tests for fresh workspace and existing workspace scenarios
+
+## Executors (How to Run)
+
+Implement small TypeScript executors that:
+
+- Build command arguments deterministically from schema options
+- Forward stdio (`inherit`) for interactive diagnostics
+- Exit non-zero on failure
+- Support pass-through args when useful
+- Return `{ success: boolean }` consistently
+
+Executor requirements:
+
+- Helpful error messages with remediation hints
+- No hidden global state
+- Deterministic behavior between local and CI
+- Explicit cache guidance (`cache: false`) for non-reproducible IO tasks
 
 ## Inference (Project Crystal)
 
-Create an inference plugin that:
+Use `createNodesV2` for target discovery whenever targets can be derived from file conventions.
 
-- Recognizes a **Rails project** if:
-  - `Gemfile` **and** `bin/rails` **and** `config/application.rb` exist
-- Infers targets:
-  - `serve` → map to our serve executor
-  - `test` → choose rspec vs rails test by inspecting Gemfile.lock
-  - `lint` → choose rubocop vs standardrb by inspecting Gemfile.lock
-  - `build` → `bundle install`
-  - `db:migrate` / `db:seed` → rails db tasks
-- Provide sensible default options (e.g., `port: 3000`, `host: localhost`)
+Inference requirements:
 
-## Formatting
+- Match on real source-of-truth files (for example tool config, manifest, profile files)
+- Infer stable target names
+- Use documented, deterministic default options
+- Avoid inference when no convention files exist
+- Keep inferred behavior equivalent to explicit behavior
 
-- Enforce Prettier with `@prettier/plugin-ruby` in generated apps:
-  - Write `.prettierrc` and optionally add npm script `format`.
-- Allow `nx format:write` to run across TS + Ruby files (Copilot should include ruby file extensions in Prettier config).
+When multiple convention files exist, define and document precedence rules.
 
-## Examples (what to suggest)
+## Compatibility and Migration Strategy
 
-**Serve executor (sketch)**
+- Phase in inference before removing explicit target generation.
+- Keep existing workspaces working without manual intervention.
+- If config model changes, provide migration generators or codemods.
+- Document deprecations first, then enforce in a later phase.
 
-```ts
-import { ExecutorContext, logger } from '@nx/devkit';
-import { execa } from 'execa';
+## Testing Strategy
 
-export default async function serve(
-  options: { port?: number; host?: string; env?: Record<string, string> },
-  ctx: ExecutorContext
-) {
-  const env = { ...process.env, ...options.env };
-  const args = [
-    'exec',
-    'rails',
-    'server',
-    '-p',
-    String(options.port ?? 3000),
-    '-b',
-    options.host ?? '127.0.0.1',
-  ];
-  await execa('bundle', args, { stdio: 'inherit', env });
-  return { success: true };
-}
-```
+Every plugin feature should include the following tests:
 
-**Lint executor (rubocop/standardrb inference)**
+- Unit tests:
+  - option parsing and validation
+  - command composition
+  - inference matching and target generation
+- Integration tests:
+  - generator output in a temp workspace
+  - executor behavior against representative fixtures
+  - inferred targets runnable through Nx
+- Regression tests:
+  - prior bug behavior locked with explicit test coverage
 
-```ts
-import { execa } from 'execa';
-import { detectRubyTool } from '../utils/detect';
+Use Nx tasks for verification:
 
-export default async function lint() {
-  const tool = await detectRubyTool(['rubocop', 'standardrb']);
-  if (!tool) throw new Error('No linter found. Install rubocop or standardrb.');
-  await execa('bundle', ['exec', tool], { stdio: 'inherit' });
-  return { success: true };
-}
-```
+- `yarn nx build <plugin-project>`
+- `yarn nx test <plugin-project>`
+- `yarn nx lint <plugin-project>`
 
-**Test executor (rspec vs rails test)**
+## Documentation Requirements
 
-```ts
-import { execa } from 'execa';
-import { hasGem } from '../utils/gems';
+For each plugin, keep README documentation implementation-ready:
 
-export default async function test() {
-  const isRspec = await hasGem('rspec');
-  const cmd = isRspec ? ['exec', 'rspec'] : ['exec', 'rails', 'test'];
-  await execa('bundle', cmd, { stdio: 'inherit' });
-  return { success: true };
-}
-```
+- Install via `nx add <plugin-package>` as primary path
+- Quickstart for generator + executor usage
+- Inference conventions and precedence rules
+- Command reference with examples
+- Troubleshooting section with actionable errors
 
-**Inference rule (pseudo)**
+## Pull Request Quality Bar
 
-```ts
-// packages/rails/src/inference.ts
-export const railsInference = {
-  match: ({ workspaceRoot, projectRoot }) =>
-    exists('Gemfile', projectRoot) &&
-    exists('bin/rails', projectRoot) &&
-    exists('config/application.rb', projectRoot),
-  targets: () => ({
-    serve: { executor: '@anarchitects/rails:serve' },
-    test: { executor: '@anarchitects/rails:test' },
-    lint: { executor: '@anarchitects/rails:lint' },
-    build: { executor: '@anarchitects/rails:bundle' },
-    'db:migrate': { executor: '@anarchitects/rails:db-migrate' },
-    'db:seed': { executor: '@anarchitects/rails:db-seed' },
-  }),
-};
-```
+Before merge:
+
+- Build, test, and lint are green for the plugin project
+- New behavior covered by tests
+- Breaking changes have migration path and documentation
+- README updated for user-facing changes
+- No unrelated refactors bundled with feature work
+
+## Suggested Delivery Sequence
+
+1. Define target UX and conventions.
+2. Implement inference and shared utils.
+3. Implement/adjust executors.
+4. Implement/adjust generators.
+5. Add migration support (if needed).
+6. Add/refresh tests.
+7. Update README and usage examples.
 
 ## Rules of Thumb
 
-- Prefer inferred targets; only write project.json when absolutely needed.
-- Keep executors thin; Rails/Ruby does the heavy lifting.
-- Provide helpful errors (“Install rubocop or set linter option”).
-- Always add tests for generators/executors.
-- Use conventional commits in suggestions.
+- If inference can express it, do not write explicit target config.
+- If users must repeat a manual step twice, consider a generator.
+- If behavior depends on file presence, test both present and absent states.
+- If a default is chosen automatically, make it deterministic and documented.
+- Prefer small, composable utilities over monolithic executor logic.

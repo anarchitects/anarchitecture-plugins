@@ -1,19 +1,19 @@
 {
-  "name": "nx-typeorm-e2e",
+  "name": "nx-governance-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "projectType": "application",
-    "sourceRoot": "packages/typeorm-e2e/src",
+    "sourceRoot": "packages/governance-e2e/src",
     "metadata": {
       "documentation": true,
       "ownership": {
         "team": "@anarchitects/qa"
       }
     },
-    "tags": ["type:e2e", "domain:typeorm"],
+    "tags": ["type:e2e", "domain:governance"],
     "implicitDependencies": [
-      "nx-typeorm"
+      "nx-governance"
     ],
     "targets": {
       "e2e": {
@@ -22,7 +22,7 @@
           "{projectRoot}/test-output/jest/coverage"
         ],
         "options": {
-          "jestConfig": "packages/typeorm-e2e/jest.config.cts",
+          "jestConfig": "packages/governance-e2e/jest.config.cts",
           "runInBand": true
         },
         "dependsOn": [
