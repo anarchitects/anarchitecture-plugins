@@ -50,7 +50,7 @@ import {
   summarizeRootCause,
 } from '../ai-analysis/index.js';
 import { AiAnalysisRequest, AiAnalysisResult } from '../core/models.js';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
 
 export interface GovernanceRunOptions {
@@ -1880,7 +1880,7 @@ function renderAiOnboardingCliReport(analysis: AiAnalysisResult): string {
 
 function readChangedFiles(baseRef: string, headRef: string): string[] {
   try {
-    const output = execSync(
+    const output = execFileSync(
       'git',
       ['diff', '--name-only', `${baseRef}...${headRef}`],
       {
