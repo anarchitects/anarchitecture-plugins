@@ -542,6 +542,43 @@ Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON outp
 
 All raw values are bounded to `[0, 1]` before scoring. "Lower is better" metrics are scored as `(1 − value) × 100`. "Higher is better" metrics are scored as `value × 100`.
 
+### How to interpret metrics
+
+Use the overall health score for prioritization, then make decisions at the metric level.
+
+| Metric | What it measures in practice | Watch signal | First remediation moves |
+| --- | --- | --- | --- |
+| `architectural-entropy` | Density of policy violations relative to dependency volume. | Rising entropy with stable project count usually means boundary discipline is eroding. | Triage top violation clusters, fix highest-fanout offenders first, then add CI gates for recurring rule ids. |
+| `dependency-complexity` | How connected the workspace is compared with its size. | High complexity with frequent cross-domain work indicates large blast radius risk. | Reduce fanout in shared nodes, split overloaded libraries, tighten public APIs. |
+| `domain-integrity` | Fraction of dependencies that break domain constraints. | Any sustained increase usually signals implicit coupling between domains. | Introduce explicit inter-domain contracts, route integrations through APIs, align reviews to domain ownership. |
+| `ownership-coverage` | Portion of projects with explicit ownership metadata or CODEOWNERS coverage. | Coverage below target slows incident response and architecture decisions. | Fill ownership gaps first in hotspot projects, then enforce ownership checks in CI. |
+| `documentation-completeness` | Portion of projects with documented architecture/context metadata. | Low documentation on high-change projects increases onboarding and regression risk. | Prioritize docs for critical and high-fanout projects, add minimum documentation policy for new projects. |
+| `layer-integrity` | Fraction of dependencies violating layer ordering rules. | Repeated layer leaks often precede test brittleness and circular dependency pressure. | Introduce layer-facing interfaces, move implementation details downward, block upward imports in lint and governance checks. |
+
+#### Quick threshold guide
+
+These are operating heuristics for decision-making (not hard scientific cutoffs):
+
+- **Score >= 85**: healthy, optimize selectively and prevent regressions.
+- **Score 70-84**: acceptable but trending risk, prioritize top 1-2 weakest metrics.
+- **Score < 70**: intervention zone, create a short burn-down plan tied to violation clusters.
+
+Metric-specific caution points:
+
+- `domain-integrity` or `layer-integrity` **below 80**: treat as structural risk, not cosmetic debt.
+- `ownership-coverage` **below 90** in fast-moving repos: likely coordination bottleneck.
+- `dependency-complexity` falling while entropy rises: architecture may be simplifying graph shape but still violating contracts.
+
+#### Trend interpretation
+
+- Prefer trend direction over one-off snapshots: 3-4 consecutive worsening runs are more actionable than a single dip.
+- Small fluctuations can be noise after large refactors; focus on persistent movement and recurring hotspots.
+- If overall score improves while one integrity metric worsens, treat that metric as a targeted follow-up item.
+
+#### Score caveat
+
+The health score is a weighted heuristic summary, not a substitute for metric-level analysis. Always validate decisions against the weakest metrics, top violations, and hotspot projects before planning remediation work.
+
 ### Violations
 
 Each violation carries:
