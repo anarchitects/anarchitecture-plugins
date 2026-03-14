@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Repo Snapshot",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile to execute before snapshot persistence.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "cli"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found."
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "metricSchemaVersion": {
+      "type": "string",
+      "description": "Version identifier for the snapshot metric schema.",
+      "default": "1.0"
+    }
+  },
+  "additionalProperties": false
+}

@@ -15,6 +15,50 @@
     "repo-architecture": {
       "implementation": "./executors/repo-architecture/executor",
       "schema": "./executors/repo-architecture/schema.json"
+    },
+    "repo-snapshot": {
+      "implementation": "./executors/repo-snapshot/executor",
+      "schema": "./executors/repo-snapshot/schema.json"
+    },
+    "repo-drift": {
+      "implementation": "./executors/repo-drift/executor",
+      "schema": "./executors/repo-drift/schema.json"
+    },
+    "repo-ai-root-cause": {
+      "implementation": "./executors/repo-ai-root-cause/executor",
+      "schema": "./executors/repo-ai-root-cause/schema.json"
+    },
+    "repo-ai-drift": {
+      "implementation": "./executors/repo-ai-drift/executor",
+      "schema": "./executors/repo-ai-drift/schema.json"
+    },
+    "repo-ai-pr-impact": {
+      "implementation": "./executors/repo-ai-pr-impact/executor",
+      "schema": "./executors/repo-ai-pr-impact/schema.json"
+    },
+    "repo-ai-cognitive-load": {
+      "implementation": "./executors/repo-ai-cognitive-load/executor",
+      "schema": "./executors/repo-ai-cognitive-load/schema.json"
+    },
+    "repo-ai-recommendations": {
+      "implementation": "./executors/repo-ai-recommendations/executor",
+      "schema": "./executors/repo-ai-recommendations/schema.json"
+    },
+    "repo-ai-smell-clusters": {
+      "implementation": "./executors/repo-ai-smell-clusters/executor",
+      "schema": "./executors/repo-ai-smell-clusters/schema.json"
+    },
+    "repo-ai-refactoring-suggestions": {
+      "implementation": "./executors/repo-ai-refactoring-suggestions/executor",
+      "schema": "./executors/repo-ai-refactoring-suggestions/schema.json"
+    },
+    "repo-ai-scorecard": {
+      "implementation": "./executors/repo-ai-scorecard/executor",
+      "schema": "./executors/repo-ai-scorecard/schema.json"
+    },
+    "repo-ai-onboarding": {
+      "implementation": "./executors/repo-ai-onboarding/executor",
+      "schema": "./executors/repo-ai-onboarding/schema.json"
     }
   },
   "generators": {

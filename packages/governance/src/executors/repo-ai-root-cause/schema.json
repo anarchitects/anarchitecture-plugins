@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI Root Cause",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile to execute before preparing root-cause payloads.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "cli"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found in the deterministic assessment."
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "snapshotPath": {
+      "type": "string",
+      "description": "Optional explicit snapshot path. Defaults to latest snapshot in snapshotDir."
+    },
+    "topViolations": {
+      "type": "number",
+      "description": "Maximum number of prioritized violations to include in AI request payload.",
+      "default": 10,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

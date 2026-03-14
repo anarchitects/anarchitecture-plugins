@@ -1,4 +1,6 @@
 import { createProjectGraphAsync, workspaceRoot } from '@nx/devkit';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { ownersForProjectRoot, readCodeowners } from './codeowners.js';
 import { AdapterWorkspaceSnapshot } from './types.js';
@@ -8,11 +10,17 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
   const codeownersEntries = readCodeowners(workspaceRoot);
 
   const projects = Object.values(graph.nodes).map((node) => {
-    const tags = Array.isArray(node.data.tags) ? node.data.tags : [];
-    const metadata =
+    const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+    const graphMetadata =
       node.data.metadata && typeof node.data.metadata === 'object'
         ? (node.data.metadata as Record<string, unknown>)
         : {};
+    const { tags, metadata } = resolveProjectTagsAndMetadata(
+      node.data.root,
+      workspaceRoot,
+      graphTags,
+      graphMetadata
+    );
 
     return {
       name: node.name,
@@ -56,4 +64,69 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
     dependencies,
     codeownersByProject,
   };
+}
+
+export function resolveProjectTagsAndMetadata(
+  projectRoot: string,
+  rootPath: string,
+  graphTags: string[] = [],
+  graphMetadata: Record<string, unknown> = {}
+): { tags: string[]; metadata: Record<string, unknown> } {
+  const projectAbsoluteRoot = join(rootPath, projectRoot);
+
+  const projectConfig = readJsonFileSafe(
+    join(projectAbsoluteRoot, 'project.json')
+  );
+  const packageJson = readJsonFileSafe(
+    join(projectAbsoluteRoot, 'package.json')
+  );
+
+  const packageNx = asRecord(packageJson?.nx);
+
+  const packageTags = toStringArray(packageNx?.tags);
+  const packageMetadata = asRecord(packageNx?.metadata) ?? {};
+
+  const projectJsonTags = toStringArray(projectConfig?.tags);
+  const projectJsonMetadata = asRecord(projectConfig?.metadata) ?? {};
+
+  return {
+    tags: uniqueStrings([...packageTags, ...projectJsonTags, ...graphTags]),
+    metadata: {
+      ...packageMetadata,
+      ...projectJsonMetadata,
+      ...graphMetadata,
+    },
+  };
+}
+
+function readJsonFileSafe(filePath: string): Record<string, unknown> | null {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    const raw = readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return asRecord(parsed) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values)];
 }
