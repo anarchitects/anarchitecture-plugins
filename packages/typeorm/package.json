@@ -23,13 +23,6 @@
   },
   "nx": {
     "name": "nx-typeorm",
-    "metadata": {
-      "documentation": true,
-      "ownership": {
-        "team": "@anarchitects/data"
-      }
-    },
-    "tags": ["type:plugin", "domain:typeorm"],
     "plugins": [
       {
         "plugin": "dist/plugins/typeorm.js"
@@ -66,11 +59,7 @@
           "passWithNoTests": false
         }
       }
-    },
-    "tags": [
-      "type:plugin",
-      "domain:typeorm"
-    ]
+    }
   },
   "peerDependencies": {
     "@nx/devkit": "^22.0.0",

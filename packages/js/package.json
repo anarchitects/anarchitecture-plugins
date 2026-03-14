@@ -39,13 +39,6 @@
   },
   "nx": {
     "name": "nx-js",
-    "metadata": {
-      "documentation": true,
-      "ownership": {
-        "team": "@anarchitects/js"
-      }
-    },
-    "tags": ["type:plugin", "domain:js"],
     "targets": {
       "build": {
         "executor": "@nx/js:tsc",
