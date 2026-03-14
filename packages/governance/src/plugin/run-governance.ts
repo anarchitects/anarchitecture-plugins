@@ -1880,10 +1880,14 @@ function renderAiOnboardingCliReport(analysis: AiAnalysisResult): string {
 
 function readChangedFiles(baseRef: string, headRef: string): string[] {
   try {
-    const output = execSync(`git diff --name-only ${baseRef}...${headRef}`, {
-      cwd: workspaceRoot,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
+    const output = execSync(
+      'git',
+      ['diff', '--name-only', `${baseRef}...${headRef}`],
+      {
+        cwd: workspaceRoot,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }
+    )
       .toString()
       .trim();
 
