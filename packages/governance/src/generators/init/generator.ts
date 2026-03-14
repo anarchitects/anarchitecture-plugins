@@ -1,10 +1,4 @@
-import {
-  formatFiles,
-  logger,
-  Tree,
-  updateJson,
-  writeJson,
-} from '@nx/devkit';
+import { formatFiles, logger, Tree, updateJson, writeJson } from '@nx/devkit';
 import { eslintIntegrationGenerator } from '../eslint-integration/generator.js';
 
 interface InitSchema {
@@ -19,7 +13,9 @@ interface RootPackageJson {
 }
 
 interface NxJson {
-  plugins?: Array<string | { plugin: string; options?: Record<string, unknown> }>;
+  plugins?: Array<
+    string | { plugin: string; options?: Record<string, unknown> }
+  >;
 }
 
 const GOVERNANCE_PLUGIN_NAME = '@anarchitects/nx-governance';
@@ -63,6 +59,136 @@ const GOVERNANCE_TARGETS = {
     },
     metadata: {
       description: 'Run governance architecture checks for the workspace.',
+    },
+  },
+  'repo-snapshot': {
+    executor: '@anarchitects/nx-governance:repo-snapshot',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'cli',
+    },
+    metadata: {
+      description:
+        'Persist governance metric snapshots for drift and AI analysis.',
+    },
+  },
+  'repo-drift': {
+    executor: '@anarchitects/nx-governance:repo-drift',
+    options: {
+      output: 'cli',
+    },
+    metadata: {
+      description:
+        'Compare recent governance snapshots and report drift signals.',
+    },
+  },
+  'repo-ai-root-cause': {
+    executor: '@anarchitects/nx-governance:repo-ai-root-cause',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topViolations: 10,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic root-cause payloads for AI interpretation based on governance snapshots.',
+    },
+  },
+  'repo-ai-drift': {
+    executor: '@anarchitects/nx-governance:repo-ai-drift',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+    },
+    metadata: {
+      description:
+        'Prepare deterministic drift interpretation payloads from snapshot deltas and trend signals.',
+    },
+  },
+  'repo-ai-pr-impact': {
+    executor: '@anarchitects/nx-governance:repo-ai-pr-impact',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      baseRef: 'main',
+      headRef: 'HEAD',
+    },
+    metadata: {
+      description:
+        'Prepare deterministic PR architectural impact payloads for AI interpretation.',
+    },
+  },
+  'repo-ai-cognitive-load': {
+    executor: '@anarchitects/nx-governance:repo-ai-cognitive-load',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topProjects: 10,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic cognitive-load analysis payloads from dependency and domain coupling signals.',
+    },
+  },
+  'repo-ai-recommendations': {
+    executor: '@anarchitects/nx-governance:repo-ai-recommendations',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topViolations: 10,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic architecture recommendations from violations, dependencies, and trend signals.',
+    },
+  },
+  'repo-ai-smell-clusters': {
+    executor: '@anarchitects/nx-governance:repo-ai-smell-clusters',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topViolations: 10,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic architecture smell cluster analysis from prioritized violations and snapshot persistence signals.',
+    },
+  },
+  'repo-ai-refactoring-suggestions': {
+    executor: '@anarchitects/nx-governance:repo-ai-refactoring-suggestions',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topViolations: 10,
+      topProjects: 5,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic AI refactoring suggestions from hotspot, fanout, and persistent smell signals.',
+    },
+  },
+  'repo-ai-scorecard': {
+    executor: '@anarchitects/nx-governance:repo-ai-scorecard',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+    },
+    metadata: {
+      description:
+        'Prepare deterministic AI governance scorecards from health, violations, and drift trend signals.',
+    },
+  },
+  'repo-ai-onboarding': {
+    executor: '@anarchitects/nx-governance:repo-ai-onboarding',
+    options: {
+      profile: 'angular-cleanup',
+      output: 'json',
+      topViolations: 10,
+      topProjects: 5,
+    },
+    metadata: {
+      description:
+        'Prepare deterministic AI onboarding briefs from inventory, dependency, and governance hotspot signals.',
     },
   },
 };
@@ -120,7 +246,9 @@ function ensureRootTargets(tree: Tree): void {
       json.nx.targets = {};
     }
 
-    for (const [targetName, targetConfig] of Object.entries(GOVERNANCE_TARGETS)) {
+    for (const [targetName, targetConfig] of Object.entries(
+      GOVERNANCE_TARGETS
+    )) {
       json.nx.targets[targetName] = {
         ...(json.nx.targets[targetName] as Record<string, unknown>),
         ...targetConfig,

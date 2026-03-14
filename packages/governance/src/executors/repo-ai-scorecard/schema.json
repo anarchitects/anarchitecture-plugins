@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI Scorecard",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile used to build deterministic workspace context.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "json"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found in the deterministic assessment."
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "snapshotPath": {
+      "type": "string",
+      "description": "Optional explicit snapshot path. Defaults to latest snapshot in snapshotDir."
+    }
+  },
+  "additionalProperties": false
+}

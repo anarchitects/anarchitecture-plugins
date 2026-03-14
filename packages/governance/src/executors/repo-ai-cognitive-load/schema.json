@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI Cognitive Load",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile used to build deterministic workspace context.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "json"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found in the deterministic assessment."
+    },
+    "project": {
+      "type": "string",
+      "description": "Optional project scope for focused cognitive-load analysis."
+    },
+    "domain": {
+      "type": "string",
+      "description": "Optional domain scope for focused cognitive-load analysis."
+    },
+    "topProjects": {
+      "type": "number",
+      "description": "Number of high-fanout projects to include in output metadata.",
+      "default": 10,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

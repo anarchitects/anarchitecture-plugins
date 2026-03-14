@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI PR Impact",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile used to build deterministic workspace context.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "json"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found in the deterministic assessment."
+    },
+    "baseRef": {
+      "type": "string",
+      "description": "Base git ref used for diff computation.",
+      "default": "main"
+    },
+    "headRef": {
+      "type": "string",
+      "description": "Head git ref used for diff computation.",
+      "default": "HEAD"
+    }
+  },
+  "additionalProperties": false
+}

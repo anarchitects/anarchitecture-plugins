@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI Onboarding",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile used to build deterministic workspace context.",
+      "default": "angular-cleanup"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "json"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found in the deterministic assessment."
+    },
+    "topViolations": {
+      "type": "number",
+      "description": "Maximum number of prioritized violations included in onboarding analysis.",
+      "default": 10,
+      "minimum": 1
+    },
+    "topProjects": {
+      "type": "number",
+      "description": "Maximum number of high-fanout projects included in onboarding findings.",
+      "default": 5,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

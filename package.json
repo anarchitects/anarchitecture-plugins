@@ -99,6 +99,125 @@
         "metadata": {
           "description": "Run governance architecture checks for the workspace."
         }
+      },
+      "repo-snapshot": {
+        "executor": "@anarchitects/nx-governance:repo-snapshot",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Persist governance metric snapshots for drift and AI analysis."
+        }
+      },
+      "repo-drift": {
+        "executor": "@anarchitects/nx-governance:repo-drift",
+        "options": {
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Compare recent governance snapshots and report drift signals."
+        }
+      },
+      "repo-ai-root-cause": {
+        "executor": "@anarchitects/nx-governance:repo-ai-root-cause",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topViolations": 10
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI root-cause payloads from governance snapshots."
+        }
+      },
+      "repo-ai-drift": {
+        "executor": "@anarchitects/nx-governance:repo-ai-drift",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json"
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI drift interpretation payloads from snapshot deltas and trend signals."
+        }
+      },
+      "repo-ai-pr-impact": {
+        "executor": "@anarchitects/nx-governance:repo-ai-pr-impact",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "baseRef": "main",
+          "headRef": "HEAD"
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI PR impact payloads from git diff and workspace dependency signals."
+        }
+      },
+      "repo-ai-cognitive-load": {
+        "executor": "@anarchitects/nx-governance:repo-ai-cognitive-load",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topProjects": 10
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI cognitive-load payloads from dependency fanout and coupling signals."
+        }
+      },
+      "repo-ai-recommendations": {
+        "executor": "@anarchitects/nx-governance:repo-ai-recommendations",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topViolations": 10
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI architecture recommendations from violations, dependencies, and trends."
+        }
+      },
+      "repo-ai-smell-clusters": {
+        "executor": "@anarchitects/nx-governance:repo-ai-smell-clusters",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topViolations": 10
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI smell-cluster analysis from violations and snapshot persistence signals."
+        }
+      },
+      "repo-ai-refactoring-suggestions": {
+        "executor": "@anarchitects/nx-governance:repo-ai-refactoring-suggestions",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topViolations": 10,
+          "topProjects": 5
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI refactoring suggestions from hotspot, fanout, and persistent smell signals."
+        }
+      },
+      "repo-ai-scorecard": {
+        "executor": "@anarchitects/nx-governance:repo-ai-scorecard",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json"
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI governance scorecards from health, violations, and drift trend signals."
+        }
+      },
+      "repo-ai-onboarding": {
+        "executor": "@anarchitects/nx-governance:repo-ai-onboarding",
+        "options": {
+          "profile": "angular-cleanup",
+          "output": "json",
+          "topViolations": 10,
+          "topProjects": 5
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI onboarding briefs from inventory, dependency, and governance hotspot signals."
+        }
       }
     }
   }

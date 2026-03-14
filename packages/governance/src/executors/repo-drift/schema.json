@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Repo Drift",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "cli"
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "baseline": {
+      "type": "string",
+      "description": "Optional baseline snapshot path. Defaults to previous snapshot."
+    },
+    "current": {
+      "type": "string",
+      "description": "Optional current snapshot path. Defaults to latest snapshot."
+    }
+  },
+  "additionalProperties": false
+}
