@@ -11,7 +11,10 @@
         "team": "@anarchitects/qa"
       }
     },
-    "tags": ["type:e2e", "domain:typeorm"],
+    "tags": [
+      "type:e2e",
+      "domain:typeorm"
+    ],
     "implicitDependencies": [
       "nx-typeorm"
     ],

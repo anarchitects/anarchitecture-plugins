@@ -20,7 +20,11 @@ describe('GraphAdapter', () => {
   it('loads and normalizes graph via Nx API', async () => {
     const snapshot = await adapter.readSnapshot();
 
-    expect(snapshot.source.kind).toBe('nx-api');
+    expect(snapshot.source).toBe('nx-graph');
+    expect(typeof snapshot.extractedAt).toBe('string');
+    expect(new Date(snapshot.extractedAt).toISOString()).toBe(
+      snapshot.extractedAt
+    );
     expect(Array.isArray(snapshot.projects)).toBe(true);
     expect(Array.isArray(snapshot.dependencies)).toBe(true);
     expect(snapshot.projects.length).toBeGreaterThan(0);
@@ -53,15 +57,18 @@ describe('GraphAdapter', () => {
         graphJson: fixture.filePath,
       });
 
-      expect(snapshot.source).toEqual({
-        kind: 'json',
-        graphJsonPath: fixture.filePath,
-      });
-      expect(snapshot.projects.map((project) => project.name)).toEqual([
+      expect(snapshot.source).toBe('nx-graph');
+      expect(snapshot.projects.map((project) => project.id)).toEqual([
         'app',
         'lib',
       ]);
-      expect(snapshot.dependencies).toHaveLength(1);
+      expect(snapshot.dependencies).toEqual([
+        {
+          sourceProjectId: 'app',
+          targetProjectId: 'lib',
+          type: 'static',
+        },
+      ]);
     } finally {
       fixture.cleanup();
     }
@@ -76,8 +83,7 @@ describe('GraphAdapter', () => {
             data: {
               root: 'libs/shared',
               projectType: 'library',
-              tags: ['domain:shared'],
-              metadata: { source: 'fixture' },
+              tags: ['domain:shared', 'layer:data-access'],
             },
           },
         },
@@ -92,11 +98,207 @@ describe('GraphAdapter', () => {
 
       expect(snapshot.projects).toEqual([
         {
+          id: 'shared',
           name: 'shared',
           root: 'libs/shared',
           type: 'library',
-          tags: ['domain:shared'],
-          metadata: { source: 'fixture' },
+          tags: ['domain:shared', 'layer:data-access'],
+          domain: 'shared',
+          layer: 'data-access',
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('prefers domain tags over scope tags when both are present', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        app: {
+          data: {
+            root: 'apps/app',
+            projectType: 'app',
+            tags: ['domain:checkout', 'scope:payments', 'layer:feature'],
+          },
+        },
+      },
+      dependencies: {
+        app: [],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects).toEqual([
+        {
+          id: 'app',
+          name: 'app',
+          root: 'apps/app',
+          type: 'application',
+          tags: ['domain:checkout', 'scope:payments', 'layer:feature'],
+          domain: 'checkout',
+          layer: 'feature',
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('uses scope tags as fallback only when workspace scope tags are present', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        payments: {
+          data: {
+            root: 'libs/payments',
+            projectType: 'library',
+            tags: ['scope:payments'],
+          },
+        },
+        shared: {
+          data: {
+            root: 'libs/shared',
+            projectType: 'lib',
+            tags: ['scope:shared'],
+          },
+        },
+      },
+      dependencies: {
+        payments: [{ target: 'shared', type: 'dynamic' }],
+        shared: [],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects).toEqual([
+        {
+          id: 'payments',
+          name: 'payments',
+          root: 'libs/payments',
+          type: 'library',
+          tags: ['scope:payments'],
+          domain: 'payments',
+          layer: undefined,
+        },
+        {
+          id: 'shared',
+          name: 'shared',
+          root: 'libs/shared',
+          type: 'library',
+          tags: ['scope:shared'],
+          domain: 'shared',
+          layer: undefined,
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('does not infer domain from scope when scope conventions are absent', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        app: {
+          data: {
+            root: 'apps/app',
+            projectType: 'application',
+            tags: ['type:app', 'layer:feature'],
+          },
+        },
+      },
+      dependencies: {
+        app: [],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects).toEqual([
+        {
+          id: 'app',
+          name: 'app',
+          root: 'apps/app',
+          type: 'application',
+          tags: ['type:app', 'layer:feature'],
+          domain: undefined,
+          layer: 'feature',
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('skips malformed and unknown-target dependencies and keeps ordering deterministic', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        z: {
+          data: {
+            root: 'libs/z',
+            projectType: 'tool',
+            tags: ['domain:platform', 'layer:util'],
+          },
+        },
+        a: {
+          data: {
+            root: 'apps/a',
+            projectType: 'app',
+            tags: ['domain:a', 'layer:feature'],
+          },
+        },
+        b: {
+          data: {
+            root: 'libs/b',
+            projectType: 'library',
+            tags: ['domain:b', 'layer:data-access'],
+          },
+        },
+      },
+      dependencies: {
+        missing: [{ target: 'a', type: 'static' }],
+        b: [
+          { target: 'z', type: 'dynamic' },
+          { target: 'does-not-exist', type: 'static' },
+          { noTarget: 'a' },
+        ],
+        a: [{ target: 'b', type: 'static' }, 'invalid-shape'],
+        z: [{ target: 'a', type: 'mystery' }],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects.map((project) => project.id)).toEqual([
+        'a',
+        'b',
+        'z',
+      ]);
+      expect(snapshot.projects.map((project) => project.type)).toEqual([
+        'application',
+        'library',
+        'unknown',
+      ]);
+      expect(snapshot.dependencies).toEqual([
+        {
+          sourceProjectId: 'a',
+          targetProjectId: 'b',
+          type: 'static',
+        },
+        {
+          sourceProjectId: 'b',
+          targetProjectId: 'z',
+          type: 'dynamic',
+        },
+        {
+          sourceProjectId: 'z',
+          targetProjectId: 'a',
+          type: 'unknown',
         },
       ]);
     } finally {
@@ -116,15 +318,25 @@ describe('GraphAdapter', () => {
 
   it('summarizes a normalized snapshot deterministically', () => {
     const snapshot: WorkspaceGraphSnapshot = {
-      root: '/repo',
-      source: { kind: 'json', graphJsonPath: '/repo/graph.json' },
+      source: 'nx-graph',
+      extractedAt: '2026-03-17T00:00:00.000Z',
       projects: [
-        { name: 'a', root: 'a', type: 'library', tags: [], metadata: {} },
-        { name: 'b', root: 'b', type: 'library', tags: [], metadata: {} },
+        {
+          id: 'a',
+          name: 'a',
+          type: 'library',
+          tags: [],
+        },
+        {
+          id: 'b',
+          name: 'b',
+          type: 'library',
+          tags: [],
+        },
       ],
       dependencies: [
-        { source: 'a', target: 'b', type: 'static' },
-        { source: 'b', target: 'a', type: 'static' },
+        { sourceProjectId: 'a', targetProjectId: 'b', type: 'static' },
+        { sourceProjectId: 'b', targetProjectId: 'a', type: 'static' },
       ],
     };
 
