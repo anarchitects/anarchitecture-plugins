@@ -46,6 +46,21 @@ describe('nx-governance', () => {
     );
     expect(existsSync(profilePath)).toBe(true);
 
+    execSync('yarn nx workspace-graph --skip-nx-cache > workspace-graph.txt', {
+      cwd: projectDirectory,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NX_DAEMON: 'false',
+      },
+    });
+
+    const workspaceGraphPath = join(projectDirectory, 'workspace-graph.txt');
+    expect(existsSync(workspaceGraphPath)).toBe(true);
+    const workspaceGraph = readFileSync(workspaceGraphPath, 'utf-8');
+    expect(workspaceGraph).toMatch(/Projects:\s+\d+/);
+    expect(workspaceGraph).toMatch(/Dependencies:\s+\d+/);
+
     execSync(
       'yarn nx repo-health --profile=angular-cleanup --output=json > governance-report.json',
       {

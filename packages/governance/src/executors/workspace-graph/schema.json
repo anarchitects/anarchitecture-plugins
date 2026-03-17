@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Workspace Graph",
+  "type": "object",
+  "properties": {
+    "graphJson": {
+      "type": "string",
+      "description": "Optional graph JSON path used when Nx API graph loading fails."
+    }
+  },
+  "additionalProperties": false
+}

@@ -27,6 +27,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
   - [init](#init-generator)
   - [eslint-integration](#eslint-integration-generator)
 - [Executors](#executors)
+  - [workspace-graph](#workspace-graph)
   - [repo-health](#repo-health)
   - [repo-boundaries](#repo-boundaries)
   - [repo-ownership](#repo-ownership)
@@ -83,10 +84,13 @@ nx add @anarchitects/nx-governance
 #    Add to each package.json > nx.tags:
 #    ["type:plugin", "domain:billing", "layer:feature"]
 
-# 3. Run the full workspace health check
+# 3. Print a baseline graph summary (diagnostic foundation command)
+nx workspace-graph
+
+# 4. Run the full workspace health check
 nx repo-health
 
-# 4. Drill into specific concerns
+# 5. Drill into specific concerns
 nx repo-boundaries
 nx repo-ownership
 nx repo-architecture
@@ -209,7 +213,7 @@ nx g @anarchitects/nx-governance:init
 **What it does:**
 
 - Registers `@anarchitects/nx-governance` in `nx.json` plugins.
-- Writes root targets into `package.json > nx.targets` for health checks, snapshot/drift, and deterministic AI analysis workflows.
+- Writes root targets into `package.json > nx.targets` for graph diagnostics, health checks, snapshot/drift, and deterministic AI analysis workflows.
 - Creates `tools/governance/profiles/angular-cleanup.json` with sensible defaults (if it does not already exist).
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
 
@@ -247,6 +251,24 @@ After running this generator, adding or changing domain dependency rules in a pr
 ---
 
 ## Executors
+
+### `workspace-graph`
+
+**Intent:** Provide a minimal, diagnostic view of the workspace graph as a foundation for future governance signal integration.
+
+```bash
+nx workspace-graph
+nx workspace-graph --graphJson=.nx/workspace-data/project-graph.json
+```
+
+**Output:**
+
+- `Projects: X`
+- `Dependencies: Y`
+
+**Use when:** you need a quick graph baseline check or when validating graph ingestion independently from governance scoring/reporting.
+
+---
 
 Base options used by governance and AI executors:
 
@@ -546,14 +568,14 @@ All raw values are bounded to `[0, 1]` before scoring. "Lower is better" metrics
 
 Use the overall health score for prioritization, then make decisions at the metric level.
 
-| Metric | What it measures in practice | Watch signal | First remediation moves |
-| --- | --- | --- | --- |
-| `architectural-entropy` | Density of policy violations relative to dependency volume. | Rising entropy with stable project count usually means boundary discipline is eroding. | Triage top violation clusters, fix highest-fanout offenders first, then add CI gates for recurring rule ids. |
-| `dependency-complexity` | How connected the workspace is compared with its size. | High complexity with frequent cross-domain work indicates large blast radius risk. | Reduce fanout in shared nodes, split overloaded libraries, tighten public APIs. |
-| `domain-integrity` | Fraction of dependencies that break domain constraints. | Any sustained increase usually signals implicit coupling between domains. | Introduce explicit inter-domain contracts, route integrations through APIs, align reviews to domain ownership. |
-| `ownership-coverage` | Portion of projects with explicit ownership metadata or CODEOWNERS coverage. | Coverage below target slows incident response and architecture decisions. | Fill ownership gaps first in hotspot projects, then enforce ownership checks in CI. |
-| `documentation-completeness` | Portion of projects with documented architecture/context metadata. | Low documentation on high-change projects increases onboarding and regression risk. | Prioritize docs for critical and high-fanout projects, add minimum documentation policy for new projects. |
-| `layer-integrity` | Fraction of dependencies violating layer ordering rules. | Repeated layer leaks often precede test brittleness and circular dependency pressure. | Introduce layer-facing interfaces, move implementation details downward, block upward imports in lint and governance checks. |
+| Metric                       | What it measures in practice                                                 | Watch signal                                                                           | First remediation moves                                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `architectural-entropy`      | Density of policy violations relative to dependency volume.                  | Rising entropy with stable project count usually means boundary discipline is eroding. | Triage top violation clusters, fix highest-fanout offenders first, then add CI gates for recurring rule ids.                 |
+| `dependency-complexity`      | How connected the workspace is compared with its size.                       | High complexity with frequent cross-domain work indicates large blast radius risk.     | Reduce fanout in shared nodes, split overloaded libraries, tighten public APIs.                                              |
+| `domain-integrity`           | Fraction of dependencies that break domain constraints.                      | Any sustained increase usually signals implicit coupling between domains.              | Introduce explicit inter-domain contracts, route integrations through APIs, align reviews to domain ownership.               |
+| `ownership-coverage`         | Portion of projects with explicit ownership metadata or CODEOWNERS coverage. | Coverage below target slows incident response and architecture decisions.              | Fill ownership gaps first in hotspot projects, then enforce ownership checks in CI.                                          |
+| `documentation-completeness` | Portion of projects with documented architecture/context metadata.           | Low documentation on high-change projects increases onboarding and regression risk.    | Prioritize docs for critical and high-fanout projects, add minimum documentation policy for new projects.                    |
+| `layer-integrity`            | Fraction of dependencies violating layer ordering rules.                     | Repeated layer leaks often precede test brittleness and circular dependency pressure.  | Introduce layer-facing interfaces, move implementation details downward, block upward imports in lint and governance checks. |
 
 #### Quick threshold guide
 

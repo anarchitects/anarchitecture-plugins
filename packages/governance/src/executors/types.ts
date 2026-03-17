@@ -46,3 +46,7 @@ export interface GovernanceAiOnboardingExecutorOptions
   extends GovernanceAiExecutorOptions {
   topProjects?: number;
 }
+
+export interface WorkspaceGraphExecutorOptions {
+  graphJson?: string;
+}
