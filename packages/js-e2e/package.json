@@ -11,7 +11,10 @@
         "team": "@anarchitects/qa"
       }
     },
-    "tags": ["type:e2e", "domain:js"],
+    "tags": [
+      "type:e2e",
+      "domain:js"
+    ],
     "implicitDependencies": [
       "nx-js"
     ],

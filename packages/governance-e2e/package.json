@@ -11,7 +11,10 @@
         "team": "@anarchitects/qa"
       }
     },
-    "tags": ["type:e2e", "domain:governance"],
+    "tags": [
+      "type:e2e",
+      "domain:governance"
+    ],
     "implicitDependencies": [
       "nx-governance"
     ],
