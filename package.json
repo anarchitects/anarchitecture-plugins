@@ -125,6 +125,15 @@
           "description": "Print workspace project/dependency counts from the Nx graph for diagnostic baselining."
         }
       },
+      "workspace-conformance": {
+        "executor": "@anarchitects/nx-governance:workspace-conformance",
+        "options": {
+          "conformanceJson": "dist/conformance-result.json"
+        },
+        "metadata": {
+          "description": "Print Nx Conformance finding/error/warning counts from conformance JSON output."
+        }
+      },
       "repo-ai-root-cause": {
         "executor": "@anarchitects/nx-governance:repo-ai-root-cause",
         "options": {
