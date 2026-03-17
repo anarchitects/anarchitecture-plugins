@@ -270,6 +270,24 @@ nx workspace-graph --graphJson=.nx/workspace-data/project-graph.json
 
 ---
 
+### `workspace-conformance`
+
+**Intent:** Provide a minimal, diagnostic summary of Nx Conformance findings from JSON output.
+
+```bash
+nx workspace-conformance --conformanceJson=dist/conformance-result.json
+```
+
+**Output:**
+
+- `Findings: X`
+- `Errors: Y`
+- `Warnings: Z`
+
+**Use when:** you need to validate conformance ingestion independently from governance scoring/reporting.
+
+---
+
 Base options used by governance and AI executors:
 
 | Option            | Type                | Default             | Description                                                                                                 |

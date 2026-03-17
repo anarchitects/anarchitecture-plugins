@@ -50,3 +50,7 @@ export interface GovernanceAiOnboardingExecutorOptions
 export interface WorkspaceGraphExecutorOptions {
   graphJson?: string;
 }
+
+export interface WorkspaceConformanceExecutorOptions {
+  conformanceJson: string;
+}

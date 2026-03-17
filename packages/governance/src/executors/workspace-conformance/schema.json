@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Workspace Conformance",
+  "type": "object",
+  "properties": {
+    "conformanceJson": {
+      "type": "string",
+      "description": "Path to Nx Conformance JSON output."
+    }
+  },
+  "required": ["conformanceJson"],
+  "additionalProperties": false
+}
