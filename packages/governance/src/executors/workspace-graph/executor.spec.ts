@@ -18,13 +18,15 @@ describe('workspace-graph executor', () => {
     const info = jest.fn();
     const error = jest.fn();
     const readSnapshot = jest.fn().mockResolvedValue({
-      root: '/repo',
-      source: { kind: 'nx-api' as const },
+      source: 'nx-graph' as const,
+      extractedAt: '2026-03-17T00:00:00.000Z',
       projects: [
-        { name: 'a', root: 'a', type: 'library', tags: [], metadata: {} },
-        { name: 'b', root: 'b', type: 'library', tags: [], metadata: {} },
+        { id: 'a', name: 'a', type: 'library', tags: [] },
+        { id: 'b', name: 'b', type: 'library', tags: [] },
       ],
-      dependencies: [{ source: 'a', target: 'b', type: 'static' }],
+      dependencies: [
+        { sourceProjectId: 'a', targetProjectId: 'b', type: 'static' },
+      ],
     });
     const summarize = jest
       .fn()

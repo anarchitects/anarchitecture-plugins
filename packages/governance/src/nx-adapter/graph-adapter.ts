@@ -5,31 +5,30 @@ import path from 'node:path';
 const UNKNOWN_PROJECT_TYPE = 'unknown';
 const UNKNOWN_DEPENDENCY_TYPE = 'unknown';
 
-export interface WorkspaceGraphProject {
+export interface GovernedProject {
+  id: string;
   name: string;
-  root: string;
-  type: string;
+  root?: string;
+  type: 'application' | 'library' | 'unknown';
   tags: string[];
-  metadata: Record<string, unknown>;
-}
-
-export interface WorkspaceGraphDependency {
-  source: string;
-  target: string;
-  type: string;
-  sourceFile?: string;
-}
-
-export interface WorkspaceGraphSourceMetadata {
-  kind: 'nx-api' | 'json';
-  graphJsonPath?: string;
+  domain?: string;
+  layer?: string;
+  workspaceId?: string;
 }
 
 export interface WorkspaceGraphSnapshot {
-  root: string;
-  source: WorkspaceGraphSourceMetadata;
-  projects: WorkspaceGraphProject[];
-  dependencies: WorkspaceGraphDependency[];
+  workspaceId?: string;
+  projects: GovernedProject[];
+  dependencies: GovernedDependency[];
+  extractedAt: string;
+  source: 'nx-graph';
+}
+
+export interface GovernedDependency {
+  sourceProjectId: string;
+  targetProjectId: string;
+  type: 'static' | 'dynamic' | 'implicit' | 'unknown';
+  workspaceId?: string;
 }
 
 export interface GraphSummary {
@@ -47,9 +46,7 @@ export class GraphAdapter {
   ): Promise<WorkspaceGraphSnapshot> {
     try {
       const graph = await createProjectGraphAsync();
-      return normalizeProjectGraph(graph, {
-        kind: 'nx-api',
-      });
+      return normalizeProjectGraph(graph);
     } catch {
       if (!options.graphJson) {
         throw new Error(
@@ -77,10 +74,7 @@ export class GraphAdapter {
     }
 
     try {
-      return normalizeProjectGraph(parsed, {
-        kind: 'json',
-        graphJsonPath,
-      });
+      return normalizeProjectGraph(parsed);
     } catch {
       throw new Error(
         `Workspace graph JSON at ${graphJsonPath} does not contain a valid graph shape.`
@@ -116,10 +110,7 @@ export function summarizeWorkspaceGraph(
   return defaultGraphAdapter.summarize(snapshot);
 }
 
-function normalizeProjectGraph(
-  rawGraph: unknown,
-  source: WorkspaceGraphSourceMetadata
-): WorkspaceGraphSnapshot {
+function normalizeProjectGraph(rawGraph: unknown): WorkspaceGraphSnapshot {
   const record = asRecord(rawGraph);
   if (!record) {
     throw new Error('Invalid project graph shape.');
@@ -133,12 +124,22 @@ function normalizeProjectGraph(
     throw new Error('Invalid project graph shape.');
   }
 
-  const projects = Object.entries(nodes)
+  const mappedProjects = Object.entries(nodes)
     .map(([projectName, node]) => normalizeProjectNode(projectName, node))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.id.localeCompare(b.id) || a.name.localeCompare(b.name));
 
-  const projectNames = new Set(projects.map((project) => project.name));
-  const dependencies: WorkspaceGraphDependency[] = [];
+  const scopeFallbackEnabled = mappedProjects.some((project) =>
+    hasTagWithPrefix(project.tags, 'scope')
+  );
+
+  const projects = mappedProjects.map((project) => ({
+    ...project,
+    domain: inferProjectDomain(project.tags, scopeFallbackEnabled),
+    layer: inferProjectLayer(project.tags),
+  }));
+
+  const projectNames = new Set(projects.map((project) => project.id));
+  const dependencies: GovernedDependency[] = [];
 
   for (const [sourceProjectName, edges] of Object.entries(
     dependenciesBySource
@@ -149,7 +150,7 @@ function normalizeProjectGraph(
 
     for (const edge of edges) {
       const normalized = normalizeDependency(edge, sourceProjectName);
-      if (!normalized || !projectNames.has(normalized.target)) {
+      if (!normalized || !projectNames.has(normalized.targetProjectId)) {
         continue;
       }
 
@@ -159,15 +160,14 @@ function normalizeProjectGraph(
 
   dependencies.sort(
     (a, b) =>
-      a.source.localeCompare(b.source) ||
-      a.target.localeCompare(b.target) ||
-      a.type.localeCompare(b.type) ||
-      (a.sourceFile ?? '').localeCompare(b.sourceFile ?? '')
+      a.sourceProjectId.localeCompare(b.sourceProjectId) ||
+      a.targetProjectId.localeCompare(b.targetProjectId) ||
+      a.type.localeCompare(b.type)
   );
 
   return {
-    root: workspaceRoot,
-    source,
+    extractedAt: new Date().toISOString(),
+    source: 'nx-graph',
     projects,
     dependencies,
   };
@@ -183,24 +183,26 @@ function unwrapGraphEnvelope(
 function normalizeProjectNode(
   projectName: string,
   rawNode: unknown
-): WorkspaceGraphProject {
+): Omit<GovernedProject, 'domain' | 'layer'> {
   const node = asRecord(rawNode) ?? {};
   const data = asRecord(node.data) ?? {};
+  const root = asString(data.root);
 
   return {
+    id: projectName,
     name: asString(node.name) ?? projectName,
-    root: asString(data.root) ?? '',
-    type:
-      asString(data.projectType) ?? asString(node.type) ?? UNKNOWN_PROJECT_TYPE,
+    root,
+    type: normalizeProjectType(
+      asString(data.projectType) ?? asString(node.type) ?? UNKNOWN_PROJECT_TYPE
+    ),
     tags: toStringArray(data.tags),
-    metadata: asRecord(data.metadata) ?? {},
   };
 }
 
 function normalizeDependency(
   rawDependency: unknown,
   sourceProjectName: string
-): WorkspaceGraphDependency | null {
+): GovernedDependency | null {
   const dependency = asRecord(rawDependency);
   if (!dependency) {
     return null;
@@ -212,11 +214,70 @@ function normalizeDependency(
   }
 
   return {
-    source: sourceProjectName,
-    target,
-    type: asString(dependency.type) ?? UNKNOWN_DEPENDENCY_TYPE,
-    sourceFile: asString(dependency.sourceFile),
+    sourceProjectId: sourceProjectName,
+    targetProjectId: target,
+    type: normalizeDependencyType(
+      asString(dependency.type) ?? UNKNOWN_DEPENDENCY_TYPE
+    ),
   };
+}
+
+function inferProjectDomain(
+  tags: string[],
+  scopeFallbackEnabled: boolean
+): string | undefined {
+  const domainTag = readTagValue(tags, 'domain');
+  if (domainTag) {
+    return domainTag;
+  }
+
+  if (!scopeFallbackEnabled) {
+    return undefined;
+  }
+
+  return readTagValue(tags, 'scope');
+}
+
+function inferProjectLayer(tags: string[]): string | undefined {
+  return readTagValue(tags, 'layer');
+}
+
+function hasTagWithPrefix(tags: string[], prefix: string): boolean {
+  return tags.some((tag) => tag.startsWith(`${prefix}:`));
+}
+
+function readTagValue(tags: string[], prefix: string): string | undefined {
+  const matchingTag = tags.find((tag) => tag.startsWith(`${prefix}:`));
+  if (!matchingTag) {
+    return undefined;
+  }
+
+  const value = matchingTag.slice(prefix.length + 1);
+  return value ? value : undefined;
+}
+
+function normalizeProjectType(
+  type: string
+): 'application' | 'library' | 'unknown' {
+  if (type === 'application' || type === 'app') {
+    return 'application';
+  }
+
+  if (type === 'library' || type === 'lib') {
+    return 'library';
+  }
+
+  return 'unknown';
+}
+
+function normalizeDependencyType(
+  type: string
+): 'static' | 'dynamic' | 'implicit' | 'unknown' {
+  if (type === 'static' || type === 'dynamic' || type === 'implicit') {
+    return type;
+  }
+
+  return 'unknown';
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
