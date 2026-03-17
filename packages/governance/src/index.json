@@ -59,6 +59,10 @@
     "repo-ai-onboarding": {
       "implementation": "./executors/repo-ai-onboarding/executor",
       "schema": "./executors/repo-ai-onboarding/schema.json"
+    },
+    "workspace-graph": {
+      "implementation": "./executors/workspace-graph/executor",
+      "schema": "./executors/workspace-graph/schema.json"
     }
   },
   "generators": {

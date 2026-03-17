@@ -119,6 +119,12 @@
           "description": "Compare recent governance snapshots and report drift signals."
         }
       },
+      "workspace-graph": {
+        "executor": "@anarchitects/nx-governance:workspace-graph",
+        "metadata": {
+          "description": "Print workspace project/dependency counts from the Nx graph for diagnostic baselining."
+        }
+      },
       "repo-ai-root-cause": {
         "executor": "@anarchitects/nx-governance:repo-ai-root-cause",
         "options": {
