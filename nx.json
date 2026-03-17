@@ -56,6 +56,7 @@
       }
     },
     "conventionalCommits": {
+      "useCommitScope": false,
       "types": {
         "feat": { "semverBump": "minor" },
         "fix": { "semverBump": "patch" },
