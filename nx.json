@@ -56,25 +56,16 @@
       }
     },
     "conventionalCommits": {
-      "types": {
-        "init": {
-          "semverBump": "none",
-          "message": "init: initial commit"
-        },
-        "docs": {
-          "semverBump": "none"
-        },
-        "chore": {
-          "semverBump": "none"
-        },
-        "style": {
-          "semverBump": "none"
-        },
-        "refactor": {
-          "semverBump": "patch"
-        },
-        "ci": {
-          "semverBump": "none"
+      "conventionalCommits": {
+        "types": {
+          "feat": { "semverBump": "minor" },
+          "fix": { "semverBump": "patch" },
+          "init": { "semverBump": "none", "message": "init: initial commit" },
+          "docs": { "semverBump": "none" },
+          "chore": { "semverBump": "none" },
+          "style": { "semverBump": "none" },
+          "refactor": { "semverBump": "patch" },
+          "ci": { "semverBump": "none" }
         }
       }
     }
