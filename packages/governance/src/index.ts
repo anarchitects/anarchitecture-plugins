@@ -28,3 +28,4 @@ export * from './ai-analysis/index.js';
 export * from './ai-handoff/index.js';
 export * from './nx-adapter/graph-adapter.js';
 export * from './conformance-adapter/conformance-adapter.js';
+export * from './signal-engine/index.js';
