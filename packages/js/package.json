@@ -37,6 +37,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "peerDependencies": {
+    "nx": ">=21.6.4 <23"
+  },
   "nx": {
     "name": "nx-js",
     "targets": {
@@ -78,8 +81,8 @@
     }
   },
   "dependencies": {
-    "@nx/devkit": "21.6.4",
-    "@nx/js": "21.6.4",
+    "@nx/devkit": ">=21.6.4 <23",
+    "@nx/js": ">=21.6.4 <23",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2"
   }
