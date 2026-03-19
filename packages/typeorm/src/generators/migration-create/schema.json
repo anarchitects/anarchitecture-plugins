@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Migration Create Generator",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Name of the existing Nx project to scaffold a migration for."
+    },
+    "name": {
+      "type": "string",
+      "description": "Migration name. Spaces are normalized to hyphens."
+    },
+    "directory": {
+      "type": "string",
+      "description": "Optional directory relative to the project root where the migration should be created."
+    },
+    "outputJs": {
+      "type": "boolean",
+      "description": "Generate JavaScript migration output."
+    },
+    "esm": {
+      "type": "boolean",
+      "description": "Generate ESM migration output."
+    },
+    "timestamp": {
+      "type": "number",
+      "description": "Custom migration timestamp."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to TypeORM."
+    }
+  },
+  "required": ["project", "name"],
+  "additionalProperties": false
+}

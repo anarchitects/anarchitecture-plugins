@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Entity Create Generator",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Name of the existing Nx project to scaffold an entity for."
+    },
+    "name": {
+      "type": "string",
+      "description": "Entity name. Spaces are normalized to hyphens."
+    },
+    "directory": {
+      "type": "string",
+      "description": "Optional directory relative to the project root where the entity should be created."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to TypeORM."
+    }
+  },
+  "required": ["project", "name"],
+  "additionalProperties": false
+}

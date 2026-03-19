@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Subscriber Create Generator",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Name of the existing Nx project to scaffold a subscriber for."
+    },
+    "name": {
+      "type": "string",
+      "description": "Subscriber name. Spaces are normalized to hyphens."
+    },
+    "directory": {
+      "type": "string",
+      "description": "Optional directory relative to the project root where the subscriber should be created."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to TypeORM."
+    }
+  },
+  "required": ["project", "name"],
+  "additionalProperties": false
+}

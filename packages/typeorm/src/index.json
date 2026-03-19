@@ -73,6 +73,30 @@
     "bootstrap": {
       "implementation": "./generators/bootstrap/generator",
       "schema": "./generators/bootstrap/schema.json"
+    },
+    "migration-create": {
+      "implementation": "./generators/migration-create/generator",
+      "schema": "./generators/migration-create/schema.json"
+    },
+    "migration": {
+      "implementation": "./generators/migration-create/generator",
+      "schema": "./generators/migration-create/schema.json"
+    },
+    "entity-create": {
+      "implementation": "./generators/entity-create/generator",
+      "schema": "./generators/entity-create/schema.json"
+    },
+    "entity": {
+      "implementation": "./generators/entity-create/generator",
+      "schema": "./generators/entity-create/schema.json"
+    },
+    "subscriber-create": {
+      "implementation": "./generators/subscriber-create/generator",
+      "schema": "./generators/subscriber-create/schema.json"
+    },
+    "subscriber": {
+      "implementation": "./generators/subscriber-create/generator",
+      "schema": "./generators/subscriber-create/schema.json"
     }
   }
 }
