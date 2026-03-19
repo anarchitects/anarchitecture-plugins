@@ -6,6 +6,7 @@ It provides:
 - `nx add` / `init` setup for minimal TypeORM dependencies.
 - `bootstrap` scaffolding for app runtime datasource wiring and library
   infrastructure-persistence templates.
+- name-first scaffold generators for TypeORM file creation workflows.
 - inferred database targets via `createNodesV2`.
 - thin executors that wrap TypeORM CLI workflows.
 
@@ -79,6 +80,51 @@ Generated app datasources support two connection modes:
 The generated helper rejects mixed mode (setting `DATABASE_URL` together with
 `TYPEORM_*` connection variables) and throws clear validation errors when
 required variables are missing.
+
+### Scaffolding generators
+
+These are convenience wrappers around existing executors. They are invoked
+manually via `nx g` and are not inferred targets.
+
+`migration-create` (alias: `migration`)
+
+```bash
+nx g @anarchitects/nx-typeorm:migration-create --project=api --name="add users"
+nx g @anarchitects/nx-typeorm:migration --project=api --name="add users"
+```
+
+- required: `--project`, `--name`
+- optional: `--directory` (relative to project root), `--outputJs`, `--esm`,
+  `--timestamp`, `--args`
+- default output directory:
+  - app: `tools/typeorm/migrations`
+  - lib: `src/infrastructure-persistence/migrations`
+
+`entity-create` (alias: `entity`)
+
+```bash
+nx g @anarchitects/nx-typeorm:entity-create --project=api --name="user profile"
+nx g @anarchitects/nx-typeorm:entity --project=api --name="user profile"
+```
+
+- required: `--project`, `--name`
+- optional: `--directory` (relative to project root), `--args`
+- default output directory:
+  - app: `src/entities`
+  - lib: `src/infrastructure-persistence/entities`
+
+`subscriber-create` (alias: `subscriber`)
+
+```bash
+nx g @anarchitects/nx-typeorm:subscriber-create --project=api --name="user subscriber"
+nx g @anarchitects/nx-typeorm:subscriber --project=api --name="user subscriber"
+```
+
+- required: `--project`, `--name`
+- optional: `--directory` (relative to project root), `--args`
+- default output directory:
+  - app: `src/subscribers`
+  - lib: `src/infrastructure-persistence/subscribers`
 
 ## Inferred Targets
 
