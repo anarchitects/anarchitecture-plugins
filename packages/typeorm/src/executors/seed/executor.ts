@@ -3,15 +3,8 @@ import { isAbsolute, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ExecutorContext } from '@nx/devkit';
 import { logger } from '@nx/devkit';
-import { resolveProjectRoot, type BaseExecutorOptions } from '../shared.js';
-
-export interface SeedExecutorOptions
-  extends Pick<BaseExecutorOptions, 'projectRoot'> {
-  file: string;
-  export?: string;
-  tsconfig?: string;
-  args?: unknown[];
-}
+import { resolveProjectRoot } from '../../utils/shared.js';
+import type { SeedExecutorOptions } from './schema.js';
 
 export default async function seedDatabase(
   options: SeedExecutorOptions,

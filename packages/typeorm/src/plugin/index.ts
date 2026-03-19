@@ -11,7 +11,7 @@ import {
   defaultMigrationsDirectory,
   schemaFilePath,
   schemaNameFrom,
-} from '../executors/shared.js';
+} from '../utils/shared.js';
 
 const FILE_PATTERN =
   '**/{project.json,app.module.ts,data-source.ts,data-source.js,typeorm.datasource.ts,typeorm.datasource.js,datasource.migrations.ts,datasource.migrations.js,schema.ts}';
@@ -214,10 +214,42 @@ function createTargets(
         dataSource: facts.dataSource,
       },
     };
+    targets['db:migrate:show'] = {
+      executor: '@anarchitects/nx-typeorm:migration-show',
+      options: {
+        projectRoot,
+        dataSource: facts.dataSource,
+      },
+    };
+    targets['db:schema:sync'] = {
+      executor: '@anarchitects/nx-typeorm:schema-sync',
+      options: {
+        projectRoot,
+        dataSource: facts.dataSource,
+      },
+    };
+    targets['db:schema:log'] = {
+      executor: '@anarchitects/nx-typeorm:schema-log',
+      options: {
+        projectRoot,
+        dataSource: facts.dataSource,
+      },
+    };
+    targets['db:cache:clear'] = {
+      executor: '@anarchitects/nx-typeorm:cache-clear',
+      options: {
+        projectRoot,
+        dataSource: facts.dataSource,
+      },
+    };
 
     targets['typeorm:generate'] = cloneTarget(targets['db:migrate:generate']);
     targets['typeorm:run'] = cloneTarget(targets['db:migrate:run']);
     targets['typeorm:revert'] = cloneTarget(targets['db:migrate:revert']);
+    targets['typeorm:show'] = cloneTarget(targets['db:migrate:show']);
+    targets['typeorm:schema:sync'] = cloneTarget(targets['db:schema:sync']);
+    targets['typeorm:schema:log'] = cloneTarget(targets['db:schema:log']);
+    targets['typeorm:cache:clear'] = cloneTarget(targets['db:cache:clear']);
   }
 
   targets['db:ensure-schema'] = {

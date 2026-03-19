@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Version Executor",
+  "type": "object",
+  "properties": {
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  }
+}

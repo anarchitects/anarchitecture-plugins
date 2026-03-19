@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ExecutorContext } from '@nx/devkit';
-import { resolveTypeormCliRunner } from './shared.js';
+import { resolveTypeormCliRunner } from '../utils/shared.js';
 
 describe('resolveTypeormCliRunner', () => {
   let workspaceRoot: string;

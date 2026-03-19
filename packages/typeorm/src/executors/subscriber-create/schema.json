@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Subscriber Create Executor",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path of the subscriber file."
+    },
+    "projectRoot": {
+      "type": "string",
+      "description": "Project root when it cannot be inferred from the Nx project configuration."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  },
+  "required": ["path"]
+}

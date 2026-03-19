@@ -45,9 +45,19 @@ export class AppModule {}
     expect(api?.targets?.['db:migrate:generate']).toBeDefined();
     expect(api?.targets?.['db:migrate:run']).toBeDefined();
     expect(api?.targets?.['db:migrate:revert']).toBeDefined();
+    expect(api?.targets?.['db:migrate:show']).toBeDefined();
+    expect(api?.targets?.['db:schema:sync']).toBeDefined();
+    expect(api?.targets?.['db:schema:log']).toBeDefined();
+    expect(api?.targets?.['db:cache:clear']).toBeDefined();
     expect(api?.targets?.['db:seed']).toBeDefined();
     expect(api?.targets?.['typeorm:generate']).toBeDefined();
     expect(api?.targets?.['typeorm:run']).toBeDefined();
+    expect(api?.targets?.['typeorm:show']).toBeDefined();
+    expect(api?.targets?.['typeorm:schema:sync']).toBeDefined();
+    expect(api?.targets?.['typeorm:schema:log']).toBeDefined();
+    expect(api?.targets?.['typeorm:cache:clear']).toBeDefined();
+    expect(api?.targets?.['db:query']).toBeUndefined();
+    expect(api?.targets?.['db:schema:drop']).toBeUndefined();
   });
 
   it('supports legacy runtime datasource names', async () => {

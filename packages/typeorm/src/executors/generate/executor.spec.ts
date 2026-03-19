@@ -89,6 +89,52 @@ describe('generate executor', () => {
     expect(options).toMatchObject({ cwd: tempDir });
   });
 
+  it('defaults to tools/typeorm/datasource.migrations.ts when dataSource is omitted', async () => {
+    const projectRoot = join(tempDir, 'apps/api');
+    mkdirSync(join(projectRoot, 'tools/typeorm'), { recursive: true });
+    mkdirSync(join(projectRoot, 'src'), { recursive: true });
+    writeFileSync(
+      join(projectRoot, 'tools/typeorm/datasource.migrations.ts'),
+      'export default {};\n'
+    );
+    writeFileSync(
+      join(projectRoot, 'src/data-source.ts'),
+      'export default {};\n'
+    );
+
+    await runGenerate(
+      {
+        name: 'Use Default DataSource',
+        outputPath: join(tempDir, 'migrations'),
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args).toContain('apps/api/tools/typeorm/datasource.migrations.ts');
+  });
+
+  it('honors explicit dataSource override over inferred defaults', async () => {
+    const projectRoot = join(tempDir, 'apps/api');
+    mkdirSync(join(projectRoot, 'tools/typeorm'), { recursive: true });
+    writeFileSync(
+      join(projectRoot, 'tools/typeorm/datasource.migrations.ts'),
+      'export default {};\n'
+    );
+
+    await runGenerate(
+      {
+        name: 'Use Override DataSource',
+        dataSource: 'src/override.datasource.ts',
+        outputPath: join(tempDir, 'migrations'),
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args).toContain('apps/api/src/override.datasource.ts');
+  });
+
   it('throws when migration name is missing', async () => {
     await expect(
       runGenerate(

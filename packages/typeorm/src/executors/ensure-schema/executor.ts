@@ -8,14 +8,8 @@ import {
   ensureProjectRoot,
   schemaFilePath,
   schemaNameFrom,
-  type BaseExecutorOptions,
-} from '../shared.js';
-
-export interface EnsureSchemaExecutorOptions
-  extends Pick<BaseExecutorOptions, 'projectRoot' | 'dataSource'> {
-  schema?: string;
-  tsconfig?: string;
-}
+} from '../../utils/shared.js';
+import type { EnsureSchemaExecutorOptions } from './schema.js';
 
 export default async function ensureSchema(
   options: EnsureSchemaExecutorOptions,

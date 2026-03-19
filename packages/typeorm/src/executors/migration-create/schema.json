@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Migration Create Executor",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path for the migration file."
+    },
+    "outputJs": {
+      "type": "boolean",
+      "description": "Generate JavaScript migration output."
+    },
+    "esm": {
+      "type": "boolean",
+      "description": "Generate ESM migration output."
+    },
+    "timestamp": {
+      "type": "number",
+      "description": "Custom migration timestamp."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  },
+  "required": ["path"]
+}

@@ -19,6 +19,50 @@
     "seed": {
       "implementation": "./executors/seed/executor",
       "schema": "./executors/seed/schema.json"
+    },
+    "migration-create": {
+      "implementation": "./executors/migration-create/executor",
+      "schema": "./executors/migration-create/schema.json"
+    },
+    "migration-show": {
+      "implementation": "./executors/migration-show/executor",
+      "schema": "./executors/migration-show/schema.json"
+    },
+    "schema-sync": {
+      "implementation": "./executors/schema-sync/executor",
+      "schema": "./executors/schema-sync/schema.json"
+    },
+    "schema-log": {
+      "implementation": "./executors/schema-log/executor",
+      "schema": "./executors/schema-log/schema.json"
+    },
+    "schema-drop": {
+      "implementation": "./executors/schema-drop/executor",
+      "schema": "./executors/schema-drop/schema.json"
+    },
+    "query": {
+      "implementation": "./executors/query/executor",
+      "schema": "./executors/query/schema.json"
+    },
+    "cache-clear": {
+      "implementation": "./executors/cache-clear/executor",
+      "schema": "./executors/cache-clear/schema.json"
+    },
+    "entity-create": {
+      "implementation": "./executors/entity-create/executor",
+      "schema": "./executors/entity-create/schema.json"
+    },
+    "subscriber-create": {
+      "implementation": "./executors/subscriber-create/executor",
+      "schema": "./executors/subscriber-create/schema.json"
+    },
+    "version": {
+      "implementation": "./executors/version/executor",
+      "schema": "./executors/version/schema.json"
+    },
+    "init": {
+      "implementation": "./executors/init/executor",
+      "schema": "./executors/init/schema.json"
     }
   },
   "generators": {
