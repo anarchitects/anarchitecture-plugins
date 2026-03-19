@@ -69,7 +69,7 @@ describe('secondaryEntryPointGenerator', () => {
     assertNoPackageJsonMutation(tree);
   });
 
-  it.each(['@nx/js:swc', '@nx/rollup:rollup'])(
+  it.each(['@nx/js:swc', '@nx/rollup:rollup', '@nx/esbuild:esbuild'])(
     'should configure additional entry points for the %s executor',
     async (executor) => {
       updateBuildExecutor(tree, executor);
@@ -146,6 +146,105 @@ export default defineConfig({
     expect(
       projectConfig.targets?.build?.options?.additionalEntryPoints
     ).toContain('packages/my-lib/src/data/access/index.ts');
+  });
+
+  it('should support rollup with inferred targets and no explicit build target', async () => {
+    // Create a new project with rollup config but no explicit build target
+    addProjectConfiguration(tree, 'rollup-lib', {
+      root: 'packages/rollup-lib',
+      sourceRoot: 'packages/rollup-lib/src',
+      projectType: 'library',
+      targets: {}, // Empty targets - relies on inference
+    });
+
+    tree.write(
+      'packages/rollup-lib/package.json',
+      JSON.stringify(
+        {
+          name: '@scope/rollup-lib',
+          exports: { '.': { types: './dist/index.d.ts' } },
+        },
+        null,
+        2
+      )
+    );
+
+    tree.write(
+      'packages/rollup-lib/src/index.ts',
+      `export const value = 'primary';\n`
+    );
+
+    tree.write('packages/rollup-lib/rollup.config.js', 'export default {};');
+
+    await secondaryEntryPointGenerator(tree, {
+      project: 'rollup-lib',
+      name: 'feature',
+      skipFormat: true,
+    });
+
+    expect(tree.exists('packages/rollup-lib/src/feature/index.ts')).toBe(true);
+    const projectConfig = readProjectConfiguration(tree, 'rollup-lib');
+    expect(
+      projectConfig.targets?.build?.options?.additionalEntryPoints
+    ).toContain('packages/rollup-lib/src/feature/index.ts');
+    expect(projectConfig.targets?.build?.options?.generateExportsField).toBe(
+      true
+    );
+  });
+
+  it('should support vite with inferred targets and no explicit build target', async () => {
+    // Create a new project with vite config but no explicit build target
+    addProjectConfiguration(tree, 'vite-lib', {
+      root: 'packages/vite-lib',
+      sourceRoot: 'packages/vite-lib/src',
+      projectType: 'library',
+      targets: {}, // Empty targets - relies on inference
+    });
+
+    tree.write(
+      'packages/vite-lib/package.json',
+      JSON.stringify(
+        {
+          name: '@scope/vite-lib',
+          exports: { '.': { types: './dist/index.d.ts' } },
+        },
+        null,
+        2
+      )
+    );
+
+    tree.write(
+      'packages/vite-lib/src/index.ts',
+      `export const value = 'primary';\n`
+    );
+
+    tree.write(
+      'packages/vite-lib/vite.config.ts',
+      `import { defineConfig } from 'vite';
+export default defineConfig({
+  build: {
+    lib: {
+      entry: 'src/index.ts',
+    },
+  },
+});
+`
+    );
+
+    await secondaryEntryPointGenerator(tree, {
+      project: 'vite-lib',
+      name: 'feature',
+      skipFormat: true,
+    });
+
+    expect(tree.exists('packages/vite-lib/src/feature/index.ts')).toBe(true);
+
+    const viteConfig = tree
+      .read('packages/vite-lib/vite.config.ts')
+      ?.toString('utf-8');
+    expect(viteConfig).toMatch(
+      /['"]feature\/index['"]:\s*['"]src\/feature\/index\.ts['"]/
+    );
   });
 });
 

@@ -124,7 +124,44 @@ function updateBuildTargetOptions(tree: Tree, options: NormalizedOptions) {
   const projectConfiguration = options.projectConfiguration;
   const buildTarget = projectConfiguration.targets?.[options.buildTargetName];
 
+  // Handle inferred targets: if no explicit target, try inferred executors
   if (!buildTarget) {
+    // Check if rollup or vite could be inferred (they don't create explicit targets)
+    if (isRollupProject(tree, options)) {
+      // For rollup with inferred targets, we still need to update the config
+      // Create a synthetic target config for rollup
+      const syntheticTarget: TargetConfiguration = {
+        executor: '@nx/rollup:rollup',
+      };
+      const updated = configureAdditionalEntryPoints(
+        projectConfiguration,
+        syntheticTarget,
+        options
+      );
+      if (updated) {
+        // Ensure targets object exists
+        projectConfiguration.targets ??= {};
+        projectConfiguration.targets[options.buildTargetName] = {
+          ...projectConfiguration.targets[options.buildTargetName],
+          options: {
+            ...syntheticTarget.options,
+          },
+        };
+        updateProjectConfiguration(
+          tree,
+          options.projectName,
+          projectConfiguration
+        );
+      }
+      return;
+    }
+
+    if (isViteProject(tree, options)) {
+      // For vite, just update the config file
+      updateViteConfig(tree, options);
+      return;
+    }
+
     throw new Error(
       `Project "${options.projectName}" does not define a "${options.buildTargetName}" target.`
     );
@@ -164,10 +201,31 @@ const GENERATE_EXPORTS_EXECUTORS = new Set<string>([
   '@nx/js:tsc',
   '@nx/js:swc',
   '@nx/rollup:rollup',
+  '@nx/esbuild:esbuild',
 ]);
 
 function isViteExecutor(executor: string): boolean {
   return executor === '@nx/vite:build';
+}
+
+function isRollupProject(tree: Tree, options: NormalizedOptions): boolean {
+  // Check for rollup.config.* files to detect rollup projects
+  const rollupConfigs = [
+    'rollup.config.js',
+    'rollup.config.ts',
+    'rollup.config.mjs',
+    'rollup.config.mts',
+    'rollup.config.cjs',
+  ];
+
+  return rollupConfigs.some((config) =>
+    tree.exists(joinPathFragments(options.projectRoot, config))
+  );
+}
+
+function isViteProject(tree: Tree, options: NormalizedOptions): boolean {
+  // Check for vite.config.* files to detect vite projects
+  return !!findViteConfigPath(tree, options.projectRoot);
 }
 
 function configureAdditionalEntryPoints(

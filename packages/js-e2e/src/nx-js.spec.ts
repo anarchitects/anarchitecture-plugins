@@ -33,85 +33,90 @@ describe('nx-js', () => {
     runCommand('yarn info --name-only @anarchitects/nx-js', projectDirectory);
   });
 
-  it('should add secondary entry points to js libraries', () => {
-    runCommand(
-      [
-        'yarn nx g @anarchitects/nx-js:library my-lib',
-        '--directory=libs',
-        '--bundler=tsc',
-        '--unitTestRunner=none',
-        '--linter=none',
-        '--no-interactive',
-      ].join(' '),
-      projectDirectory
-    );
-
-    const libraryProject = resolveGeneratedLibrary(projectDirectory, 'my-lib');
-    const libraryEntryPath = normalizeWorkspacePath(
-      join(libraryProject.root, 'src/feature/index.ts')
-    );
-
-    runCommand(
-      [
-        'yarn nx g @anarchitects/nx-js:secondary-entry-point',
-        `--project=${libraryProject.name}`,
-        '--name=feature',
-        '--no-interactive',
-      ].join(' '),
-      projectDirectory
-    );
-
-    const projectJson = JSON.parse(
-      readFileSync(
-        join(projectDirectory, libraryProject.root, 'project.json'),
-        'utf-8'
-      )
-    );
-    expect(projectJson.targets.build.options.additionalEntryPoints).toContain(
-      libraryEntryPath
-    );
-    expect(projectJson.targets.build.options.generateExportsField).toBe(true);
-
-    runCommand(`yarn nx build ${libraryProject.name}`, projectDirectory);
-
-    const builtPackageJson = JSON.parse(
-      readFileSync(
-        join(
-          projectDirectory,
-          projectJson.targets.build.options.outputPath ??
-            `dist/${libraryProject.root}`,
-          'package.json'
-        ),
-        'utf-8'
-      )
-    );
-    const featureExport = builtPackageJson.exports['./feature'];
-    expect(featureExport).toBeDefined();
-
-    if (typeof featureExport === 'string') {
-      expect(normalizeWorkspacePath(featureExport)).toMatch(
-        /feature\/index\.js$/
-      );
-    } else {
-      expect(featureExport).toMatchObject({});
-      if (featureExport.import) {
-        expect(normalizeWorkspacePath(featureExport.import)).toMatch(
-          /feature\/index\.js$/
-        );
-      }
-      if (featureExport.default) {
-        expect(normalizeWorkspacePath(featureExport.default)).toMatch(
-          /feature\/index\.js$/
-        );
-      }
-      if (featureExport.types) {
-        expect(normalizeWorkspacePath(featureExport.types)).toMatch(
-          /feature\/index\.d\.ts$/
-        );
-      }
+  it.each(['tsc', 'esbuild'])(
+    'should add secondary entry points to js libraries using %s bundler',
+    (bundler) => {
+      runSecondaryEntryPointScenario(projectDirectory, bundler);
     }
-  });
+  );
 });
+
+function runSecondaryEntryPointScenario(
+  projectDirectory: string,
+  bundler: 'tsc' | 'esbuild'
+) {
+  const libraryName = `my-lib-${bundler}`;
+
+  runCommand(
+    [
+      `yarn nx g @anarchitects/nx-js:library ${libraryName}`,
+      `--directory=libs/${libraryName}`,
+      `--bundler=${bundler}`,
+      '--unitTestRunner=none',
+      '--linter=none',
+      '--no-interactive',
+    ].join(' '),
+    projectDirectory
+  );
+
+  const libraryProject = resolveGeneratedLibrary(projectDirectory, libraryName);
+  const libraryEntryPath = normalizeWorkspacePath(
+    join(libraryProject.root, 'src/feature/index.ts')
+  );
+
+  runCommand(
+    [
+      'yarn nx g @anarchitects/nx-js:secondary-entry-point',
+      `--project=${libraryProject.name}`,
+      '--name=feature',
+      '--no-interactive',
+    ].join(' '),
+    projectDirectory
+  );
+
+  const projectJson = JSON.parse(
+    readFileSync(join(projectDirectory, libraryProject.root, 'project.json'), 'utf-8')
+  );
+  expect(projectJson.targets.build.options.additionalEntryPoints).toContain(
+    libraryEntryPath
+  );
+  expect(projectJson.targets.build.options.generateExportsField).toBe(true);
+
+  runCommand(`yarn nx build ${libraryProject.name}`, projectDirectory);
+
+  const builtPackageJson = JSON.parse(
+    readFileSync(
+      join(
+        projectDirectory,
+        projectJson.targets.build.options.outputPath ??
+          `dist/${libraryProject.root}`,
+        'package.json'
+      ),
+      'utf-8'
+    )
+  );
+  const featureExport = builtPackageJson.exports['./feature'];
+  expect(featureExport).toBeDefined();
+  const jsEntryPattern = /feature\/index\.(js|cjs|mjs)$/;
+
+  if (typeof featureExport === 'string') {
+    expect(normalizeWorkspacePath(featureExport)).toMatch(jsEntryPattern);
+    return;
+  }
+
+  expect(featureExport).toMatchObject({});
+  if (featureExport.import) {
+    expect(normalizeWorkspacePath(featureExport.import)).toMatch(jsEntryPattern);
+  }
+  if (featureExport.default) {
+    expect(normalizeWorkspacePath(featureExport.default)).toMatch(jsEntryPattern);
+  }
+  if (featureExport.types) {
+    expect(normalizeWorkspacePath(featureExport.types)).toMatch(
+      /feature\/index\.d\.ts$/
+    );
+  }
+}
 
 /**
  * Creates a test project with create-nx-workspace and installs the plugin
