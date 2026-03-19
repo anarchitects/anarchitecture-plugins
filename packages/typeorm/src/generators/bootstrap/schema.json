@@ -30,6 +30,14 @@
       "type": "boolean",
       "description": "Skip running package installations after updating dependencies.",
       "default": false
+    },
+    "schemaPath": {
+      "type": "string",
+      "description": "Relative path from the project root where schema.ts should be generated for library projects."
+    },
+    "migrationsDir": {
+      "type": "string",
+      "description": "Relative directory from the project root where the initial migration should be generated for library projects."
     }
   },
   "required": ["project"],

@@ -3,7 +3,9 @@
   "metadata": {
     "typeorm": {
       "schema": "<%= schema %>",
-      "domain": "<%= domain %>"
+      "domain": "<%= domain %>",
+      "schemaPath": "<%= schemaPath %>",
+      "migrationsDir": "<%= migrationsDir %>"
     }
   }
 }

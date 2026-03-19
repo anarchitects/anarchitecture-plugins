@@ -7,10 +7,10 @@ import {
   readProjectConfiguration,
   runTasksInSerial,
   Tree,
-  updateJson,
+  updateProjectConfiguration,
   type GeneratorCallback,
 } from '@nx/devkit';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   ArrayLiteralExpression,
@@ -33,30 +33,50 @@ interface BootstrapGeneratorSchema {
   db?: string;
   withCompose?: boolean;
   skipInstall?: boolean;
+  schemaPath?: string;
+  migrationsDir?: string;
 }
 
 const generatorDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATABASE = 'postgres';
-const runtimeImportPath = './typeorm.datasource';
+const DEFAULT_SCHEMA_PATH = 'src/infrastructure-persistence/schema.ts';
+const DEFAULT_MIGRATIONS_DIR = 'src/infrastructure-persistence/migrations';
+const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
+const runtimeImportPath = './data-source';
+
+const DRIVER_DEPENDENCIES: Record<
+  string,
+  {
+    packageName: string;
+    version: string;
+  }
+> = {
+  postgres: { packageName: 'pg', version: '^8.20.0' },
+  postgresql: { packageName: 'pg', version: '^8.20.0' },
+  mysql: { packageName: 'mysql2', version: '^3.20.0' },
+  mariadb: { packageName: 'mariadb', version: '^3.5.2' },
+  sqlite: { packageName: 'sqlite3', version: '^6.0.1' },
+  'better-sqlite3': { packageName: 'better-sqlite3', version: '^12.8.0' },
+  mssql: { packageName: 'mssql', version: '^12.2.1' },
+};
 
 export default async function bootstrapGenerator(
   tree: Tree,
   options: BootstrapGeneratorSchema
 ) {
   const project = readProjectConfiguration(tree, options.project);
-  const tasks: GeneratorCallback[] = [];
+  const isNestApplication =
+    project.projectType === 'application' &&
+    hasNestModuleFile(tree, project.root, project.sourceRoot);
 
+  const tasks: GeneratorCallback[] = [];
   const dependencyTask = addDependenciesToPackageJson(
     tree,
-    {
-      typeorm: '^0.3.20',
-      pg: '^8.11.0',
-      'reflect-metadata': '^0.1.13',
-      '@nestjs/typeorm': '^10.0.0',
-    },
+    buildRuntimeDependencies(options.db, isNestApplication),
     {
       'ts-node': '^10.9.2',
-      'typeorm-ts-node-commonjs': '^0.0.8',
+      'typeorm-ts-node-commonjs': '^0.3.20',
+      'typeorm-ts-node-esm': '^0.3.20',
     }
   );
 
@@ -65,9 +85,15 @@ export default async function bootstrapGenerator(
   }
 
   if (project.projectType === 'library') {
-    prepareLibrary(tree, project.root, options);
+    prepareLibrary(tree, options.project, project.root, options);
   } else {
-    prepareApplication(tree, project.root, project.sourceRoot, options);
+    prepareApplication(
+      tree,
+      project.root,
+      project.sourceRoot,
+      options,
+      isNestApplication
+    );
   }
 
   await formatFiles(tree);
@@ -75,8 +101,31 @@ export default async function bootstrapGenerator(
   return tasks.length ? runTasksInSerial(...tasks) : () => undefined;
 }
 
+function buildRuntimeDependencies(
+  database: string | undefined,
+  isNestApplication: boolean
+) {
+  const resolvedDatabase = (database ?? DEFAULT_DATABASE).toLowerCase();
+  const dependencies: Record<string, string> = {
+    typeorm: '^0.3.28',
+    'reflect-metadata': '^0.2.2',
+  };
+
+  const driverDependency = DRIVER_DEPENDENCIES[resolvedDatabase];
+  if (driverDependency) {
+    dependencies[driverDependency.packageName] = driverDependency.version;
+  }
+
+  if (isNestApplication) {
+    dependencies['@nestjs/typeorm'] = '^11.0.0';
+  }
+
+  return dependencies;
+}
+
 function prepareLibrary(
   tree: Tree,
+  projectName: string,
   projectRoot: string,
   options: BootstrapGeneratorSchema
 ) {
@@ -85,55 +134,86 @@ function prepareLibrary(
   }
 
   const schemaName = (options.schema ?? options.domain).toLowerCase();
+  const schemaPathRelative = normalizeProjectRelative(
+    options.schemaPath ?? DEFAULT_SCHEMA_PATH
+  );
+  const migrationsDirRelative = normalizeProjectRelative(
+    options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR
+  );
   const templateOptions = {
     tmpl: '',
     schema: schemaName,
     domain: options.domain,
+    schemaPath: schemaPathRelative,
+    migrationsDir: migrationsDirRelative,
     ...names(options.domain),
   };
 
   generateFiles(
     tree,
-    join(generatorDir, 'files', 'lib'),
+    joinPathFragments(generatorDir, 'files', 'lib'),
     projectRoot,
     templateOptions
   );
 
-  const tempPartialPath = joinPathFragments(
+  const defaultSchemaPath = joinPathFragments(projectRoot, DEFAULT_SCHEMA_PATH);
+  const defaultMigrationPath = joinPathFragments(
     projectRoot,
-    'project.json.partial'
+    DEFAULT_MIGRATIONS_DIR,
+    DEFAULT_MIGRATION_FILE
   );
-  if (tree.exists(tempPartialPath)) {
-    tree.delete(tempPartialPath);
-  }
+  const targetSchemaPath = joinPathFragments(projectRoot, schemaPathRelative);
+  const targetMigrationPath = joinPathFragments(
+    projectRoot,
+    migrationsDirRelative,
+    DEFAULT_MIGRATION_FILE
+  );
 
-  const projectJsonPath = joinPathFragments(projectRoot, 'project.json');
-  if (tree.exists(projectJsonPath)) {
-    updateJson(tree, projectJsonPath, (json) => {
-      json.metadata ??= {};
-      json.metadata.typeorm = {
+  moveGeneratedFile(tree, defaultSchemaPath, targetSchemaPath);
+  moveGeneratedFile(tree, defaultMigrationPath, targetMigrationPath);
+  patchMigrationSchemaImport(tree, targetSchemaPath, targetMigrationPath);
+
+  const partial = consumeProjectJsonPartial(tree, projectRoot);
+  const projectConfig = readProjectConfiguration(tree, projectName);
+  updateProjectConfiguration(tree, projectName, {
+    ...projectConfig,
+    metadata: {
+      ...(projectConfig.metadata ?? {}),
+      ...(partial.metadata ?? {}),
+      typeorm: {
+        ...((projectConfig.metadata as { typeorm?: Record<string, unknown> })
+          ?.typeorm ?? {}),
+        ...((partial.metadata as { typeorm?: Record<string, unknown> })
+          ?.typeorm ?? {}),
         schema: schemaName,
         domain: options.domain,
-      };
-      return json;
-    });
-  }
+        schemaPath: schemaPathRelative,
+        migrationsDir: migrationsDirRelative,
+      },
+    },
+  });
 }
 
 function prepareApplication(
   tree: Tree,
   projectRoot: string,
   sourceRoot: string | undefined,
-  options: BootstrapGeneratorSchema
+  options: BootstrapGeneratorSchema,
+  isNestApplication: boolean
 ) {
   const database = options.db ?? DEFAULT_DATABASE;
   const projectName = names(options.project).fileName.replace(/-/g, '_');
 
-  generateFiles(tree, join(generatorDir, 'files', 'app'), projectRoot, {
-    tmpl: '',
-    database,
-    appDatabase: projectName,
-  });
+  generateFiles(
+    tree,
+    joinPathFragments(generatorDir, 'files', 'app'),
+    projectRoot,
+    {
+      tmpl: '',
+      database,
+      appDatabase: projectName,
+    }
+  );
 
   if (!options.withCompose) {
     const composePath = joinPathFragments(projectRoot, 'docker-compose.yml');
@@ -142,7 +222,113 @@ function prepareApplication(
     }
   }
 
-  patchAppModule(tree, projectRoot, sourceRoot);
+  if (isNestApplication) {
+    patchAppModule(tree, projectRoot, sourceRoot);
+  }
+}
+
+function consumeProjectJsonPartial(
+  tree: Tree,
+  projectRoot: string
+): {
+  metadata?: Record<string, unknown>;
+} {
+  const tempPartialPath = joinPathFragments(
+    projectRoot,
+    'project.json.partial'
+  );
+  if (!tree.exists(tempPartialPath)) {
+    return {};
+  }
+
+  const contents = tree.read(tempPartialPath, 'utf-8');
+  tree.delete(tempPartialPath);
+
+  if (!contents) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(contents) as { metadata?: Record<string, unknown> };
+  } catch {
+    return {};
+  }
+}
+
+function moveGeneratedFile(tree: Tree, from: string, to: string) {
+  if (from === to || !tree.exists(from)) {
+    return;
+  }
+
+  const contents = tree.read(from);
+  if (!contents) {
+    return;
+  }
+
+  tree.write(to, contents);
+  tree.delete(from);
+}
+
+function patchMigrationSchemaImport(
+  tree: Tree,
+  schemaPath: string,
+  migrationPath: string
+) {
+  if (!tree.exists(schemaPath) || !tree.exists(migrationPath)) {
+    return;
+  }
+
+  const migrationContents = tree.read(migrationPath, 'utf-8');
+  if (!migrationContents) {
+    return;
+  }
+
+  const schemaImportPath = importPathFrom(migrationPath, schemaPath);
+  const updatedContents = migrationContents.replace(
+    /from\s+['"][^'"]+['"];/,
+    `from '${schemaImportPath}';`
+  );
+
+  tree.write(migrationPath, updatedContents);
+}
+
+function importPathFrom(fromFile: string, targetFile: string): string {
+  const relativePath = relative(dirname(fromFile), targetFile).replace(
+    /\\/g,
+    '/'
+  );
+  const withoutExtension = relativePath.replace(/\.ts$/, '');
+  if (withoutExtension.startsWith('.')) {
+    return withoutExtension;
+  }
+  return `./${withoutExtension}`;
+}
+
+function normalizeProjectRelative(pathValue: string): string {
+  if (isAbsolute(pathValue)) {
+    throw new Error(
+      `Path "${pathValue}" must be relative to the project root.`
+    );
+  }
+
+  const normalized = pathValue
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/\/+$/, '');
+  if (!normalized) {
+    throw new Error('Path options must not be empty.');
+  }
+  return normalized;
+}
+
+function hasNestModuleFile(
+  tree: Tree,
+  projectRoot: string,
+  sourceRoot: string | undefined
+): boolean {
+  const resolvedSourceRoot =
+    sourceRoot ?? joinPathFragments(projectRoot, 'src');
+  return tree.exists(joinPathFragments(resolvedSourceRoot, 'app.module.ts'));
 }
 
 function patchAppModule(

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ExecutorContext } from '@nx/devkit';
@@ -21,6 +21,8 @@ describe('generate executor', () => {
     spawnMock.mockResolvedValue(0);
 
     tempDir = mkdtempSync(join(tmpdir(), 'nx-typeorm-generate-'));
+    ensureRunnerPackage(tempDir, 'typeorm-ts-node-commonjs');
+    ensureRunnerPackage(tempDir, 'typeorm-ts-node-esm');
 
     context = {
       root: tempDir,
@@ -80,10 +82,8 @@ describe('generate executor', () => {
       join(outputPath, 'Initial-Migration'),
       '-d',
       'apps/api/tools/typeorm/datasource.ts',
-      '-n',
-      'Initial-Migration',
       '--pretty',
-      '--drift-check',
+      '--check',
       '--foo',
     ]);
     expect(options).toMatchObject({ cwd: tempDir });
@@ -103,4 +103,69 @@ describe('generate executor', () => {
 
     expect(spawnMock).not.toHaveBeenCalled();
   });
+
+  it('supports explicit check option', async () => {
+    await runGenerate(
+      {
+        name: 'Validate Drift',
+        dataSource: 'tools/typeorm/datasource.ts',
+        outputPath: join(tempDir, 'migrations'),
+        check: true,
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args).toContain('--check');
+  });
+
+  it('uses ESM runner for module projects', async () => {
+    mkdirSync(join(tempDir, 'apps/api'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'apps/api/package.json'),
+      `${JSON.stringify({ type: 'module' }, null, 2)}\n`
+    );
+
+    await runGenerate(
+      {
+        name: 'Esm Migration',
+        dataSource: 'tools/typeorm/datasource.ts',
+        outputPath: join(tempDir, 'migrations'),
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args[1]).toBe('typeorm-ts-node-esm');
+  });
+
+  it('honors explicit moduleSystem override', async () => {
+    mkdirSync(join(tempDir, 'apps/api'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'apps/api/package.json'),
+      `${JSON.stringify({ type: 'module' }, null, 2)}\n`
+    );
+
+    await runGenerate(
+      {
+        name: 'Forced Commonjs',
+        dataSource: 'tools/typeorm/datasource.ts',
+        outputPath: join(tempDir, 'migrations'),
+        moduleSystem: 'commonjs',
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args[1]).toBe('typeorm-ts-node-commonjs');
+  });
 });
+
+function ensureRunnerPackage(workspaceRoot: string, packageName: string) {
+  const packageDirectory = join(workspaceRoot, 'node_modules', packageName);
+  mkdirSync(packageDirectory, { recursive: true });
+  writeFileSync(
+    join(packageDirectory, 'package.json'),
+    `${JSON.stringify({ name: packageName, version: '0.0.0-test' }, null, 2)}\n`
+  );
+}

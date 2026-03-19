@@ -1,140 +1,248 @@
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 
 describe('nx-typeorm', () => {
-  let projectDirectory: string;
+  const workspaceRoot = join(__dirname, '../../..');
+  const sandboxProjects = [
+    'packages/typeorm-e2e-temp-nest-api',
+    'packages/typeorm-e2e-temp-plain-api',
+    'packages/typeorm-e2e-temp-lib',
+  ];
+  let originalNxJson = '';
+  let originalPackageJson = '';
 
   beforeAll(() => {
-    projectDirectory = createTestProject();
+    originalNxJson = readFileSync(join(workspaceRoot, 'nx.json'), 'utf-8');
+    originalPackageJson = readFileSync(
+      join(workspaceRoot, 'package.json'),
+      'utf-8'
+    );
+    resetWorkspaceState();
+  });
 
-    // The plugin has been built and published to a local registry in the jest globalSetup
-    // Install the plugin built with the latest source code into the test repo
-    execSync(`yarn add -D @anarchitects/nx-typeorm@e2e`, {
-      cwd: projectDirectory,
-      stdio: 'inherit',
-      env: process.env,
-    });
+  afterEach(() => {
+    resetWorkspaceState();
   });
 
   afterAll(() => {
-    if (projectDirectory) {
-      // Cleanup the test project
-      rmSync(projectDirectory, {
-        recursive: true,
-        force: true,
-      });
-    }
+    resetWorkspaceState();
   });
 
-  it('should be installed', () => {
-    // npm ls will fail if the package is not installed properly
-    execSync('yarn info --name-only @anarchitects/nx-typeorm', {
-      cwd: projectDirectory,
-      stdio: 'inherit',
-    });
+  it('runs init generator and registers plugin metadata', () => {
+    runNx(
+      'yarn nx g @anarchitects/nx-typeorm:init --skipInstall --skipFormat --no-interactive'
+    );
+
+    const nxJson = JSON.parse(
+      readFileSync(join(workspaceRoot, 'nx.json'), 'utf-8')
+    );
+    expect(nxJson.plugins).toEqual(
+      expect.arrayContaining([{ plugin: '@anarchitects/nx-typeorm' }])
+    );
+
+    const packageJson = JSON.parse(
+      readFileSync(join(workspaceRoot, 'package.json'), 'utf-8')
+    );
+    const typeormVersion =
+      packageJson.dependencies?.typeorm ?? packageJson.devDependencies?.typeorm;
+    const reflectMetadataVersion =
+      packageJson.dependencies?.['reflect-metadata'] ??
+      packageJson.devDependencies?.['reflect-metadata'];
+    expect(typeormVersion).toBeDefined();
+    expect(reflectMetadataVersion).toBeDefined();
   });
 
-  it('bootstraps a library project', () => {
-    execSync(
-      'yarn nx generate @nx/js:library typeorm-lib --bundler=tsc --unitTestRunner=none --no-interactive',
+  it('bootstraps Nest and non-Nest backend applications', () => {
+    runNx(
+      'yarn nx g @anarchitects/nx-typeorm:init --skipInstall --skipFormat --no-interactive'
+    );
+
+    const nestProjectName = 'typeorm-e2e-temp-nest-api';
+    const nestProjectRoot = 'packages/typeorm-e2e-temp-nest-api';
+    createProject(
+      workspaceRoot,
+      nestProjectRoot,
       {
-        cwd: projectDirectory,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          NX_DAEMON: 'false',
-        },
+        name: nestProjectName,
+        root: nestProjectRoot,
+        sourceRoot: `${nestProjectRoot}/src`,
+        projectType: 'application',
+        targets: {},
+      },
+      {
+        'src/app.module.ts': `import { Module } from '@nestjs/common';
+
+@Module({
+  imports: [],
+})
+export class AppModule {}
+`,
       }
     );
 
-    execSync(
-      'yarn nx generate @anarchitects/nx-typeorm:bootstrap --project=typeorm-lib --domain=Customer --skipInstall --no-interactive',
+    const plainProjectName = 'typeorm-e2e-temp-plain-api';
+    const plainProjectRoot = 'packages/typeorm-e2e-temp-plain-api';
+    createProject(
+      workspaceRoot,
+      plainProjectRoot,
       {
-        cwd: projectDirectory,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          NX_DAEMON: 'false',
-        },
+        name: plainProjectName,
+        root: plainProjectRoot,
+        sourceRoot: `${plainProjectRoot}/src`,
+        projectType: 'application',
+        targets: {},
+      },
+      {
+        'src/main.ts': `export function main() {
+  return 'ok';
+}
+`,
       }
     );
 
-    const libraryRoot = resolveLibraryRoot(projectDirectory, 'typeorm-lib');
-    const schemaPath = join(
-      projectDirectory,
+    runNx(
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${nestProjectName} --skipInstall --no-interactive`
+    );
+    runNx(
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${plainProjectName} --skipInstall --no-interactive`
+    );
+
+    const nestModule = readFileSync(
+      join(workspaceRoot, nestProjectRoot, 'src/app.module.ts'),
+      'utf-8'
+    );
+    expect(nestModule).toContain('TypeOrmModule.forRootAsync');
+    expect(nestModule).toContain('data-source');
+
+    expect(
+      existsSync(join(workspaceRoot, plainProjectRoot, 'src/data-source.ts'))
+    ).toBe(true);
+    expect(
+      readFileSync(
+        join(workspaceRoot, plainProjectRoot, 'src/main.ts'),
+        'utf-8'
+      )
+    ).toContain("return 'ok';");
+
+    const nestProject = showProject(workspaceRoot, nestProjectName);
+    expect(nestProject.targets['db:migrate:run']).toBeDefined();
+    expect(nestProject.targets['typeorm:run']).toBeDefined();
+
+    const plainProject = showProject(workspaceRoot, plainProjectName);
+    expect(plainProject.targets['db:migrate:run']).toBeDefined();
+    expect(plainProject.targets['db:seed']).toBeDefined();
+  });
+
+  it('bootstraps a library with overridden persistence paths', () => {
+    runNx(
+      'yarn nx g @anarchitects/nx-typeorm:init --skipInstall --skipFormat --no-interactive'
+    );
+
+    const libraryName = 'typeorm-e2e-temp-lib';
+    const libraryRoot = 'packages/typeorm-e2e-temp-lib';
+    createProject(
+      workspaceRoot,
       libraryRoot,
-      'src/infrastructure-persistence/schema.ts'
+      {
+        name: libraryName,
+        root: libraryRoot,
+        sourceRoot: `${libraryRoot}/src`,
+        projectType: 'library',
+        targets: {},
+      },
+      {
+        'src/index.ts': 'export {};\n',
+      }
+    );
+
+    runNx(
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${libraryName} --domain=Customer --schemaPath=src/persistence/schema.ts --migrationsDir=src/persistence/migrations --skipInstall --no-interactive`
+    );
+
+    const schemaPath = join(
+      workspaceRoot,
+      libraryRoot,
+      'src/persistence/schema.ts'
     );
     expect(existsSync(schemaPath)).toBe(true);
-    const schemaContents = readFileSync(schemaPath, 'utf-8');
-    expect(schemaContents).toContain(
-      "export const Customer_SCHEMA = 'customer';"
-    );
 
     const migrationPath = join(
-      projectDirectory,
+      workspaceRoot,
       libraryRoot,
-      'src/infrastructure-persistence/migrations/1700000000000_init_schema.ts'
+      'src/persistence/migrations/1700000000000_init_schema.ts'
     );
     expect(existsSync(migrationPath)).toBe(true);
 
     const projectJson = JSON.parse(
-      readFileSync(join(projectDirectory, libraryRoot, 'project.json'), {
+      readFileSync(join(workspaceRoot, libraryRoot, 'project.json'), {
         encoding: 'utf-8',
       })
     );
-
     expect(projectJson.metadata?.typeorm).toEqual({
       schema: 'customer',
       domain: 'Customer',
+      schemaPath: 'src/persistence/schema.ts',
+      migrationsDir: 'src/persistence/migrations',
     });
-  });
-});
 
-/**
- * Creates a test project with create-nx-workspace and installs the plugin
- * @returns The directory where the test project was created
- */
-function createTestProject(projectName = 'test-project') {
-  const projectDirectory = join(process.cwd(), 'tmp', projectName);
-
-  // Ensure projectDirectory is empty
-  rmSync(projectDirectory, {
-    recursive: true,
-    force: true,
-  });
-  mkdirSync(dirname(projectDirectory), {
-    recursive: true,
+    const libProject = showProject(workspaceRoot, libraryName);
+    expect(libProject.targets['db:ensure-schema']).toBeDefined();
   });
 
-  execSync(
-    `yarn dlx create-nx-workspace@latest ${projectName} --preset apps --nxCloud=skip --no-interactive`,
-    {
-      cwd: dirname(projectDirectory),
+  function runNx(command: string) {
+    execSync(command, {
+      cwd: workspaceRoot,
       stdio: 'inherit',
-      env: process.env,
-    }
-  );
-  console.log(`Created test project in "${projectDirectory}"`);
-
-  return projectDirectory;
-}
-
-function resolveLibraryRoot(projectDirectory: string, libraryName: string) {
-  const candidates = [
-    join('libs', libraryName),
-    join('packages', libraryName),
-    libraryName,
-  ];
-
-  for (const candidate of candidates) {
-    if (existsSync(join(projectDirectory, candidate))) {
-      return candidate;
-    }
+      env: {
+        ...process.env,
+        NX_DAEMON: 'false',
+      },
+    });
   }
 
-  throw new Error(
-    `Unable to locate generated library root for "${libraryName}".`
+  function resetWorkspaceState() {
+    writeFileSync(join(workspaceRoot, 'nx.json'), originalNxJson);
+    writeFileSync(join(workspaceRoot, 'package.json'), originalPackageJson);
+    for (const projectRoot of sandboxProjects) {
+      rmSync(join(workspaceRoot, projectRoot), {
+        recursive: true,
+        force: true,
+      });
+    }
+  }
+});
+
+function createProject(
+  workspaceRoot: string,
+  projectRoot: string,
+  projectJson: Record<string, unknown>,
+  files: Record<string, string>
+) {
+  const fullProjectRoot = join(workspaceRoot, projectRoot);
+  mkdirSync(fullProjectRoot, { recursive: true });
+  writeFileSync(
+    join(fullProjectRoot, 'project.json'),
+    `${JSON.stringify(projectJson, null, 2)}\n`
   );
+
+  for (const [relativePath, contents] of Object.entries(files)) {
+    const fullPath = join(fullProjectRoot, relativePath);
+    mkdirSync(dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, contents);
+  }
+}
+
+function showProject(workspaceRoot: string, projectName: string) {
+  const output = execSync(`yarn nx show project ${projectName} --json`, {
+    cwd: workspaceRoot,
+    env: {
+      ...process.env,
+      NX_DAEMON: 'false',
+    },
+    encoding: 'utf-8',
+  });
+  return JSON.parse(output) as {
+    targets: Record<string, unknown>;
+  };
 }

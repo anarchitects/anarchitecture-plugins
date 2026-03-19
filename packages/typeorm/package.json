@@ -25,7 +25,7 @@
     "name": "nx-typeorm",
     "plugins": [
       {
-        "plugin": "dist/plugins/typeorm.js"
+        "plugin": "dist/plugin/index.js"
       }
     ],
     "targets": {
@@ -62,14 +62,13 @@
     }
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0",
-    "nx": "22.0.1",
+    "@nx/devkit": "^22.5.3",
     "ts-morph": "^22.0.0",
-    "ts-node": "10.9.1",
-    "typeorm": "^0.3.20"
+    "ts-node": "^10.9.1",
+    "typeorm": "^0.3.27"
   },
   "dependencies": {
-    "tslib": "^2.6.2"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "ts-morph": "^22.0.0"

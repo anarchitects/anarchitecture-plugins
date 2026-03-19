@@ -22,6 +22,10 @@
     }
   },
   "generators": {
+    "init": {
+      "implementation": "./generators/init/generator",
+      "schema": "./generators/init/schema.json"
+    },
     "bootstrap": {
       "implementation": "./generators/bootstrap/generator",
       "schema": "./generators/bootstrap/schema.json"

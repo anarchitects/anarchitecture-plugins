@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Init Generator",
+  "type": "object",
+  "properties": {
+    "skipFormat": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip formatting files after generation."
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip running package manager install tasks."
+    }
+  },
+  "additionalProperties": false
+}
