@@ -125,16 +125,19 @@ nx run api:db:seed --file tools/typeorm/seeds/index.ts
 `generate` supports `--check` and compatibility alias `--driftCheck` (mapped to
 TypeORM check mode).
 
-CLI executors (`generate`, `run`, `revert`) select the TypeORM runner at
-runtime:
+Datasource-backed CLI executors (`generate`, `run`, `revert`,
+`migration-show`, `schema-sync`, `schema-log`, `schema-drop`, `query`,
+`cache-clear`) select the TypeORM runner at runtime:
 
 - `moduleSystem=auto` (default): detect by nearest `package.json` `type`,
   then project tsconfig module mode, then fall back to CommonJS.
 - `moduleSystem=commonjs`: force `typeorm-ts-node-commonjs`.
 - `moduleSystem=esm`: force `typeorm-ts-node-esm`.
 
-When `dataSource` is omitted, migration-oriented executors (`generate`, `run`,
-`revert`) and `ensure-schema` infer it from the project with this priority:
+When `dataSource` is omitted, datasource-backed executors (`generate`, `run`,
+`revert`, `migration-show`, `schema-sync`, `schema-log`, `schema-drop`,
+`query`, `cache-clear`) and `ensure-schema` infer it from the project with
+this priority:
 
 1. `tools/typeorm/datasource.migrations.ts`
 2. `tools/typeorm/datasource.migrations.js`
@@ -146,6 +149,10 @@ When `dataSource` is omitted, migration-oriented executors (`generate`, `run`,
 Override inference at any time with `--dataSource=<relative-or-absolute-path>`.
 
 ## TypeORM CLI Coverage
+
+Inference is intentionally limited to convention-safe operational commands.
+Scaffolding/meta commands (`migration:create`, `entity:create`,
+`subscriber:create`, `version`, `init`) are executor-only and not inferred.
 
 | TypeORM CLI command  | nx-typeorm executor | Inferred target |
 | -------------------- | ------------------- | --------------- |
@@ -165,7 +172,8 @@ Override inference at any time with `--dataSource=<relative-or-absolute-path>`.
 | `init`               | `init`              | no              |
 
 Manual-only executors are available for explicit wiring in `project.json`.
-This includes risky commands like `query` and `schema:drop`.
+This includes risky commands (`query`, `schema:drop`) and non-inferred
+scaffolding/meta commands from the table above.
 
 Example manual targets:
 
