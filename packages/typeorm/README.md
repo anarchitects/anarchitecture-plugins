@@ -47,7 +47,11 @@ For applications:
 
 - generates runtime datasource in `src/data-source.ts`.
 - generates compatibility re-export `src/typeorm.datasource.ts`.
-- generates TypeORM CLI datasource/seeds under `tools/typeorm`.
+- generates shared connection helper `tools/typeorm/connection-options.ts`.
+- generates TypeORM CLI migration datasource
+  `tools/typeorm/datasource.migrations.ts` and seeds under `tools/typeorm`.
+- preserves an existing `tools/typeorm/datasource.migrations.ts` file.
+- generates a DB-specific `env.example` with URL/discrete modes.
 - patches `app.module.ts` only when the app has a Nest module file.
 
 For libraries:
@@ -63,6 +67,18 @@ Additional bootstrap dependencies are installed during bootstrap:
 `ts-node`, `typeorm-ts-node-commonjs`, `typeorm-ts-node-esm`,
 DB driver package for selected `--db`, and `@nestjs/typeorm` only for Nest
 applications.
+
+Supported `--db` values: `postgres`, `postgresql` (normalized to `postgres`),
+`mysql`, `mariadb`, `sqlite`, `better-sqlite3`, `mssql`.
+
+Generated app datasources support two connection modes:
+
+- `DATABASE_URL`
+- discrete `TYPEORM_*` variables
+
+The generated helper rejects mixed mode (setting `DATABASE_URL` together with
+`TYPEORM_*` connection variables) and throws clear validation errors when
+required variables are missing.
 
 ## Inferred Targets
 

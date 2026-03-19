@@ -1,9 +1,4 @@
 import { DataSource } from 'typeorm';
+import { createMigrationDataSourceOptions } from './connection-options';
 
-export default new DataSource({
-  type: '<%= database %>',
-  url: process.env.DATABASE_URL,
-  entities: [],
-  migrations: ['dist/tools/typeorm/migrations/*.js'],
-  synchronize: false,
-});
+export default new DataSource(createMigrationDataSourceOptions());

@@ -30,7 +30,9 @@ interface BootstrapGeneratorSchema {
   project: string;
   domain?: string;
   schema?: string;
-  db?: string;
+  db?:
+    | SupportedDatabase
+    | 'postgresql';
   withCompose?: boolean;
   skipInstall?: boolean;
   schemaPath?: string;
@@ -39,20 +41,37 @@ interface BootstrapGeneratorSchema {
 
 const generatorDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATABASE = 'postgres';
+const DATABASE_ALIAS_MAP = {
+  postgresql: 'postgres',
+} as const;
+const SUPPORTED_DATABASES = [
+  'postgres',
+  'mysql',
+  'mariadb',
+  'sqlite',
+  'better-sqlite3',
+  'mssql',
+] as const;
 const DEFAULT_SCHEMA_PATH = 'src/infrastructure-persistence/schema.ts';
 const DEFAULT_MIGRATIONS_DIR = 'src/infrastructure-persistence/migrations';
 const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
+const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
 const runtimeImportPath = './data-source';
+const SUPPORTED_DATABASE_DISPLAY = [
+  ...SUPPORTED_DATABASES,
+  'postgresql',
+].join(', ');
+
+type SupportedDatabase = (typeof SUPPORTED_DATABASES)[number];
 
 const DRIVER_DEPENDENCIES: Record<
-  string,
+  SupportedDatabase,
   {
     packageName: string;
     version: string;
   }
 > = {
   postgres: { packageName: 'pg', version: '^8.20.0' },
-  postgresql: { packageName: 'pg', version: '^8.20.0' },
   mysql: { packageName: 'mysql2', version: '^3.20.0' },
   mariadb: { packageName: 'mariadb', version: '^3.5.2' },
   sqlite: { packageName: 'sqlite3', version: '^6.0.1' },
@@ -64,6 +83,7 @@ export default async function bootstrapGenerator(
   tree: Tree,
   options: BootstrapGeneratorSchema
 ) {
+  const database = normalizeDatabase(options.db);
   const project = readProjectConfiguration(tree, options.project);
   const isNestApplication =
     project.projectType === 'application' &&
@@ -72,7 +92,7 @@ export default async function bootstrapGenerator(
   const tasks: GeneratorCallback[] = [];
   const dependencyTask = addDependenciesToPackageJson(
     tree,
-    buildRuntimeDependencies(options.db, isNestApplication),
+    buildRuntimeDependencies(database, isNestApplication),
     {
       'ts-node': '^10.9.2',
       'typeorm-ts-node-commonjs': '^0.3.20',
@@ -91,7 +111,10 @@ export default async function bootstrapGenerator(
       tree,
       project.root,
       project.sourceRoot,
-      options,
+      {
+        ...options,
+        db: database,
+      },
       isNestApplication
     );
   }
@@ -102,19 +125,16 @@ export default async function bootstrapGenerator(
 }
 
 function buildRuntimeDependencies(
-  database: string | undefined,
+  database: SupportedDatabase,
   isNestApplication: boolean
 ) {
-  const resolvedDatabase = (database ?? DEFAULT_DATABASE).toLowerCase();
   const dependencies: Record<string, string> = {
     typeorm: '^0.3.28',
     'reflect-metadata': '^0.2.2',
   };
 
-  const driverDependency = DRIVER_DEPENDENCIES[resolvedDatabase];
-  if (driverDependency) {
-    dependencies[driverDependency.packageName] = driverDependency.version;
-  }
+  const driverDependency = DRIVER_DEPENDENCIES[database];
+  dependencies[driverDependency.packageName] = driverDependency.version;
 
   if (isNestApplication) {
     dependencies['@nestjs/typeorm'] = '^11.0.0';
@@ -201,8 +221,15 @@ function prepareApplication(
   options: BootstrapGeneratorSchema,
   isNestApplication: boolean
 ) {
-  const database = options.db ?? DEFAULT_DATABASE;
+  const database = normalizeDatabase(options.db);
   const projectName = names(options.project).fileName.replace(/-/g, '_');
+  const migrationsDatasourcePath = joinPathFragments(
+    projectRoot,
+    APP_MIGRATIONS_DATASOURCE_PATH
+  );
+  const existingMigrationsDatasource = tree.exists(migrationsDatasourcePath)
+    ? tree.read(migrationsDatasourcePath)
+    : null;
 
   generateFiles(
     tree,
@@ -215,6 +242,10 @@ function prepareApplication(
     }
   );
 
+  if (existingMigrationsDatasource) {
+    tree.write(migrationsDatasourcePath, existingMigrationsDatasource);
+  }
+
   if (!options.withCompose) {
     const composePath = joinPathFragments(projectRoot, 'docker-compose.yml');
     if (tree.exists(composePath)) {
@@ -225,6 +256,21 @@ function prepareApplication(
   if (isNestApplication) {
     patchAppModule(tree, projectRoot, sourceRoot);
   }
+}
+
+function normalizeDatabase(database?: string): SupportedDatabase {
+  const normalized = (database ?? DEFAULT_DATABASE).trim().toLowerCase();
+  const aliased =
+    DATABASE_ALIAS_MAP[normalized as keyof typeof DATABASE_ALIAS_MAP] ??
+    normalized;
+
+  if (SUPPORTED_DATABASES.includes(aliased as SupportedDatabase)) {
+    return aliased as SupportedDatabase;
+  }
+
+  throw new Error(
+    `Unsupported database "${database ?? DEFAULT_DATABASE}". Supported values: ${SUPPORTED_DATABASE_DISPLAY}.`
+  );
 }
 
 function consumeProjectJsonPartial(
