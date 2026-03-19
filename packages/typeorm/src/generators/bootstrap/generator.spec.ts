@@ -54,9 +54,15 @@ export class AppModule {}
     expect(typeof task).toBe('function');
     expect(tree.exists('apps/api/src/data-source.ts')).toBe(true);
     expect(tree.exists('apps/api/src/typeorm.datasource.ts')).toBe(true);
+    expect(tree.exists('apps/api/tools/typeorm/connection-options.ts')).toBe(
+      true
+    );
     expect(tree.exists('apps/api/tools/typeorm/datasource.migrations.ts')).toBe(
       true
     );
+    expect(
+      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
+    ).toContain('createMigrationDataSourceOptions');
     expect(tree.exists('apps/api/docker-compose.yml')).toBe(false);
 
     const moduleSource = tree.read('apps/api/src/app.module.ts', 'utf-8');
@@ -67,6 +73,29 @@ export class AppModule {}
     expect(moduleSource).toContain('from "./data-source"');
     expect(moduleSource).toContain('TypeOrmModule.forRootAsync');
     expect(moduleSource).toContain('makeRuntimeDataSource');
+
+    const runtimeDataSourceSource = tree.read('apps/api/src/data-source.ts', 'utf-8');
+    expect(runtimeDataSourceSource).toContain(
+      "from '../tools/typeorm/connection-options'"
+    );
+    expect(runtimeDataSourceSource).toContain('createRuntimeDataSourceOptions');
+
+    const migrationDataSourceSource = tree.read(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      'utf-8'
+    );
+    expect(migrationDataSourceSource).toContain("from './connection-options'");
+    expect(migrationDataSourceSource).toContain(
+      'createMigrationDataSourceOptions'
+    );
+
+    const connectionOptionsSource = tree.read(
+      'apps/api/tools/typeorm/connection-options.ts',
+      'utf-8'
+    );
+    expect(connectionOptionsSource).toContain(
+      "migrations: ['dist/tools/typeorm/migrations/*.js']"
+    );
 
     const packageJson = readJson(tree, 'package.json');
     expect(packageJson.dependencies['typeorm']).toBe('^0.3.28');
@@ -102,6 +131,9 @@ export class AppModule {}
 
     expect(tree.exists('apps/worker/src/data-source.ts')).toBe(true);
     expect(tree.exists('apps/worker/src/typeorm.datasource.ts')).toBe(true);
+    expect(tree.exists('apps/worker/tools/typeorm/connection-options.ts')).toBe(
+      true
+    );
     expect(
       tree.exists('apps/worker/tools/typeorm/datasource.migrations.ts')
     ).toBe(true);
@@ -137,6 +169,125 @@ export class AppModule {}
     });
 
     expect(tree.exists('apps/api/docker-compose.yml')).toBe(true);
+  });
+
+  it('preserves existing migration datasource for applications', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    tree.write(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      "export default 'custom';\n"
+    );
+
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      skipInstall: true,
+    });
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      skipInstall: true,
+    });
+
+    expect(
+      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
+    ).toBe("export default 'custom';\n");
+  });
+
+  it.each([
+    {
+      db: 'postgres',
+      expectedType: "type: 'postgres'",
+      helperSnippet: 'connectTimeoutMS',
+      envSnippet: 'TYPEORM_CONNECT_TIMEOUT_MS=5000',
+    },
+    {
+      db: 'postgresql',
+      expectedType: "type: 'postgres'",
+      helperSnippet: 'applicationName',
+      envSnippet: 'TYPEORM_SCHEMA=public',
+    },
+    {
+      db: 'mysql',
+      expectedType: "type: 'mysql'",
+      helperSnippet: 'socketPath',
+      envSnippet: 'TYPEORM_SOCKET_PATH=',
+    },
+    {
+      db: 'mariadb',
+      expectedType: "type: 'mariadb'",
+      helperSnippet: 'charset',
+      envSnippet: 'TYPEORM_CHARSET=utf8mb4',
+    },
+    {
+      db: 'sqlite',
+      expectedType: "type: 'sqlite'",
+      helperSnippet: 'busyTimeout',
+      envSnippet: 'TYPEORM_BUSY_TIMEOUT=5000',
+    },
+    {
+      db: 'better-sqlite3',
+      expectedType: "type: 'better-sqlite3'",
+      helperSnippet: 'statementCacheSize',
+      envSnippet: 'TYPEORM_STATEMENT_CACHE_SIZE=100',
+    },
+    {
+      db: 'mssql',
+      expectedType: "type: 'mssql'",
+      helperSnippet: 'trustServerCertificate',
+      envSnippet: 'TYPEORM_TRUST_SERVER_CERTIFICATE=true',
+    },
+  ])(
+    'generates database-specific connection templates for %s',
+    async ({ db, expectedType, helperSnippet, envSnippet }) => {
+      addProjectConfiguration(tree, 'api', {
+        root: 'apps/api',
+        sourceRoot: 'apps/api/src',
+        projectType: 'application',
+        targets: {},
+      });
+
+      await bootstrapGenerator(tree, {
+        project: 'api',
+        db,
+        skipInstall: true,
+      });
+
+      const helperSource = tree.read(
+        'apps/api/tools/typeorm/connection-options.ts',
+        'utf-8'
+      );
+      expect(helperSource).toContain(expectedType);
+      expect(helperSource).toContain(helperSnippet);
+
+      const envSource = tree.read('apps/api/env.example', 'utf-8');
+      expect(envSource).toContain(envSnippet);
+      expect(envSource).toContain('DATABASE_URL=');
+      expect(envSource).toContain('Mixed mode is rejected.');
+    }
+  );
+
+  it('throws for unsupported db option', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    await expect(
+      bootstrapGenerator(tree, {
+        project: 'api',
+        db: 'oracle' as unknown as 'postgres',
+        skipInstall: true,
+      })
+    ).rejects.toThrow(
+      'Unsupported database "oracle". Supported values: postgres, mysql, mariadb, sqlite, better-sqlite3, mssql, postgresql.'
+    );
   });
 
   it('scaffolds library assets and metadata when domain provided', async () => {

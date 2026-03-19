@@ -1,0 +1,292 @@
+import type { DataSourceOptions } from 'typeorm';
+
+type ConnectionMode = 'url' | 'fields';
+
+const DATABASE_URL_KEY = 'DATABASE_URL';
+const URL_OR_FIELDS_ERROR =
+  'Invalid TypeORM connection configuration. Provide either DATABASE_URL or TYPEORM_* variables, not both.';
+const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
+const FALSE_VALUES = new Set(['0', 'false', 'no', 'off']);
+<% if (database === 'postgres') { %>const DISCRETE_ENV_KEYS = [
+  'TYPEORM_HOST',
+  'TYPEORM_PORT',
+  'TYPEORM_USERNAME',
+  'TYPEORM_PASSWORD',
+  'TYPEORM_DATABASE',
+  'TYPEORM_SCHEMA',
+  'TYPEORM_SSL',
+  'TYPEORM_APPLICATION_NAME',
+  'TYPEORM_CONNECT_TIMEOUT_MS',
+] as const;
+
+type DatabaseConnectionOptions = Extract<DataSourceOptions, { type: 'postgres' }>;
+<% } %><% if (database === 'mysql' || database === 'mariadb') { %>const DISCRETE_ENV_KEYS = [
+  'TYPEORM_HOST',
+  'TYPEORM_PORT',
+  'TYPEORM_USERNAME',
+  'TYPEORM_PASSWORD',
+  'TYPEORM_DATABASE',
+  'TYPEORM_SSL',
+  'TYPEORM_SOCKET_PATH',
+  'TYPEORM_CHARSET',
+  'TYPEORM_TIMEZONE',
+  'TYPEORM_CONNECT_TIMEOUT',
+] as const;
+
+type DatabaseConnectionOptions = Extract<DataSourceOptions, { type: '<%= database %>' }>;
+<% } %><% if (database === 'mssql') { %>const DISCRETE_ENV_KEYS = [
+  'TYPEORM_HOST',
+  'TYPEORM_PORT',
+  'TYPEORM_USERNAME',
+  'TYPEORM_PASSWORD',
+  'TYPEORM_DATABASE',
+  'TYPEORM_DOMAIN',
+  'TYPEORM_CONNECTION_TIMEOUT',
+  'TYPEORM_REQUEST_TIMEOUT',
+  'TYPEORM_ENCRYPT',
+  'TYPEORM_TRUST_SERVER_CERTIFICATE',
+  'TYPEORM_INSTANCE_NAME',
+] as const;
+
+type DatabaseConnectionOptions = Extract<DataSourceOptions, { type: 'mssql' }>;
+<% } %><% if (database === 'sqlite') { %>const DISCRETE_ENV_KEYS = [
+  'TYPEORM_DATABASE',
+  'TYPEORM_BUSY_TIMEOUT',
+  'TYPEORM_ENABLE_WAL',
+] as const;
+
+type DatabaseConnectionOptions = Extract<DataSourceOptions, { type: 'sqlite' }>;
+<% } %><% if (database === 'better-sqlite3') { %>const DISCRETE_ENV_KEYS = [
+  'TYPEORM_DATABASE',
+  'TYPEORM_ENABLE_WAL',
+  'TYPEORM_TIMEOUT',
+  'TYPEORM_READONLY',
+  'TYPEORM_FILE_MUST_EXIST',
+  'TYPEORM_STATEMENT_CACHE_SIZE',
+] as const;
+
+type DatabaseConnectionOptions = Extract<DataSourceOptions, { type: 'better-sqlite3' }>;
+<% } %>
+
+export function createRuntimeDataSourceOptions(): DataSourceOptions {
+  return {
+    ...createConnectionOptions(),
+    synchronize: false,
+    logging: false,
+  };
+}
+
+export function createMigrationDataSourceOptions(): DataSourceOptions {
+  return {
+    ...createConnectionOptions(),
+    entities: [],
+    migrations: ['dist/tools/typeorm/migrations/*.js'],
+    synchronize: false,
+    logging: false,
+  };
+}
+
+function createConnectionOptions(): DatabaseConnectionOptions {
+  return resolveConnectionMode() === 'url'
+    ? createOptionsFromUrl()
+    : createOptionsFromFields();
+}
+
+function resolveConnectionMode(): ConnectionMode {
+  const hasDatabaseUrl = optionalEnv(DATABASE_URL_KEY) !== undefined;
+  const hasDiscreteVariables = DISCRETE_ENV_KEYS.some(
+    (key) => optionalEnv(key) !== undefined
+  );
+
+  if (hasDatabaseUrl && hasDiscreteVariables) {
+    throw new Error(URL_OR_FIELDS_ERROR);
+  }
+
+  return hasDatabaseUrl ? 'url' : 'fields';
+}
+
+function requiredEnv(name: string): string {
+  const value = optionalEnv(name);
+  if (!value) {
+    throw new Error(`Missing required environment variable "${name}".`);
+  }
+  return value;
+}
+
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name];
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function parseBooleanEnv(name: string): boolean | undefined {
+  const value = optionalEnv(name);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.toLowerCase();
+  if (TRUE_VALUES.has(normalized)) {
+    return true;
+  }
+
+  if (FALSE_VALUES.has(normalized)) {
+    return false;
+  }
+
+  throw new Error(
+    `Environment variable "${name}" must be a boolean value (true/false/1/0/yes/no/on/off).`
+  );
+}
+
+function parseIntegerEnv(name: string): number | undefined {
+  const value = optionalEnv(name);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!/^-?\d+$/.test(value)) {
+    throw new Error(`Environment variable "${name}" must be an integer.`);
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`Environment variable "${name}" must be an integer.`);
+  }
+  return parsed;
+}
+
+function parseSslEnv(name: string): boolean | Record<string, unknown> | undefined {
+  const value = optionalEnv(name);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.toLowerCase();
+  if (TRUE_VALUES.has(normalized)) {
+    return true;
+  }
+  if (FALSE_VALUES.has(normalized)) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Ignore and throw below with context.
+  }
+
+  throw new Error(
+    `Environment variable "${name}" must be a boolean or a JSON object.`
+  );
+}
+
+<% if (database === 'postgres') { %>function createOptionsFromUrl(): DatabaseConnectionOptions {
+  return {
+    type: 'postgres',
+    url: requiredEnv(DATABASE_URL_KEY),
+  };
+}
+
+function createOptionsFromFields(): DatabaseConnectionOptions {
+  return {
+    type: 'postgres',
+    host: requiredEnv('TYPEORM_HOST'),
+    port: parseIntegerEnv('TYPEORM_PORT') ?? 5432,
+    username: requiredEnv('TYPEORM_USERNAME'),
+    password: requiredEnv('TYPEORM_PASSWORD'),
+    database: requiredEnv('TYPEORM_DATABASE'),
+    schema: optionalEnv('TYPEORM_SCHEMA'),
+    ssl: parseSslEnv('TYPEORM_SSL'),
+    applicationName: optionalEnv('TYPEORM_APPLICATION_NAME'),
+    connectTimeoutMS: parseIntegerEnv('TYPEORM_CONNECT_TIMEOUT_MS'),
+  };
+}
+<% } %><% if (database === 'mysql' || database === 'mariadb') { %>function createOptionsFromUrl(): DatabaseConnectionOptions {
+  return {
+    type: '<%= database %>',
+    url: requiredEnv(DATABASE_URL_KEY),
+  };
+}
+
+function createOptionsFromFields(): DatabaseConnectionOptions {
+  return {
+    type: '<%= database %>',
+    host: requiredEnv('TYPEORM_HOST'),
+    port: parseIntegerEnv('TYPEORM_PORT') ?? 3306,
+    username: requiredEnv('TYPEORM_USERNAME'),
+    password: requiredEnv('TYPEORM_PASSWORD'),
+    database: requiredEnv('TYPEORM_DATABASE'),
+    ssl: parseSslEnv('TYPEORM_SSL'),
+    socketPath: optionalEnv('TYPEORM_SOCKET_PATH'),
+    charset: optionalEnv('TYPEORM_CHARSET'),
+    timezone: optionalEnv('TYPEORM_TIMEZONE'),
+    connectTimeout: parseIntegerEnv('TYPEORM_CONNECT_TIMEOUT'),
+  };
+}
+<% } %><% if (database === 'mssql') { %>function createOptionsFromUrl(): DatabaseConnectionOptions {
+  return {
+    type: 'mssql',
+    url: requiredEnv(DATABASE_URL_KEY),
+  };
+}
+
+function createOptionsFromFields(): DatabaseConnectionOptions {
+  return {
+    type: 'mssql',
+    host: requiredEnv('TYPEORM_HOST'),
+    port: parseIntegerEnv('TYPEORM_PORT') ?? 1433,
+    username: requiredEnv('TYPEORM_USERNAME'),
+    password: requiredEnv('TYPEORM_PASSWORD'),
+    database: requiredEnv('TYPEORM_DATABASE'),
+    domain: optionalEnv('TYPEORM_DOMAIN'),
+    connectionTimeout: parseIntegerEnv('TYPEORM_CONNECTION_TIMEOUT'),
+    requestTimeout: parseIntegerEnv('TYPEORM_REQUEST_TIMEOUT'),
+    options: {
+      encrypt: parseBooleanEnv('TYPEORM_ENCRYPT'),
+      trustServerCertificate: parseBooleanEnv('TYPEORM_TRUST_SERVER_CERTIFICATE'),
+      instanceName: optionalEnv('TYPEORM_INSTANCE_NAME'),
+    },
+  };
+}
+<% } %><% if (database === 'sqlite') { %>function createOptionsFromUrl(): DatabaseConnectionOptions {
+  return {
+    type: 'sqlite',
+    database: requiredEnv(DATABASE_URL_KEY),
+  };
+}
+
+function createOptionsFromFields(): DatabaseConnectionOptions {
+  return {
+    type: 'sqlite',
+    database: requiredEnv('TYPEORM_DATABASE'),
+    busyTimeout: parseIntegerEnv('TYPEORM_BUSY_TIMEOUT'),
+    enableWAL: parseBooleanEnv('TYPEORM_ENABLE_WAL'),
+  };
+}
+<% } %><% if (database === 'better-sqlite3') { %>function createOptionsFromUrl(): DatabaseConnectionOptions {
+  return {
+    type: 'better-sqlite3',
+    database: requiredEnv(DATABASE_URL_KEY),
+  };
+}
+
+function createOptionsFromFields(): DatabaseConnectionOptions {
+  return {
+    type: 'better-sqlite3',
+    database: requiredEnv('TYPEORM_DATABASE'),
+    enableWAL: parseBooleanEnv('TYPEORM_ENABLE_WAL'),
+    timeout: parseIntegerEnv('TYPEORM_TIMEOUT'),
+    readonly: parseBooleanEnv('TYPEORM_READONLY'),
+    fileMustExist: parseBooleanEnv('TYPEORM_FILE_MUST_EXIST'),
+    statementCacheSize: parseIntegerEnv('TYPEORM_STATEMENT_CACHE_SIZE'),
+  };
+}
+<% } %>

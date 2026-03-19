@@ -105,7 +105,7 @@ export class AppModule {}
       `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${nestProjectName} --skipInstall --no-interactive`
     );
     runNx(
-      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${plainProjectName} --skipInstall --no-interactive`
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${plainProjectName} --db=sqlite --skipInstall --no-interactive`
     );
 
     const nestModule = readFileSync(
@@ -118,6 +118,38 @@ export class AppModule {}
     expect(
       existsSync(join(workspaceRoot, plainProjectRoot, 'src/data-source.ts'))
     ).toBe(true);
+    expect(
+      existsSync(
+        join(
+          workspaceRoot,
+          plainProjectRoot,
+          'tools/typeorm/connection-options.ts'
+        )
+      )
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(
+          workspaceRoot,
+          plainProjectRoot,
+          'tools/typeorm/datasource.migrations.ts'
+        )
+      )
+    ).toBe(true);
+
+    const plainConnectionOptions = readFileSync(
+      join(workspaceRoot, plainProjectRoot, 'tools/typeorm/connection-options.ts'),
+      'utf-8'
+    );
+    expect(plainConnectionOptions).toContain("type: 'sqlite'");
+    expect(plainConnectionOptions).toContain('TYPEORM_DATABASE');
+
+    const plainEnvExample = readFileSync(
+      join(workspaceRoot, plainProjectRoot, 'env.example'),
+      'utf-8'
+    );
+    expect(plainEnvExample).toContain('TYPEORM_DATABASE=');
+    expect(plainEnvExample).toContain('Mixed mode is rejected.');
     expect(
       readFileSync(
         join(workspaceRoot, plainProjectRoot, 'src/main.ts'),

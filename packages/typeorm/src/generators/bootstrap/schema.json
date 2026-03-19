@@ -18,7 +18,16 @@
     },
     "db": {
       "type": "string",
-      "description": "Database type passed to TypeORM.",
+      "description": "Database type used for generated datasource connection templates.",
+      "enum": [
+        "postgres",
+        "postgresql",
+        "mysql",
+        "mariadb",
+        "sqlite",
+        "better-sqlite3",
+        "mssql"
+      ],
       "default": "postgres"
     },
     "withCompose": {
