@@ -11,10 +11,16 @@
       "type": "string",
       "description": "Path to the TypeORM data source file used for migrations."
     },
+    "moduleSystem": {
+      "type": "string",
+      "enum": ["auto", "commonjs", "esm"],
+      "default": "auto",
+      "description": "Override module-system detection used to select the TypeORM CLI runner."
+    },
     "count": {
       "type": "integer",
       "minimum": 1,
-      "description": "Number of migrations to revert."
+      "description": "Number of times to execute TypeORM `migration:revert`."
     },
     "args": {
       "type": "array",

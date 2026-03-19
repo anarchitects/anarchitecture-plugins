@@ -9,6 +9,7 @@ import {
   normalizeName,
   projectTypeFor,
   relativeToWorkspace,
+  resolveTypeormCliRunner,
   splitCommand,
   type BaseExecutorOptions,
 } from '../shared.js';
@@ -19,6 +20,7 @@ export interface GenerateExecutorOptions extends BaseExecutorOptions {
   outputPath?: string;
   pretty?: boolean;
   driftCheck?: boolean;
+  check?: boolean;
 }
 
 export default async function runGenerate(
@@ -31,6 +33,11 @@ export default async function runGenerate(
 
   const normalizedName = normalizeName(options.name.trim());
   const paths = ensureProjectRoot(options, context);
+  const runner = resolveTypeormCliRunner(
+    options,
+    context,
+    paths.absoluteProjectRoot
+  );
   const projectType = projectTypeFor(context);
   const outputDirectory =
     options.outputPath ??
@@ -44,20 +51,18 @@ export default async function runGenerate(
   const [command, baseArgs] = splitCommand(execCommand);
   const args = [
     ...baseArgs,
-    'typeorm-ts-node-commonjs',
+    runner,
     'migration:generate',
     targetPath,
     '-d',
     relativeToWorkspace(context.root, paths.dataSource),
-    '-n',
-    normalizedName,
   ];
 
   if (options.pretty ?? true) {
     args.push('--pretty');
   }
-  if (options.driftCheck) {
-    args.push('--drift-check');
+  if (options.driftCheck || options.check) {
+    args.push('--check');
   }
   args.push(...ensureArgs(options.args));
 

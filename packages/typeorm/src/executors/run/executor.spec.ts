@@ -1,3 +1,6 @@
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ExecutorContext } from '@nx/devkit';
 import * as devkit from '@nx/devkit';
 import runMigrations from './executor.js';
@@ -9,15 +12,19 @@ jest.mock('../../utils/spawn.js', () => ({
 
 describe('run executor', () => {
   let context: ExecutorContext;
+  let tempDir: string;
   let spawnMock: jest.MockedFunction<typeof spawn>;
   let getPmSpy: jest.SpyInstance;
 
   beforeEach(() => {
     spawnMock = jest.mocked(spawn);
     spawnMock.mockResolvedValue(0);
+    tempDir = mkdtempSync(join(tmpdir(), 'nx-typeorm-run-'));
+    ensureRunnerPackage(tempDir, 'typeorm-ts-node-commonjs');
+    ensureRunnerPackage(tempDir, 'typeorm-ts-node-esm');
 
     context = {
-      root: '/tmp/workspace',
+      root: tempDir,
       projectName: 'api',
       projectsConfigurations: {
         version: 2,
@@ -42,6 +49,7 @@ describe('run executor', () => {
   afterEach(() => {
     getPmSpy.mockRestore();
     jest.clearAllMocks();
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('runs migrations with provided flags', async () => {
@@ -71,6 +79,52 @@ describe('run executor', () => {
       '--fake',
       '--log',
     ]);
-    expect(options).toMatchObject({ cwd: '/tmp/workspace' });
+    expect(options).toMatchObject({ cwd: tempDir });
+  });
+
+  it('uses ESM runner for module projects', async () => {
+    mkdirSync(join(tempDir, 'apps/api'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'apps/api/package.json'),
+      `${JSON.stringify({ type: 'module' }, null, 2)}\n`
+    );
+
+    await runMigrations(
+      {
+        dataSource: 'tools/typeorm/datasource.ts',
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args[1]).toBe('typeorm-ts-node-esm');
+  });
+
+  it('honors explicit moduleSystem override', async () => {
+    mkdirSync(join(tempDir, 'apps/api'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'apps/api/package.json'),
+      `${JSON.stringify({ type: 'module' }, null, 2)}\n`
+    );
+
+    await runMigrations(
+      {
+        dataSource: 'tools/typeorm/datasource.ts',
+        moduleSystem: 'commonjs',
+      },
+      context
+    );
+
+    const [, args] = spawnMock.mock.calls[0];
+    expect(args[1]).toBe('typeorm-ts-node-commonjs');
   });
 });
+
+function ensureRunnerPackage(workspaceRoot: string, packageName: string) {
+  const packageDirectory = join(workspaceRoot, 'node_modules', packageName);
+  mkdirSync(packageDirectory, { recursive: true });
+  writeFileSync(
+    join(packageDirectory, 'package.json'),
+    `${JSON.stringify({ name: packageName, version: '0.0.0-test' }, null, 2)}\n`
+  );
+}

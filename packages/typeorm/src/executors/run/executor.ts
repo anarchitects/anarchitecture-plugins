@@ -4,6 +4,7 @@ import {
   ensureArgs,
   ensureProjectRoot,
   relativeToWorkspace,
+  resolveTypeormCliRunner,
   splitCommand,
   type BaseExecutorOptions,
 } from '../shared.js';
@@ -20,13 +21,18 @@ export default async function runMigrations(
   context: ExecutorContext
 ) {
   const paths = ensureProjectRoot(options, context);
+  const runner = resolveTypeormCliRunner(
+    options,
+    context,
+    paths.absoluteProjectRoot
+  );
 
   const pmc = getPackageManagerCommand();
   const execCommand = pmc.exec ?? pmc.dlx ?? 'npx';
   const [command, baseArgs] = splitCommand(execCommand);
   const args = [
     ...baseArgs,
-    'typeorm-ts-node-commonjs',
+    runner,
     'migration:run',
     '-d',
     relativeToWorkspace(context.root, paths.dataSource),

@@ -4,4 +4,7 @@ export { default as revertExecutor } from './executors/revert/executor.js';
 export { default as ensureSchemaExecutor } from './executors/ensure-schema/executor.js';
 export { default as seedExecutor } from './executors/seed/executor.js';
 
+export { default as initGenerator } from './generators/init/generator.js';
 export { default as bootstrapGenerator } from './generators/bootstrap/generator.js';
+
+export { default } from './plugin/index.js';

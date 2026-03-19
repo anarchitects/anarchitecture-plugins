@@ -5,4 +5,6 @@ export interface BootstrapGeneratorSchema {
   db?: string;
   withCompose?: boolean;
   skipInstall?: boolean;
+  schemaPath?: string;
+  migrationsDir?: string;
 }

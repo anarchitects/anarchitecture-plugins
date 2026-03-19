@@ -15,6 +15,12 @@
       "type": "string",
       "description": "Path to the TypeORM data source file used for migrations."
     },
+    "moduleSystem": {
+      "type": "string",
+      "enum": ["auto", "commonjs", "esm"],
+      "default": "auto",
+      "description": "Override module-system detection used to select the TypeORM CLI runner."
+    },
     "outputPath": {
       "type": "string",
       "description": "Directory where generated migrations will be placed."
@@ -26,7 +32,11 @@
     },
     "driftCheck": {
       "type": "boolean",
-      "description": "Enable drift check before generating migrations."
+      "description": "Compatibility alias for TypeORM check mode (`--check`)."
+    },
+    "check": {
+      "type": "boolean",
+      "description": "Run TypeORM in check mode (`--check`) and fail when schema drift is detected."
     },
     "args": {
       "type": "array",
