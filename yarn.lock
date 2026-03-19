@@ -9,7 +9,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
   dependencies:
-    "@nx/devkit": "npm:22.5.4"
+    "@nx/devkit": "npm:^22.5.4"
     tslib: "npm:^2.6.2"
   languageName: unknown
   linkType: soft
@@ -2390,24 +2390,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nx/devkit@npm:22.5.4":
-  version: 22.5.4
-  resolution: "@nx/devkit@npm:22.5.4"
-  dependencies:
-    "@zkochan/js-yaml": "npm:0.0.7"
-    ejs: "npm:^3.1.7"
-    enquirer: "npm:~2.3.6"
-    minimatch: "npm:10.2.4"
-    semver: "npm:^7.6.3"
-    tslib: "npm:^2.3.0"
-    yargs-parser: "npm:21.1.1"
-  peerDependencies:
-    nx: ">= 21 <= 23 || ^22.0.0-0"
-  checksum: 10c0/ad973e41963dbb8bb1d2c5bfa91b31b332bb98753b417e41f4a212af414fad8823e2a0115d38e94df53ef0b1061c0a798f512beec79babe19e22770141b43018
-  languageName: node
-  linkType: hard
-
-"@nx/devkit@npm:22.6.0":
+"@nx/devkit@npm:22.6.0, @nx/devkit@npm:^22.5.4":
   version: 22.6.0
   resolution: "@nx/devkit@npm:22.6.0"
   dependencies:
