@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Schema Sync Executor",
+  "type": "object",
+  "properties": {
+    "projectRoot": {
+      "type": "string",
+      "description": "Project root when it cannot be inferred from the Nx project configuration."
+    },
+    "dataSource": {
+      "type": "string",
+      "description": "Path to the TypeORM data source file used for schema sync."
+    },
+    "moduleSystem": {
+      "type": "string",
+      "enum": ["auto", "commonjs", "esm"],
+      "default": "auto",
+      "description": "Override module-system detection used to select the TypeORM CLI runner."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  }
+}

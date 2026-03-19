@@ -87,6 +87,10 @@ When TypeORM files are detected, the plugin infers:
 - `db:migrate:generate`
 - `db:migrate:run`
 - `db:migrate:revert`
+- `db:migrate:show`
+- `db:schema:sync`
+- `db:schema:log`
+- `db:cache:clear`
 - `db:ensure-schema`
 - `db:seed` (applications)
 
@@ -95,6 +99,10 @@ Compatibility aliases are also inferred:
 - `typeorm:generate`
 - `typeorm:run`
 - `typeorm:revert`
+- `typeorm:show`
+- `typeorm:schema:sync`
+- `typeorm:schema:log`
+- `typeorm:cache:clear`
 - `typeorm:ensure-schema`
 - `typeorm:seed` (applications)
 
@@ -106,6 +114,10 @@ Run inferred targets:
 nx run api:db:migrate:run --transaction=each
 nx run api:db:migrate:generate --name AddUsers
 nx run api:db:migrate:revert --count=2
+nx run api:db:migrate:show
+nx run api:db:schema:sync
+nx run api:db:schema:log
+nx run api:db:cache:clear
 nx run data-access:db:ensure-schema
 nx run api:db:seed --file tools/typeorm/seeds/index.ts
 ```
@@ -120,3 +132,59 @@ runtime:
   then project tsconfig module mode, then fall back to CommonJS.
 - `moduleSystem=commonjs`: force `typeorm-ts-node-commonjs`.
 - `moduleSystem=esm`: force `typeorm-ts-node-esm`.
+
+When `dataSource` is omitted, migration-oriented executors (`generate`, `run`,
+`revert`) and `ensure-schema` infer it from the project with this priority:
+
+1. `tools/typeorm/datasource.migrations.ts`
+2. `tools/typeorm/datasource.migrations.js`
+3. `src/data-source.ts`
+4. `src/data-source.js`
+5. `src/typeorm.datasource.ts`
+6. `src/typeorm.datasource.js`
+
+Override inference at any time with `--dataSource=<relative-or-absolute-path>`.
+
+## TypeORM CLI Coverage
+
+| TypeORM CLI command  | nx-typeorm executor | Inferred target |
+| -------------------- | ------------------- | --------------- |
+| `migration:create`   | `migration-create`  | no              |
+| `migration:generate` | `generate`          | yes             |
+| `migration:run`      | `run`               | yes             |
+| `migration:revert`   | `revert`            | yes             |
+| `migration:show`     | `migration-show`    | yes             |
+| `schema:sync`        | `schema-sync`       | yes             |
+| `schema:log`         | `schema-log`        | yes             |
+| `schema:drop`        | `schema-drop`       | no              |
+| `query`              | `query`             | no              |
+| `cache:clear`        | `cache-clear`       | yes             |
+| `entity:create`      | `entity-create`     | no              |
+| `subscriber:create`  | `subscriber-create` | no              |
+| `version`            | `version`           | no              |
+| `init`               | `init`              | no              |
+
+Manual-only executors are available for explicit wiring in `project.json`.
+This includes risky commands like `query` and `schema:drop`.
+
+Example manual targets:
+
+```json
+{
+  "targets": {
+    "db:query": {
+      "executor": "@anarchitects/nx-typeorm:query",
+      "options": {
+        "projectRoot": "apps/api",
+        "query": "SELECT 1"
+      }
+    },
+    "db:schema:drop": {
+      "executor": "@anarchitects/nx-typeorm:schema-drop",
+      "options": {
+        "projectRoot": "apps/api"
+      }
+    }
+  }
+}
+```

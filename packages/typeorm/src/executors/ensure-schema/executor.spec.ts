@@ -8,7 +8,9 @@ describe('ensure-schema executor', () => {
   let tempDir: string;
   let projectRoot: string;
   let dataSourcePath: string;
+  let runtimeDataSourcePath: string;
   let mocks: EnsureSchemaMocks;
+  let runtimeMocks: EnsureSchemaMocks;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(process.cwd(), 'nx-typeorm-ensure-'));
@@ -17,15 +19,31 @@ describe('ensure-schema executor', () => {
       projectRoot,
       'tools/typeorm/datasource.migrations.js'
     );
+    runtimeDataSourcePath = join(projectRoot, 'src/data-source.js');
 
     mocks = createMocks();
+    runtimeMocks = createMocks();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).__ensureSchemaMocks = mocks;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).__ensureSchemaRuntimeMocks = runtimeMocks;
 
     mkdirSync(join(projectRoot, 'tools/typeorm'), { recursive: true });
     writeFileSync(
       dataSourcePath,
       `const mocks = globalThis.__ensureSchemaMocks;
+module.exports = {
+  initialize: (...args) => mocks.initialize(...args),
+  destroy: (...args) => mocks.destroy(...args),
+  createQueryRunner: (...args) => mocks.createQueryRunner(...args),
+  options: { type: 'postgres' },
+};
+`
+    );
+    mkdirSync(join(projectRoot, 'src'), { recursive: true });
+    writeFileSync(
+      runtimeDataSourcePath,
+      `const mocks = globalThis.__ensureSchemaRuntimeMocks;
 module.exports = {
   initialize: (...args) => mocks.initialize(...args),
   destroy: (...args) => mocks.destroy(...args),
@@ -54,7 +72,38 @@ module.exports = {
     rmSync(tempDir, { recursive: true, force: true });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (globalThis as any).__ensureSchemaMocks;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).__ensureSchemaRuntimeMocks;
     jest.resetModules();
+  });
+
+  it('defaults to tools/typeorm/datasource.migrations.js when dataSource is omitted', async () => {
+    const result = await ensureSchema(
+      {
+        projectRoot: 'libs/data',
+        schema: 'catalog',
+      },
+      context
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.initialize).toHaveBeenCalledTimes(1);
+    expect(runtimeMocks.initialize).not.toHaveBeenCalled();
+  });
+
+  it('honors explicit dataSource override over inferred defaults', async () => {
+    const result = await ensureSchema(
+      {
+        projectRoot: 'libs/data',
+        schema: 'catalog',
+        dataSource: 'src/data-source.js',
+      },
+      context
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(runtimeMocks.initialize).toHaveBeenCalledTimes(1);
+    expect(mocks.initialize).not.toHaveBeenCalled();
   });
 
   it('creates schema using provided name', async () => {
@@ -122,6 +171,7 @@ module.exports = {
 
   it('throws when data source is missing', async () => {
     rmSync(dataSourcePath, { force: true });
+    rmSync(runtimeDataSourcePath, { force: true });
 
     await expect(
       ensureSchema(

@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "TypeORM Init Executor",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the generated TypeORM project directory."
+    },
+    "database": {
+      "type": "string",
+      "description": "Database type passed to TypeORM init."
+    },
+    "express": {
+      "type": "boolean",
+      "description": "Generate an Express sample project."
+    },
+    "docker": {
+      "type": "boolean",
+      "description": "Generate docker-compose output."
+    },
+    "manager": {
+      "type": "string",
+      "enum": ["npm", "yarn"],
+      "description": "Package manager used by TypeORM init."
+    },
+    "module": {
+      "type": "string",
+      "enum": ["commonjs", "esm"],
+      "description": "Module system used by TypeORM init."
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional CLI arguments passed through to the TypeORM command."
+    }
+  }
+}

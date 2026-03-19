@@ -3,31 +3,37 @@ import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { ExecutorContext, ProjectConfiguration } from '@nx/devkit';
 
-export type ModuleSystem = 'auto' | 'commonjs' | 'esm';
-export type TypeormCliRunner =
-  | 'typeorm-ts-node-commonjs'
-  | 'typeorm-ts-node-esm';
+type ModuleSystem = 'auto' | 'commonjs' | 'esm';
+type TypeormCliRunner = 'typeorm-ts-node-commonjs' | 'typeorm-ts-node-esm';
 
-export interface BaseExecutorOptions {
+type ProjectRootDataSourceOptions = {
   projectRoot?: string;
   dataSource?: string;
-  args?: string[];
-  moduleSystem?: ModuleSystem;
-}
+};
 
-export interface WorkspacePaths {
+type ModuleSystemOptions = {
+  moduleSystem?: ModuleSystem;
+};
+
+type ResolvedProjectPaths = {
   projectRoot: string;
   absoluteProjectRoot: string;
   dataSource: string;
-}
+};
 
-const CANDIDATE_DATASOURCES = [
+const MIGRATION_DATASOURCE_CANDIDATES = [
   'tools/typeorm/datasource.migrations.ts',
   'tools/typeorm/datasource.migrations.js',
+];
+const LEGACY_RUNTIME_DATASOURCE_CANDIDATES = [
   'src/data-source.ts',
   'src/data-source.js',
   'src/typeorm.datasource.ts',
   'src/typeorm.datasource.js',
+];
+const CANDIDATE_DATASOURCES = [
+  ...MIGRATION_DATASOURCE_CANDIDATES,
+  ...LEGACY_RUNTIME_DATASOURCE_CANDIDATES,
 ];
 const DEFAULT_TS_CONFIG_NAMES = [
   'tsconfig.app.json',
@@ -40,9 +46,9 @@ const CJS_RUNNER: TypeormCliRunner = 'typeorm-ts-node-commonjs';
 const requireFromExecutor = createRequire(import.meta.url);
 
 export function ensureProjectRoot(
-  options: BaseExecutorOptions,
+  options: ProjectRootDataSourceOptions,
   context: ExecutorContext
-): WorkspacePaths {
+): ResolvedProjectPaths {
   const { projectRoot, absoluteProjectRoot } = resolveProjectRoot(
     options.projectRoot,
     context
@@ -54,7 +60,7 @@ export function ensureProjectRoot(
 }
 
 export function resolveTypeormCliRunner(
-  options: Pick<BaseExecutorOptions, 'moduleSystem'>,
+  options: ModuleSystemOptions,
   context: ExecutorContext,
   absoluteProjectRoot: string
 ): TypeormCliRunner {
@@ -90,7 +96,7 @@ export function resolveProjectRoot(
 }
 
 function detectModuleSystem(
-  options: Pick<BaseExecutorOptions, 'moduleSystem'>,
+  options: ModuleSystemOptions,
   context: ExecutorContext,
   absoluteProjectRoot: string
 ): 'commonjs' | 'esm' {
@@ -387,15 +393,6 @@ function absoluteFrom(pathValue: string, absoluteProjectRoot: string): string {
     : resolve(absoluteProjectRoot, pathValue);
 }
 
-export function splitCommand(command: string): [string, string[]] {
-  const [cmd, ...rest] = command.split(' ');
-  return [cmd, rest];
-}
-
-export function relativeToWorkspace(root: string, filePath: string): string {
-  return relative(root, filePath) || '.';
-}
-
 export function defaultMigrationsDirectory(
   projectRoot: string,
   projectType: 'application' | 'library' | undefined
@@ -405,10 +402,6 @@ export function defaultMigrationsDirectory(
   }
 
   return join(projectRoot, 'src/infrastructure-persistence/migrations');
-}
-
-export function ensureArgs(options?: string[]): string[] {
-  return options?.filter((arg) => arg.trim().length > 0) ?? [];
 }
 
 export function projectTypeFor(

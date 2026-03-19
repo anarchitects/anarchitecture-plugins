@@ -5,11 +5,7 @@ import {
   updateJson,
   type GeneratorCallback,
 } from '@nx/devkit';
-
-interface InitGeneratorSchema {
-  skipFormat?: boolean;
-  skipInstall?: boolean;
-}
+import type { InitGeneratorSchema } from './schema.js';
 
 interface NxJson {
   plugins?: Array<
