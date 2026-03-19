@@ -30,13 +30,12 @@ __metadata:
   resolution: "@anarchitects/nx-typeorm@workspace:packages/typeorm"
   dependencies:
     ts-morph: "npm:^22.0.0"
-    tslib: "npm:^2.6.2"
+    tslib: "npm:^2.8.1"
   peerDependencies:
-    "@nx/devkit": ^22.0.0
-    nx: 22.0.1
+    "@nx/devkit": ^22.5.3
     ts-morph: ^22.0.0
-    ts-node: 10.9.1
-    typeorm: ^0.3.20
+    ts-node: ^10.9.1
+    typeorm: ^0.3.27
   languageName: unknown
   linkType: soft
 
