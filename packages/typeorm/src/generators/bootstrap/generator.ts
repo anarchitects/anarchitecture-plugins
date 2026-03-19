@@ -311,10 +311,21 @@ function normalizeProjectRelative(pathValue: string): string {
     );
   }
 
-  const normalized = pathValue
-    .replace(/\\/g, '/')
-    .replace(/^\.\/+/, '')
-    .replace(/\/+$/, '');
+  const forwardSlashes = pathValue.split('\\').join('/');
+  let start = 0;
+  if (forwardSlashes.startsWith('./')) {
+    start = 1;
+    while (start < forwardSlashes.length && forwardSlashes[start] === '/') {
+      start += 1;
+    }
+  }
+
+  let end = forwardSlashes.length;
+  while (end > start && forwardSlashes[end - 1] === '/') {
+    end -= 1;
+  }
+
+  const normalized = forwardSlashes.slice(start, end);
   if (!normalized) {
     throw new Error('Path options must not be empty.');
   }
