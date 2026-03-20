@@ -44,9 +44,7 @@
     },
     {
       "plugin": "@nx/jest/plugin",
-      "include": [
-        "packages/typeorm-e2e/jest.config.cts"
-      ],
+      "include": ["packages/typeorm-e2e/jest.config.cts"],
       "options": {
         "targetName": "e2e",
         "ciTargetName": "e2e-ci",
