@@ -15,6 +15,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 ## Table of contents
 
 - [Installation](#installation)
+- [Supported Nx versions](#supported-nx-versions)
 - [Quick start](#quick-start)
 - [Concepts](#concepts)
   - [Profiles](#profiles)
@@ -71,6 +72,16 @@ If you need to re-run the init generator later (e.g. to add the ESLint integrati
 ```bash
 nx g @anarchitects/nx-governance:init
 ```
+
+---
+
+## Supported Nx versions
+
+This plugin supports Nx versions `>=19 <23`.
+
+The minimum is driven by the plugin's use of Project Crystal inferred targets. The upper bound is intentionally capped to avoid claiming compatibility with future major Nx releases before validation.
+
+For package consumers, the compatibility contract is declared in `peerDependencies` in `packages/governance/package.json`.
 
 ---
 

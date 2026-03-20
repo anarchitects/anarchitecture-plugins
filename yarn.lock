@@ -9,8 +9,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
   dependencies:
-    "@nx/devkit": "npm:^22.5.4"
     tslib: "npm:^2.6.2"
+  peerDependencies:
+    "@nx/devkit": ">=19 <23"
+    nx: ">=19 <23"
   languageName: unknown
   linkType: soft
 
@@ -2375,7 +2377,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nx/devkit@npm:22.6.0, @nx/devkit@npm:>=21.6.4 <23, @nx/devkit@npm:^22.5.4":
+"@nx/devkit@npm:22.6.0, @nx/devkit@npm:>=21.6.4 <23":
   version: 22.6.0
   resolution: "@nx/devkit@npm:22.6.0"
   dependencies:
