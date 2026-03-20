@@ -72,7 +72,10 @@
     ]
   },
   "dependencies": {
-    "@nx/devkit": "^22.5.4",
     "tslib": "^2.6.2"
+  },
+  "peerDependencies": {
+    "@nx/devkit": ">=19 <23",
+    "nx": ">=19 <23"
   }
 }
