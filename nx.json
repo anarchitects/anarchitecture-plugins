@@ -41,6 +41,15 @@
       "options": {
         "targetName": "test"
       }
+    },
+    {
+      "plugin": "@nx/jest/plugin",
+      "include": ["packages/typeorm-e2e/jest.config.cts"],
+      "options": {
+        "targetName": "e2e",
+        "ciTargetName": "e2e-ci",
+        "ciGroupName": "e2e"
+      }
     }
   ],
   "release": {
@@ -81,6 +90,12 @@
           "semverBump": "patch"
         },
         "ci": {
+          "semverBump": "none"
+        },
+        "test": {
+          "semverBump": "none"
+        },
+        "e2e": {
           "semverBump": "none"
         }
       }
