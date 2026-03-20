@@ -1,3 +1,3 @@
 import type { CliBaseOptions } from '../types.js';
 
-export interface SchemaLogExecutorOptions extends CliBaseOptions {}
+export type SchemaLogExecutorOptions = CliBaseOptions

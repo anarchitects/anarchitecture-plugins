@@ -36,7 +36,7 @@ __metadata:
     ts-morph: "npm:^22.0.0"
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@nx/devkit": ^22.5.3
+    "@nx/devkit": ">= 19 < 23"
     ts-morph: ^22.0.0
     ts-node: ^10.9.1
     typeorm: ^0.3.27

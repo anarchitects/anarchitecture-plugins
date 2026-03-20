@@ -19,6 +19,8 @@ export { default as initGenerator } from './generators/init/generator.js';
 export { default as bootstrapGenerator } from './generators/bootstrap/generator.js';
 export { default as migrationCreateGenerator } from './generators/migration-create/generator.js';
 export { default as migrationGenerator } from './generators/migration-create/generator.js';
+export { default as migrationApiGenerator } from './generators/migration-api/generator.js';
+export { default as migrationApiLibGenerator } from './generators/migration-api/generator.js';
 export { default as entityCreateGenerator } from './generators/entity-create/generator.js';
 export { default as entityGenerator } from './generators/entity-create/generator.js';
 export { default as subscriberCreateGenerator } from './generators/subscriber-create/generator.js';

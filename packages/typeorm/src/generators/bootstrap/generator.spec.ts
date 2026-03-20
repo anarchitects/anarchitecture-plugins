@@ -74,7 +74,10 @@ export class AppModule {}
     expect(moduleSource).toContain('TypeOrmModule.forRootAsync');
     expect(moduleSource).toContain('makeRuntimeDataSource');
 
-    const runtimeDataSourceSource = tree.read('apps/api/src/data-source.ts', 'utf-8');
+    const runtimeDataSourceSource = tree.read(
+      'apps/api/src/data-source.ts',
+      'utf-8'
+    );
     expect(runtimeDataSourceSource).toContain(
       "from '../tools/typeorm/connection-options'"
     );
@@ -347,6 +350,8 @@ export class AppModule {}
 
     const migrationSource = tree.read(migrationPath, 'utf-8');
     expect(migrationSource).toContain("from '../schema';");
+    expect(migrationSource).toContain('queryRunner.createSchema(SCHEMA, true)');
+    expect(migrationSource).toContain('nx-typeorm:migration-api:up:start');
 
     const projectConfig = readProjectConfiguration(tree, 'data-access');
     expect(projectConfig.metadata?.typeorm).toEqual({

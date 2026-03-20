@@ -100,6 +100,38 @@ nx g @anarchitects/nx-typeorm:migration --project=api --name="add users"
   - app: `tools/typeorm/migrations`
   - lib: `src/infrastructure-persistence/migrations`
 
+`migration-api` (alias: `migration-api-lib`)
+
+```bash
+nx g @anarchitects/nx-typeorm:migration-api --project=data-access --name="init users"
+nx g @anarchitects/nx-typeorm:migration-api-lib --project=data-access --name="init users"
+```
+
+- library-only generator (fails for applications)
+- generates migration files using TypeORM migration API (`QueryRunner`, `Table`,
+  `TableColumn`, etc.) without raw SQL strings
+- maintains migration state in
+  `src/infrastructure-persistence/migrations/.nx-typeorm-migration-manifest.json`
+- default behavior:
+  - no file when entity snapshot is unchanged
+  - new consolidated delta migration when entities changed
+- options:
+  - required: `--project`
+  - required in `fileMode=new` (default): `--name`
+  - optional: `--fileMode=new|patch-init` (default `new`)
+  - optional: `--entityGlob=<glob-relative-to-project-root>`
+    (default `src/infrastructure-persistence/entities/**/*.ts`)
+  - optional: `--allowMixedMigrations` to opt into mixed manual/tool migration
+    directories
+  - optional: `--timestamp=<number>`
+- safety behavior:
+  - fails on unsupported/unresolvable decorators/options
+  - fails when implicit naming cannot be resolved safely
+  - fails on rename-like table/column diffs (manual migration required)
+  - `patch-init` only patches bootstrap init migration
+    `1700000000000_init_schema.ts` and is only allowed before any generated
+    delta migration exists
+
 `entity-create` (alias: `entity`)
 
 ```bash

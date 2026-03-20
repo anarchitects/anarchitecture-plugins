@@ -1,3 +1,3 @@
 import type { CliBaseOptions } from '../types.js';
 
-export interface CacheClearExecutorOptions extends CliBaseOptions {}
+export type CacheClearExecutorOptions = CliBaseOptions
