@@ -18,6 +18,7 @@ export default {
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: 'test-output/jest/coverage',
   testTimeout: 60000,
+  maxWorkers: 1,
   setupFilesAfterEnv: [],
   forceExit: true,
 };
