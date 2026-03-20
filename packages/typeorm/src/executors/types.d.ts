@@ -22,7 +22,7 @@ export interface CliBaseOptions
     ModuleSystemOption,
     ArgsOption {}
 
-export interface ProjectRootOnlyOptions extends ProjectRootOption {}
+export type ProjectRootOnlyOptions = ProjectRootOption
 
 export interface ProjectRootDataSourceOptions
   extends ProjectRootOption,

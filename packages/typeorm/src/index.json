@@ -82,6 +82,14 @@
       "implementation": "./generators/migration-create/generator",
       "schema": "./generators/migration-create/schema.json"
     },
+    "migration-api": {
+      "implementation": "./generators/migration-api/generator",
+      "schema": "./generators/migration-api/schema.json"
+    },
+    "migration-api-lib": {
+      "implementation": "./generators/migration-api/generator",
+      "schema": "./generators/migration-api/schema.json"
+    },
     "entity-create": {
       "implementation": "./generators/entity-create/generator",
       "schema": "./generators/entity-create/schema.json"
