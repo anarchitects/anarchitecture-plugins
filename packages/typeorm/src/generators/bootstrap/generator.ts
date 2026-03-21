@@ -64,6 +64,8 @@ const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
 
 type SupportedDatabase = (typeof SUPPORTED_DATABASES)[number];
 
+type ApplicationBootstrapMode = 'nest' | 'plain';
+
 const DRIVER_DEPENDENCIES: Record<
   SupportedDatabase,
   {
@@ -85,9 +87,16 @@ export default async function bootstrapGenerator(
 ) {
   const database = normalizeDatabase(options.db);
   const project = readProjectConfiguration(tree, options.project);
-  const isNestApplication =
-    project.projectType === 'application' &&
-    hasNestModuleFile(tree, project.root, project.sourceRoot);
+  const applicationBootstrapMode =
+    project.projectType === 'application'
+      ? resolveApplicationBootstrapMode(
+          tree,
+          options.project,
+          project.root,
+          project.sourceRoot
+        )
+      : 'plain';
+  const isNestApplication = applicationBootstrapMode === 'nest';
 
   const tasks: GeneratorCallback[] = [];
   const dependencyTask = addDependenciesToPackageJson(
@@ -400,14 +409,36 @@ function normalizeProjectRelative(pathValue: string): string {
   return normalized;
 }
 
-function hasNestModuleFile(
+function resolveApplicationBootstrapMode(
   tree: Tree,
+  projectName: string,
   projectRoot: string,
   sourceRoot: string | undefined
-): boolean {
+): ApplicationBootstrapMode {
   const resolvedSourceRoot =
     sourceRoot ?? joinPathFragments(projectRoot, 'src');
-  return tree.exists(joinPathFragments(resolvedSourceRoot, 'app.module.ts'));
+
+  if (tree.exists(joinPathFragments(resolvedSourceRoot, 'app.module.ts'))) {
+    return 'nest';
+  }
+
+  const mainPath = joinPathFragments(resolvedSourceRoot, 'main.ts');
+  const mainSource = tree.exists(mainPath)
+    ? tree.read(mainPath, 'utf-8')
+    : null;
+  const looksLikeNestApplication =
+    mainSource?.includes('@nestjs/core') || mainSource?.includes('NestFactory');
+
+  if (looksLikeNestApplication) {
+    throw new Error(
+      `Project "${projectName}" looks like a NestJS application but is missing "${joinPathFragments(
+        resolvedSourceRoot,
+        'app.module.ts'
+      )}". NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts; bootstrap will not patch main.ts for NestJS apps.`
+    );
+  }
+
+  return 'plain';
 }
 
 function patchAppModule(
@@ -466,24 +497,36 @@ function patchAppModule(
   }
 
   const importsArray = ensureImportsArray(moduleLiteral);
-  const hasTypeOrm = importsArray
+  const existingTypeOrmRegistration = importsArray
     .getElements()
-    .some((element: Expression) =>
+    .find((element: Expression) =>
       element.getText().includes('TypeOrmModule.forRoot')
     );
 
-  if (!hasTypeOrm) {
+  if (existingTypeOrmRegistration) {
+    existingTypeOrmRegistration.replaceWithText((writer: CodeBlockWriter) => {
+      writeNestTypeOrmRegistration(writer);
+    });
+  } else {
     importsArray.addElement((writer: CodeBlockWriter) => {
-      writer.write('TypeOrmModule.forRoot({');
-      writer.indent(() => {
-        writer.writeLine('...AppDataSource.options,');
-        writer.writeLine('autoLoadEntities: true,');
-      });
-      writer.write('})');
+      writeNestTypeOrmRegistration(writer);
     });
   }
 
   tree.write(modulePath, sourceFile.getFullText());
+}
+
+function writeNestTypeOrmRegistration(writer: CodeBlockWriter) {
+  writer.write('TypeOrmModule.forRootAsync({');
+  writer.indent(() => {
+    writer.writeLine('useFactory: async () => ({');
+    writer.indent(() => {
+      writer.writeLine('...AppDataSource.options,');
+      writer.writeLine('autoLoadEntities: true,');
+    });
+    writer.writeLine('}),');
+  });
+  writer.write('})');
 }
 
 function patchMainFile(

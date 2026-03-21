@@ -50,6 +50,9 @@
         "ciTargetName": "e2e-ci",
         "ciGroupName": "e2e"
       }
+    },
+    {
+      "plugin": "@anarchitects/nx-typeorm"
     }
   ],
   "release": {
