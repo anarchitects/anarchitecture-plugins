@@ -5,6 +5,7 @@ import {
   readProjectFile,
   resetWorkspaceState,
   runNx,
+  runNxExpectFailure,
   showProject,
 } from './test-utils';
 
@@ -44,6 +45,13 @@ describe('nx-typeorm bootstrap applications', () => {
         targets: {},
       },
       {
+        'src/main.ts': `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`,
         'src/app.module.ts': `import { Module } from '@nestjs/common';
 
 @Module({
@@ -84,6 +92,10 @@ export class AppModule {}
     expect(nestModule).toContain('TypeOrmModule.forRootAsync');
     expect(nestModule).toContain('data-source');
 
+    const nestMain = readProjectFile(nestProjectRoot, 'src/main.ts');
+    expect(nestMain).toContain('NestFactory.create(AppModule)');
+    expect(nestMain).not.toContain('AppDataSource.initialize().catch');
+
     expect(projectFileExists(plainProjectRoot, 'src/data-source.ts')).toBe(
       true
     );
@@ -121,5 +133,48 @@ export class AppModule {}
     const plainProject = showProject(plainProjectName);
     expect(plainProject.targets['db:migrate:run']).toBeDefined();
     expect(plainProject.targets['db:seed']).toBeDefined();
+  });
+
+  it('fails instead of patching main.ts for incomplete Nest applications', () => {
+    runNx(
+      'yarn nx g @anarchitects/nx-typeorm:init --skipInstall --skipFormat --no-interactive'
+    );
+
+    const nestProjectName = 'typeorm-e2e-temp-nest-api';
+    const nestProjectRoot = 'packages/typeorm-e2e-temp-nest-api';
+    createProject(
+      nestProjectRoot,
+      {
+        name: nestProjectName,
+        root: nestProjectRoot,
+        sourceRoot: `${nestProjectRoot}/src`,
+        projectType: 'application',
+        targets: {},
+      },
+      {
+        'src/main.ts': `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`,
+      }
+    );
+
+    const output = runNxExpectFailure(
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${nestProjectName} --skipInstall --no-interactive`
+    );
+
+    expect(output).toContain(
+      'NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts'
+    );
+    expect(projectFileExists(nestProjectRoot, 'src/data-source.ts')).toBe(
+      false
+    );
+
+    const nestMain = readProjectFile(nestProjectRoot, 'src/main.ts');
+    expect(nestMain).toContain('NestFactory.create(AppModule)');
+    expect(nestMain).not.toContain('AppDataSource.initialize().catch');
   });
 });

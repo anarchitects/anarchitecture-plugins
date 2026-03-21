@@ -45,6 +45,16 @@ describe('bootstrapGenerator', () => {
 export class AppModule {}
 `
     );
+    tree.write(
+      'apps/api/src/main.ts',
+      `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`
+    );
 
     const task = await bootstrapGenerator(tree, {
       project: 'api',
@@ -68,8 +78,15 @@ export class AppModule {}
       'import { TypeOrmModule } from "@nestjs/typeorm"'
     );
     expect(moduleSource).toContain('from "./data-source"');
-    expect(moduleSource).toContain('TypeOrmModule.forRoot');
+    expect(moduleSource).toContain('TypeOrmModule.forRootAsync');
+    expect(moduleSource).toContain('useFactory: async () => ({');
     expect(moduleSource).toContain('AppDataSource.options');
+    expect(moduleSource).toContain('autoLoadEntities: true');
+
+    const mainSource = tree.read('apps/api/src/main.ts', 'utf-8');
+    expect(mainSource).toContain('NestFactory.create(AppModule)');
+    expect(mainSource).not.toContain('AppDataSource.initialize().catch');
+    expect(mainSource).not.toContain('./typeorm.datasource');
 
     const runtimeDataSourceSource = tree.read(
       'apps/api/src/data-source.ts',
@@ -152,6 +169,43 @@ export class AppModule {}
       '^0.3.20'
     );
     expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBe('^0.3.20');
+  });
+
+  it('fails for Nest applications that are missing app.module.ts', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    tree.write(
+      'apps/api/src/main.ts',
+      `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`
+    );
+
+    await expect(
+      bootstrapGenerator(tree, {
+        project: 'api',
+        skipInstall: true,
+      })
+    ).rejects.toThrow(
+      'NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts'
+    );
+
+    expect(tree.exists('apps/api/src/data-source.ts')).toBe(false);
+    expect(tree.read('apps/api/src/main.ts', 'utf-8')).toContain(
+      'NestFactory.create(AppModule)'
+    );
+    expect(tree.read('apps/api/src/main.ts', 'utf-8')).not.toContain(
+      'AppDataSource.initialize().catch'
+    );
   });
 
   it('retains docker-compose when requested', async () => {
