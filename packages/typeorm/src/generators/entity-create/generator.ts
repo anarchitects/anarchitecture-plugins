@@ -5,9 +5,10 @@ import {
   type ExecutorContext,
   type Tree,
 } from '@nx/devkit';
-import { isAbsolute, posix } from 'node:path';
+import { existsSync, renameSync } from 'node:fs';
+import { isAbsolute, join, posix } from 'node:path';
 import createEntity from '../../executors/entity-create/executor.js';
-import { normalizeName } from '../../utils/shared.js';
+import { normalizeName, toPascalCase } from '../../utils/shared.js';
 import type { EntityCreateGeneratorSchema } from './schema.js';
 
 export default async function entityCreateGenerator(
@@ -15,7 +16,8 @@ export default async function entityCreateGenerator(
   options: EntityCreateGeneratorSchema
 ) {
   const projectName = requireOption(options.project, 'project');
-  const entityName = normalizeName(requireOption(options.name, 'name'));
+  const kebabName = normalizeName(requireOption(options.name, 'name'));
+  const classBaseName = ensureSuffix(toPascalCase(kebabName), 'Entity');
   const projectConfig = readProjectConfiguration(tree, projectName);
   const targetDirectory = resolveTargetDirectory(
     projectConfig.projectType,
@@ -26,7 +28,7 @@ export default async function entityCreateGenerator(
   const result = await createEntity(
     {
       projectRoot: projectConfig.root,
-      path: joinPathFragments(targetDirectory, entityName),
+      path: joinPathFragments(targetDirectory, classBaseName),
       args: options.args,
     },
     context
@@ -35,6 +37,17 @@ export default async function entityCreateGenerator(
   if (!result.success) {
     throw new Error('TypeORM entity:create failed.');
   }
+
+  const absDir = join(tree.root, projectConfig.root, targetDirectory);
+  const generatedFile = join(absDir, `${classBaseName}.ts`);
+  const expectedFile = join(absDir, `${kebabName}.entity.ts`);
+  if (existsSync(generatedFile)) {
+    renameSync(generatedFile, expectedFile);
+  }
+}
+
+function ensureSuffix(value: string, suffix: string): string {
+  return value.endsWith(suffix) ? value : `${value}${suffix}`;
 }
 
 function resolveTargetDirectory(

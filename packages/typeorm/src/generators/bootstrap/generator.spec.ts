@@ -55,14 +55,11 @@ export class AppModule {}
     expect(tree.exists('apps/api/src/data-source.ts')).toBe(true);
     expect(tree.exists('apps/api/src/typeorm.datasource.ts')).toBe(true);
     expect(tree.exists('apps/api/tools/typeorm/connection-options.ts')).toBe(
-      true
+      false
     );
     expect(tree.exists('apps/api/tools/typeorm/datasource.migrations.ts')).toBe(
-      true
+      false
     );
-    expect(
-      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
-    ).toContain('createMigrationDataSourceOptions');
     expect(tree.exists('apps/api/docker-compose.yml')).toBe(false);
 
     const moduleSource = tree.read('apps/api/src/app.module.ts', 'utf-8');
@@ -71,33 +68,24 @@ export class AppModule {}
       'import { TypeOrmModule } from "@nestjs/typeorm"'
     );
     expect(moduleSource).toContain('from "./data-source"');
-    expect(moduleSource).toContain('TypeOrmModule.forRootAsync');
-    expect(moduleSource).toContain('makeRuntimeDataSource');
+    expect(moduleSource).toContain('TypeOrmModule.forRoot');
+    expect(moduleSource).toContain('AppDataSource.options');
 
     const runtimeDataSourceSource = tree.read(
       'apps/api/src/data-source.ts',
       'utf-8'
     );
     expect(runtimeDataSourceSource).toContain(
-      "from '../tools/typeorm/connection-options'"
+      'const AppDataSource = new DataSource({'
     );
-    expect(runtimeDataSourceSource).toContain('createRuntimeDataSourceOptions');
+    expect(runtimeDataSourceSource).toContain("type: 'postgres'");
 
-    const migrationDataSourceSource = tree.read(
-      'apps/api/tools/typeorm/datasource.migrations.ts',
+    const typeormDataSourceSource = tree.read(
+      'apps/api/src/typeorm.datasource.ts',
       'utf-8'
     );
-    expect(migrationDataSourceSource).toContain("from './connection-options'");
-    expect(migrationDataSourceSource).toContain(
-      'createMigrationDataSourceOptions'
-    );
-
-    const connectionOptionsSource = tree.read(
-      'apps/api/tools/typeorm/connection-options.ts',
-      'utf-8'
-    );
-    expect(connectionOptionsSource).toContain(
-      "migrations: ['dist/tools/typeorm/migrations/*.js']"
+    expect(typeormDataSourceSource).toContain(
+      "export { AppDataSource as default } from './data-source';"
     );
 
     const packageJson = readJson(tree, 'package.json');
@@ -105,10 +93,15 @@ export class AppModule {}
     expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.dependencies['pg']).toBe('^8.20.0');
     expect(packageJson.dependencies['@nestjs/typeorm']).toBe('^11.0.0');
+    expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
     expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBe(
       '^0.3.20'
     );
     expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBe('^0.3.20');
+    expect(packageJson.devDependencies.typeorm).toBeUndefined();
+    expect(packageJson.devDependencies['reflect-metadata']).toBeUndefined();
+    expect(packageJson.devDependencies.pg).toBeUndefined();
+    expect(packageJson.devDependencies['@nestjs/typeorm']).toBeUndefined();
   });
 
   it('does not patch non-Nest applications', async () => {
@@ -135,17 +128,30 @@ export class AppModule {}
     expect(tree.exists('apps/worker/src/data-source.ts')).toBe(true);
     expect(tree.exists('apps/worker/src/typeorm.datasource.ts')).toBe(true);
     expect(tree.exists('apps/worker/tools/typeorm/connection-options.ts')).toBe(
-      true
+      false
     );
     expect(
       tree.exists('apps/worker/tools/typeorm/datasource.migrations.ts')
-    ).toBe(true);
+    ).toBe(false);
     expect(tree.read('apps/worker/src/main.ts', 'utf-8')).toContain(
       'bootstrap'
     );
+    expect(tree.read('apps/worker/src/main.ts', 'utf-8')).toContain(
+      'AppDataSource } from'
+    );
+    expect(tree.read('apps/worker/src/main.ts', 'utf-8')).toContain(
+      'AppDataSource.initialize().catch'
+    );
 
     const packageJson = readJson(tree, 'package.json');
+    expect(packageJson.dependencies['typeorm']).toBe('^0.3.28');
+    expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.dependencies['@nestjs/typeorm']).toBeUndefined();
+    expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
+    expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBe(
+      '^0.3.20'
+    );
+    expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBe('^0.3.20');
   });
 
   it('retains docker-compose when requested', async () => {
@@ -174,7 +180,7 @@ export class AppModule {}
     expect(tree.exists('apps/api/docker-compose.yml')).toBe(true);
   });
 
-  it('preserves existing migration datasource for applications', async () => {
+  it('preserves existing migration datasource for applications when migrationDatasource is true', async () => {
     addProjectConfiguration(tree, 'api', {
       root: 'apps/api',
       sourceRoot: 'apps/api/src',
@@ -189,16 +195,64 @@ export class AppModule {}
 
     await bootstrapGenerator(tree, {
       project: 'api',
+      migrationDatasource: true,
       skipInstall: true,
     });
     await bootstrapGenerator(tree, {
       project: 'api',
+      migrationDatasource: true,
       skipInstall: true,
     });
 
     expect(
       tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
     ).toBe("export default 'custom';\n");
+  });
+
+  it('creates migration datasource for applications when migrationDatasource is true', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      migrationDatasource: true,
+      skipInstall: true,
+    });
+
+    expect(tree.exists('apps/api/tools/typeorm/datasource.migrations.ts')).toBe(
+      true
+    );
+    expect(
+      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
+    ).toContain("migrations: ['dist/tools/typeorm/migrations/*.js']");
+  });
+
+  it('removes migration datasource for applications when migrationDatasource is false', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    tree.write(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      "export default 'custom';\n"
+    );
+
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      migrationDatasource: false,
+      skipInstall: true,
+    });
+
+    expect(tree.exists('apps/api/tools/typeorm/datasource.migrations.ts')).toBe(
+      false
+    );
   });
 
   it.each([
@@ -260,12 +314,9 @@ export class AppModule {}
         skipInstall: true,
       });
 
-      const helperSource = tree.read(
-        'apps/api/tools/typeorm/connection-options.ts',
-        'utf-8'
-      );
-      expect(helperSource).toContain(expectedType);
-      expect(helperSource).toContain(helperSnippet);
+      const runtimeSource = tree.read('apps/api/src/data-source.ts', 'utf-8');
+      expect(runtimeSource).toContain(expectedType);
+      expect(runtimeSource).toContain(helperSnippet);
 
       const envSource = tree.read('apps/api/env.example', 'utf-8');
       expect(envSource).toContain(envSnippet);

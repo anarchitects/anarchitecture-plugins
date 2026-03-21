@@ -84,25 +84,35 @@ export class AppModule {}
     expect(nestModule).toContain('TypeOrmModule.forRootAsync');
     expect(nestModule).toContain('data-source');
 
-    expect(projectFileExists(plainProjectRoot, 'src/data-source.ts')).toBe(true);
+    expect(projectFileExists(plainProjectRoot, 'src/data-source.ts')).toBe(
+      true
+    );
     expect(
       projectFileExists(plainProjectRoot, 'tools/typeorm/connection-options.ts')
-    ).toBe(true);
+    ).toBe(false);
     expect(
-      projectFileExists(plainProjectRoot, 'tools/typeorm/datasource.migrations.ts')
-    ).toBe(true);
+      projectFileExists(
+        plainProjectRoot,
+        'tools/typeorm/datasource.migrations.ts'
+      )
+    ).toBe(false);
 
-    const plainConnectionOptions = readProjectFile(
+    const plainDataSource = readProjectFile(
       plainProjectRoot,
-      'tools/typeorm/connection-options.ts'
+      'src/data-source.ts'
     );
-    expect(plainConnectionOptions).toContain("type: 'sqlite'");
-    expect(plainConnectionOptions).toContain('TYPEORM_DATABASE');
+    expect(plainDataSource).toContain("type: 'sqlite'");
+    expect(plainDataSource).toContain('process.env.TYPEORM_DATABASE');
+    expect(plainDataSource).toContain(
+      './tmp/typeorm_e2e_temp_plain_api.sqlite'
+    );
 
     const plainEnvExample = readProjectFile(plainProjectRoot, 'env.example');
     expect(plainEnvExample).toContain('TYPEORM_DATABASE=');
     expect(plainEnvExample).toContain('Mixed mode is rejected.');
-    expect(readProjectFile(plainProjectRoot, 'src/main.ts')).toContain("return 'ok';");
+    expect(readProjectFile(plainProjectRoot, 'src/main.ts')).toContain(
+      "return 'ok';"
+    );
 
     const nestProject = showProject(nestProjectName);
     expect(nestProject.targets['db:migrate:run']).toBeDefined();

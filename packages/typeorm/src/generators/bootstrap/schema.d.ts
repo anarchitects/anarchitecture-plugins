@@ -11,6 +11,7 @@ export interface BootstrapGeneratorSchema {
     | 'better-sqlite3'
     | 'mssql';
   withCompose?: boolean;
+  migrationDatasource?: boolean;
   skipInstall?: boolean;
   schemaPath?: string;
   migrationsDir?: string;

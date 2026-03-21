@@ -42,7 +42,7 @@ describe('entity-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'apps/api',
-        path: 'src/entities/user-profile',
+        path: 'src/entities/UserProfileEntity',
         args: undefined,
       },
       expect.objectContaining({ projectName: 'api' })
@@ -64,7 +64,7 @@ describe('entity-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'libs/data-access',
-        path: 'src/infrastructure-persistence/entities/audit-log',
+        path: 'src/infrastructure-persistence/entities/AuditLogEntity',
         args: undefined,
       },
       expect.objectContaining({ projectName: 'data-access' })
@@ -88,7 +88,7 @@ describe('entity-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'apps/api',
-        path: 'src/domain/entities/order-item',
+        path: 'src/domain/entities/OrderItemEntity',
         args: ['--bar'],
       },
       expect.objectContaining({ projectName: 'api' })
