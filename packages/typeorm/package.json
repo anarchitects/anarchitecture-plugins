@@ -1,6 +1,6 @@
 {
   "name": "@anarchitects/nx-typeorm",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Nx plugin providing TypeORM executors, generators, and schema management utilities.",
   "type": "module",
   "main": "dist/index.js",
