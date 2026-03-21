@@ -35,6 +35,11 @@
       "description": "Include a Docker Compose file for local Postgres development.",
       "default": false
     },
+    "migrationDatasource": {
+      "type": "boolean",
+      "description": "Create a separate migration datasource file for CLI commands.",
+      "default": false
+    },
     "skipInstall": {
       "type": "boolean",
       "description": "Skip running package installations after updating dependencies.",

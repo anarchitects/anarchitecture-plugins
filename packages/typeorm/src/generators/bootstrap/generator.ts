@@ -14,6 +14,7 @@ import { dirname, isAbsolute, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   ArrayLiteralExpression,
+  CallExpression,
   CodeBlockWriter,
   Decorator,
   Expression,
@@ -30,10 +31,9 @@ interface BootstrapGeneratorSchema {
   project: string;
   domain?: string;
   schema?: string;
-  db?:
-    | SupportedDatabase
-    | 'postgresql';
+  db?: SupportedDatabase | 'postgresql';
   withCompose?: boolean;
+  migrationDatasource?: boolean;
   skipInstall?: boolean;
   schemaPath?: string;
   migrationsDir?: string;
@@ -56,11 +56,11 @@ const DEFAULT_SCHEMA_PATH = 'src/infrastructure-persistence/schema.ts';
 const DEFAULT_MIGRATIONS_DIR = 'src/infrastructure-persistence/migrations';
 const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
 const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
+const APP_CONNECTION_OPTIONS_PATH = 'tools/typeorm/connection-options.ts';
 const runtimeImportPath = './data-source';
-const SUPPORTED_DATABASE_DISPLAY = [
-  ...SUPPORTED_DATABASES,
-  'postgresql',
-].join(', ');
+const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
+  ', '
+);
 
 type SupportedDatabase = (typeof SUPPORTED_DATABASES)[number];
 
@@ -93,11 +93,7 @@ export default async function bootstrapGenerator(
   const dependencyTask = addDependenciesToPackageJson(
     tree,
     buildRuntimeDependencies(database, isNestApplication),
-    {
-      'ts-node': '^10.9.2',
-      'typeorm-ts-node-commonjs': '^0.3.20',
-      'typeorm-ts-node-esm': '^0.3.20',
-    }
+    buildToolDependencies()
   );
 
   if (!options.skipInstall) {
@@ -141,6 +137,14 @@ function buildRuntimeDependencies(
   }
 
   return dependencies;
+}
+
+function buildToolDependencies() {
+  return {
+    'ts-node': '^10.9.2',
+    'typeorm-ts-node-commonjs': '^0.3.20',
+    'typeorm-ts-node-esm': '^0.3.20',
+  };
 }
 
 function prepareLibrary(
@@ -227,6 +231,10 @@ function prepareApplication(
     projectRoot,
     APP_MIGRATIONS_DATASOURCE_PATH
   );
+  const connectionOptionsPath = joinPathFragments(
+    projectRoot,
+    APP_CONNECTION_OPTIONS_PATH
+  );
   const existingMigrationsDatasource = tree.exists(migrationsDatasourcePath)
     ? tree.read(migrationsDatasourcePath)
     : null;
@@ -242,8 +250,18 @@ function prepareApplication(
     }
   );
 
-  if (existingMigrationsDatasource) {
+  if (options.migrationDatasource && existingMigrationsDatasource) {
     tree.write(migrationsDatasourcePath, existingMigrationsDatasource);
+  } else if (
+    !options.migrationDatasource &&
+    tree.exists(migrationsDatasourcePath)
+  ) {
+    tree.delete(migrationsDatasourcePath);
+  }
+
+  // Legacy helper template is no longer generated; clean up when re-running.
+  if (tree.exists(connectionOptionsPath)) {
+    tree.delete(connectionOptionsPath);
   }
 
   if (!options.withCompose) {
@@ -255,6 +273,8 @@ function prepareApplication(
 
   if (isNestApplication) {
     patchAppModule(tree, projectRoot, sourceRoot);
+  } else {
+    patchMainFile(tree, projectRoot, sourceRoot);
   }
 }
 
@@ -269,7 +289,9 @@ function normalizeDatabase(database?: string): SupportedDatabase {
   }
 
   throw new Error(
-    `Unsupported database "${database ?? DEFAULT_DATABASE}". Supported values: ${SUPPORTED_DATABASE_DISPLAY}.`
+    `Unsupported database "${
+      database ?? DEFAULT_DATABASE
+    }". Supported values: ${SUPPORTED_DATABASE_DISPLAY}.`
   );
 }
 
@@ -415,7 +437,7 @@ function patchAppModule(
   });
 
   ensureImport(sourceFile, '@nestjs/typeorm', 'TypeOrmModule');
-  ensureImport(sourceFile, runtimeImportPath, 'makeRuntimeDataSource');
+  ensureImport(sourceFile, runtimeImportPath, 'AppDataSource');
 
   const moduleDecorator = sourceFile
     .getDescendantsOfKind(SyntaxKind.Decorator)
@@ -452,23 +474,74 @@ function patchAppModule(
 
   if (!hasTypeOrm) {
     importsArray.addElement((writer: CodeBlockWriter) => {
-      writer.write('TypeOrmModule.forRootAsync({');
+      writer.write('TypeOrmModule.forRoot({');
       writer.indent(() => {
-        writer.writeLine('useFactory: async () => ({');
-        writer.indent(() => {
-          writer.writeLine('...makeRuntimeDataSource().options,');
-          writer.writeLine('autoLoadEntities: true,');
-        });
-        writer.writeLine('}),');
-        writer.writeLine(
-          'dataSourceFactory: async () => makeRuntimeDataSource().initialize(),'
-        );
+        writer.writeLine('...AppDataSource.options,');
+        writer.writeLine('autoLoadEntities: true,');
       });
       writer.write('})');
     });
   }
 
   tree.write(modulePath, sourceFile.getFullText());
+}
+
+function patchMainFile(
+  tree: Tree,
+  projectRoot: string,
+  sourceRoot: string | undefined
+) {
+  const resolvedSourceRoot =
+    sourceRoot ?? joinPathFragments(projectRoot, 'src');
+  const mainPath = joinPathFragments(resolvedSourceRoot, 'main.ts');
+
+  if (!tree.exists(mainPath)) {
+    return;
+  }
+
+  const sourceText = tree.read(mainPath, 'utf-8');
+  if (!sourceText) {
+    return;
+  }
+
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    skipAddingFilesFromTsConfig: true,
+  });
+  const sourceFile = project.createSourceFile(mainPath, sourceText, {
+    overwrite: true,
+  });
+
+  ensureImport(sourceFile, './typeorm.datasource', 'AppDataSource');
+
+  const hasDataSourceInit = sourceFile
+    .getDescendantsOfKind(SyntaxKind.CallExpression)
+    .some(
+      (callExpression: CallExpression) =>
+        callExpression.getExpression().getText() === 'AppDataSource.initialize'
+    );
+
+  if (!hasDataSourceInit) {
+    const importDeclarations = sourceFile.getImportDeclarations();
+    const insertionIndex =
+      importDeclarations.length > 0
+        ? importDeclarations[importDeclarations.length - 1].getChildIndex() + 1
+        : 0;
+
+    sourceFile.insertStatements(insertionIndex, (writer: CodeBlockWriter) => {
+      writer.writeLine('');
+      writer.writeLine('void AppDataSource.initialize().catch((error) => {');
+      writer.indent(() => {
+        writer.writeLine(
+          "console.error('Failed to initialize TypeORM data source', error);"
+        );
+        writer.writeLine('process.exit(1);');
+      });
+      writer.writeLine('});');
+    });
+  }
+
+  tree.write(mainPath, sourceFile.getFullText());
 }
 
 function ensureImport(

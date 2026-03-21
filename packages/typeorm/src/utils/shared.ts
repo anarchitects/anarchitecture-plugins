@@ -425,3 +425,10 @@ export function schemaNameFrom(contents: string): string | undefined {
 export function normalizeName(name: string): string {
   return name.replace(/\s+/g, '-');
 }
+
+export function toPascalCase(name: string): string {
+  return name
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+}

@@ -42,7 +42,7 @@ describe('subscriber-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'apps/api',
-        path: 'src/subscribers/user-subscriber',
+        path: 'src/subscribers/UserSubscriber',
         args: undefined,
       },
       expect.objectContaining({ projectName: 'api' })
@@ -64,7 +64,7 @@ describe('subscriber-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'libs/data-access',
-        path: 'src/infrastructure-persistence/subscribers/audit-subscriber',
+        path: 'src/infrastructure-persistence/subscribers/AuditSubscriber',
         args: undefined,
       },
       expect.objectContaining({ projectName: 'data-access' })
@@ -88,7 +88,7 @@ describe('subscriber-create generator', () => {
     expect(executorMock).toHaveBeenCalledWith(
       {
         projectRoot: 'apps/api',
-        path: 'src/domain/subscribers/order-subscriber',
+        path: 'src/domain/subscribers/OrderSubscriber',
         args: ['--foo'],
       },
       expect.objectContaining({ projectName: 'api' })

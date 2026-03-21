@@ -75,7 +75,36 @@ export class AppModule {}
 
     const dataSource =
       projects['apps/api']?.targets?.['db:migrate:run']?.options?.dataSource;
-    expect(dataSource).toBe('apps/api/tools/typeorm/datasource.migrations.ts');
+    // Must be project-root-relative so the executor can join it with
+    // absoluteProjectRoot without double-prefixing the project path.
+    expect(dataSource).toBe('tools/typeorm/datasource.migrations.ts');
+  });
+
+  it('inferred dataSource is project-root-relative, not workspace-relative', async () => {
+    writeFile(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      'export default {};\n'
+    );
+    writeFile(
+      'apps/api/src/app.module.ts',
+      `import { Module } from '@nestjs/common';\n@Module({})\nexport class AppModule {}\n`
+    );
+
+    const results = await createNodes([
+      'apps/api/src/app.module.ts',
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+    ]);
+    const projects = mergeProjects(results);
+
+    const dataSource =
+      projects['apps/api']?.targets?.['db:migrate:show']?.options?.dataSource;
+
+    // Must NOT contain the project root prefix. If it were workspace-relative
+    // ('apps/api/tools/...') the executor would double-join it with
+    // absoluteProjectRoot and produce apps/api/apps/api/tools/... — the bug
+    // reported in https://github.com/anarchitects/anarchitecture-plugins.
+    expect(dataSource).not.toContain('apps/api/apps/api');
+    expect(dataSource).toBe('tools/typeorm/datasource.migrations.ts');
   });
 
   it('infers schema-oriented targets for libraries', async () => {
