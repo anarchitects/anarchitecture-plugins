@@ -121,6 +121,54 @@ export async function bootstrap() {
     expect(packageJson.devDependencies['@nestjs/typeorm']).toBeUndefined();
   });
 
+  it('patches nested Nest app.module.ts under src/app', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    tree.write(
+      'apps/api/src/app/app.module.ts',
+      `import { Module } from '@nestjs/common';
+
+@Module({
+  imports: [],
+})
+export class AppModule {}
+`
+    );
+    tree.write(
+      'apps/api/src/main.ts',
+      `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app/app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`
+    );
+
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      skipInstall: true,
+    });
+
+    const nestedModuleSource = tree.read('apps/api/src/app/app.module.ts', 'utf-8');
+    expect(nestedModuleSource).toBeDefined();
+    expect(nestedModuleSource).toContain(
+      'import { TypeOrmModule } from "@nestjs/typeorm"'
+    );
+    expect(nestedModuleSource).toContain('from "../data-source"');
+    expect(nestedModuleSource).toContain('TypeOrmModule.forRootAsync');
+    expect(nestedModuleSource).toContain('autoLoadEntities: true');
+
+    const mainSource = tree.read('apps/api/src/main.ts', 'utf-8');
+    expect(mainSource).toContain('NestFactory.create(AppModule)');
+    expect(mainSource).not.toContain('AppDataSource.initialize().catch');
+  });
+
   it('does not patch non-Nest applications', async () => {
     addProjectConfiguration(tree, 'worker', {
       root: 'apps/worker',
@@ -196,7 +244,7 @@ export async function bootstrap() {
         skipInstall: true,
       })
     ).rejects.toThrow(
-      'NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts'
+      'looks like a NestJS application but is missing an app.module.ts under'
     );
 
     expect(tree.exists('apps/api/src/data-source.ts')).toBe(false);
@@ -206,6 +254,49 @@ export async function bootstrap() {
     expect(tree.read('apps/api/src/main.ts', 'utf-8')).not.toContain(
       'AppDataSource.initialize().catch'
     );
+  });
+
+  it('fails when multiple nested app.module.ts files exist under source root', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+
+    tree.write(
+      'apps/api/src/app/app.module.ts',
+      `import { Module } from '@nestjs/common';
+
+@Module({})
+export class AppModule {}
+`
+    );
+    tree.write(
+      'apps/api/src/admin/app.module.ts',
+      `import { Module } from '@nestjs/common';
+
+@Module({})
+export class AdminModule {}
+`
+    );
+    tree.write(
+      'apps/api/src/main.ts',
+      `import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app/app.module';
+
+export async function bootstrap() {
+  return NestFactory.create(AppModule);
+}
+`
+    );
+
+    await expect(
+      bootstrapGenerator(tree, {
+        project: 'api',
+        skipInstall: true,
+      })
+    ).rejects.toThrow('has multiple app.module.ts files under');
   });
 
   it('retains docker-compose when requested', async () => {

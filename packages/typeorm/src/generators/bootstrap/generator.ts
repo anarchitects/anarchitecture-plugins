@@ -57,7 +57,6 @@ const DEFAULT_MIGRATIONS_DIR = 'src/infrastructure-persistence/migrations';
 const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
 const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
 const APP_CONNECTION_OPTIONS_PATH = 'tools/typeorm/connection-options.ts';
-const runtimeImportPath = './data-source';
 const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
   ', '
 );
@@ -281,7 +280,7 @@ function prepareApplication(
   }
 
   if (isNestApplication) {
-    patchAppModule(tree, projectRoot, sourceRoot);
+    patchAppModule(tree, options.project, projectRoot, sourceRoot);
   } else {
     patchMainFile(tree, projectRoot, sourceRoot);
   }
@@ -418,7 +417,7 @@ function resolveApplicationBootstrapMode(
   const resolvedSourceRoot =
     sourceRoot ?? joinPathFragments(projectRoot, 'src');
 
-  if (tree.exists(joinPathFragments(resolvedSourceRoot, 'app.module.ts'))) {
+  if (resolveNestAppModulePath(tree, projectName, resolvedSourceRoot)) {
     return 'nest';
   }
 
@@ -431,26 +430,89 @@ function resolveApplicationBootstrapMode(
 
   if (looksLikeNestApplication) {
     throw new Error(
-      `Project "${projectName}" looks like a NestJS application but is missing "${joinPathFragments(
+      `Project "${projectName}" looks like a NestJS application but is missing an app.module.ts under "${resolvedSourceRoot}" (for example "${joinPathFragments(
         resolvedSourceRoot,
         'app.module.ts'
-      )}". NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts; bootstrap will not patch main.ts for NestJS apps.`
+      )}" or "${joinPathFragments(
+        resolvedSourceRoot,
+        'app',
+        'app.module.ts'
+      )}"). NestJS apps must wire TypeORM through TypeOrmModule in app.module.ts; bootstrap will not patch main.ts for NestJS apps.`
     );
   }
 
   return 'plain';
 }
 
+function resolveNestAppModulePath(
+  tree: Tree,
+  projectName: string,
+  sourceRoot: string
+): string | undefined {
+  const rootModulePath = joinPathFragments(sourceRoot, 'app.module.ts');
+  if (tree.exists(rootModulePath)) {
+    return rootModulePath;
+  }
+
+  const nestedModulePaths = findNestedAppModulePaths(tree, sourceRoot);
+  if (nestedModulePaths.length === 0) {
+    return undefined;
+  }
+
+  if (nestedModulePaths.length === 1) {
+    return nestedModulePaths[0];
+  }
+
+  const listedPaths = nestedModulePaths
+    .map((modulePath) => `"${modulePath}"`)
+    .join(', ');
+  throw new Error(
+    `Project "${projectName}" has multiple app.module.ts files under "${sourceRoot}": ${listedPaths}. Keep a single NestJS module entrypoint or move the canonical module to "${rootModulePath}".`
+  );
+}
+
+function findNestedAppModulePaths(tree: Tree, rootDirectory: string): string[] {
+  const matches: string[] = [];
+
+  function visit(directory: string) {
+    let children: string[];
+    try {
+      children = [...tree.children(directory)].sort();
+    } catch {
+      return;
+    }
+
+    for (const child of children) {
+      const childPath = joinPathFragments(directory, child);
+      if (child === 'app.module.ts' && tree.exists(childPath)) {
+        matches.push(childPath);
+        continue;
+      }
+
+      visit(childPath);
+    }
+  }
+
+  visit(rootDirectory);
+
+  return matches.sort();
+}
+
 function patchAppModule(
   tree: Tree,
+  projectName: string,
   projectRoot: string,
   sourceRoot: string | undefined
 ) {
   const resolvedSourceRoot =
     sourceRoot ?? joinPathFragments(projectRoot, 'src');
-  const modulePath = joinPathFragments(resolvedSourceRoot, 'app.module.ts');
+  const modulePath = resolveNestAppModulePath(
+    tree,
+    projectName,
+    resolvedSourceRoot
+  );
 
-  if (!tree.exists(modulePath)) {
+  if (!modulePath || !tree.exists(modulePath)) {
     return;
   }
 
@@ -458,6 +520,9 @@ function patchAppModule(
   if (!sourceText) {
     return;
   }
+
+  const runtimeDataSourcePath = joinPathFragments(resolvedSourceRoot, 'data-source.ts');
+  const runtimeImportPath = importPathFrom(modulePath, runtimeDataSourcePath);
 
   const project = new Project({
     useInMemoryFileSystem: true,

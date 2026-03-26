@@ -60,6 +60,34 @@ export class AppModule {}
     expect(api?.targets?.['db:schema:drop']).toBeUndefined();
   });
 
+  it('infers targets for Nest applications with src/app/app.module.ts', async () => {
+    writeFile(
+      'apps/api/src/app/app.module.ts',
+      `import { Module } from '@nestjs/common';
+@Module({})
+export class AppModule {}
+`
+    );
+    writeFile(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      'export default {}\n'
+    );
+    writeFile('apps/api/src/data-source.ts', 'export const dataSource = {}\n');
+
+    const results = await createNodes([
+      'apps/api/src/app/app.module.ts',
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      'apps/api/src/data-source.ts',
+    ]);
+    const projects = mergeProjects(results);
+
+    const api = projects['apps/api'];
+    expect(api?.targets?.['db:migrate:generate']).toBeDefined();
+    expect(api?.targets?.['db:migrate:run']).toBeDefined();
+    expect(api?.targets?.['db:migrate:revert']).toBeDefined();
+    expect(api?.targets?.['db:migrate:show']).toBeDefined();
+  });
+
   it('supports legacy runtime datasource names', async () => {
     writeFile(
       'apps/api/tools/typeorm/datasource.migrations.ts',
