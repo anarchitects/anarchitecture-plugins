@@ -42,9 +42,12 @@ const LIB_DATASOURCE_CANDIDATES = [
 ];
 
 function isRelevantFile(file: string): boolean {
+  const appModuleInSourceRoot =
+    file.endsWith('/app.module.ts') && file.includes('/src/');
+
   return (
     file.endsWith('/project.json') ||
-    file.endsWith('/src/app.module.ts') ||
+    appModuleInSourceRoot ||
     file.endsWith('/src/data-source.ts') ||
     file.endsWith('/src/data-source.js') ||
     file.endsWith('/src/typeorm.datasource.ts') ||
