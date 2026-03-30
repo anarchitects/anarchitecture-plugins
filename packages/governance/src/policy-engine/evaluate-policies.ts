@@ -9,8 +9,12 @@ export function evaluatePolicies(
   profile: GovernanceProfile
 ): Violation[] {
   const violations: Violation[] = [];
-  const projectByName = new Map(workspace.projects.map((project) => [project.name, project]));
-  const layerIndex = new Map(profile.layers.map((layer, index) => [layer, index]));
+  const projectByName = new Map(
+    workspace.projects.map((project) => [project.name, project])
+  );
+  const layerIndex = new Map(
+    profile.layers.map((layer, index) => [layer, index])
+  );
 
   for (const dependency of workspace.dependencies) {
     const source = projectByName.get(dependency.source);
@@ -33,6 +37,7 @@ export function evaluatePolicies(
         severity: 'error',
         message: `Project ${source.name} in domain ${source.domain} depends on ${target.name} in domain ${target.domain}.`,
         details: {
+          targetProject: target.name,
           sourceDomain: source.domain,
           targetDomain: target.domain,
           dependencyType: dependency.type,
@@ -57,6 +62,7 @@ export function evaluatePolicies(
         severity: 'warning',
         message: `Layer violation: ${source.name} (${source.layer}) depends on ${target.name} (${target.layer}).`,
         details: {
+          targetProject: target.name,
           sourceLayer: source.layer,
           targetLayer: target.layer,
           order: profile.layers,
@@ -69,7 +75,10 @@ export function evaluatePolicies(
 
   if (profile.ownership.required) {
     for (const project of workspace.projects) {
-      if (!project.ownership?.team && !(project.ownership?.contacts?.length ?? 0)) {
+      if (
+        !project.ownership?.team &&
+        !(project.ownership?.contacts?.length ?? 0)
+      ) {
         violations.push({
           id: `${project.name}-ownership`,
           ruleId: 'ownership-presence',

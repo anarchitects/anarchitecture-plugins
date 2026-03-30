@@ -26,6 +26,7 @@ import { compareSnapshots, summarizeDrift } from '../drift-analysis/index.js';
 import {
   DriftSignal,
   GovernanceDependency,
+  GovernanceWorkspace,
   SnapshotComparison,
   SnapshotViolation,
 } from '../core/index.js';
@@ -52,6 +53,11 @@ import {
 import { AiAnalysisRequest, AiAnalysisResult } from '../core/models.js';
 import { execFileSync } from 'node:child_process';
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
+import {
+  buildGraphSignals,
+  buildPolicySignals,
+} from '../signal-engine/index.js';
+import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1430,7 +1436,14 @@ async function buildAssessment(
   const snapshot = await readNxWorkspaceSnapshot();
   const inventory = buildInventory(snapshot, overrides);
   const allViolations = evaluatePolicies(inventory, effectiveProfile);
-  const allMeasurements = calculateMetrics(inventory, allViolations);
+  const metricSignals = [
+    ...buildGraphSignals(toWorkspaceGraphSnapshot(inventory)),
+    ...buildPolicySignals(allViolations),
+  ];
+  const allMeasurements = calculateMetrics({
+    workspace: inventory,
+    signals: metricSignals,
+  });
 
   return {
     workspace: inventory,
@@ -1443,6 +1456,31 @@ async function buildAssessment(
       metricWeightsFromProfile(effectiveProfile.metrics)
     ),
     recommendations: buildRecommendations(allViolations, allMeasurements),
+  };
+}
+
+function toWorkspaceGraphSnapshot(
+  workspace: GovernanceWorkspace
+): WorkspaceGraphSnapshot {
+  const extractedAt = new Date().toISOString();
+
+  return {
+    source: 'nx-graph',
+    extractedAt,
+    projects: workspace.projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      root: project.root,
+      type: project.type === 'tool' ? 'unknown' : project.type,
+      tags: project.tags,
+      domain: project.domain,
+      layer: project.layer,
+    })),
+    dependencies: workspace.dependencies.map((dependency) => ({
+      sourceProjectId: dependency.source,
+      targetProjectId: dependency.target,
+      type: dependency.type,
+    })),
   };
 }
 

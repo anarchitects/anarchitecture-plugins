@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import type { Violation } from '../core/index.js';
 import type {
   ConformanceFinding,
   ConformanceSnapshot,
@@ -29,12 +30,14 @@ interface SignalDraft {
   metadata?: Record<string, unknown>;
   source: GovernanceSignalSource;
   createdAt: string;
+  identityKey?: string;
 }
 
 const SIGNAL_ID_PREFIX = 'signal-';
 const SOURCE_SORT_ORDER: Record<GovernanceSignalSource, number> = {
   graph: 0,
   conformance: 1,
+  policy: 2,
 };
 const SEVERITY_SORT_ORDER: Record<GovernanceSignalSeverity, number> = {
   info: 0,
@@ -128,7 +131,9 @@ export function buildConformanceSignals(
   snapshot: ConformanceSnapshot
 ): GovernanceSignal[] {
   return snapshot.findings
-    .map((finding) => mapConformanceFindingToSignal(finding, snapshot.extractedAt))
+    .map((finding) =>
+      mapConformanceFindingToSignal(finding, snapshot.extractedAt)
+    )
     .sort(compareSignals);
 }
 
@@ -150,11 +155,28 @@ export function buildGovernanceSignals(
   return [...dedupedSignals.values()].sort(compareSignals);
 }
 
+export interface BuildPolicySignalsOptions {
+  createdAt?: string;
+}
+
+export function buildPolicySignals(
+  violations: Violation[],
+  options: BuildPolicySignalsOptions = {}
+): GovernanceSignal[] {
+  const createdAt = options.createdAt ?? new Date().toISOString();
+
+  return violations
+    .flatMap((violation) => mapViolationToPolicySignal(violation, createdAt))
+    .sort(compareSignals);
+}
+
 function mapConformanceFindingToSignal(
   finding: ConformanceFinding,
   extractedAt: string
 ): GovernanceSignal {
-  const relatedProjectIds = normalizeRelatedProjectIds(finding.relatedProjectIds);
+  const relatedProjectIds = normalizeRelatedProjectIds(
+    finding.relatedProjectIds
+  );
   const targetProjectId =
     relatedProjectIds.length === 1 ? relatedProjectIds[0] : undefined;
 
@@ -170,6 +192,55 @@ function mapConformanceFindingToSignal(
     source: 'conformance',
     createdAt: extractedAt,
   });
+}
+
+function mapViolationToPolicySignal(
+  violation: Violation,
+  createdAt: string
+): GovernanceSignal[] {
+  const ruleMapping = mapPolicyRuleToSignalDescriptor(violation.ruleId);
+  if (!ruleMapping) {
+    return [];
+  }
+
+  const details = asRecord(violation.details);
+  const targetProjectId = normalizeText(asString(details?.targetProject));
+  const sourceProjectId = normalizeText(violation.project);
+  const relatedProjectIds = normalizeRelatedProjectIds([
+    sourceProjectId,
+    targetProjectId,
+  ]);
+
+  const metadata: Record<string, unknown> = {
+    ruleId: violation.ruleId,
+    ...(details ?? {}),
+    ...(violation.recommendation
+      ? { recommendation: violation.recommendation }
+      : {}),
+  };
+
+  return [
+    finalizeSignal({
+      type: ruleMapping.type,
+      sourceProjectId,
+      targetProjectId,
+      relatedProjectIds,
+      severity: violation.severity,
+      category: ruleMapping.category,
+      message: violation.message,
+      metadata,
+      source: 'policy',
+      createdAt,
+      identityKey: [
+        'policy',
+        violation.ruleId,
+        sourceProjectId ?? '',
+        targetProjectId ?? '',
+        violation.severity,
+        relatedProjectIds.join(','),
+      ].join('|'),
+    }),
+  ];
 }
 
 function finalizeSignal(draft: SignalDraft): GovernanceSignal {
@@ -192,6 +263,7 @@ function finalizeSignal(draft: SignalDraft): GovernanceSignal {
       targetProjectId: normalizedTargetProjectId,
       message: draft.message,
       relatedProjectIds: normalizedRelatedProjectIds,
+      identityKey: draft.identityKey,
     }),
     type: draft.type,
     sourceProjectId: normalizedSourceProjectId,
@@ -206,10 +278,14 @@ function finalizeSignal(draft: SignalDraft): GovernanceSignal {
   };
 }
 
-function normalizeRelatedProjectIds(values: Array<string | undefined>): string[] {
-  return [...new Set(values.map(normalizeText).filter((value): value is string => !!value))].sort(
-    (a, b) => a.localeCompare(b)
-  );
+function normalizeRelatedProjectIds(
+  values: Array<string | undefined>
+): string[] {
+  return [
+    ...new Set(
+      values.map(normalizeText).filter((value): value is string => !!value)
+    ),
+  ].sort((a, b) => a.localeCompare(b));
 }
 
 function buildSignalId(input: {
@@ -220,24 +296,26 @@ function buildSignalId(input: {
   targetProjectId?: string;
   message: string;
   relatedProjectIds: string[];
+  identityKey?: string;
 }): string {
-  const seed = [
-    input.source,
-    input.type,
-    input.category,
-    input.sourceProjectId ?? '',
-    input.targetProjectId ?? '',
-    input.message,
-    input.relatedProjectIds.join(','),
-  ].join('|');
+  const seed =
+    input.identityKey ??
+    [
+      input.source,
+      input.type,
+      input.category,
+      input.sourceProjectId ?? '',
+      input.targetProjectId ?? '',
+      input.message,
+      input.relatedProjectIds.join(','),
+    ].join('|');
 
   const hash = createHash('sha256').update(seed).digest('hex').slice(0, 16);
   return `${SIGNAL_ID_PREFIX}${hash}`;
 }
 
 function compareSignals(a: GovernanceSignal, b: GovernanceSignal): number {
-  const sourceOrder =
-    SOURCE_SORT_ORDER[a.source] - SOURCE_SORT_ORDER[b.source];
+  const sourceOrder = SOURCE_SORT_ORDER[a.source] - SOURCE_SORT_ORDER[b.source];
   if (sourceOrder !== 0) {
     return sourceOrder;
   }
@@ -279,3 +357,39 @@ function normalizeText(value: string | undefined): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function mapPolicyRuleToSignalDescriptor(
+  ruleId: string
+): { type: GovernanceSignalType; category: GovernanceSignalCategory } | null {
+  if (ruleId === 'domain-boundary') {
+    return {
+      type: 'domain-boundary-violation',
+      category: 'boundary',
+    };
+  }
+
+  if (ruleId === 'layer-boundary') {
+    return {
+      type: 'layer-boundary-violation',
+      category: 'boundary',
+    };
+  }
+
+  if (ruleId === 'ownership-presence') {
+    return {
+      type: 'ownership-gap',
+      category: 'ownership',
+    };
+  }
+
+  return null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
