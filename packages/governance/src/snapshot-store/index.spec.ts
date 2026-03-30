@@ -56,6 +56,12 @@ describe('snapshot-store', () => {
           { source: 'conformance', count: 0 },
           { source: 'policy', count: 0 },
         ],
+        byType: [],
+        bySeverity: [
+          { severity: 'info', count: 0 },
+          { severity: 'warning', count: 0 },
+          { severity: 'error', count: 0 },
+        ],
       },
       health: {
         score: 80,

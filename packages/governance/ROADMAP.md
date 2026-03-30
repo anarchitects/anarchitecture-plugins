@@ -47,6 +47,8 @@ Goal:
   - [x] Graph findings
   - [x] Conformance findings
 - [x] Add counts per source
+- [x] Add counts per signal type
+- [x] Add severity grouping for signals
 
 ---
 

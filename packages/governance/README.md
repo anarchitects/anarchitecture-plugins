@@ -322,7 +322,7 @@ nx repo-health --failOnViolation
 
 **Metrics included:** all six (Architectural Entropy, Dependency Complexity, Domain Integrity, Ownership Coverage, Documentation Completeness, Layer Integrity).
 
-**Signal sources shown:** graph, conformance, and policy. The CLI report prints a deterministic `Signal Sources` section, and the JSON output includes `signalBreakdown.total` plus `signalBreakdown.bySource`.
+**Signal breakdown shown:** graph, conformance, and policy source counts, plus per-type and per-severity counts. The CLI report prints deterministic `Signal Sources`, `Signal Types`, and `Signal Severity` sections, and the JSON output includes `signalBreakdown.total`, `signalBreakdown.bySource`, `signalBreakdown.byType`, and `signalBreakdown.bySeverity`.
 
 **Conformance input resolution:** explicit `--conformanceJson` wins. If it is not provided, governance tries `nx.json > conformance.outputPath`. If neither is available, the report still renders with a `conformance` count of `0`. If `nx.json` declares an output path but the file cannot be read, governance fails with a clear configuration error.
 
@@ -341,7 +341,7 @@ nx repo-boundaries --output=json --failOnViolation
 
 **Metrics included:** Architectural Entropy, Domain Integrity, Layer Integrity.
 
-**Signal sources shown:** boundary-scoped graph, conformance, and policy signals only.
+**Signal breakdown shown:** boundary-scoped source, type, and severity counts only.
 
 **Violations surfaced:**
 
@@ -363,7 +363,7 @@ nx repo-ownership --output=json
 
 **Metrics included:** Ownership Coverage.
 
-**Signal sources shown:** ownership-scoped graph, conformance, and policy signals only.
+**Signal breakdown shown:** ownership-scoped source, type, and severity counts only.
 
 **Violations surfaced:**
 
@@ -384,21 +384,27 @@ nx repo-architecture --output=json
 
 **Metrics included:** Architectural Entropy, Dependency Complexity, Domain Integrity.
 
-**Signal sources shown:** all non-ownership graph, conformance, and policy signals.
+**Signal breakdown shown:** all non-ownership source, type, and severity counts.
 
 **Violations surfaced:** all violation types _except_ `ownership-presence`.
 
 **Use when:** you want to track architectural drift over time and are not concerned with team assignment in this particular run.
 
-### Signal Source Breakdown
+### Signal Breakdown
 
-When governance reporting is rendered, the assessment always includes a source breakdown with fixed rows in this order:
+When governance reporting is rendered, the assessment always includes a signal breakdown with these views:
 
-- `graph`
-- `conformance`
-- `policy`
+- `bySource` with fixed rows in this order:
+  - `graph`
+  - `conformance`
+  - `policy`
+- `byType` with observed signal types only, in canonical governance signal order
+- `bySeverity` with fixed rows in this order:
+  - `info`
+  - `warning`
+  - `error`
 
-Counts are scoped to the active report type. For example, `repo-boundaries` only counts boundary-category signals, while `repo-architecture` excludes ownership-category signals. If `conformanceJson` is omitted, the `conformance` row is still present with count `0`.
+Counts are scoped to the active report type. For example, `repo-boundaries` only counts boundary-category signals, while `repo-architecture` excludes ownership-category signals. If `conformanceJson` is omitted, the `conformance` row is still present with count `0`. Severity rows are always present even when their count is `0`, while type rows are observed-only.
 
 ---
 

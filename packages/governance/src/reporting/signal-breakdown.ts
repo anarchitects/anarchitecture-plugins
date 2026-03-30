@@ -1,5 +1,9 @@
 import type { SignalBreakdown } from '../core/index.js';
-import type { GovernanceSignal } from '../signal-engine/index.js';
+import type {
+  GovernanceSignal,
+  GovernanceSignalSeverity,
+  GovernanceSignalType,
+} from '../signal-engine/index.js';
 
 export type GovernanceReportType =
   | 'health'
@@ -8,6 +12,17 @@ export type GovernanceReportType =
   | 'architecture';
 
 const SOURCE_ORDER = ['graph', 'conformance', 'policy'] as const;
+const SEVERITY_ORDER: GovernanceSignalSeverity[] = ['info', 'warning', 'error'];
+const TYPE_ORDER: GovernanceSignalType[] = [
+  'structural-dependency',
+  'cross-domain-dependency',
+  'missing-domain-context',
+  'circular-dependency',
+  'conformance-violation',
+  'domain-boundary-violation',
+  'layer-boundary-violation',
+  'ownership-gap',
+];
 
 export function filterSignalsForReportType(
   signals: GovernanceSignal[],
@@ -31,17 +46,33 @@ export function filterSignalsForReportType(
 export function buildSignalBreakdown(
   signals: GovernanceSignal[]
 ): SignalBreakdown {
-  const counts = new Map<string, number>();
+  const sourceCounts = new Map<string, number>();
+  const typeCounts = new Map<GovernanceSignalType, number>();
+  const severityCounts = new Map<GovernanceSignalSeverity, number>();
 
   for (const signal of signals) {
-    counts.set(signal.source, (counts.get(signal.source) ?? 0) + 1);
+    sourceCounts.set(signal.source, (sourceCounts.get(signal.source) ?? 0) + 1);
+    typeCounts.set(signal.type, (typeCounts.get(signal.type) ?? 0) + 1);
+    severityCounts.set(
+      signal.severity,
+      (severityCounts.get(signal.severity) ?? 0) + 1
+    );
   }
 
   return {
     total: signals.length,
     bySource: SOURCE_ORDER.map((source) => ({
       source,
-      count: counts.get(source) ?? 0,
+      count: sourceCounts.get(source) ?? 0,
+    })),
+    byType: TYPE_ORDER.flatMap((type) => {
+      const count = typeCounts.get(type) ?? 0;
+
+      return count > 0 ? [{ type, count }] : [];
+    }),
+    bySeverity: SEVERITY_ORDER.map((severity) => ({
+      severity,
+      count: severityCounts.get(severity) ?? 0,
     })),
   };
 }

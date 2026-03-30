@@ -81,6 +81,26 @@ describe('runGovernance', () => {
         count: health.assessment.signalBreakdown.bySource[2].count,
       },
     ]);
+    expect(health.assessment.signalBreakdown.bySeverity).toEqual([
+      {
+        severity: 'info',
+        count: health.assessment.signalBreakdown.bySeverity[0].count,
+      },
+      {
+        severity: 'warning',
+        count: health.assessment.signalBreakdown.bySeverity[1].count,
+      },
+      {
+        severity: 'error',
+        count: health.assessment.signalBreakdown.bySeverity[2].count,
+      },
+    ]);
+    expect(
+      health.assessment.signalBreakdown.byType.reduce(
+        (total, entry) => total + entry.count,
+        0
+      )
+    ).toBe(health.assessment.signalBreakdown.total);
   });
 
   it('loads conformance signals into the assessment pipeline when conformanceJson is provided', async () => {
@@ -121,6 +141,20 @@ describe('runGovernance', () => {
           (entry) => entry.source === 'conformance'
         )
       ).toEqual({ source: 'conformance', count: 1 });
+      expect(
+        withConformance.assessment.signalBreakdown.byType.find(
+          (entry) => entry.type === 'conformance-violation'
+        )
+      ).toEqual({ type: 'conformance-violation', count: 1 });
+      expect(
+        withConformance.assessment.signalBreakdown.bySeverity.find(
+          (entry) => entry.severity === 'error'
+        )?.count
+      ).toBe(
+        (baseline.assessment.signalBreakdown.bySeverity.find(
+          (entry) => entry.severity === 'error'
+        )?.count ?? 0) + 1
+      );
 
       const baselineEntropy = baseline.assessment.measurements.find(
         (metric) => metric.id === 'architectural-entropy'
@@ -266,5 +300,71 @@ describe('runGovernance', () => {
     await expect(runGovernance({ reportType: 'health' })).rejects.toThrow(
       'Unable to load Nx Conformance output configured in nx.json'
     );
+  });
+
+  it('filters type and severity breakdowns to the active report type', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    const tempDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-conformance-')
+    );
+    const conformanceJson = path.join(tempDir, 'conformance.json');
+
+    writeFileSync(
+      conformanceJson,
+      JSON.stringify([
+        {
+          id: 'finding-boundary',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          severity: 'error',
+          message: 'Conformance boundary violation',
+          projectId: 'packages/governance',
+        },
+        {
+          id: 'finding-ownership',
+          ruleId: '@nx/conformance/ensure-owners',
+          severity: 'warning',
+          message: 'Conformance ownership warning',
+          projectId: 'packages/governance',
+        },
+      ])
+    );
+
+    try {
+      const boundaries = await runGovernance({
+        reportType: 'boundaries',
+        conformanceJson,
+      });
+      const ownership = await runGovernance({
+        reportType: 'ownership',
+        conformanceJson,
+      });
+
+      expect(boundaries.assessment.signalBreakdown.byType).toContainEqual({
+        type: 'conformance-violation',
+        count: 1,
+      });
+      expect(
+        boundaries.assessment.signalBreakdown.bySeverity.find(
+          (entry) => entry.severity === 'error'
+        )?.count
+      ).toBeGreaterThanOrEqual(1);
+
+      expect(ownership.assessment.signalBreakdown.bySource).toEqual([
+        { source: 'graph', count: 0 },
+        { source: 'conformance', count: 1 },
+        { source: 'policy', count: 0 },
+      ]);
+      expect(ownership.assessment.signalBreakdown.byType).toEqual([
+        { type: 'conformance-violation', count: 1 },
+      ]);
+      expect(ownership.assessment.signalBreakdown.bySeverity).toEqual([
+        { severity: 'info', count: 0 },
+        { severity: 'warning', count: 1 },
+        { severity: 'error', count: 0 },
+      ]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

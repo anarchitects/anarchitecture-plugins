@@ -18,6 +18,18 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
     lines.push(`- ${entry.source}: ${entry.count}`);
   }
 
+  lines.push('');
+  lines.push('Signal Types:');
+  for (const entry of assessment.signalBreakdown.byType) {
+    lines.push(`- ${entry.type}: ${entry.count}`);
+  }
+
+  lines.push('');
+  lines.push('Signal Severity:');
+  for (const entry of assessment.signalBreakdown.bySeverity) {
+    lines.push(`- ${entry.severity}: ${entry.count}`);
+  }
+
   if (assessment.warnings.length > 0) {
     lines.push('');
     lines.push('Warnings:');
