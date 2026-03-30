@@ -9,4 +9,5 @@ export {
   buildConformanceSignals,
   buildGovernanceSignals,
   buildGraphSignals,
+  buildPolicySignals,
 } from './builders.js';

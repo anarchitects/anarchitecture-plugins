@@ -5,13 +5,16 @@ export type GovernanceSignalType =
   | 'cross-domain-dependency'
   | 'missing-domain-context'
   | 'circular-dependency'
-  | 'conformance-violation';
+  | 'conformance-violation'
+  | 'domain-boundary-violation'
+  | 'layer-boundary-violation'
+  | 'ownership-gap';
 
 export type GovernanceSignalSeverity = 'info' | 'warning' | 'error';
 
 export type GovernanceSignalCategory = Category | 'structure';
 
-export type GovernanceSignalSource = 'graph' | 'conformance';
+export type GovernanceSignalSource = 'graph' | 'conformance' | 'policy';
 
 export interface GovernanceSignal {
   id: string;
@@ -26,4 +29,3 @@ export interface GovernanceSignal {
   source: GovernanceSignalSource;
   createdAt: string;
 }
-

@@ -1,19 +1,30 @@
-import {
-  GovernanceWorkspace,
-  Measurement,
-  Violation,
-} from '../core/index.js';
+import { GovernanceWorkspace, Measurement } from '../core/index.js';
+import { GovernanceSignal } from '../signal-engine/index.js';
 
-export function calculateMetrics(
-  workspace: GovernanceWorkspace,
-  violations: Violation[]
-): Measurement[] {
+export interface MetricEngineInput {
+  workspace: GovernanceWorkspace;
+  signals: GovernanceSignal[];
+}
+
+export function calculateMetrics(input: MetricEngineInput): Measurement[] {
+  const { workspace, signals } = input;
   const dependencyCount = workspace.dependencies.length;
   const projectCount = workspace.projects.length || 1;
-  const violationCount = violations.length;
+  const structuralDependencyCount = signals.filter(
+    (signal) => signal.type === 'structural-dependency'
+  ).length;
+  const canonicalDependencyCount =
+    structuralDependencyCount > 0 ? structuralDependencyCount : dependencyCount;
+  const policySignalCount = signals.filter(
+    (signal) => signal.source === 'policy'
+  ).length;
 
-  const layerViolations = violations.filter((v) => v.ruleId === 'layer-boundary').length;
-  const domainViolations = violations.filter((v) => v.ruleId === 'domain-boundary').length;
+  const layerViolations = signals.filter(
+    (signal) => signal.type === 'layer-boundary-violation'
+  ).length;
+  const domainViolations = signals.filter(
+    (signal) => signal.type === 'domain-boundary-violation'
+  ).length;
   const ownedProjects = workspace.projects.filter(
     (project) =>
       Boolean(project.ownership?.team) ||
@@ -29,17 +40,17 @@ export function calculateMetrics(
     makeScore(
       'architectural-entropy',
       'Architectural Entropy',
-      violationCount / Math.max(dependencyCount, 1)
+      policySignalCount / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'dependency-complexity',
       'Dependency Complexity',
-      dependencyCount / projectCount / 4
+      canonicalDependencyCount / projectCount / 4
     ),
     makeScore(
       'domain-integrity',
       'Domain Integrity',
-      domainViolations / Math.max(dependencyCount, 1)
+      domainViolations / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'ownership-coverage',
@@ -56,7 +67,7 @@ export function calculateMetrics(
     makeScore(
       'layer-integrity',
       'Layer Integrity',
-      layerViolations / Math.max(dependencyCount, 1)
+      layerViolations / Math.max(canonicalDependencyCount, 1)
     ),
   ];
 }

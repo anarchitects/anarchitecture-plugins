@@ -1,9 +1,11 @@
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import type { Violation } from '../core/index.js';
 import type { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
 import {
   buildConformanceSignals,
   buildGovernanceSignals,
   buildGraphSignals,
+  buildPolicySignals,
 } from './index.js';
 
 describe('signal-engine', () => {
@@ -257,15 +259,19 @@ describe('signal-engine', () => {
     });
 
     expect(signals).toHaveLength(6);
-    expect(signals.filter((signal) => signal.source === 'graph')).toHaveLength(2);
-    expect(signals.filter((signal) => signal.source === 'conformance')).toHaveLength(
-      4
+    expect(signals.filter((signal) => signal.source === 'graph')).toHaveLength(
+      2
     );
+    expect(
+      signals.filter((signal) => signal.source === 'conformance')
+    ).toHaveLength(4);
 
     expect(
       signals.map(
         (signal) =>
-          `${signal.source}|${signal.type}|${signal.severity}|${signal.sourceProjectId ?? ''}|${signal.message}`
+          `${signal.source}|${signal.type}|${signal.severity}|${
+            signal.sourceProjectId ?? ''
+          }|${signal.message}`
       )
     ).toEqual([
       'graph|structural-dependency|info|a|Dependency: a -> c.',
@@ -274,6 +280,110 @@ describe('signal-engine', () => {
       'conformance|conformance-violation|info|b|same issue',
       'conformance|conformance-violation|warning|z|warn issue',
       'conformance|conformance-violation|error|a|error issue',
+    ]);
+  });
+
+  it('builds deterministic policy signals from structured violations', () => {
+    const violations: Violation[] = [
+      {
+        id: 'v-1',
+        ruleId: 'domain-boundary',
+        project: 'checkout-app',
+        severity: 'error',
+        message: 'Checkout crosses into billing.',
+        details: {
+          sourceDomain: 'checkout',
+          targetDomain: 'billing',
+          targetProject: 'billing-lib',
+        },
+      },
+      {
+        id: 'v-2',
+        ruleId: 'domain-boundary',
+        project: 'checkout-app',
+        severity: 'error',
+        message: 'Reworded message should keep the same signal identity.',
+        details: {
+          sourceDomain: 'checkout',
+          targetDomain: 'billing',
+          targetProject: 'billing-lib',
+        },
+      },
+    ];
+
+    const signals = buildPolicySignals(violations, {
+      createdAt: '2026-03-19T00:00:00.000Z',
+    });
+
+    expect(signals).toHaveLength(2);
+    expect(signals[0].id).toBe(signals[1].id);
+    expect(signals[0]).toMatchObject({
+      type: 'domain-boundary-violation',
+      source: 'policy',
+      category: 'boundary',
+      severity: 'error',
+      sourceProjectId: 'checkout-app',
+      targetProjectId: 'billing-lib',
+      relatedProjectIds: ['billing-lib', 'checkout-app'],
+      createdAt: '2026-03-19T00:00:00.000Z',
+      metadata: {
+        ruleId: 'domain-boundary',
+        sourceDomain: 'checkout',
+        targetDomain: 'billing',
+        targetProject: 'billing-lib',
+      },
+    });
+  });
+
+  it('sorts policy signals deterministically by type, severity, and project scope', () => {
+    const signals = buildPolicySignals(
+      [
+        {
+          id: 'ownership',
+          ruleId: 'ownership-presence',
+          project: 'z-project',
+          severity: 'warning',
+          message: 'Missing ownership.',
+        },
+        {
+          id: 'layer',
+          ruleId: 'layer-boundary',
+          project: 'b-project',
+          severity: 'warning',
+          message: 'Layer violation.',
+          details: {
+            sourceLayer: 'feature',
+            targetLayer: 'data-access',
+            targetProject: 'a-target',
+          },
+        },
+        {
+          id: 'domain',
+          ruleId: 'domain-boundary',
+          project: 'a-project',
+          severity: 'error',
+          message: 'Domain violation.',
+          details: {
+            sourceDomain: 'orders',
+            targetDomain: 'payments',
+            targetProject: 'b-target',
+          },
+        },
+      ],
+      { createdAt: '2026-03-19T00:00:00.000Z' }
+    );
+
+    expect(
+      signals.map(
+        (signal) =>
+          `${signal.type}|${signal.severity}|${signal.sourceProjectId ?? ''}|${
+            signal.targetProjectId ?? ''
+          }`
+      )
+    ).toEqual([
+      'domain-boundary-violation|error|a-project|b-target',
+      'layer-boundary-violation|warning|b-project|a-target',
+      'ownership-gap|warning|z-project|',
     ]);
   });
 });
@@ -305,4 +415,3 @@ function makeConformanceSnapshot(input: {
     findings: input.findings,
   };
 }
-
