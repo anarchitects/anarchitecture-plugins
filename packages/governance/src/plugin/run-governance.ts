@@ -16,6 +16,10 @@ import {
 } from '../presets/angular-cleanup/profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
+import {
+  buildSignalBreakdown,
+  filterSignalsForReportType,
+} from '../reporting/signal-breakdown.js';
 import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
@@ -23,6 +27,7 @@ import {
   saveMetricSnapshot,
 } from '../snapshot-store/index.js';
 import { compareSnapshots, summarizeDrift } from '../drift-analysis/index.js';
+import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import {
   DriftSignal,
   GovernanceDependency,
@@ -53,9 +58,12 @@ import {
 import { AiAnalysisRequest, AiAnalysisResult } from '../core/models.js';
 import { execFileSync } from 'node:child_process';
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
+import { resolveConformanceInput } from './resolve-conformance-input.js';
 import {
+  buildConformanceSignals,
   buildGraphSignals,
   buildPolicySignals,
+  mergeGovernanceSignals,
 } from '../signal-engine/index.js';
 import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
 
@@ -63,6 +71,7 @@ export interface GovernanceRunOptions {
   profile?: string;
   output?: 'cli' | 'json';
   failOnViolation?: boolean;
+  conformanceJson?: string;
   reportType?: 'health' | 'boundaries' | 'ownership' | 'architecture';
 }
 
@@ -1436,14 +1445,25 @@ async function buildAssessment(
   const snapshot = await readNxWorkspaceSnapshot();
   const inventory = buildInventory(snapshot, overrides);
   const allViolations = evaluatePolicies(inventory, effectiveProfile);
-  const metricSignals = [
-    ...buildGraphSignals(toWorkspaceGraphSnapshot(inventory)),
-    ...buildPolicySignals(allViolations),
-  ];
+  const graphSignals = buildGraphSignals(toWorkspaceGraphSnapshot(inventory));
+  const policySignals = buildPolicySignals(allViolations);
+  const resolvedConformanceInput = resolveConformanceInput(
+    options.conformanceJson
+  );
+  const conformanceSignals = loadConformanceSignals(resolvedConformanceInput);
+  const metricSignals = mergeGovernanceSignals(
+    graphSignals,
+    conformanceSignals,
+    policySignals
+  );
   const allMeasurements = calculateMetrics({
     workspace: inventory,
     signals: metricSignals,
   });
+  const filteredSignals = filterSignalsForReportType(
+    metricSignals,
+    options.reportType
+  );
 
   return {
     workspace: inventory,
@@ -1451,6 +1471,7 @@ async function buildAssessment(
     warnings: overrides.runtimeWarnings,
     violations: filterViolations(allViolations, options.reportType),
     measurements: filterMeasurements(allMeasurements, options.reportType),
+    signalBreakdown: buildSignalBreakdown(filteredSignals),
     health: calculateHealthScore(
       allMeasurements,
       metricWeightsFromProfile(effectiveProfile.metrics)
@@ -1558,6 +1579,30 @@ function filterMeasurements(
   return measurements;
 }
 
+function loadConformanceSignals(
+  input: ReturnType<typeof resolveConformanceInput>
+) {
+  if (!input.conformanceJson) {
+    return [];
+  }
+
+  try {
+    return buildConformanceSignals(
+      readConformanceSnapshot({ conformanceJson: input.conformanceJson })
+    );
+  } catch (error) {
+    if (input.source === 'nx-json') {
+      throw new Error(
+        `Unable to load Nx Conformance output configured in nx.json at "${
+          input.conformanceJson
+        }": ${toErrorMessage(error)}`
+      );
+    }
+
+    throw error;
+  }
+}
+
 function resolveSnapshotPath(
   explicitPath: string | undefined,
   fallbackPath: string | undefined
@@ -1569,6 +1614,10 @@ function resolveSnapshotPath(
   return path.isAbsolute(explicitPath)
     ? explicitPath
     : path.resolve(workspaceRoot, explicitPath);
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error.';
 }
 
 function renderDriftCliReport(

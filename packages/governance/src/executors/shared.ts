@@ -12,6 +12,7 @@ export async function runGovernanceExecutor(
     profile: options.profile,
     output: options.output,
     failOnViolation: options.failOnViolation,
+    conformanceJson: options.conformanceJson,
     reportType,
   });
 

@@ -17,6 +17,10 @@
       "type": "boolean",
       "default": false,
       "description": "Exit with failure if violations are found."
+    },
+    "conformanceJson": {
+      "type": "string",
+      "description": "Optional override for the Nx Conformance JSON path. Falls back to nx.json conformance.outputPath when omitted."
     }
   },
   "additionalProperties": false

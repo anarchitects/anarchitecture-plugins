@@ -301,11 +301,12 @@ nx workspace-conformance --conformanceJson=dist/conformance-result.json
 
 Base options used by governance and AI executors:
 
-| Option            | Type                | Default             | Description                                                                                                 |
-| ----------------- | ------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `profile`         | `string`            | `"angular-cleanup"` | Name of the governance profile to load from `tools/governance/profiles/`.                                   |
-| `output`          | `"cli"` \| `"json"` | `"cli"`             | Output format. `cli` prints a human-readable report via Nx logger. `json` writes structured JSON to stdout. |
-| `failOnViolation` | `boolean`           | `false`             | Exit with a non-zero code when any violation is found. Use this to gate CI.                                 |
+| Option            | Type                | Default             | Description                                                                                                                                                           |
+| ----------------- | ------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profile`         | `string`            | `"angular-cleanup"` | Name of the governance profile to load from `tools/governance/profiles/`.                                                                                             |
+| `output`          | `"cli"` \| `"json"` | `"cli"`             | Output format. `cli` prints a human-readable report via Nx logger. `json` writes structured JSON to stdout.                                                           |
+| `failOnViolation` | `boolean`           | `false`             | Exit with a non-zero code when any violation is found. Use this to gate CI.                                                                                           |
+| `conformanceJson` | `string`            | unset               | Optional override for the Nx Conformance JSON path. If omitted, governance will try `nx.json > conformance.outputPath` before continuing without conformance signals. |
 
 Additional options are listed per command where applicable (`snapshotDir`, `snapshotPath`, `topViolations`, `topProjects`, `baseRef`, `headRef`, ...).
 
@@ -321,6 +322,10 @@ nx repo-health --failOnViolation
 
 **Metrics included:** all six (Architectural Entropy, Dependency Complexity, Domain Integrity, Ownership Coverage, Documentation Completeness, Layer Integrity).
 
+**Signal sources shown:** graph, conformance, and policy. The CLI report prints a deterministic `Signal Sources` section, and the JSON output includes `signalBreakdown.total` plus `signalBreakdown.bySource`.
+
+**Conformance input resolution:** explicit `--conformanceJson` wins. If it is not provided, governance tries `nx.json > conformance.outputPath`. If neither is available, the report still renders with a `conformance` count of `0`. If `nx.json` declares an output path but the file cannot be read, governance fails with a clear configuration error.
+
 **Use when:** you want a single number that summarises overall workspace quality, or when running a health gate in CI.
 
 ---
@@ -335,6 +340,8 @@ nx repo-boundaries --output=json --failOnViolation
 ```
 
 **Metrics included:** Architectural Entropy, Domain Integrity, Layer Integrity.
+
+**Signal sources shown:** boundary-scoped graph, conformance, and policy signals only.
 
 **Violations surfaced:**
 
@@ -356,6 +363,8 @@ nx repo-ownership --output=json
 
 **Metrics included:** Ownership Coverage.
 
+**Signal sources shown:** ownership-scoped graph, conformance, and policy signals only.
+
 **Violations surfaced:**
 
 - `ownership-presence` (severity: `warning`) — a project has neither an `ownership.team` metadata field nor a matching CODEOWNERS entry.
@@ -375,9 +384,21 @@ nx repo-architecture --output=json
 
 **Metrics included:** Architectural Entropy, Dependency Complexity, Domain Integrity.
 
+**Signal sources shown:** all non-ownership graph, conformance, and policy signals.
+
 **Violations surfaced:** all violation types _except_ `ownership-presence`.
 
 **Use when:** you want to track architectural drift over time and are not concerned with team assignment in this particular run.
+
+### Signal Source Breakdown
+
+When governance reporting is rendered, the assessment always includes a source breakdown with fixed rows in this order:
+
+- `graph`
+- `conformance`
+- `policy`
+
+Counts are scoped to the active report type. For example, `repo-boundaries` only counts boundary-category signals, while `repo-architecture` excludes ownership-category signals. If `conformanceJson` is omitted, the `conformance` row is still present with count `0`.
 
 ---
 
@@ -582,13 +603,13 @@ Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON outp
 
 ### Metrics
 
-| Metric id                    | Name                       | Direction        | Formula                                                                |
-| ---------------------------- | -------------------------- | ---------------- | ---------------------------------------------------------------------- |
+| Metric id                    | Name                       | Direction        | Formula                                                                                        |
+| ---------------------------- | -------------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
 | `architectural-entropy`      | Architectural Entropy      | lower is better  | `(weighted negative signal burden) / max(structural dependency volume, 1)` → inverted to score |
-| `dependency-complexity`      | Dependency Complexity      | lower is better  | `(structural dependency volume) / (projects × 4)` → inverted to score |
+| `dependency-complexity`      | Dependency Complexity      | lower is better  | `(structural dependency volume) / (projects × 4)` → inverted to score                          |
 | `domain-integrity`           | Domain Integrity           | lower is better  | `(weighted domain-boundary burden) / max(structural dependency volume, 1)` → inverted to score |
-| `ownership-coverage`         | Ownership Coverage         | higher is better | `(owned projects) / (total projects)` → direct score                   |
-| `documentation-completeness` | Documentation Completeness | higher is better | `(documented projects) / (total projects)` → direct score              |
+| `ownership-coverage`         | Ownership Coverage         | higher is better | `(owned projects) / (total projects)` → direct score                                           |
+| `documentation-completeness` | Documentation Completeness | higher is better | `(documented projects) / (total projects)` → direct score                                      |
 | `layer-integrity`            | Layer Integrity            | lower is better  | `(weighted layer-boundary burden) / max(structural dependency volume, 1)` → inverted to score  |
 
 All raw values are bounded to `[0, 1]` before scoring. "Lower is better" metrics are scored as `(1 − value) × 100`. "Higher is better" metrics are scored as `value × 100`.
@@ -599,24 +620,24 @@ Negative signal-driven metrics use deterministic internal weighting before scori
 
 Severity weights:
 
-| Severity | Weight |
-| -------- | ------ |
-| `info`   | `0.25` |
-| `warning`| `0.6`  |
-| `error`  | `1.0`  |
+| Severity  | Weight |
+| --------- | ------ |
+| `info`    | `0.25` |
+| `warning` | `0.6`  |
+| `error`   | `1.0`  |
 
 Type weights:
 
-| Signal type                 | Weight | Notes |
-| --------------------------- | ------ | ----- |
+| Signal type                 | Weight | Notes                                                                 |
+| --------------------------- | ------ | --------------------------------------------------------------------- |
 | `structural-dependency`     | `1.0`  | Used for dependency volume only, excluded from entropy penalty burden |
-| `cross-domain-dependency`   | `0.7`  | Contributes to entropy as a graph warning signal |
-| `missing-domain-context`    | `0.85` | Contributes to entropy as a graph warning signal |
-| `circular-dependency`       | `1.0`  | Reserved for future negative graph signals |
-| `conformance-violation`     | `1.0`  | Full-weight conformance penalty |
-| `domain-boundary-violation` | `1.0`  | Full-weight domain policy penalty |
-| `layer-boundary-violation`  | `0.75` | Reduced but material layer penalty |
-| `ownership-gap`             | `0.5`  | Used in entropy only; ownership coverage remains workspace-derived |
+| `cross-domain-dependency`   | `0.7`  | Contributes to entropy as a graph warning signal                      |
+| `missing-domain-context`    | `0.85` | Contributes to entropy as a graph warning signal                      |
+| `circular-dependency`       | `1.0`  | Reserved for future negative graph signals                            |
+| `conformance-violation`     | `1.0`  | Full-weight conformance penalty                                       |
+| `domain-boundary-violation` | `1.0`  | Full-weight domain policy penalty                                     |
+| `layer-boundary-violation`  | `0.75` | Reduced but material layer penalty                                    |
+| `ownership-gap`             | `0.5`  | Used in entropy only; ownership coverage remains workspace-derived    |
 
 ### How to interpret metrics
 

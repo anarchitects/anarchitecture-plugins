@@ -5,10 +5,18 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
 
   lines.push(`Nx Governance - ${assessment.profile}`);
   lines.push('');
-  lines.push(`Health Score: ${assessment.health.score} (${assessment.health.grade})`);
+  lines.push(
+    `Health Score: ${assessment.health.score} (${assessment.health.grade})`
+  );
   lines.push(`Projects: ${assessment.workspace.projects.length}`);
   lines.push(`Dependencies: ${assessment.workspace.dependencies.length}`);
   lines.push(`Violations: ${assessment.violations.length}`);
+
+  lines.push('');
+  lines.push('Signal Sources:');
+  for (const entry of assessment.signalBreakdown.bySource) {
+    lines.push(`- ${entry.source}: ${entry.count}`);
+  }
 
   if (assessment.warnings.length > 0) {
     lines.push('');
@@ -29,7 +37,9 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
     lines.push('');
     lines.push('Top Violations:');
     for (const violation of assessment.violations.slice(0, 10)) {
-      lines.push(`- [${violation.severity}] ${violation.ruleId} :: ${violation.message}`);
+      lines.push(
+        `- [${violation.severity}] ${violation.ruleId} :: ${violation.message}`
+      );
     }
   }
 

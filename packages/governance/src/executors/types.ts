@@ -2,6 +2,7 @@ export interface GovernanceExecutorOptions {
   profile?: string;
   output?: 'cli' | 'json';
   failOnViolation?: boolean;
+  conformanceJson?: string;
 }
 
 export interface GovernanceSnapshotExecutorOptions

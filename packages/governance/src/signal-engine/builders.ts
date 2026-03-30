@@ -140,19 +140,10 @@ export function buildConformanceSignals(
 export function buildGovernanceSignals(
   options: BuildGovernanceSignalsOptions
 ): GovernanceSignal[] {
-  const mergedSignals = [
-    ...buildGraphSignals(options.graphSnapshot),
-    ...buildConformanceSignals(options.conformanceSnapshot),
-  ];
-  const dedupedSignals = new Map<string, GovernanceSignal>();
-
-  for (const signal of mergedSignals) {
-    if (!dedupedSignals.has(signal.id)) {
-      dedupedSignals.set(signal.id, signal);
-    }
-  }
-
-  return [...dedupedSignals.values()].sort(compareSignals);
+  return mergeGovernanceSignals(
+    buildGraphSignals(options.graphSnapshot),
+    buildConformanceSignals(options.conformanceSnapshot)
+  );
 }
 
 export interface BuildPolicySignalsOptions {
@@ -168,6 +159,20 @@ export function buildPolicySignals(
   return violations
     .flatMap((violation) => mapViolationToPolicySignal(violation, createdAt))
     .sort(compareSignals);
+}
+
+export function mergeGovernanceSignals(
+  ...signalGroups: GovernanceSignal[][]
+): GovernanceSignal[] {
+  const dedupedSignals = new Map<string, GovernanceSignal>();
+
+  for (const signal of signalGroups.flat()) {
+    if (!dedupedSignals.has(signal.id)) {
+      dedupedSignals.set(signal.id, signal);
+    }
+  }
+
+  return [...dedupedSignals.values()].sort(compareSignals);
 }
 
 function mapConformanceFindingToSignal(

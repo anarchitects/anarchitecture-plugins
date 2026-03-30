@@ -49,6 +49,14 @@ describe('snapshot-store', () => {
           unit: 'ratio',
         },
       ],
+      signalBreakdown: {
+        total: 0,
+        bySource: [
+          { source: 'graph', count: 0 },
+          { source: 'conformance', count: 0 },
+          { source: 'policy', count: 0 },
+        ],
+      },
       health: {
         score: 80,
         grade: 'B',
