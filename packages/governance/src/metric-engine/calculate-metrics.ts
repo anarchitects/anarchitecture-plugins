@@ -1,5 +1,11 @@
 import { GovernanceWorkspace, Measurement } from '../core/index.js';
 import { GovernanceSignal } from '../signal-engine/index.js';
+import {
+  aggregateSignals,
+  isEntropyPenaltyAggregate,
+  sumSignalAggregateCounts,
+  sumSignalAggregateWeights,
+} from './aggregate-signals.js';
 
 export interface MetricEngineInput {
   workspace: GovernanceWorkspace;
@@ -10,21 +16,25 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
   const { workspace, signals } = input;
   const dependencyCount = workspace.dependencies.length;
   const projectCount = workspace.projects.length || 1;
-  const structuralDependencyCount = signals.filter(
-    (signal) => signal.type === 'structural-dependency'
-  ).length;
+  const signalAggregates = aggregateSignals(signals);
+  const structuralDependencyCount = sumSignalAggregateCounts(
+    signalAggregates,
+    (aggregate) => aggregate.type === 'structural-dependency'
+  );
   const canonicalDependencyCount =
     structuralDependencyCount > 0 ? structuralDependencyCount : dependencyCount;
-  const policySignalCount = signals.filter(
-    (signal) => signal.source === 'policy'
-  ).length;
-
-  const layerViolations = signals.filter(
-    (signal) => signal.type === 'layer-boundary-violation'
-  ).length;
-  const domainViolations = signals.filter(
-    (signal) => signal.type === 'domain-boundary-violation'
-  ).length;
+  const entropyPenaltyWeight = sumSignalAggregateWeights(
+    signalAggregates,
+    isEntropyPenaltyAggregate
+  );
+  const layerViolationWeight = sumSignalAggregateWeights(
+    signalAggregates,
+    (aggregate) => aggregate.type === 'layer-boundary-violation'
+  );
+  const domainViolationWeight = sumSignalAggregateWeights(
+    signalAggregates,
+    (aggregate) => aggregate.type === 'domain-boundary-violation'
+  );
   const ownedProjects = workspace.projects.filter(
     (project) =>
       Boolean(project.ownership?.team) ||
@@ -40,7 +50,7 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
     makeScore(
       'architectural-entropy',
       'Architectural Entropy',
-      policySignalCount / Math.max(canonicalDependencyCount, 1)
+      entropyPenaltyWeight / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'dependency-complexity',
@@ -50,7 +60,7 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
     makeScore(
       'domain-integrity',
       'Domain Integrity',
-      domainViolations / Math.max(canonicalDependencyCount, 1)
+      domainViolationWeight / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'ownership-coverage',
@@ -67,7 +77,7 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
     makeScore(
       'layer-integrity',
       'Layer Integrity',
-      layerViolations / Math.max(canonicalDependencyCount, 1)
+      layerViolationWeight / Math.max(canonicalDependencyCount, 1)
     ),
   ];
 }

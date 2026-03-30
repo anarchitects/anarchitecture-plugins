@@ -584,14 +584,39 @@ Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON outp
 
 | Metric id                    | Name                       | Direction        | Formula                                                                |
 | ---------------------------- | -------------------------- | ---------------- | ---------------------------------------------------------------------- |
-| `architectural-entropy`      | Architectural Entropy      | lower is better  | `(total violations) / max(total dependencies, 1)` → inverted to score  |
-| `dependency-complexity`      | Dependency Complexity      | lower is better  | `(total dependencies) / (projects × 4)` → inverted to score            |
-| `domain-integrity`           | Domain Integrity           | lower is better  | `(domain violations) / max(total dependencies, 1)` → inverted to score |
+| `architectural-entropy`      | Architectural Entropy      | lower is better  | `(weighted negative signal burden) / max(structural dependency volume, 1)` → inverted to score |
+| `dependency-complexity`      | Dependency Complexity      | lower is better  | `(structural dependency volume) / (projects × 4)` → inverted to score |
+| `domain-integrity`           | Domain Integrity           | lower is better  | `(weighted domain-boundary burden) / max(structural dependency volume, 1)` → inverted to score |
 | `ownership-coverage`         | Ownership Coverage         | higher is better | `(owned projects) / (total projects)` → direct score                   |
 | `documentation-completeness` | Documentation Completeness | higher is better | `(documented projects) / (total projects)` → direct score              |
-| `layer-integrity`            | Layer Integrity            | lower is better  | `(layer violations) / max(total dependencies, 1)` → inverted to score  |
+| `layer-integrity`            | Layer Integrity            | lower is better  | `(weighted layer-boundary burden) / max(structural dependency volume, 1)` → inverted to score  |
 
 All raw values are bounded to `[0, 1]` before scoring. "Lower is better" metrics are scored as `(1 − value) × 100`. "Higher is better" metrics are scored as `value × 100`.
+
+Negative signal-driven metrics use deterministic internal weighting before scoring.
+
+### Default signal aggregation weights
+
+Severity weights:
+
+| Severity | Weight |
+| -------- | ------ |
+| `info`   | `0.25` |
+| `warning`| `0.6`  |
+| `error`  | `1.0`  |
+
+Type weights:
+
+| Signal type                 | Weight | Notes |
+| --------------------------- | ------ | ----- |
+| `structural-dependency`     | `1.0`  | Used for dependency volume only, excluded from entropy penalty burden |
+| `cross-domain-dependency`   | `0.7`  | Contributes to entropy as a graph warning signal |
+| `missing-domain-context`    | `0.85` | Contributes to entropy as a graph warning signal |
+| `circular-dependency`       | `1.0`  | Reserved for future negative graph signals |
+| `conformance-violation`     | `1.0`  | Full-weight conformance penalty |
+| `domain-boundary-violation` | `1.0`  | Full-weight domain policy penalty |
+| `layer-boundary-violation`  | `0.75` | Reduced but material layer penalty |
+| `ownership-gap`             | `0.5`  | Used in entropy only; ownership coverage remains workspace-derived |
 
 ### How to interpret metrics
 
@@ -599,12 +624,12 @@ Use the overall health score for prioritization, then make decisions at the metr
 
 | Metric                       | What it measures in practice                                                 | Watch signal                                                                           | First remediation moves                                                                                                      |
 | ---------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `architectural-entropy`      | Density of policy violations relative to dependency volume.                  | Rising entropy with stable project count usually means boundary discipline is eroding. | Triage top violation clusters, fix highest-fanout offenders first, then add CI gates for recurring rule ids.                 |
+| `architectural-entropy`      | Weighted negative signal burden relative to dependency volume.               | Rising entropy with stable project count usually means boundary discipline is eroding. | Triage top violation clusters, fix highest-fanout offenders first, then add CI gates for recurring rule ids.                 |
 | `dependency-complexity`      | How connected the workspace is compared with its size.                       | High complexity with frequent cross-domain work indicates large blast radius risk.     | Reduce fanout in shared nodes, split overloaded libraries, tighten public APIs.                                              |
-| `domain-integrity`           | Fraction of dependencies that break domain constraints.                      | Any sustained increase usually signals implicit coupling between domains.              | Introduce explicit inter-domain contracts, route integrations through APIs, align reviews to domain ownership.               |
+| `domain-integrity`           | Weighted burden of domain-boundary violations relative to dependency volume. | Any sustained increase usually signals implicit coupling between domains.              | Introduce explicit inter-domain contracts, route integrations through APIs, align reviews to domain ownership.               |
 | `ownership-coverage`         | Portion of projects with explicit ownership metadata or CODEOWNERS coverage. | Coverage below target slows incident response and architecture decisions.              | Fill ownership gaps first in hotspot projects, then enforce ownership checks in CI.                                          |
 | `documentation-completeness` | Portion of projects with documented architecture/context metadata.           | Low documentation on high-change projects increases onboarding and regression risk.    | Prioritize docs for critical and high-fanout projects, add minimum documentation policy for new projects.                    |
-| `layer-integrity`            | Fraction of dependencies violating layer ordering rules.                     | Repeated layer leaks often precede test brittleness and circular dependency pressure.  | Introduce layer-facing interfaces, move implementation details downward, block upward imports in lint and governance checks. |
+| `layer-integrity`            | Weighted burden of layer-boundary violations relative to dependency volume.  | Repeated layer leaks often precede test brittleness and circular dependency pressure.  | Introduce layer-facing interfaces, move implementation details downward, block upward imports in lint and governance checks. |
 
 #### Quick threshold guide
 
