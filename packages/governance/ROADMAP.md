@@ -19,26 +19,26 @@ Goal:
 
 ## Graph Integration
 
-- [ ] Implement `GraphAdapter`
-- [ ] Load Nx project graph (API or JSON)
-- [ ] Normalize projects → `GovernedProject`
-- [ ] Normalize dependencies → `GovernedDependency`
-- [ ] Add domain/layer inference from tags
-- [ ] Produce `WorkspaceGraphSnapshot`
+- [x] Implement `GraphAdapter`
+- [x] Load Nx project graph (API or JSON)
+- [x] Normalize projects → `GovernedProject`
+- [x] Normalize dependencies → `GovernedDependency`
+- [x] Add domain/layer inference from tags
+- [x] Produce `WorkspaceGraphSnapshot`
 
 ## Conformance Integration
 
-- [ ] Implement `ConformanceAdapter`
-- [ ] Support JSON-based ingestion
-- [ ] Map rule violations → `GovernanceSignal`
-- [ ] Normalize severity levels
-- [ ] Capture rule metadata
+- [x] Implement `ConformanceAdapter`
+- [x] Support JSON-based ingestion
+- [x] Map rule violations → `GovernanceSignal`
+- [x] Normalize severity levels
+- [x] Capture rule metadata
 
 ## Signal Unification
 
-- [ ] Define `GovernanceSignal` contract in core
-- [ ] Merge graph + conformance signals
-- [ ] Ensure signals are explainable and traceable
+- [x] Define `GovernanceSignal` contract in core
+- [x] Merge graph + conformance signals
+- [x] Ensure signals are explainable and traceable
 
 ## Reporting
 
@@ -59,7 +59,7 @@ Goal:
 - [ ] Redefine **Ownership Coverage Score**
   - [ ] Metadata + rule violations
 - [ ] Redefine **Dependency Complexity Score**
-  - [ ] Graph-driven
+  - [x] Graph-driven
 
 ## New Metrics
 
@@ -69,9 +69,9 @@ Goal:
 
 ## Health Engine
 
-- [ ] Implement weighted scoring
-- [ ] Aggregate signals into health scores
-- [ ] Detect hotspots (top offenders)
+- [x] Implement weighted scoring
+- [x] Aggregate signals into health scores
+- [x] Detect hotspots (top offenders)
 
 ---
 
@@ -168,12 +168,12 @@ It DOES:
 
 👉 Start with:
 
-- [ ] GraphAdapter (minimal working version)
-- [ ] CLI output: project + dependency count
+- [x] GraphAdapter (minimal working version)
+- [x] CLI output: project + dependency count
 
 Then:
 
-- [ ] ConformanceAdapter (JSON ingestion)
+- [x] ConformanceAdapter (JSON ingestion)
 - [ ] Integrate into reporting
 
 ---

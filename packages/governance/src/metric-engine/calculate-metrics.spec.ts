@@ -80,8 +80,8 @@ describe('calculateMetrics', () => {
     });
 
     expect(metricById(metrics, 'architectural-entropy')).toMatchObject({
-      value: 0.5,
-      score: 50,
+      value: 0.15,
+      score: 85,
     });
     expect(metricById(metrics, 'dependency-complexity')).toMatchObject({
       value: 0.25,
@@ -100,6 +100,36 @@ describe('calculateMetrics', () => {
       score: 50,
     });
     expect(metricById(metrics, 'layer-integrity')).toMatchObject({
+      value: 0,
+      score: 100,
+    });
+  });
+
+  it('counts graph warning signals in entropy without treating them as domain-integrity penalties', () => {
+    const metrics = calculateMetrics({
+      workspace,
+      signals: [
+        ...buildSignals(workspace, []),
+        {
+          id: 'graph-warning',
+          type: 'missing-domain-context' as const,
+          sourceProjectId: 'a',
+          targetProjectId: 'b',
+          relatedProjectIds: ['a', 'b'],
+          severity: 'warning' as const,
+          category: 'boundary' as const,
+          message: 'missing domain context',
+          source: 'graph' as const,
+          createdAt: '2026-03-30T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(metricById(metrics, 'architectural-entropy')).toMatchObject({
+      value: 0.255,
+      score: 75,
+    });
+    expect(metricById(metrics, 'domain-integrity')).toMatchObject({
       value: 0,
       score: 100,
     });
