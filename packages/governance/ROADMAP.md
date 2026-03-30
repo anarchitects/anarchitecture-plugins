@@ -72,6 +72,7 @@ Goal:
 - [x] Implement weighted scoring
 - [x] Aggregate signals into health scores
 - [x] Detect hotspots (top offenders)
+- [x] Validate weighted metrics against representative workspace fixtures
 
 ---
 
