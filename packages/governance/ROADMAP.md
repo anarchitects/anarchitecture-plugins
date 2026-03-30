@@ -42,11 +42,11 @@ Goal:
 
 ## Reporting
 
-- [ ] Show signal sources in CLI output
-- [ ] Distinguish:
-  - [ ] Graph findings
-  - [ ] Conformance findings
-- [ ] Add counts per source
+- [x] Show signal sources in CLI output
+- [x] Distinguish:
+  - [x] Graph findings
+  - [x] Conformance findings
+- [x] Add counts per source
 
 ---
 
@@ -175,6 +175,6 @@ It DOES:
 Then:
 
 - [x] ConformanceAdapter (JSON ingestion)
-- [ ] Integrate into reporting
+- [x] Integrate into reporting
 
 ---

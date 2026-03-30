@@ -63,12 +63,23 @@ export interface HealthScore {
   hotspots: string[];
 }
 
+export interface SignalBreakdownEntry {
+  source: 'graph' | 'conformance' | 'policy';
+  count: number;
+}
+
+export interface SignalBreakdown {
+  total: number;
+  bySource: SignalBreakdownEntry[];
+}
+
 export interface GovernanceAssessment {
   workspace: GovernanceWorkspace;
   profile: string;
   warnings: string[];
   violations: Violation[];
   measurements: Measurement[];
+  signalBreakdown: SignalBreakdown;
   health: HealthScore;
   recommendations: Recommendation[];
 }

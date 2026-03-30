@@ -9,5 +9,6 @@ export {
   buildConformanceSignals,
   buildGovernanceSignals,
   buildGraphSignals,
+  mergeGovernanceSignals,
   buildPolicySignals,
 } from './builders.js';
