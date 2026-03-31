@@ -324,6 +324,8 @@ nx repo-health --failOnViolation
 
 **Signal breakdown shown:** graph, conformance, and policy source counts, plus per-type and per-severity counts. The CLI report prints deterministic `Signal Sources`, `Signal Types`, and `Signal Severity` sections, and the JSON output includes `signalBreakdown.total`, `signalBreakdown.bySource`, `signalBreakdown.byType`, and `signalBreakdown.bySeverity`.
 
+**Metric and issue breakdown shown:** the CLI also prints `Metric Families` and `Top Issues`, and the JSON output includes `metricBreakdown.families` plus `topIssues`.
+
 **Conformance input resolution:** explicit `--conformanceJson` wins. If it is not provided, governance tries `nx.json > conformance.outputPath`. If neither is available, the report still renders with a `conformance` count of `0`. If `nx.json` declares an output path but the file cannot be read, governance fails with a clear configuration error.
 
 **Use when:** you want a single number that summarises overall workspace quality, or when running a health gate in CI.
@@ -405,6 +407,15 @@ When governance reporting is rendered, the assessment always includes a signal b
   - `error`
 
 Counts are scoped to the active report type. For example, `repo-boundaries` only counts boundary-category signals, while `repo-architecture` excludes ownership-category signals. If `conformanceJson` is omitted, the `conformance` row is still present with count `0`. Severity rows are always present even when their count is `0`, while type rows are observed-only.
+
+### Metric Families and Top Issues
+
+Governance reporting also publishes:
+
+- `metricBreakdown.families` with deterministic family ordering: `architecture`, `boundaries`, `ownership`, `documentation`
+- `topIssues`, a unified ranked list built from filtered governance signals rather than policy violations alone
+
+`Top Issues` is ordered by severity first, then issue frequency, then canonical signal ordering. Policy-backed issues include `ruleId` when available.
 
 ---
 
