@@ -25,6 +25,7 @@ describe('signal breakdown helpers', () => {
         source: 'graph',
         type: 'structural-dependency',
         category: 'dependency',
+        severity: 'info',
       }),
       makeSignal({
         id: 'graph-domain',
@@ -44,6 +45,17 @@ describe('signal breakdown helpers', () => {
         { source: 'conformance', count: 1 },
         { source: 'policy', count: 1 },
       ],
+      byType: [
+        { type: 'structural-dependency', count: 1 },
+        { type: 'cross-domain-dependency', count: 1 },
+        { type: 'conformance-violation', count: 1 },
+        { type: 'domain-boundary-violation', count: 1 },
+      ],
+      bySeverity: [
+        { severity: 'info', count: 1 },
+        { severity: 'warning', count: 3 },
+        { severity: 'error', count: 0 },
+      ],
     });
   });
 
@@ -55,6 +67,7 @@ describe('signal breakdown helpers', () => {
           source: 'graph',
           type: 'structural-dependency',
           category: 'dependency',
+          severity: 'info',
         }),
       ])
     ).toEqual({
@@ -64,16 +77,23 @@ describe('signal breakdown helpers', () => {
         { source: 'conformance', count: 0 },
         { source: 'policy', count: 0 },
       ],
+      byType: [{ type: 'structural-dependency', count: 1 }],
+      bySeverity: [
+        { severity: 'info', count: 1 },
+        { severity: 'warning', count: 0 },
+        { severity: 'error', count: 0 },
+      ],
     });
   });
 
-  it('filters signal sets by report type before breakdown', () => {
+  it('filters signal sets by report type before type and severity aggregation', () => {
     const signals = [
       makeSignal({
         id: 'graph-structural',
         source: 'graph',
         type: 'structural-dependency',
         category: 'dependency',
+        severity: 'info',
       }),
       makeSignal({
         id: 'graph-boundary',
@@ -107,6 +127,52 @@ describe('signal breakdown helpers', () => {
     expect(
       filterSignalsForReportType(signals, 'health').map((s) => s.id)
     ).toEqual(signals.map((signal) => signal.id));
+  });
+
+  it('keeps type ordering deterministic and observed-only', () => {
+    const breakdown = buildSignalBreakdown([
+      makeSignal({
+        id: 'policy-ownership',
+        source: 'policy',
+        type: 'ownership-gap',
+        category: 'ownership',
+      }),
+      makeSignal({
+        id: 'graph-missing-domain',
+        source: 'graph',
+        type: 'missing-domain-context',
+        category: 'boundary',
+      }),
+      makeSignal({
+        id: 'graph-structural',
+        source: 'graph',
+        type: 'structural-dependency',
+        category: 'dependency',
+        severity: 'info',
+      }),
+      makeSignal({
+        id: 'conformance-boundary',
+        source: 'conformance',
+        type: 'conformance-violation',
+        category: 'boundary',
+        severity: 'error',
+      }),
+    ]);
+
+    expect(breakdown.byType).toEqual([
+      { type: 'structural-dependency', count: 1 },
+      { type: 'missing-domain-context', count: 1 },
+      { type: 'conformance-violation', count: 1 },
+      { type: 'ownership-gap', count: 1 },
+    ]);
+    expect(
+      breakdown.byType.find((entry) => entry.type === 'circular-dependency')
+    ).toBeUndefined();
+    expect(breakdown.bySeverity).toEqual([
+      { severity: 'info', count: 1 },
+      { severity: 'warning', count: 2 },
+      { severity: 'error', count: 1 },
+    ]);
   });
 });
 

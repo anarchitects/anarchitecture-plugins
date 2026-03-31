@@ -8,10 +8,23 @@ describe('governance report rendering', () => {
     const rendered = renderCliReport(makeAssessment());
 
     expect(rendered).toContain('Signal Sources:');
+    expect(rendered).toContain('Signal Types:');
+    expect(rendered).toContain('Signal Severity:');
     expect(rendered).toContain('- graph: 3');
     expect(rendered).toContain('- conformance: 1');
     expect(rendered).toContain('- policy: 2');
+    expect(rendered).toContain('- structural-dependency: 2');
+    expect(rendered).toContain('- conformance-violation: 1');
+    expect(rendered).toContain('- info: 2');
+    expect(rendered).toContain('- warning: 3');
+    expect(rendered).toContain('- error: 1');
     expect(rendered.indexOf('Signal Sources:')).toBeLessThan(
+      rendered.indexOf('Signal Types:')
+    );
+    expect(rendered.indexOf('Signal Types:')).toBeLessThan(
+      rendered.indexOf('Signal Severity:')
+    );
+    expect(rendered.indexOf('Signal Severity:')).toBeLessThan(
       rendered.indexOf('Metrics:')
     );
   });
@@ -26,6 +39,17 @@ describe('governance report rendering', () => {
           { source: 'graph', count: 3 },
           { source: 'conformance', count: 1 },
           { source: 'policy', count: 2 },
+        ],
+        byType: [
+          { type: 'structural-dependency', count: 2 },
+          { type: 'conformance-violation', count: 1 },
+          { type: 'domain-boundary-violation', count: 2 },
+          { type: 'ownership-gap', count: 1 },
+        ],
+        bySeverity: [
+          { severity: 'info', count: 2 },
+          { severity: 'warning', count: 3 },
+          { severity: 'error', count: 1 },
         ],
       },
     });
@@ -60,6 +84,17 @@ function makeAssessment(): GovernanceAssessment {
         { source: 'graph', count: 3 },
         { source: 'conformance', count: 1 },
         { source: 'policy', count: 2 },
+      ],
+      byType: [
+        { type: 'structural-dependency', count: 2 },
+        { type: 'conformance-violation', count: 1 },
+        { type: 'domain-boundary-violation', count: 2 },
+        { type: 'ownership-gap', count: 1 },
+      ],
+      bySeverity: [
+        { severity: 'info', count: 2 },
+        { severity: 'warning', count: 3 },
+        { severity: 'error', count: 1 },
       ],
     },
     health: {

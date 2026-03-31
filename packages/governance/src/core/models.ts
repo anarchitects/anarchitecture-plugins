@@ -1,3 +1,8 @@
+import type {
+  GovernanceSignalSeverity,
+  GovernanceSignalType,
+} from '../signal-engine/types.js';
+
 export interface GovernanceWorkspace {
   id: string;
   name: string;
@@ -68,9 +73,21 @@ export interface SignalBreakdownEntry {
   count: number;
 }
 
+export interface SignalTypeBreakdownEntry {
+  type: GovernanceSignalType;
+  count: number;
+}
+
+export interface SignalSeverityBreakdownEntry {
+  severity: GovernanceSignalSeverity;
+  count: number;
+}
+
 export interface SignalBreakdown {
   total: number;
   bySource: SignalBreakdownEntry[];
+  byType: SignalTypeBreakdownEntry[];
+  bySeverity: SignalSeverityBreakdownEntry[];
 }
 
 export interface GovernanceAssessment {
