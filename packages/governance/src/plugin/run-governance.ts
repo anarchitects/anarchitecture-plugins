@@ -1,6 +1,6 @@
 import { logger, workspaceRoot } from '@nx/devkit';
 
-import { GovernanceAssessment } from '../core/index.js';
+import { GovernanceAssessment, GovernanceProfile } from '../core/index.js';
 import {
   buildRecommendations,
   calculateHealthScore,
@@ -1429,7 +1429,7 @@ async function buildAssessment(
   const profileName = options.profile ?? 'angular-cleanup';
 
   const overrides = await loadProfileOverrides(workspaceRoot, profileName);
-  const effectiveProfile = {
+  const effectiveProfile: GovernanceProfile = {
     ...angularCleanupProfile,
     layers: overrides.layers ?? angularCleanupProfile.layers,
     allowedDomainDependencies:
@@ -1440,8 +1440,10 @@ async function buildAssessment(
       ...(overrides.ownership ?? {}),
     },
     health: {
-      ...angularCleanupProfile.health,
-      ...(overrides.health ?? {}),
+      statusThresholds: {
+        ...angularCleanupProfile.health.statusThresholds,
+        ...(overrides.health?.statusThresholds ?? {}),
+      },
     },
     metrics: {
       ...angularCleanupProfile.metrics,
