@@ -77,9 +77,22 @@ describe('runGovernance', () => {
       calculateHealthScore(
         health.assessment.measurements,
         resolvedWeights,
-        resolvedStatusThresholds
+        resolvedStatusThresholds,
+        {
+          topIssues: health.assessment.topIssues,
+        }
       )
     );
+    expect(boundaries.assessment.health).toEqual(health.assessment.health);
+    expect(ownership.assessment.health).toEqual(health.assessment.health);
+    expect(architecture.assessment.health).toEqual(health.assessment.health);
+    expect(health.assessment.health.explainability.weakestMetrics.length).toBe(
+      3
+    );
+    expect(health.assessment.health.projectHotspots.length).toBeGreaterThan(0);
+    expect(
+      health.assessment.health.explainability.dominantIssues.length
+    ).toBeGreaterThan(0);
     expect(health.assessment.signalBreakdown.bySource).toEqual([
       {
         source: 'graph',

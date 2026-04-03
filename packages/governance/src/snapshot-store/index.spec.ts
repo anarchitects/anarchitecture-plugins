@@ -72,6 +72,22 @@ describe('snapshot-store', () => {
         status: 'warning',
         grade: 'B',
         hotspots: [],
+        metricHotspots: [],
+        projectHotspots: [],
+        explainability: {
+          summary:
+            'Overall health is Warning at 80/100. Weakest metrics: Architectural Entropy (80). Dominant issues: none.',
+          statusReason:
+            'Score 80 is below the Good threshold (85) but meets the Warning threshold (70).',
+          weakestMetrics: [
+            {
+              id: 'architectural-entropy',
+              name: 'Architectural Entropy',
+              score: 80,
+            },
+          ],
+          dominantIssues: [],
+        },
       },
       recommendations: [],
     };
