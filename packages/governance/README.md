@@ -45,7 +45,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
   - [repo-ai-scorecard](#repo-ai-scorecard)
   - [repo-ai-onboarding](#repo-ai-onboarding)
 - [Reports explained](#reports-explained)
-  - [Health score and grade](#health-score-and-grade)
+  - [Health score, status, and grade](#health-score-status-and-grade)
   - [Metrics](#metrics)
   - [Violations](#violations)
   - [Recommendations](#recommendations)
@@ -312,7 +312,7 @@ Additional options are listed per command where applicable (`snapshotDir`, `snap
 
 ### `repo-health`
 
-**Intent:** Give a full workspace health overview — the "dashboard" view. Every metric is computed and combined into a single weighted score with a letter grade.
+**Intent:** Give a full workspace health overview — the "dashboard" view. Every metric is computed and combined into a single weighted score with a health status and compatibility grade.
 
 ```bash
 nx repo-health
@@ -602,9 +602,17 @@ nx repo-ai-onboarding --topViolations=10 --topProjects=5
 
 ## Reports explained
 
-### Health score and grade
+### Health score, status, and grade
 
-Every executor computes a **health score** from 0–100 and assigns a letter grade:
+Every executor computes a **health score** from 0–100, then derives a health status:
+
+| Score  | Status     | Interpretation                                        |
+| ------ | ---------- | ----------------------------------------------------- |
+| 85–100 | `Good`     | Healthy overall posture with minor follow-up items.   |
+| 70–84  | `Warning`  | Risk is emerging and should be prioritized soon.      |
+| 0–69   | `Critical` | Intervention is needed to reduce structural exposure. |
+
+For backward compatibility, the report also keeps the existing letter grade:
 
 | Score  | Grade | Interpretation                                           |
 | ------ | ----- | -------------------------------------------------------- |
@@ -614,7 +622,9 @@ Every executor computes a **health score** from 0–100 and assigns a letter gra
 | 60–69  | D     | Concerning — multiple signals degraded.                  |
 | 0–59   | F     | Critical — significant structural violations present.    |
 
-The score is a **weighted average** of individual metric scores. Weights are configured per-profile under `metrics.*Weight`. Equal weights (0.2 each across all six metrics) are the default, meaning each metric contributes evenly. Raise a weight to make a particular concern more influential in the overall grade.
+The score is a **weighted average** of individual metric scores. Weights are configured per-profile under `metrics.*Weight`. Equal weights (0.2 each across all six metrics) are the default, meaning each metric contributes evenly. Raise a weight to make a particular concern more influential in the overall score.
+
+Status thresholds are configurable per-profile under `health.statusThresholds`. The defaults are `goodMinScore: 85` and `warningMinScore: 70`.
 
 Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON output.
 
@@ -777,6 +787,7 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
   ],
   "health": {
     "score": 91,
+    "status": "good",
     "grade": "A",
     "hotspots": []
   },
@@ -817,6 +828,14 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
   "ownership": {
     "required": true, // raise ownership-presence violations when true
     "metadataField": "ownership"
+  },
+
+  // Workspace-level health classification thresholds
+  "health": {
+    "statusThresholds": {
+      "goodMinScore": 85,
+      "warningMinScore": 70
+    }
   },
 
   // Per-metric weight in the overall health score (must be > 0, relative scale)

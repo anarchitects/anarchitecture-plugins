@@ -29,6 +29,7 @@ describe('calculateHealthScore', () => {
     const health = calculateHealthScore(measurements);
 
     expect(health.score).toBe(90);
+    expect(health.status).toBe('good');
     expect(health.grade).toBe('A');
   });
 
@@ -55,6 +56,7 @@ describe('calculateHealthScore', () => {
     const health = calculateHealthScore(measurements);
 
     expect(health.hotspots).toEqual(['Metric 1']);
+    expect(health.status).toBe('critical');
     expect(health.grade).toBe('F');
   });
 
@@ -84,6 +86,7 @@ describe('calculateHealthScore', () => {
     });
 
     expect(health.score).toBe(28);
+    expect(health.status).toBe('critical');
     expect(health.grade).toBe('F');
   });
 
@@ -149,8 +152,60 @@ describe('calculateHealthScore', () => {
     });
 
     expect(health.score).toBe(83);
+    expect(health.status).toBe('warning');
     expect(health.grade).toBe('B');
     expect(health.hotspots).toEqual(['Layer Integrity']);
+  });
+
+  it('uses default 85/70 status thresholds at boundary scores', () => {
+    const warningHealth = calculateHealthScore([
+      {
+        id: 'm1',
+        name: 'Metric 1',
+        value: 0.7,
+        score: 70,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+    ]);
+    const goodHealth = calculateHealthScore([
+      {
+        id: 'm1',
+        name: 'Metric 1',
+        value: 0.85,
+        score: 85,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+    ]);
+
+    expect(warningHealth.status).toBe('warning');
+    expect(warningHealth.grade).toBe('C');
+    expect(goodHealth.status).toBe('good');
+    expect(goodHealth.grade).toBe('B');
+  });
+
+  it('uses custom status thresholds when provided', () => {
+    const health = calculateHealthScore(
+      [
+        {
+          id: 'm1',
+          name: 'Metric 1',
+          value: 0.8,
+          score: 80,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+      ],
+      {},
+      {
+        goodMinScore: 90,
+        warningMinScore: 75,
+      }
+    );
+
+    expect(health.status).toBe('warning');
+    expect(health.grade).toBe('B');
   });
 });
 

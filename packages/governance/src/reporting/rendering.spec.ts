@@ -7,6 +7,7 @@ describe('governance report rendering', () => {
   it('renders deterministic signal source rows in CLI output', () => {
     const rendered = renderCliReport(makeAssessment());
 
+    expect(rendered).toContain('Health Score: 80 (Warning, B)');
     expect(rendered).toContain('Signal Sources:');
     expect(rendered).toContain('Signal Types:');
     expect(rendered).toContain('Signal Severity:');
@@ -46,6 +47,12 @@ describe('governance report rendering', () => {
     const rendered = renderJsonReport(makeAssessment());
 
     expect(JSON.parse(rendered)).toMatchObject({
+      health: {
+        score: 80,
+        status: 'warning',
+        grade: 'B',
+        hotspots: [],
+      },
       signalBreakdown: {
         total: 6,
         bySource: [
@@ -194,6 +201,7 @@ function makeAssessment(): GovernanceAssessment {
     ],
     health: {
       score: 80,
+      status: 'warning',
       grade: 'B',
       hotspots: [],
     },

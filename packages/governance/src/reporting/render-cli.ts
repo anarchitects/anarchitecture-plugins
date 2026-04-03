@@ -8,7 +8,9 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
   lines.push(`Nx Governance - ${assessment.profile}`);
   lines.push('');
   lines.push(
-    `Health Score: ${assessment.health.score} (${assessment.health.grade})`
+    `Health Score: ${assessment.health.score} (${formatHealthStatus(
+      assessment.health.status
+    )}, ${assessment.health.grade})`
   );
   lines.push(`Projects: ${assessment.workspace.projects.length}`);
   lines.push(`Dependencies: ${assessment.workspace.dependencies.length}`);
@@ -86,4 +88,8 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
   }
 
   return lines.join('\n');
+}
+
+function formatHealthStatus(status: GovernanceAssessment['health']['status']) {
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
 }

@@ -63,8 +63,16 @@ export interface Recommendation {
   reason: string;
 }
 
+export type HealthStatus = 'good' | 'warning' | 'critical';
+
+export interface HealthStatusThresholds {
+  goodMinScore: number;
+  warningMinScore: number;
+}
+
 export interface HealthScore {
   score: number;
+  status: HealthStatus;
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   hotspots: string[];
 }

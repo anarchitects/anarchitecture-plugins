@@ -1217,6 +1217,7 @@ export async function runGovernanceAiScorecard(
     metadata: {
       snapshotPath: path.relative(workspaceRoot, snapshotSource),
       workspaceHealthScore: assessment.health.score,
+      workspaceHealthStatus: assessment.health.status,
       workspaceHealthGrade: assessment.health.grade,
       totalViolations: assessment.violations.length,
       measurementsCount: assessment.measurements.length,
@@ -1438,6 +1439,10 @@ async function buildAssessment(
       ...angularCleanupProfile.ownership,
       ...(overrides.ownership ?? {}),
     },
+    health: {
+      ...angularCleanupProfile.health,
+      ...(overrides.health ?? {}),
+    },
     metrics: {
       ...angularCleanupProfile.metrics,
       ...(overrides.metrics ?? {}),
@@ -1486,7 +1491,8 @@ async function buildAssessment(
     topIssues: buildTopIssues(filteredSignals),
     health: calculateHealthScore(
       allMeasurements,
-      metricWeightsFromProfile(effectiveProfile.metrics)
+      metricWeightsFromProfile(effectiveProfile.metrics),
+      effectiveProfile.health.statusThresholds
     ),
     recommendations: buildRecommendations(allViolations, allMeasurements),
   };

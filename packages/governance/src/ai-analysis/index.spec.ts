@@ -412,6 +412,9 @@ describe('ai-analysis', () => {
     const result = summarizeScorecard(request);
 
     expect(result.kind).toBe('scorecard');
+    expect(result.summary).toContain('(Critical, D)');
+    expect(result.findings[0]?.detail).toContain('(Critical, grade D)');
+    expect(result.metadata?.workspaceHealthStatus).toBe('critical');
     expect(result.metadata?.trend).toBe('worsening');
     expect(
       result.recommendations.some(
