@@ -2,6 +2,7 @@ import {
   AiAnalysisResult,
   AiAnalysisRequest,
   GovernanceDependency,
+  HealthStatus,
   MetricSnapshot,
   Recommendation,
   SnapshotComparison,
@@ -366,6 +367,9 @@ export function summarizeScorecard(
   const workspaceHealthScore =
     snapshot?.scores.workspaceHealth ??
     numberFromMetadata(metadata, 'workspaceHealthScore');
+  const healthStatus =
+    asHealthStatus(metadata['workspaceHealthStatus']) ??
+    statusForScore(workspaceHealthScore);
   const healthGrade =
     asGrade(metadata['workspaceHealthGrade']) ??
     gradeForScore(workspaceHealthScore);
@@ -392,7 +396,7 @@ export function summarizeScorecard(
       title: 'Overall Governance Health',
       detail: `Workspace health score is ${workspaceHealthScore.toFixed(
         0
-      )} (grade ${healthGrade}).`,
+      )} (${formatHealthStatus(healthStatus)}, grade ${healthGrade}).`,
       signals: ['workspace-health', 'metric-scores'],
       confidence: 1,
     },
@@ -472,11 +476,14 @@ export function summarizeScorecard(
     kind: 'scorecard',
     summary: `Deterministic governance scorecard: ${workspaceHealthScore.toFixed(
       0
-    )} (${healthGrade}), trend ${trend}, ${violationCount} violations.`,
+    )} (${formatHealthStatus(
+      healthStatus
+    )}, ${healthGrade}), trend ${trend}, ${violationCount} violations.`,
     findings,
     recommendations,
     metadata: {
       workspaceHealthScore,
+      workspaceHealthStatus: healthStatus,
       workspaceHealthGrade: healthGrade,
       trend,
       scoreDelta,
@@ -1458,10 +1465,28 @@ function asGrade(value: unknown): 'A' | 'B' | 'C' | 'D' | 'F' | null {
   return null;
 }
 
+function asHealthStatus(value: unknown): HealthStatus | null {
+  if (value === 'good' || value === 'warning' || value === 'critical') {
+    return value;
+  }
+
+  return null;
+}
+
 function gradeForScore(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
   if (score >= 90) return 'A';
   if (score >= 80) return 'B';
   if (score >= 70) return 'C';
   if (score >= 60) return 'D';
   return 'F';
+}
+
+function statusForScore(score: number): HealthStatus {
+  if (score >= 85) return 'good';
+  if (score >= 70) return 'warning';
+  return 'critical';
+}
+
+function formatHealthStatus(status: HealthStatus): string {
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
 }

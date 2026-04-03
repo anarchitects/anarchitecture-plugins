@@ -42,6 +42,9 @@ describe('runGovernance', () => {
         overrides.metrics?.layerIntegrityWeight ??
         angularCleanupProfile.metrics.layerIntegrityWeight,
     };
+    const resolvedStatusThresholds =
+      overrides.health?.statusThresholds ??
+      angularCleanupProfile.health.statusThresholds;
 
     const health = await runGovernance({ reportType: 'health' });
     const boundaries = await runGovernance({ reportType: 'boundaries' });
@@ -71,7 +74,11 @@ describe('runGovernance', () => {
     ]);
 
     expect(health.assessment.health).toEqual(
-      calculateHealthScore(health.assessment.measurements, resolvedWeights)
+      calculateHealthScore(
+        health.assessment.measurements,
+        resolvedWeights,
+        resolvedStatusThresholds
+      )
     );
     expect(health.assessment.signalBreakdown.bySource).toEqual([
       {

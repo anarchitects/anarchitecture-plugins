@@ -293,6 +293,12 @@ function ensureProfileConfig(tree: Tree): void {
       required: true,
       metadataField: 'ownership',
     },
+    health: {
+      statusThresholds: {
+        goodMinScore: 85,
+        warningMinScore: 70,
+      },
+    },
     metrics: {
       architecturalEntropyWeight: 0.2,
       dependencyComplexityWeight: 0.2,

@@ -18,6 +18,7 @@ const WORKSPACE_FIXTURES: Array<{
     measurements: Record<string, { value: number; score: number }>;
     health: {
       score: number;
+      status: 'good' | 'warning' | 'critical';
       grade: 'A' | 'B' | 'C' | 'D' | 'F';
       hotspots: string[];
     };
@@ -52,6 +53,7 @@ const WORKSPACE_FIXTURES: Array<{
       },
       health: {
         score: 97,
+        status: 'good',
         grade: 'A',
         hotspots: [],
       },
@@ -86,6 +88,7 @@ const WORKSPACE_FIXTURES: Array<{
       },
       health: {
         score: 95,
+        status: 'good',
         grade: 'A',
         hotspots: [],
       },
@@ -130,6 +133,7 @@ const WORKSPACE_FIXTURES: Array<{
       },
       health: {
         score: 44,
+        status: 'critical',
         grade: 'F',
         hotspots: [
           'Architectural Entropy',
@@ -157,18 +161,23 @@ describe('workspace metric baselines', () => {
         workspace: inventory,
         signals,
       });
-      const health = calculateHealthScore(measurements, {
-        'architectural-entropy':
-          angularCleanupProfile.metrics.architecturalEntropyWeight,
-        'dependency-complexity':
-          angularCleanupProfile.metrics.dependencyComplexityWeight,
-        'domain-integrity': angularCleanupProfile.metrics.domainIntegrityWeight,
-        'ownership-coverage':
-          angularCleanupProfile.metrics.ownershipCoverageWeight,
-        'documentation-completeness':
-          angularCleanupProfile.metrics.documentationCompletenessWeight,
-        'layer-integrity': angularCleanupProfile.metrics.layerIntegrityWeight,
-      });
+      const health = calculateHealthScore(
+        measurements,
+        {
+          'architectural-entropy':
+            angularCleanupProfile.metrics.architecturalEntropyWeight,
+          'dependency-complexity':
+            angularCleanupProfile.metrics.dependencyComplexityWeight,
+          'domain-integrity':
+            angularCleanupProfile.metrics.domainIntegrityWeight,
+          'ownership-coverage':
+            angularCleanupProfile.metrics.ownershipCoverageWeight,
+          'documentation-completeness':
+            angularCleanupProfile.metrics.documentationCompletenessWeight,
+          'layer-integrity': angularCleanupProfile.metrics.layerIntegrityWeight,
+        },
+        angularCleanupProfile.health.statusThresholds
+      );
 
       expect(violations.map((violation) => violation.ruleId)).toEqual(
         expected.violationRuleIds

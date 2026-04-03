@@ -69,6 +69,7 @@ describe('snapshot-store', () => {
       topIssues: [],
       health: {
         score: 80,
+        status: 'warning',
         grade: 'B',
         hotspots: [],
       },

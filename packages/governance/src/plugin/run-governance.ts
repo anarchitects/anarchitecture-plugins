@@ -1,6 +1,6 @@
 import { logger, workspaceRoot } from '@nx/devkit';
 
-import { GovernanceAssessment } from '../core/index.js';
+import { GovernanceAssessment, GovernanceProfile } from '../core/index.js';
 import {
   buildRecommendations,
   calculateHealthScore,
@@ -1217,6 +1217,7 @@ export async function runGovernanceAiScorecard(
     metadata: {
       snapshotPath: path.relative(workspaceRoot, snapshotSource),
       workspaceHealthScore: assessment.health.score,
+      workspaceHealthStatus: assessment.health.status,
       workspaceHealthGrade: assessment.health.grade,
       totalViolations: assessment.violations.length,
       measurementsCount: assessment.measurements.length,
@@ -1428,7 +1429,7 @@ async function buildAssessment(
   const profileName = options.profile ?? 'angular-cleanup';
 
   const overrides = await loadProfileOverrides(workspaceRoot, profileName);
-  const effectiveProfile = {
+  const effectiveProfile: GovernanceProfile = {
     ...angularCleanupProfile,
     layers: overrides.layers ?? angularCleanupProfile.layers,
     allowedDomainDependencies:
@@ -1437,6 +1438,12 @@ async function buildAssessment(
     ownership: {
       ...angularCleanupProfile.ownership,
       ...(overrides.ownership ?? {}),
+    },
+    health: {
+      statusThresholds: {
+        ...angularCleanupProfile.health.statusThresholds,
+        ...(overrides.health?.statusThresholds ?? {}),
+      },
     },
     metrics: {
       ...angularCleanupProfile.metrics,
@@ -1486,7 +1493,8 @@ async function buildAssessment(
     topIssues: buildTopIssues(filteredSignals),
     health: calculateHealthScore(
       allMeasurements,
-      metricWeightsFromProfile(effectiveProfile.metrics)
+      metricWeightsFromProfile(effectiveProfile.metrics),
+      effectiveProfile.health.statusThresholds
     ),
     recommendations: buildRecommendations(allViolations, allMeasurements),
   };

@@ -2,7 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { GovernanceProfile, ProfileOverrides } from '../../core/index.js';
+import {
+  DEFAULT_HEALTH_STATUS_THRESHOLDS,
+  GovernanceProfile,
+  HealthStatusThresholds,
+  ProfileOverrides,
+} from '../../core/index.js';
 
 export const angularCleanupProfile: GovernanceProfile = {
   name: 'angular-cleanup',
@@ -15,6 +20,9 @@ export const angularCleanupProfile: GovernanceProfile = {
   ownership: {
     required: true,
     metadataField: 'ownership',
+  },
+  health: {
+    statusThresholds: DEFAULT_HEALTH_STATUS_THRESHOLDS,
   },
   metrics: {
     architecturalEntropyWeight: 0.2,
@@ -47,6 +55,7 @@ export async function loadProfileOverrides(
       allowedDomainDependencies:
         angularCleanupProfile.allowedDomainDependencies,
       ownership: angularCleanupProfile.ownership,
+      health: angularCleanupProfile.health,
       metrics: angularCleanupProfile.metrics,
       projectOverrides: {},
       runtimeWarnings: [],
@@ -58,6 +67,7 @@ export async function loadProfileOverrides(
     layers?: string[];
     allowedDomainDependencies?: Record<string, string[]>;
     ownership?: ProfileOverrides['ownership'];
+    health?: ProfileOverrides['health'];
     metrics?: Partial<GovernanceProfile['metrics']>;
     projectOverrides?: ProfileOverrides['projectOverrides'];
   };
@@ -91,6 +101,11 @@ export async function loadProfileOverrides(
     ownership: {
       ...angularCleanupProfile.ownership,
       ...(raw.ownership ?? {}),
+    },
+    health: {
+      statusThresholds: normalizeHealthStatusThresholds(
+        raw.health?.statusThresholds
+      ),
     },
     metrics: {
       ...angularCleanupProfile.metrics,
@@ -169,4 +184,34 @@ function depConstraintsToAllowedDomainDependencies(
   }
 
   return mapped;
+}
+
+function normalizeHealthStatusThresholds(
+  raw?: Partial<HealthStatusThresholds>
+): HealthStatusThresholds {
+  const goodMinScore = normalizeThresholdValue(
+    raw?.goodMinScore,
+    angularCleanupProfile.health.statusThresholds.goodMinScore
+  );
+  const warningMinScore = normalizeThresholdValue(
+    raw?.warningMinScore,
+    angularCleanupProfile.health.statusThresholds.warningMinScore
+  );
+
+  if (goodMinScore <= warningMinScore) {
+    return angularCleanupProfile.health.statusThresholds;
+  }
+
+  return {
+    goodMinScore,
+    warningMinScore,
+  };
+}
+
+function normalizeThresholdValue(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(100, value));
 }

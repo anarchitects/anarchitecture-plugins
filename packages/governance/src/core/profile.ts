@@ -1,3 +1,10 @@
+import { HealthStatusThresholds } from './models.js';
+
+export const DEFAULT_HEALTH_STATUS_THRESHOLDS: HealthStatusThresholds = {
+  goodMinScore: 85,
+  warningMinScore: 70,
+};
+
 export interface GovernanceProfile {
   name: string;
   description?: string;
@@ -7,6 +14,9 @@ export interface GovernanceProfile {
   ownership: {
     required: boolean;
     metadataField: string;
+  };
+  health: {
+    statusThresholds: HealthStatusThresholds;
   };
   metrics: {
     architecturalEntropyWeight: number;
@@ -23,6 +33,9 @@ export interface ProfileOverrides {
   layers?: string[];
   allowedDomainDependencies?: Record<string, string[]>;
   ownership?: Partial<GovernanceProfile['ownership']>;
+  health?: {
+    statusThresholds?: Partial<HealthStatusThresholds>;
+  };
   metrics?: Partial<GovernanceProfile['metrics']>;
   projectOverrides: Record<
     string,
