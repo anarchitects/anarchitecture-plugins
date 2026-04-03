@@ -10,9 +10,24 @@ import {
   angularCleanupProfile,
   loadProfileOverrides,
 } from '../presets/angular-cleanup/profile.js';
-import { runGovernance } from './run-governance.js';
+import {
+  runGovernance,
+  runGovernanceAiDrift,
+  runGovernanceDrift,
+  runGovernanceSnapshot,
+} from './run-governance.js';
 
 describe('runGovernance', () => {
+  function writeSnapshotFile(
+    directory: string,
+    fileName: string,
+    snapshot: Record<string, unknown>
+  ): string {
+    const filePath = path.join(directory, fileName);
+    writeFileSync(filePath, `${JSON.stringify(snapshot, null, 2)}\n`);
+    return filePath;
+  }
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -424,6 +439,411 @@ describe('runGovernance', () => {
       ]);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('persists enriched snapshot summary fields in repo-snapshot output', async () => {
+    jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const snapshotDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-snapshots-')
+    );
+
+    try {
+      const result = await runGovernanceSnapshot({
+        output: 'json',
+        snapshotDir,
+      });
+      const rendered = JSON.parse(result.rendered) as {
+        snapshot: Record<string, unknown>;
+      };
+      const snapshot = rendered.snapshot as Record<string, unknown>;
+
+      expect(result.snapshot.metricSchemaVersion).toBe('1.1');
+      expect(snapshot['health']).toEqual(
+        expect.objectContaining({
+          score: result.assessment.health.score,
+          status: result.assessment.health.status,
+          grade: result.assessment.health.grade,
+        })
+      );
+      expect(snapshot['signalBreakdown']).toEqual(
+        result.assessment.signalBreakdown
+      );
+      expect(snapshot['metricBreakdown']).toEqual(
+        result.assessment.metricBreakdown
+      );
+      expect(snapshot['topIssues']).toEqual(result.assessment.topIssues);
+    } finally {
+      rmSync(snapshotDir, { recursive: true, force: true });
+    }
+  });
+
+  it('builds enriched snapshot comparisons and drift summaries', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const snapshotDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-drift-')
+    );
+
+    try {
+      const baselinePath = writeSnapshotFile(
+        snapshotDir,
+        '2026-03-01T10-00-00.json',
+        {
+          timestamp: '2026-03-01T10:00:00Z',
+          repo: 'anarchitecture-plugins',
+          branch: 'main',
+          commitSha: 'abc123',
+          pluginVersion: '0.1.0',
+          metricSchemaVersion: '1.1',
+          metrics: {
+            'architectural-entropy': 0.2,
+          },
+          scores: {
+            workspaceHealth: 80,
+            'architectural-entropy': 85,
+          },
+          violations: [
+            {
+              type: 'domain-boundary',
+              source: 'libs/orders/data-access',
+              target: 'libs/shared/data-access',
+              severity: 'error',
+            },
+          ],
+          health: {
+            score: 80,
+            status: 'warning',
+            grade: 'B',
+          },
+          signalBreakdown: {
+            total: 3,
+            bySource: [
+              { source: 'graph', count: 1 },
+              { source: 'conformance', count: 0 },
+              { source: 'policy', count: 2 },
+            ],
+            byType: [
+              { type: 'structural-dependency', count: 1 },
+              { type: 'domain-boundary-violation', count: 2 },
+            ],
+            bySeverity: [
+              { severity: 'info', count: 1 },
+              { severity: 'warning', count: 0 },
+              { severity: 'error', count: 2 },
+            ],
+          },
+          metricBreakdown: {
+            families: [
+              {
+                family: 'architecture',
+                score: 84,
+                measurements: [],
+              },
+              {
+                family: 'ownership',
+                score: 90,
+                measurements: [],
+              },
+            ],
+          },
+          topIssues: [
+            {
+              type: 'domain-boundary-violation',
+              source: 'policy',
+              severity: 'error',
+              count: 2,
+              projects: ['libs/orders/data-access', 'libs/shared/data-access'],
+              ruleId: 'domain-boundary',
+              message: 'Domain boundary is violated.',
+            },
+          ],
+        }
+      );
+      const currentPath = writeSnapshotFile(
+        snapshotDir,
+        '2026-03-13T10-00-00.json',
+        {
+          timestamp: '2026-03-13T10:00:00Z',
+          repo: 'anarchitecture-plugins',
+          branch: 'main',
+          commitSha: 'def456',
+          pluginVersion: '0.1.0',
+          metricSchemaVersion: '1.1',
+          metrics: {
+            'architectural-entropy': 0.25,
+          },
+          scores: {
+            workspaceHealth: 74,
+            'architectural-entropy': 79,
+          },
+          violations: [
+            {
+              type: 'domain-boundary',
+              source: 'libs/orders/data-access',
+              target: 'libs/shared/data-access',
+              severity: 'error',
+            },
+            {
+              type: 'domain-boundary',
+              source: 'libs/orders/feature',
+              target: 'libs/shared/ui',
+              severity: 'error',
+            },
+          ],
+          health: {
+            score: 74,
+            status: 'warning',
+            grade: 'C',
+          },
+          signalBreakdown: {
+            total: 5,
+            bySource: [
+              { source: 'graph', count: 2 },
+              { source: 'conformance', count: 1 },
+              { source: 'policy', count: 2 },
+            ],
+            byType: [
+              { type: 'structural-dependency', count: 2 },
+              { type: 'conformance-violation', count: 1 },
+              { type: 'domain-boundary-violation', count: 2 },
+            ],
+            bySeverity: [
+              { severity: 'info', count: 1 },
+              { severity: 'warning', count: 1 },
+              { severity: 'error', count: 3 },
+            ],
+          },
+          metricBreakdown: {
+            families: [
+              {
+                family: 'architecture',
+                score: 79,
+                measurements: [],
+              },
+              {
+                family: 'ownership',
+                score: 90,
+                measurements: [],
+              },
+            ],
+          },
+          topIssues: [
+            {
+              type: 'domain-boundary-violation',
+              source: 'policy',
+              severity: 'error',
+              count: 3,
+              projects: [
+                'libs/orders/data-access',
+                'libs/orders/feature',
+                'libs/shared/data-access',
+              ],
+              ruleId: 'domain-boundary',
+              message: 'Domain boundary is violated.',
+            },
+          ],
+        }
+      );
+
+      const result = await runGovernanceDrift({
+        output: 'json',
+        baseline: baselinePath,
+        current: currentPath,
+      });
+      const cliResult = await runGovernanceDrift({
+        output: 'cli',
+        baseline: baselinePath,
+        current: currentPath,
+      });
+      const rendered = JSON.parse(result.rendered) as {
+        summary: Record<string, unknown>;
+      };
+
+      expect(result.comparison?.healthDelta).toEqual({
+        baselineScore: 80,
+        currentScore: 74,
+        scoreDelta: -6,
+        baselineStatus: 'warning',
+        currentStatus: 'warning',
+        baselineGrade: 'B',
+        currentGrade: 'C',
+      });
+      expect(result.comparison?.metricFamilyDeltas).toContainEqual({
+        family: 'architecture',
+        baseline: 84,
+        current: 79,
+        delta: -5,
+      });
+      expect(
+        result.signals.some((signal) => signal.kind === 'metric-family')
+      ).toBe(true);
+      expect(result.summary.overallTrend).toBe('worsening');
+      expect(rendered.summary['overallTrend']).toBe('worsening');
+      expect(cliResult.rendered).toContain('Overall trend: Worsening');
+      expect(cliResult.rendered).toContain('Top Worsening:');
+    } finally {
+      rmSync(snapshotDir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes structured drift summaries through AI drift metadata', async () => {
+    jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const snapshotDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-ai-drift-')
+    );
+
+    try {
+      const baselinePath = writeSnapshotFile(
+        snapshotDir,
+        '2026-03-01T10-00-00.json',
+        {
+          timestamp: '2026-03-01T10:00:00Z',
+          repo: 'anarchitecture-plugins',
+          branch: 'main',
+          commitSha: 'abc123',
+          pluginVersion: '0.1.0',
+          metricSchemaVersion: '1.1',
+          metrics: {
+            'architectural-entropy': 0.2,
+          },
+          scores: {
+            workspaceHealth: 78,
+          },
+          violations: [],
+          health: {
+            score: 78,
+            status: 'warning',
+            grade: 'B',
+          },
+          signalBreakdown: {
+            total: 2,
+            bySource: [
+              { source: 'graph', count: 1 },
+              { source: 'conformance', count: 0 },
+              { source: 'policy', count: 1 },
+            ],
+            byType: [
+              { type: 'structural-dependency', count: 1 },
+              { type: 'domain-boundary-violation', count: 1 },
+            ],
+            bySeverity: [
+              { severity: 'info', count: 1 },
+              { severity: 'warning', count: 0 },
+              { severity: 'error', count: 1 },
+            ],
+          },
+          metricBreakdown: {
+            families: [
+              {
+                family: 'architecture',
+                score: 80,
+                measurements: [],
+              },
+            ],
+          },
+          topIssues: [
+            {
+              type: 'domain-boundary-violation',
+              source: 'policy',
+              severity: 'error',
+              count: 1,
+              projects: ['libs/orders/data-access'],
+              ruleId: 'domain-boundary',
+              message: 'Domain boundary is violated.',
+            },
+          ],
+        }
+      );
+      const currentPath = writeSnapshotFile(
+        snapshotDir,
+        '2026-03-13T10-00-00.json',
+        {
+          timestamp: '2026-03-13T10:00:00Z',
+          repo: 'anarchitecture-plugins',
+          branch: 'main',
+          commitSha: 'def456',
+          pluginVersion: '0.1.0',
+          metricSchemaVersion: '1.1',
+          metrics: {
+            'architectural-entropy': 0.28,
+          },
+          scores: {
+            workspaceHealth: 70,
+          },
+          violations: [
+            {
+              type: 'domain-boundary',
+              source: 'libs/orders/data-access',
+              target: 'libs/shared/data-access',
+              severity: 'error',
+            },
+          ],
+          health: {
+            score: 70,
+            status: 'warning',
+            grade: 'C',
+          },
+          signalBreakdown: {
+            total: 4,
+            bySource: [
+              { source: 'graph', count: 2 },
+              { source: 'conformance', count: 0 },
+              { source: 'policy', count: 2 },
+            ],
+            byType: [
+              { type: 'structural-dependency', count: 2 },
+              { type: 'domain-boundary-violation', count: 2 },
+            ],
+            bySeverity: [
+              { severity: 'info', count: 1 },
+              { severity: 'warning', count: 1 },
+              { severity: 'error', count: 2 },
+            ],
+          },
+          metricBreakdown: {
+            families: [
+              {
+                family: 'architecture',
+                score: 72,
+                measurements: [],
+              },
+            ],
+          },
+          topIssues: [
+            {
+              type: 'domain-boundary-violation',
+              source: 'policy',
+              severity: 'error',
+              count: 2,
+              projects: ['libs/orders/data-access', 'libs/shared/data-access'],
+              ruleId: 'domain-boundary',
+              message: 'Domain boundary is violated.',
+            },
+          ],
+        }
+      );
+
+      const result = await runGovernanceAiDrift({
+        output: 'json',
+        baseline: baselinePath,
+        current: currentPath,
+      });
+
+      expect(result.summary.overallTrend).toBe('worsening');
+      expect(result.request.inputs.metadata?.['driftSummary']).toEqual(
+        result.summary
+      );
+      expect(result.analysis.metadata?.trend).toBe('worsening');
+      expect(result.analysis.metadata?.topWorsening).toEqual(
+        result.summary.topWorsening
+      );
+      expect(result.rendered).toContain('"summary"');
+    } finally {
+      rmSync(snapshotDir, { recursive: true, force: true });
     }
   });
 });

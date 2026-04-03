@@ -28,9 +28,14 @@ import {
   readMetricSnapshot,
   saveMetricSnapshot,
 } from '../snapshot-store/index.js';
-import { compareSnapshots, summarizeDrift } from '../drift-analysis/index.js';
+import {
+  buildDriftSummary,
+  compareSnapshots,
+  summarizeDrift,
+} from '../drift-analysis/index.js';
 import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import {
+  DriftSummary,
   DriftSignal,
   GovernanceDependency,
   GovernanceWorkspace,
@@ -103,6 +108,7 @@ export interface GovernanceDriftRunOptions extends GovernanceRunOptions {
 export interface GovernanceDriftRunResult {
   comparison: SnapshotComparison | null;
   signals: DriftSignal[];
+  summary: DriftSummary;
   rendered: string;
   success: boolean;
 }
@@ -140,6 +146,7 @@ export interface GovernanceAiDriftRunResult {
   analysis: AiAnalysisResult;
   comparison: SnapshotComparison | null;
   signals: DriftSignal[];
+  summary: DriftSummary;
   handoffPayloadPath: string;
   handoffPromptPath: string;
   rendered: string;
@@ -319,6 +326,7 @@ export async function runGovernanceDrift(
   options: GovernanceDriftRunOptions = {}
 ): Promise<GovernanceDriftRunResult> {
   const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
+  const emptySummary = buildDriftSummary([]);
   const baselinePath = resolveSnapshotPath(
     options.baseline,
     snapshotPaths.at(-2)
@@ -350,6 +358,7 @@ export async function runGovernanceDrift(
     return {
       comparison: null,
       signals: [],
+      summary: emptySummary,
       rendered,
       success: false,
     };
@@ -359,11 +368,12 @@ export async function runGovernanceDrift(
   const current = await readMetricSnapshot(currentPath);
   const comparison = compareSnapshots(baseline, current);
   const signals = summarizeDrift(comparison, options.driftThreshold ?? 0.02);
+  const summary = buildDriftSummary(signals);
 
   const rendered =
     options.output === 'json'
-      ? JSON.stringify({ comparison, signals }, null, 2)
-      : renderDriftCliReport(comparison, signals);
+      ? JSON.stringify({ comparison, signals, summary }, null, 2)
+      : renderDriftCliReport(comparison, signals, summary);
 
   if (options.output === 'json') {
     process.stdout.write(`${rendered}\n`);
@@ -374,6 +384,7 @@ export async function runGovernanceDrift(
   return {
     comparison,
     signals,
+    summary,
     rendered,
     success: true,
   };
@@ -645,12 +656,14 @@ export async function runGovernanceAiDrift(
 
   let comparison: SnapshotComparison | null = null;
   let signals: DriftSignal[] = [];
+  let summary = buildDriftSummary([]);
 
   if (baselinePath && currentPath) {
     const baseline = await readMetricSnapshot(baselinePath);
     const current = await readMetricSnapshot(currentPath);
     comparison = compareSnapshots(baseline, current);
     signals = summarizeDrift(comparison, options.driftThreshold ?? 0.02);
+    summary = buildDriftSummary(signals);
   }
 
   const request: AiAnalysisRequest = {
@@ -661,13 +674,14 @@ export async function runGovernanceAiDrift(
       comparison: comparison ?? undefined,
       metadata: {
         signals,
+        driftSummary: summary,
         snapshotCount: snapshotPaths.length,
         trendWindowInsufficient: snapshotPaths.length < 4 || !comparison,
       },
     },
   };
 
-  const analysis = summarizeDriftInterpretation(request, signals);
+  const analysis = summarizeDriftInterpretation(request, signals, summary);
   const signalSlice = sliceTopItems(
     signals,
     AI_PAYLOAD_LIMITS.driftSignals,
@@ -719,6 +733,7 @@ export async function runGovernanceAiDrift(
       metadata: {
         ...(request.inputs.metadata ?? {}),
         signals: signalSlice.items,
+        driftSummary: summary,
         payloadScope: {
           signals: signalSlice.truncation,
           metricDeltas: metricDeltaSlice.truncation,
@@ -755,6 +770,7 @@ export async function runGovernanceAiDrift(
             analysis,
             comparison,
             signals,
+            summary,
           },
           null,
           2
@@ -774,6 +790,7 @@ export async function runGovernanceAiDrift(
     analysis,
     comparison,
     signals,
+    summary,
     handoffPayloadPath: handoffArtifacts.payloadRelativePath,
     handoffPromptPath: handoffArtifacts.promptRelativePath,
     rendered,
@@ -1648,7 +1665,8 @@ function toErrorMessage(error: unknown): string {
 
 function renderDriftCliReport(
   comparison: SnapshotComparison,
-  signals: DriftSignal[]
+  signals: DriftSignal[],
+  summary: DriftSummary
 ): string {
   const lines: string[] = [];
   lines.push('Nx Governance Drift Analysis');
@@ -1658,15 +1676,59 @@ function renderDriftCliReport(
   lines.push(
     `Violation delta: +${comparison.newViolations.length} / -${comparison.resolvedViolations.length}`
   );
-  lines.push('');
-  lines.push('Signals:');
+  lines.push(`Overall trend: ${formatDriftStatus(summary.overallTrend)}`);
 
-  for (const signal of signals) {
+  if (
+    comparison.healthDelta &&
+    (comparison.healthDelta.baselineStatus !==
+      comparison.healthDelta.currentStatus ||
+      comparison.healthDelta.baselineGrade !==
+        comparison.healthDelta.currentGrade)
+  ) {
     lines.push(
-      `- ${signal.id}: ${signal.status} (magnitude ${signal.magnitude.toFixed(
-        3
-      )})`
+      `Health transition: ${formatDriftStatus(
+        comparison.healthDelta.baselineStatus
+      )} (${comparison.healthDelta.baselineGrade}) -> ${formatDriftStatus(
+        comparison.healthDelta.currentStatus
+      )} (${comparison.healthDelta.currentGrade})`
     );
+  }
+
+  if (summary.topWorsening.length > 0) {
+    lines.push('');
+    lines.push('Top Worsening:');
+    for (const signal of summary.topWorsening) {
+      lines.push(
+        `- ${signal.label}: ${formatDriftDelta(signal.delta)} (${
+          signal.baseline
+        } -> ${signal.current})`
+      );
+    }
+  }
+
+  if (summary.topImproving.length > 0) {
+    lines.push('');
+    lines.push('Top Improving:');
+    for (const signal of summary.topImproving) {
+      lines.push(
+        `- ${signal.label}: ${formatDriftDelta(signal.delta)} (${
+          signal.baseline
+        } -> ${signal.current})`
+      );
+    }
+  }
+
+  if (signals.length > 0) {
+    lines.push('');
+    lines.push('Signals:');
+
+    for (const signal of signals) {
+      lines.push(
+        `- ${signal.label}: ${signal.status} (${formatDriftDelta(
+          signal.delta
+        )}, magnitude ${signal.magnitude.toFixed(3)})`
+      );
+    }
   }
 
   return lines.join('\n');
@@ -1708,28 +1770,15 @@ function renderAiRootCauseCliReport(
 
 function summarizeDriftInterpretation(
   request: AiAnalysisRequest,
-  signals: DriftSignal[]
+  signals: DriftSignal[],
+  summary: DriftSummary
 ): AiAnalysisResult {
-  const worseningCount = signals.filter(
-    (signal) => signal.status === 'worsening'
-  ).length;
-  const improvingCount = signals.filter(
-    (signal) => signal.status === 'improving'
-  ).length;
-
-  const trend =
-    worseningCount > improvingCount
-      ? 'worsening'
-      : improvingCount > worseningCount
-      ? 'improving'
-      : 'stable';
-
   const findings = signals.map((signal) => ({
     id: `drift-${signal.id}`,
-    title: `Signal ${signal.id}`,
-    detail: `Status is ${
-      signal.status
-    } with magnitude ${signal.magnitude.toFixed(3)}.`,
+    title: signal.label,
+    detail: `Status is ${signal.status} with delta ${formatDriftDelta(
+      signal.delta
+    )} and magnitude ${signal.magnitude.toFixed(3)}.`,
     signals: ['drift-analysis', 'snapshot-comparison'],
     confidence: 1,
   }));
@@ -1738,10 +1787,10 @@ function summarizeDriftInterpretation(
     {
       id: 'drift-review-regressing-signals',
       title: 'Review Regressing Signals First',
-      priority: worseningCount > 0 ? 'high' : 'low',
+      priority: summary.worseningCount > 0 ? 'high' : 'low',
       reason:
-        worseningCount > 0
-          ? `There are ${worseningCount} worsening drift signals. Prioritize investigation of those signals before broader refactoring.`
+        summary.worseningCount > 0
+          ? `There are ${summary.worseningCount} worsening drift signals. Prioritize investigation of those signals before broader refactoring.`
           : 'No worsening drift signals were detected in this comparison window.',
     },
     {
@@ -1760,14 +1809,17 @@ function summarizeDriftInterpretation(
 
   return {
     kind: 'drift',
-    summary: `Deterministic drift interpretation indicates a ${trend} trend (${worseningCount} worsening, ${improvingCount} improving).`,
+    summary: `Deterministic drift interpretation indicates a ${summary.overallTrend} trend (${summary.worseningCount} worsening, ${summary.improvingCount} improving, ${summary.stableCount} stable).`,
     findings,
     recommendations,
     metadata: {
-      trend,
-      worseningCount,
-      improvingCount,
+      trend: summary.overallTrend,
+      worseningCount: summary.worseningCount,
+      improvingCount: summary.improvingCount,
+      stableCount: summary.stableCount,
       signalCount: signals.length,
+      topWorsening: summary.topWorsening,
+      topImproving: summary.topImproving,
       ...request.inputs.metadata,
     },
   };
@@ -1798,6 +1850,14 @@ function renderAiDriftCliReport(analysis: AiAnalysisResult): string {
   }
 
   return lines.join('\n');
+}
+
+function formatDriftStatus(status: string): string {
+  return status[0]?.toUpperCase() + status.slice(1);
+}
+
+function formatDriftDelta(delta: number): string {
+  return `${delta > 0 ? '+' : ''}${delta.toFixed(3)}`;
 }
 
 function renderAiPrImpactCliReport(analysis: AiAnalysisResult): string {

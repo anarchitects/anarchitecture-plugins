@@ -45,7 +45,7 @@ export async function saveMetricSnapshot(
     branch: options.branch ?? inferGitRef('branch'),
     commitSha: options.commitSha ?? inferGitRef('sha'),
     pluginVersion: options.pluginVersion ?? '0.1.0',
-    metricSchemaVersion: options.metricSchemaVersion ?? '1.0',
+    metricSchemaVersion: options.metricSchemaVersion ?? '1.1',
   });
 
   await fs.mkdir(snapshotDirectory, { recursive: true });
@@ -101,7 +101,16 @@ export function formatTimestampForFilename(date: Date): string {
 
 function buildSnapshot(
   assessment: GovernanceAssessment,
-  metadata: Omit<MetricSnapshot, 'metrics' | 'scores' | 'violations'>
+  metadata: Omit<
+    MetricSnapshot,
+    | 'metrics'
+    | 'scores'
+    | 'violations'
+    | 'health'
+    | 'signalBreakdown'
+    | 'metricBreakdown'
+    | 'topIssues'
+  >
 ): MetricSnapshot {
   const metrics = Object.fromEntries(
     assessment.measurements.map((measurement) => [
@@ -135,6 +144,14 @@ function buildSnapshot(
     metrics,
     scores,
     violations,
+    health: {
+      score: assessment.health.score,
+      status: assessment.health.status,
+      grade: assessment.health.grade,
+    },
+    signalBreakdown: assessment.signalBreakdown,
+    metricBreakdown: assessment.metricBreakdown,
+    topIssues: assessment.topIssues,
   };
 }
 

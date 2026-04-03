@@ -7,6 +7,7 @@ import { GovernanceAssessment } from '../core/index.js';
 import {
   formatTimestampForFilename,
   listMetricSnapshots,
+  readMetricSnapshot,
   saveMetricSnapshot,
 } from './index.js';
 
@@ -66,7 +67,16 @@ describe('snapshot-store', () => {
       metricBreakdown: {
         families: [],
       },
-      topIssues: [],
+      topIssues: [
+        {
+          type: 'ownership-gap',
+          source: 'policy',
+          severity: 'warning',
+          count: 2,
+          projects: ['libs/orders/data-access'],
+          message: 'Ownership metadata is missing.',
+        },
+      ],
       health: {
         score: 80,
         status: 'warning',
@@ -103,8 +113,56 @@ describe('snapshot-store', () => {
 
     expect(result.relativePath.endsWith('2026-03-13T10-15-00.json')).toBe(true);
     expect(result.snapshot.scores.workspaceHealth).toBe(80);
+    expect(result.snapshot.health).toEqual({
+      score: 80,
+      status: 'warning',
+      grade: 'B',
+    });
+    expect(result.snapshot.signalBreakdown).toEqual(assessment.signalBreakdown);
+    expect(result.snapshot.metricBreakdown).toEqual(assessment.metricBreakdown);
+    expect(result.snapshot.topIssues).toEqual(assessment.topIssues);
 
     const snapshots = await listMetricSnapshots(snapshotDir);
     expect(snapshots.length).toBeGreaterThan(0);
+  });
+
+  it('reads older snapshots that do not include enriched summary fields', async () => {
+    const legacyPath = path.join(
+      workspaceRoot,
+      snapshotDir,
+      '2026-03-01T10-00-00.json'
+    );
+
+    await fs.mkdir(path.dirname(legacyPath), { recursive: true });
+    await fs.writeFile(
+      legacyPath,
+      `${JSON.stringify(
+        {
+          timestamp: '2026-03-01T10:00:00Z',
+          repo: 'test-repo',
+          branch: 'main',
+          commitSha: 'abc123',
+          pluginVersion: '0.1.0',
+          metricSchemaVersion: '1.0',
+          metrics: {
+            'architectural-entropy': 0.2,
+          },
+          scores: {
+            workspaceHealth: 80,
+          },
+          violations: [],
+        },
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    const snapshot = await readMetricSnapshot(legacyPath);
+    expect(snapshot.metricSchemaVersion).toBe('1.0');
+    expect(snapshot.health).toBeUndefined();
+    expect(snapshot.signalBreakdown).toBeUndefined();
+    expect(snapshot.metricBreakdown).toBeUndefined();
+    expect(snapshot.topIssues).toBeUndefined();
   });
 });
