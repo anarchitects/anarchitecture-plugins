@@ -1,5 +1,7 @@
 import { GovernanceAssessment } from '../core/index.js';
 
+const TOP_ISSUES_LIMIT = 10;
+
 export function renderCliReport(assessment: GovernanceAssessment): string {
   const lines: string[] = [];
 
@@ -45,12 +47,30 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
     lines.push(`- ${metric.name}: ${metric.score}/100`);
   }
 
-  if (assessment.violations.length > 0) {
+  if (assessment.metricBreakdown.families.length > 0) {
     lines.push('');
-    lines.push('Top Violations:');
-    for (const violation of assessment.violations.slice(0, 10)) {
+    lines.push('Metric Families:');
+    for (const family of assessment.metricBreakdown.families) {
+      lines.push(`- ${family.family}: ${family.score}/100`);
       lines.push(
-        `- [${violation.severity}] ${violation.ruleId} :: ${violation.message}`
+        `  measurements: ${family.measurements
+          .map((measurement) => `${measurement.name} (${measurement.score})`)
+          .join(', ')}`
+      );
+    }
+  }
+
+  if (assessment.topIssues.length > 0) {
+    lines.push('');
+    lines.push('Top Issues:');
+    for (const issue of assessment.topIssues.slice(0, TOP_ISSUES_LIMIT)) {
+      const ruleIdSuffix = issue.ruleId ? ` :: ${issue.ruleId}` : '';
+      const projectsSuffix =
+        issue.projects.length > 0
+          ? ` :: projects=${issue.projects.join(',')}`
+          : '';
+      lines.push(
+        `- [${issue.severity}] ${issue.type} (${issue.source}) x${issue.count}${ruleIdSuffix}${projectsSuffix} :: ${issue.message}`
       );
     }
   }

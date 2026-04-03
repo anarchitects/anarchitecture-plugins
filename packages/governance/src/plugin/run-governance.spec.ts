@@ -101,6 +101,18 @@ describe('runGovernance', () => {
         0
       )
     ).toBe(health.assessment.signalBreakdown.total);
+    expect(
+      health.assessment.metricBreakdown.families.map((entry) => entry.family)
+    ).toEqual(['architecture', 'boundaries', 'ownership', 'documentation']);
+    expect(
+      boundaries.assessment.metricBreakdown.families.map(
+        (entry) => entry.family
+      )
+    ).toEqual(['architecture', 'boundaries']);
+    expect(
+      ownership.assessment.metricBreakdown.families.map((entry) => entry.family)
+    ).toEqual(['ownership']);
+    expect(health.assessment.topIssues.length).toBeGreaterThan(0);
   });
 
   it('loads conformance signals into the assessment pipeline when conformanceJson is provided', async () => {
@@ -154,6 +166,14 @@ describe('runGovernance', () => {
         (baseline.assessment.signalBreakdown.bySeverity.find(
           (entry) => entry.severity === 'error'
         )?.count ?? 0) + 1
+      );
+      expect(withConformance.assessment.topIssues).toContainEqual(
+        expect.objectContaining({
+          type: 'conformance-violation',
+          source: 'conformance',
+          severity: 'error',
+          count: 1,
+        })
       );
 
       const baselineEntropy = baseline.assessment.measurements.find(
@@ -362,6 +382,22 @@ describe('runGovernance', () => {
         { severity: 'info', count: 0 },
         { severity: 'warning', count: 1 },
         { severity: 'error', count: 0 },
+      ]);
+      expect(boundaries.assessment.topIssues).toContainEqual(
+        expect.objectContaining({
+          type: 'conformance-violation',
+          source: 'conformance',
+          severity: 'error',
+          count: 1,
+        })
+      );
+      expect(ownership.assessment.topIssues).toEqual([
+        expect.objectContaining({
+          type: 'conformance-violation',
+          source: 'conformance',
+          severity: 'warning',
+          count: 1,
+        }),
       ]);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

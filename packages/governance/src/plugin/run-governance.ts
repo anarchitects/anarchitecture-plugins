@@ -16,10 +16,12 @@ import {
 } from '../presets/angular-cleanup/profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
+import { buildMetricBreakdown } from '../reporting/metric-breakdown.js';
 import {
   buildSignalBreakdown,
   filterSignalsForReportType,
 } from '../reporting/signal-breakdown.js';
+import { buildTopIssues } from '../reporting/top-issues.js';
 import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
@@ -1460,8 +1462,16 @@ async function buildAssessment(
     workspace: inventory,
     signals: metricSignals,
   });
+  const filteredMeasurements = filterMeasurements(
+    allMeasurements,
+    options.reportType
+  );
   const filteredSignals = filterSignalsForReportType(
     metricSignals,
+    options.reportType
+  );
+  const filteredViolations = filterViolations(
+    allViolations,
     options.reportType
   );
 
@@ -1469,9 +1479,11 @@ async function buildAssessment(
     workspace: inventory,
     profile: profileName,
     warnings: overrides.runtimeWarnings,
-    violations: filterViolations(allViolations, options.reportType),
-    measurements: filterMeasurements(allMeasurements, options.reportType),
+    violations: filteredViolations,
+    measurements: filteredMeasurements,
     signalBreakdown: buildSignalBreakdown(filteredSignals),
+    metricBreakdown: buildMetricBreakdown(filteredMeasurements),
+    topIssues: buildTopIssues(filteredSignals),
     health: calculateHealthScore(
       allMeasurements,
       metricWeightsFromProfile(effectiveProfile.metrics)

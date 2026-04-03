@@ -63,6 +63,10 @@ describe('snapshot-store', () => {
           { severity: 'error', count: 0 },
         ],
       },
+      metricBreakdown: {
+        families: [],
+      },
+      topIssues: [],
       health: {
         score: 80,
         grade: 'B',

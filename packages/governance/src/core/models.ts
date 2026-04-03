@@ -1,5 +1,6 @@
 import type {
   GovernanceSignalSeverity,
+  GovernanceSignalSource,
   GovernanceSignalType,
 } from '../signal-engine/types.js';
 
@@ -90,6 +91,38 @@ export interface SignalBreakdown {
   bySeverity: SignalSeverityBreakdownEntry[];
 }
 
+export type GovernanceMetricFamily =
+  | 'architecture'
+  | 'boundaries'
+  | 'ownership'
+  | 'documentation';
+
+export interface MetricBreakdownMeasurement {
+  id: Measurement['id'];
+  name: string;
+  score: number;
+}
+
+export interface MetricBreakdownFamily {
+  family: GovernanceMetricFamily;
+  score: number;
+  measurements: MetricBreakdownMeasurement[];
+}
+
+export interface MetricBreakdown {
+  families: MetricBreakdownFamily[];
+}
+
+export interface GovernanceTopIssue {
+  type: GovernanceSignalType;
+  source: GovernanceSignalSource;
+  severity: GovernanceSignalSeverity;
+  count: number;
+  projects: string[];
+  ruleId?: string;
+  message: string;
+}
+
 export interface GovernanceAssessment {
   workspace: GovernanceWorkspace;
   profile: string;
@@ -97,6 +130,8 @@ export interface GovernanceAssessment {
   violations: Violation[];
   measurements: Measurement[];
   signalBreakdown: SignalBreakdown;
+  metricBreakdown: MetricBreakdown;
+  topIssues: GovernanceTopIssue[];
   health: HealthScore;
   recommendations: Recommendation[];
 }
