@@ -70,11 +70,33 @@ export interface HealthStatusThresholds {
   warningMinScore: number;
 }
 
+export interface HealthMetricHotspot {
+  id: Measurement['id'];
+  name: string;
+  score: number;
+}
+
+export interface HealthProjectHotspot {
+  project: string;
+  count: number;
+  dominantIssueTypes: GovernanceSignalType[];
+}
+
+export interface HealthExplainability {
+  summary: string;
+  statusReason: string;
+  weakestMetrics: HealthMetricHotspot[];
+  dominantIssues: GovernanceTopIssue[];
+}
+
 export interface HealthScore {
   score: number;
   status: HealthStatus;
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   hotspots: string[];
+  metricHotspots: HealthMetricHotspot[];
+  projectHotspots: HealthProjectHotspot[];
+  explainability: HealthExplainability;
 }
 
 export interface SignalBreakdownEntry {

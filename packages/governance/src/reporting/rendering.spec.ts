@@ -8,6 +8,16 @@ describe('governance report rendering', () => {
     const rendered = renderCliReport(makeAssessment());
 
     expect(rendered).toContain('Health Score: 80 (Warning, B)');
+    expect(rendered).toContain('Metric Hotspots:');
+    expect(rendered).toContain('Project Hotspots:');
+    expect(rendered).toContain('Explainability:');
+    expect(rendered).toContain('- Documentation Completeness: 33/100');
+    expect(rendered).toContain(
+      '- payments-feature: 3 :: types=domain-boundary-violation,ownership-gap'
+    );
+    expect(rendered).toContain(
+      '- summary: Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.'
+    );
     expect(rendered).toContain('Signal Sources:');
     expect(rendered).toContain('Signal Types:');
     expect(rendered).toContain('Signal Severity:');
@@ -39,6 +49,18 @@ describe('governance report rendering', () => {
       rendered.indexOf('Metric Families:')
     );
     expect(rendered.indexOf('Metric Families:')).toBeLessThan(
+      rendered.indexOf('Metric Hotspots:')
+    );
+    expect(rendered.indexOf('Metric Hotspots:')).toBeLessThan(
+      rendered.indexOf('Project Hotspots:')
+    );
+    expect(rendered.indexOf('Project Hotspots:')).toBeLessThan(
+      rendered.indexOf('Explainability:')
+    );
+    expect(rendered.indexOf('Explainability:')).toBeLessThan(
+      rendered.indexOf('Top Issues:')
+    );
+    expect(rendered.indexOf('Metric Families:')).toBeLessThan(
       rendered.indexOf('Top Issues:')
     );
   });
@@ -52,6 +74,58 @@ describe('governance report rendering', () => {
         status: 'warning',
         grade: 'B',
         hotspots: [],
+        metricHotspots: [
+          {
+            id: 'documentation-completeness',
+            name: 'Documentation Completeness',
+            score: 33,
+          },
+        ],
+        projectHotspots: [
+          {
+            project: 'payments-feature',
+            count: 3,
+            dominantIssueTypes: ['domain-boundary-violation', 'ownership-gap'],
+          },
+        ],
+        explainability: {
+          summary:
+            'Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.',
+          statusReason:
+            'Score 80 is below the Good threshold (85) but meets the Warning threshold (70).',
+          weakestMetrics: [
+            {
+              id: 'documentation-completeness',
+              name: 'Documentation Completeness',
+              score: 33,
+            },
+            {
+              id: 'architectural-entropy',
+              name: 'Architectural Entropy',
+              score: 80,
+            },
+          ],
+          dominantIssues: [
+            {
+              type: 'domain-boundary-violation',
+              source: 'policy',
+              severity: 'error',
+              count: 2,
+              projects: ['orders-app', 'payments-feature'],
+              ruleId: 'domain-boundary',
+              message: 'Domain boundary violation',
+            },
+            {
+              type: 'ownership-gap',
+              source: 'policy',
+              severity: 'warning',
+              count: 1,
+              projects: ['payments-feature'],
+              ruleId: 'ownership-presence',
+              message: 'Ownership gap',
+            },
+          ],
+        },
       },
       signalBreakdown: {
         total: 6,
@@ -204,6 +278,58 @@ function makeAssessment(): GovernanceAssessment {
       status: 'warning',
       grade: 'B',
       hotspots: [],
+      metricHotspots: [
+        {
+          id: 'documentation-completeness',
+          name: 'Documentation Completeness',
+          score: 33,
+        },
+      ],
+      projectHotspots: [
+        {
+          project: 'payments-feature',
+          count: 3,
+          dominantIssueTypes: ['domain-boundary-violation', 'ownership-gap'],
+        },
+      ],
+      explainability: {
+        summary:
+          'Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.',
+        statusReason:
+          'Score 80 is below the Good threshold (85) but meets the Warning threshold (70).',
+        weakestMetrics: [
+          {
+            id: 'documentation-completeness',
+            name: 'Documentation Completeness',
+            score: 33,
+          },
+          {
+            id: 'architectural-entropy',
+            name: 'Architectural Entropy',
+            score: 80,
+          },
+        ],
+        dominantIssues: [
+          {
+            type: 'domain-boundary-violation',
+            source: 'policy',
+            severity: 'error',
+            count: 2,
+            projects: ['orders-app', 'payments-feature'],
+            ruleId: 'domain-boundary',
+            message: 'Domain boundary violation',
+          },
+          {
+            type: 'ownership-gap',
+            source: 'policy',
+            severity: 'warning',
+            count: 1,
+            projects: ['payments-feature'],
+            ruleId: 'ownership-presence',
+            message: 'Ownership gap',
+          },
+        ],
+      },
     },
     recommendations: [],
   };

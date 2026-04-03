@@ -324,7 +324,7 @@ nx repo-health --failOnViolation
 
 **Signal breakdown shown:** graph, conformance, and policy source counts, plus per-type and per-severity counts. The CLI report prints deterministic `Signal Sources`, `Signal Types`, and `Signal Severity` sections, and the JSON output includes `signalBreakdown.total`, `signalBreakdown.bySource`, `signalBreakdown.byType`, and `signalBreakdown.bySeverity`.
 
-**Metric and issue breakdown shown:** the CLI also prints `Metric Families` and `Top Issues`, and the JSON output includes `metricBreakdown.families` plus `topIssues`.
+**Metric and issue breakdown shown:** the CLI also prints `Metric Families`, `Metric Hotspots`, `Project Hotspots`, `Explainability`, and `Top Issues`. The JSON output includes `metricBreakdown.families`, `topIssues`, and structured hotspot/explainability fields under `health`.
 
 **Conformance input resolution:** explicit `--conformanceJson` wins. If it is not provided, governance tries `nx.json > conformance.outputPath`. If neither is available, the report still renders with a `conformance` count of `0`. If `nx.json` declares an output path but the file cannot be read, governance fails with a clear configuration error.
 
@@ -626,7 +626,7 @@ The score is a **weighted average** of individual metric scores. Weights are con
 
 Status thresholds are configurable per-profile under `health.statusThresholds`. The defaults are `goodMinScore: 85` and `warningMinScore: 70`.
 
-Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON output.
+Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON output. The report also emits structured `metricHotspots`, ranked `projectHotspots`, and a nested `health.explainability` payload with weakest metrics, dominant issues, a threshold-based status reason, and a deterministic summary.
 
 ### Metrics
 
@@ -789,7 +789,37 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
     "score": 91,
     "status": "good",
     "grade": "A",
-    "hotspots": []
+    "hotspots": [],
+    "metricHotspots": [],
+    "projectHotspots": [
+      {
+        "project": "billing-api",
+        "count": 2,
+        "dominantIssueTypes": ["domain-boundary-violation"]
+      }
+    ],
+    "explainability": {
+      "summary": "Overall health is Good at 91/100. Weakest metrics: Ownership Coverage (86). Dominant issues: domain-boundary-violation x2.",
+      "statusReason": "Score 91 meets the Good threshold (85).",
+      "weakestMetrics": [
+        {
+          "id": "ownership-coverage",
+          "name": "Ownership Coverage",
+          "score": 86
+        }
+      ],
+      "dominantIssues": [
+        {
+          "type": "domain-boundary-violation",
+          "source": "policy",
+          "severity": "error",
+          "count": 2,
+          "projects": ["billing-api", "payments-api"],
+          "ruleId": "domain-boundary",
+          "message": "Domain boundary violation"
+        }
+      ]
+    }
   },
   "recommendations": [
     {

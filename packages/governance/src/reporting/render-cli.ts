@@ -62,6 +62,47 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
     }
   }
 
+  if (assessment.health.metricHotspots.length > 0) {
+    lines.push('');
+    lines.push('Metric Hotspots:');
+    for (const hotspot of assessment.health.metricHotspots) {
+      lines.push(`- ${hotspot.name}: ${hotspot.score}/100`);
+    }
+  }
+
+  if (assessment.health.projectHotspots.length > 0) {
+    lines.push('');
+    lines.push('Project Hotspots:');
+    for (const hotspot of assessment.health.projectHotspots) {
+      lines.push(
+        `- ${hotspot.project}: ${
+          hotspot.count
+        } :: types=${hotspot.dominantIssueTypes.join(',')}`
+      );
+    }
+  }
+
+  lines.push('');
+  lines.push('Explainability:');
+  lines.push(`- summary: ${assessment.health.explainability.summary}`);
+  lines.push(
+    `- status reason: ${assessment.health.explainability.statusReason}`
+  );
+  if (assessment.health.explainability.weakestMetrics.length > 0) {
+    lines.push(
+      `- weakest metrics: ${assessment.health.explainability.weakestMetrics
+        .map((metric) => `${metric.name} (${metric.score})`)
+        .join(', ')}`
+    );
+  }
+  if (assessment.health.explainability.dominantIssues.length > 0) {
+    lines.push(
+      `- dominant issues: ${assessment.health.explainability.dominantIssues
+        .map((issue) => `${issue.type} x${issue.count}`)
+        .join(', ')}`
+    );
+  }
+
   if (assessment.topIssues.length > 0) {
     lines.push('');
     lines.push('Top Issues:');

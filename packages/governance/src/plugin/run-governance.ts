@@ -1469,6 +1469,7 @@ async function buildAssessment(
     workspace: inventory,
     signals: metricSignals,
   });
+  const allTopIssues = buildTopIssues(metricSignals);
   const filteredMeasurements = filterMeasurements(
     allMeasurements,
     options.reportType
@@ -1494,7 +1495,10 @@ async function buildAssessment(
     health: calculateHealthScore(
       allMeasurements,
       metricWeightsFromProfile(effectiveProfile.metrics),
-      effectiveProfile.health.statusThresholds
+      effectiveProfile.health.statusThresholds,
+      {
+        topIssues: allTopIssues,
+      }
     ),
     recommendations: buildRecommendations(allViolations, allMeasurements),
   };

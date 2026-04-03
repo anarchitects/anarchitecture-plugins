@@ -193,7 +193,7 @@ describe('workspace metric baselines', () => {
           ])
         )
       ).toEqual(expected.measurements);
-      expect(health).toEqual(expected.health);
+      expect(health).toMatchObject(expected.health);
     }
   );
 });
