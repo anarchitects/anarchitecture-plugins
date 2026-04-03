@@ -86,6 +86,72 @@ describe('calculateHealthScore', () => {
     expect(health.score).toBe(28);
     expect(health.grade).toBe('F');
   });
+
+  it('uses the configured layer-integrity weight instead of fallback weighting', () => {
+    const measurements: Measurement[] = [
+      {
+        id: 'architectural-entropy',
+        name: 'Architectural Entropy',
+        value: 0,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'dependency-complexity',
+        name: 'Dependency Complexity',
+        value: 0,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'domain-integrity',
+        name: 'Domain Integrity',
+        value: 0,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'ownership-coverage',
+        name: 'Ownership Coverage',
+        value: 1,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'documentation-completeness',
+        name: 'Documentation Completeness',
+        value: 1,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'layer-integrity',
+        name: 'Layer Integrity',
+        value: 1,
+        score: 0,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+    ];
+
+    const health = calculateHealthScore(measurements, {
+      'architectural-entropy': 0.2,
+      'dependency-complexity': 0.2,
+      'domain-integrity': 0.2,
+      'ownership-coverage': 0.2,
+      'documentation-completeness': 0.2,
+      'layer-integrity': 0.2,
+    });
+
+    expect(health.score).toBe(83);
+    expect(health.grade).toBe('B');
+    expect(health.hotspots).toEqual(['Layer Integrity']);
+  });
 });
 
 describe('buildRecommendations', () => {

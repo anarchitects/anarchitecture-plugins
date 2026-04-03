@@ -22,6 +22,7 @@ export const angularCleanupProfile: GovernanceProfile = {
     domainIntegrityWeight: 0.2,
     ownershipCoverageWeight: 0.2,
     documentationCompletenessWeight: 0.2,
+    layerIntegrityWeight: 0.2,
   },
 };
 
@@ -43,7 +44,8 @@ export async function loadProfileOverrides(
     return {
       boundaryPolicySource: angularCleanupProfile.boundaryPolicySource,
       layers: angularCleanupProfile.layers,
-      allowedDomainDependencies: angularCleanupProfile.allowedDomainDependencies,
+      allowedDomainDependencies:
+        angularCleanupProfile.allowedDomainDependencies,
       ownership: angularCleanupProfile.ownership,
       metrics: angularCleanupProfile.metrics,
       projectOverrides: {},
@@ -121,7 +123,9 @@ async function loadAllowedDomainDependenciesFromEslint(
       return undefined;
     }
 
-    return depConstraintsToAllowedDomainDependencies(mod.governanceDepConstraints);
+    return depConstraintsToAllowedDomainDependencies(
+      mod.governanceDepConstraints
+    );
   } catch {
     return undefined;
   }
@@ -139,8 +143,8 @@ function depConstraintsToAllowedDomainDependencies(
 
     const sourceTag = (constraint as { sourceTag?: unknown }).sourceTag;
     const allowed =
-      (constraint as { onlyDependOnLibsWithTags?: unknown }).onlyDependOnLibsWithTags ??
-      [];
+      (constraint as { onlyDependOnLibsWithTags?: unknown })
+        .onlyDependOnLibsWithTags ?? [];
 
     if (typeof sourceTag !== 'string' || !sourceTag.startsWith('domain:')) {
       continue;

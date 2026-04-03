@@ -614,7 +614,7 @@ Every executor computes a **health score** from 0–100 and assigns a letter gra
 | 60–69  | D     | Concerning — multiple signals degraded.                  |
 | 0–59   | F     | Critical — significant structural violations present.    |
 
-The score is a **weighted average** of individual metric scores. Weights are configured per-profile under `metrics.*Weight`. Equal weights (0.2 each) are the default, meaning each metric contributes evenly. Raise a weight to make a particular concern more influential in the overall grade.
+The score is a **weighted average** of individual metric scores. Weights are configured per-profile under `metrics.*Weight`. Equal weights (0.2 each across all six metrics) are the default, meaning each metric contributes evenly. Raise a weight to make a particular concern more influential in the overall grade.
 
 Any metric scoring below 60 is listed as a **hotspot** in both CLI and JSON output.
 
@@ -825,7 +825,8 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
     "dependencyComplexityWeight": 0.2,
     "domainIntegrityWeight": 0.2,
     "ownershipCoverageWeight": 0.2,
-    "documentationCompletenessWeight": 0.2
+    "documentationCompletenessWeight": 0.2,
+    "layerIntegrityWeight": 0.2
   },
 
   // Per-project overrides — useful for projects that cannot carry tags or metadata

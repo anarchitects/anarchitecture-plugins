@@ -38,6 +38,9 @@ describe('runGovernance', () => {
       'documentation-completeness':
         overrides.metrics?.documentationCompletenessWeight ??
         angularCleanupProfile.metrics.documentationCompletenessWeight,
+      'layer-integrity':
+        overrides.metrics?.layerIntegrityWeight ??
+        angularCleanupProfile.metrics.layerIntegrityWeight,
     };
 
     const health = await runGovernance({ reportType: 'health' });

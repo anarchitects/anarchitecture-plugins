@@ -14,6 +14,7 @@ export interface GovernanceProfile {
     domainIntegrityWeight: number;
     ownershipCoverageWeight: number;
     documentationCompletenessWeight: number;
+    layerIntegrityWeight: number;
   };
 }
 

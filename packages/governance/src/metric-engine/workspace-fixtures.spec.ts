@@ -51,7 +51,7 @@ const WORKSPACE_FIXTURES: Array<{
         'layer-integrity': { value: 0, score: 100 },
       },
       health: {
-        score: 98,
+        score: 97,
         grade: 'A',
         hotspots: [],
       },
@@ -85,7 +85,7 @@ const WORKSPACE_FIXTURES: Array<{
         'layer-integrity': { value: 0, score: 100 },
       },
       health: {
-        score: 97,
+        score: 95,
         grade: 'A',
         hotspots: [],
       },
@@ -97,7 +97,14 @@ const WORKSPACE_FIXTURES: Array<{
       root: '/workspace',
       projects: [
         project('orders-app', 'application', 'orders', 'app', true, true),
-        project('payments-feature', 'library', 'payments', 'feature', false, false),
+        project(
+          'payments-feature',
+          'library',
+          'payments',
+          'feature',
+          false,
+          false
+        ),
         project('payments-ui', 'library', 'payments', 'ui', true, false),
       ],
       dependencies: [
@@ -122,7 +129,7 @@ const WORKSPACE_FIXTURES: Array<{
         'layer-integrity': { value: 0.225, score: 78 },
       },
       health: {
-        score: 57,
+        score: 44,
         grade: 'F',
         hotspots: [
           'Architectural Entropy',
@@ -160,6 +167,7 @@ describe('workspace metric baselines', () => {
           angularCleanupProfile.metrics.ownershipCoverageWeight,
         'documentation-completeness':
           angularCleanupProfile.metrics.documentationCompletenessWeight,
+        'layer-integrity': angularCleanupProfile.metrics.layerIntegrityWeight,
       });
 
       expect(violations.map((violation) => violation.ruleId)).toEqual(

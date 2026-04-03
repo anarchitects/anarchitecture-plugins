@@ -1523,6 +1523,7 @@ function metricWeightsFromProfile(metrics: {
   domainIntegrityWeight: number;
   ownershipCoverageWeight: number;
   documentationCompletenessWeight: number;
+  layerIntegrityWeight: number;
 }): MetricWeights {
   return {
     'architectural-entropy': metrics.architecturalEntropyWeight,
@@ -1530,6 +1531,7 @@ function metricWeightsFromProfile(metrics: {
     'domain-integrity': metrics.domainIntegrityWeight,
     'ownership-coverage': metrics.ownershipCoverageWeight,
     'documentation-completeness': metrics.documentationCompletenessWeight,
+    'layer-integrity': metrics.layerIntegrityWeight,
   };
 }
 
