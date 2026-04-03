@@ -299,6 +299,7 @@ function ensureProfileConfig(tree: Tree): void {
       domainIntegrityWeight: 0.2,
       ownershipCoverageWeight: 0.2,
       documentationCompletenessWeight: 0.2,
+      layerIntegrityWeight: 0.2,
     },
     projectOverrides: {},
   });

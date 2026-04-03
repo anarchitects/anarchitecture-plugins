@@ -1,12 +1,6 @@
 {
   "boundaryPolicySource": "eslint",
-  "layers": [
-    "app",
-    "feature",
-    "ui",
-    "data-access",
-    "util"
-  ],
+  "layers": ["app", "feature", "ui", "data-access", "util"],
   "allowedDomainDependencies": {
     "js": [],
     "typeorm": [],
@@ -21,7 +15,8 @@
     "dependencyComplexityWeight": 0.2,
     "domainIntegrityWeight": 0.2,
     "ownershipCoverageWeight": 0.2,
-    "documentationCompletenessWeight": 0.2
+    "documentationCompletenessWeight": 0.2,
+    "layerIntegrityWeight": 0.2
   },
   "projectOverrides": {
     "@anarchitecture-plugins/source": {
