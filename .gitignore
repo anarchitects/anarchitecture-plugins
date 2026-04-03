@@ -49,3 +49,5 @@ test-output
 .claude/worktrees
 .claude/settings.local.json
 vite.config.*.timestamp*
+
+/.governance-metrics

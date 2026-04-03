@@ -432,7 +432,16 @@ nx repo-snapshot --snapshotDir=.governance-metrics/snapshots
 **Additional options:**
 
 - `snapshotDir` (default: `.governance-metrics/snapshots`)
-- `metricSchemaVersion` (default: `1.0`)
+- `metricSchemaVersion` (default: `1.1`)
+
+Snapshot files persist the historical metric and score maps plus deterministic governance summaries used by later drift analysis:
+
+- `health` with workspace `score`, `status`, and `grade`
+- `signalBreakdown`
+- `metricBreakdown`
+- `topIssues`
+
+Older `1.0` snapshots remain readable; the enriched summary fields are optional for backward compatibility.
 
 **Use when:** you want historical governance baselines for CI trend monitoring and AI analysis.
 
@@ -440,7 +449,7 @@ nx repo-snapshot --snapshotDir=.governance-metrics/snapshots
 
 ### `repo-drift`
 
-**Intent:** Compare two snapshots and classify drift signals as improving, stable, or worsening.
+**Intent:** Compare two snapshots and classify metric, signal, issue, and violation drift as improving, stable, or worsening.
 
 ```bash
 nx repo-drift
@@ -453,6 +462,14 @@ nx repo-drift --baseline=.governance-metrics/snapshots/<older>.json --current=.g
 - `snapshotDir` (default: `.governance-metrics/snapshots`)
 - `baseline` (optional explicit baseline snapshot path)
 - `current` (optional explicit current snapshot path)
+
+`repo-drift` emits the raw `comparison`, structured `signals`, and a deterministic `summary` with:
+
+- `overallTrend`
+- `worseningCount`, `improvingCount`, `stableCount`
+- `topWorsening` and `topImproving`
+
+When both snapshots include schema `1.1` summary fields, the comparison also includes `healthDelta`, `signalDeltas`, `metricFamilyDeltas`, and `topIssueDeltas`.
 
 **Use when:** you need deterministic drift trend signals from recent governance runs.
 

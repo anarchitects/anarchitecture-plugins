@@ -175,6 +175,12 @@ export interface SnapshotViolation {
   message?: string;
 }
 
+export interface SnapshotHealth {
+  score: HealthScore['score'];
+  status: HealthScore['status'];
+  grade: HealthScore['grade'];
+}
+
 export interface MetricSnapshot {
   timestamp: string;
   repo: string;
@@ -185,6 +191,10 @@ export interface MetricSnapshot {
   metrics: Record<string, number>;
   scores: Record<string, number>;
   violations: SnapshotViolation[];
+  health?: SnapshotHealth;
+  signalBreakdown?: SignalBreakdown;
+  metricBreakdown?: MetricBreakdown;
+  topIssues?: GovernanceTopIssue[];
 }
 
 export interface SnapshotMetricDelta {
@@ -194,6 +204,62 @@ export interface SnapshotMetricDelta {
   delta: number;
 }
 
+export interface SnapshotHealthDelta {
+  baselineScore: number;
+  currentScore: number;
+  scoreDelta: number;
+  baselineStatus: HealthStatus;
+  currentStatus: HealthStatus;
+  baselineGrade: HealthScore['grade'];
+  currentGrade: HealthScore['grade'];
+}
+
+export interface SnapshotSignalSourceDelta {
+  source: GovernanceSignalSource;
+  baseline: number;
+  current: number;
+  delta: number;
+}
+
+export interface SnapshotSignalTypeDelta {
+  type: GovernanceSignalType;
+  baseline: number;
+  current: number;
+  delta: number;
+}
+
+export interface SnapshotSignalSeverityDelta {
+  severity: GovernanceSignalSeverity;
+  baseline: number;
+  current: number;
+  delta: number;
+}
+
+export interface SnapshotSignalDeltas {
+  bySource: SnapshotSignalSourceDelta[];
+  byType: SnapshotSignalTypeDelta[];
+  bySeverity: SnapshotSignalSeverityDelta[];
+}
+
+export interface SnapshotMetricFamilyDelta {
+  family: GovernanceMetricFamily;
+  baseline: number;
+  current: number;
+  delta: number;
+}
+
+export interface SnapshotTopIssueDelta {
+  type: GovernanceSignalType;
+  source: GovernanceSignalSource;
+  severity: GovernanceSignalSeverity;
+  ruleId?: string;
+  message: string;
+  baselineCount: number;
+  currentCount: number;
+  delta: number;
+  projects: string[];
+}
+
 export interface SnapshotComparison {
   baseline: MetricSnapshot;
   current: MetricSnapshot;
@@ -201,13 +267,41 @@ export interface SnapshotComparison {
   scoreDeltas: SnapshotMetricDelta[];
   newViolations: SnapshotViolation[];
   resolvedViolations: SnapshotViolation[];
+  healthDelta?: SnapshotHealthDelta;
+  signalDeltas?: SnapshotSignalDeltas;
+  metricFamilyDeltas?: SnapshotMetricFamilyDelta[];
+  topIssueDeltas?: SnapshotTopIssueDelta[];
 }
+
+export type DriftSignalKind =
+  | 'workspace-health'
+  | 'metric-score'
+  | 'metric-family'
+  | 'signal-source'
+  | 'signal-type'
+  | 'signal-severity'
+  | 'top-issue'
+  | 'violation-footprint';
 
 export interface DriftSignal {
   id: string;
+  kind: DriftSignalKind;
+  label: string;
   status: 'worsening' | 'stable' | 'improving';
   magnitude: number;
+  baseline: number;
+  current: number;
+  delta: number;
   details?: Record<string, unknown>;
+}
+
+export interface DriftSummary {
+  overallTrend: DriftSignal['status'];
+  worseningCount: number;
+  improvingCount: number;
+  stableCount: number;
+  topWorsening: DriftSignal[];
+  topImproving: DriftSignal[];
 }
 
 export interface CognitiveLoadSignal {
