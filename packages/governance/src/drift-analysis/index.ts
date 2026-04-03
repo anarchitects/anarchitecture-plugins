@@ -2,9 +2,6 @@ import {
   DriftSignal,
   DriftSummary,
   GovernanceMetricFamily,
-  GovernanceSignalSeverity,
-  GovernanceSignalSource,
-  GovernanceSignalType,
   MetricSnapshot,
   SnapshotComparison,
   SnapshotHealthDelta,
@@ -16,6 +13,11 @@ import {
   SnapshotSignalTypeDelta,
   SnapshotTopIssueDelta,
 } from '../core/index.js';
+import type {
+  GovernanceSignalSeverity,
+  GovernanceSignalSource,
+  GovernanceSignalType,
+} from '../signal-engine/index.js';
 
 const SOURCE_ORDER: GovernanceSignalSource[] = [
   'graph',
