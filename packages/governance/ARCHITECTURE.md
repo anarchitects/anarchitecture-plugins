@@ -1,301 +1,154 @@
-# Nx Governance Architecture (Augmented v2)
+# Nx Governance Architecture
 
 ## 1. Purpose
 
-Nx Governance is a **deterministic governance and health analysis plugin** for Nx workspaces.
+`@anarchitects/nx-governance` is the shared governance core for Nx workspaces.
 
-It analyzes:
-- repository structure
-- project boundaries
-- architectural consistency
-- drift over time
+It turns workspace structure into:
 
-It produces:
-- metrics
-- health scores
-- findings
-- recommendations
-- AI-ready payloads
+- governance signals
+- weighted health scores
+- explainable findings
+- CLI and JSON reports
+- snapshot and AI payload inputs
 
----
+The core is intentionally ecosystem-neutral. Framework- and language-specific intelligence should live in separate extension plugins that contribute into the shared governance pipeline.
 
-## 2. Strategic Positioning
+## 2. Product model
 
-Nx Governance is an **interpretation layer on top of Nx signals**.
+The intended architecture is:
 
-It does NOT:
-- replace Nx Graph
-- replace Nx Conformance
-- enforce rules
+- one shared core plugin: `@anarchitects/nx-governance`
+- multiple ecosystem-specific extension plugins such as `@anarchitects/nx-governance-angular`
 
-It DOES:
-- interpret structural signals (Nx Graph)
-- interpret compliance signals (Nx Conformance — upcoming)
-- aggregate signals into health and insights
+This keeps generic governance concerns in one place and prevents the core package from accumulating Angular-, React-, JVM-, or .NET-specific runtime logic.
 
-### Evolution Path
+### Generic governance concerns
 
-Today:
-- Nx Graph + profile policy → metrics → health → reporting
+These stay in the core package:
 
-Next:
-- Nx Graph → GraphAdapter
-- Nx Conformance → ConformanceAdapter
-- Signals → GovernanceSignal → metrics → health
+- Nx graph loading and workspace normalization
+- dependency and boundary analysis
+- ownership and documentation checks
+- signal aggregation
+- metric calculation and health scoring
+- CLI and JSON reporting
+- snapshot and AI payload generation
+- extension discovery and execution lifecycle
 
-Future:
-- Multi-workspace (PolyGraph)
-- Org-level insights
-- Cross-repo governance
+### Ecosystem-specific manifestations
 
----
+These belong in extension plugins:
 
-## 3. Current Module Structure
+- framework-specific layering conventions
+- ecosystem-specific dependency smells
+- metadata extraction and enrichers
+- rule packs and heuristics
+- extension-specific metrics and signals
 
-Located under:
+## 3. Core vs extension responsibilities
 
+The core owns:
+
+- the governance execution lifecycle
+- shared data contracts
+- scoring and score aggregation
+- reporting and machine-readable outputs
+- extension registration and ordering
+
+Extensions own:
+
+- workspace enrichers
+- rule packs
+- signal providers
+- metric providers
+- optional presets and extension-specific docs
+
+Extensions contribute intelligence. The core remains the place where that intelligence is collected, scored, and reported.
+
+## 4. Extension model
+
+Governance-capable Nx plugins are discovered from `nx.json.plugins`.
+
+If a plugin wants to extend governance, it should expose:
+
+```text
+<package>/governance-extension
 ```
+
+That module must export a named `governanceExtension`.
+
+The public extension-facing contracts are exported from the package root:
+
+- `GovernanceExtensionDefinition`
+- `GovernanceExtensionHostContext`
+- `GovernanceExtensionHost`
+- `GovernanceWorkspaceEnricher`
+- `GovernanceRulePack`
+- `GovernanceSignalProvider`
+- `GovernanceMetricProvider`
+
+Extensions reuse the shared governance output types:
+
+- `GovernanceSignal`
+- `Violation`
+- `Measurement`
+
+For the authoring view and example code, see [EXTENSIONS.md](./EXTENSIONS.md).
+
+## 5. Execution flow
+
+The core runtime owns the full orchestration pipeline:
+
+```text
+runGovernance
+  -> load profile and Nx snapshot
+  -> build normalized governance workspace
+  -> discover and register governance extensions
+  -> apply workspace enrichers
+  -> evaluate core policies and extension rule packs
+  -> merge core and extension signals
+  -> merge core and extension metrics
+  -> calculate health and top issues
+  -> render reports, snapshots, and AI payloads
+```
+
+This preserves one governance truth even when multiple ecosystem engines contribute analysis.
+
+## 6. Module structure
+
+The core package lives under:
+
+```text
 packages/governance/src
 ```
 
-Main modules:
+The main architectural areas are:
 
-- core → orchestration (runGovernance)
-- inventory → project and structure extraction
-- metrics → metric calculations
-- health → scoring system
-- reporting → CLI output
-- snapshot → persistence and drift
-- ai → payload generation
-- config → profile configuration
+- `plugin` for orchestration and executor entrypoints
+- `inventory` and `nx-adapter` for workspace normalization
+- `policy-engine`, `signal-engine`, and `metrics` for shared governance evaluation
+- `health` and `reporting` for score aggregation and output
+- `snapshot` and `ai` for downstream consumption
+- `extensions` for extension discovery, registration, and public contracts
 
----
+## 7. Angular as the reference extension
 
-## 4. Main Execution Flow
+Angular is the first reference ecosystem engine, but it should not be embedded directly into the core package.
 
-```
-runGovernance
-    ↓
-Inventory Builder (Nx Graph)
-    ↓
-Metrics Engine
-    ↓
-Health Engine
-    ↓
-Reporting Engine
-    ↓
-Snapshot Engine
-    ↓
-AI Payload Generation
-```
+The intended package model is:
 
-### Characteristics
+- `@anarchitects/nx-governance` as the shared platform
+- `@anarchitects/nx-governance-angular` as the Angular extension plugin
 
-- deterministic pipeline
-- no side effects
-- CLI-first
-- composable steps
+The Angular plugin should contribute Angular-specific metrics, signals, rule packs, and metadata enrichers through the shared contracts. It should not duplicate the governance model, scoring pipeline, or reporting infrastructure.
 
----
+This establishes the reference pattern for future engines such as TypeScript, React, Maven, Gradle, and .NET.
 
-## 5. Core Models and Contracts
+## 8. Guiding principles
 
-### WorkspaceInventory
-
-Represents normalized workspace structure.
-
-Contains:
-- projects
-- dependencies
-- metadata
-
----
-
-### Metrics
-
-Computed indicators based on inventory.
-
-Examples:
-- boundary integrity
-- dependency complexity
-- ownership coverage
-
----
-
-### Health Score
-
-Aggregated score derived from metrics.
-
-Used for:
-- summaries
-- trend tracking
-- decision support
-
----
-
-### Snapshot
-
-Serialized output of a run.
-
-Used for:
-- drift detection
-- historical comparison
-
----
-
-### AI Payload
-
-Structured JSON containing:
-- metrics
-- findings
-- recommendations
-
-Used by external AI agents.
-
----
-
-## 6. CLI Surface
-
-Commands:
-
-- run governance analysis
-- output results
-- generate snapshot
-- generate AI payload
-
-Targets:
-- explicit targets only (current limitation)
-
----
-
-## 7. Reporting & Snapshot Flow
-
-Reporting:
-- CLI output (human-readable)
-- structured JSON (machine-readable)
-
-Snapshots:
-- stored for drift comparison
-- enable time-based analysis
-
----
-
-## 8. AI Flow (Model 1)
-
-Nx Governance does NOT execute AI.
-
-Instead:
-- generates payloads
-- suggests prompts
-
-AI execution happens in:
-- VS Code
-- Cursor
-- external tools
-
----
-
-## 9. Architectural Principles
-
-- deterministic first
-- no hidden behavior
-- modular design
-- no tight Nx coupling
-- extensible pipeline
-- explicit over implicit
-
----
-
-## 10. Known Gaps (Current State)
-
-- no GraphAdapter abstraction yet
-- no Conformance integration yet
-- no unified signal model
-- no inferred targets
-- AI payload coverage limited
-
----
-
-## 11. Target Architecture Delta
-
-### Current State
-
-```
-Nx Graph + Profile Policy
-    ↓
-Inventory
-    ↓
-Metrics
-    ↓
-Health
-    ↓
-Reporting
-```
-
----
-
-### Target State
-
-```
-Nx Graph → GraphAdapter
-Nx Conformance → ConformanceAdapter
-
-Graph + Conformance
-    ↓
-GovernanceSignal (unified model)
-    ↓
-Metrics Engine
-    ↓
-Health Engine
-    ↓
-Reporting / Snapshot / AI
-```
-
----
-
-## 12. Planned Extensions
-
-### GraphAdapter
-- normalize Nx graph
-- decouple Nx internals
-
-### ConformanceAdapter
-- ingest rule violations
-- convert to signals
-
-### GovernanceSignal
-- unified signal abstraction
-- source-aware (graph / conformance)
-
----
-
-## 13. AI Agent Working Context
-
-When extending this system:
-
-### DO
-
-- extend existing pipeline
-- use adapters as isolation layers
-- keep logic deterministic
-- reuse core models
-- keep AI external
-
-### DO NOT
-
-- redesign the architecture
-- duplicate Nx features
-- tightly couple to Nx APIs
-- introduce implicit behavior
-
----
-
-## 14. Guiding Principle
-
-Nx Governance:
-
-- reads signals
-- interprets signals
-- enables decisions
-
-It does not enforce or replace Nx.
+- keep the core deterministic
+- keep ecosystem logic out of the core package
+- extend the shared pipeline instead of forking it
+- preserve a single scoring and reporting model
+- keep outputs explainable and traceable back to contributed signals, violations, and metrics
