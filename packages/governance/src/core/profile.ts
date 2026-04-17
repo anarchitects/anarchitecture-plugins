@@ -1,3 +1,4 @@
+import { GovernanceException } from './exceptions.js';
 import { HealthStatusThresholds, Measurement } from './models.js';
 
 export const DEFAULT_HEALTH_STATUS_THRESHOLDS: HealthStatusThresholds = {
@@ -30,6 +31,7 @@ export interface ProfileOverrides {
     statusThresholds?: Partial<HealthStatusThresholds>;
   };
   metrics?: Partial<Record<string, number>>;
+  exceptions?: GovernanceException[];
   projectOverrides: Record<
     string,
     {
