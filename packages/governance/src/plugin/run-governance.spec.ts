@@ -360,6 +360,34 @@ describe('runGovernance', () => {
     );
   });
 
+  it('keeps assessment output unchanged when nx plugins do not expose governance extensions', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    const nxJsonPath = path.join(workspaceRoot, 'nx.json');
+    const actualReadFileSync = fs.readFileSync;
+    const baseline = await runGovernance({ reportType: 'health' });
+
+    jest.spyOn(fs, 'readFileSync').mockImplementation(((filePath, encoding) => {
+      if (path.resolve(String(filePath)) === nxJsonPath) {
+        return JSON.stringify({
+          plugins: [
+            '@nx/jest/plugin',
+            { plugin: '@nx/vite/plugin' },
+            '@anarchitects/nx-governance',
+          ],
+        });
+      }
+
+      return actualReadFileSync(filePath, encoding as never);
+    }) as typeof fs.readFileSync);
+
+    const withGovernanceDiscovery = await runGovernance({
+      reportType: 'health',
+    });
+
+    expect(withGovernanceDiscovery.assessment).toEqual(baseline.assessment);
+  });
+
   it('filters type and severity breakdowns to the active report type', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 
