@@ -3,9 +3,21 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+jest.mock('../presets/angular-cleanup/profile.js', () => {
+  const actual = jest.requireActual(
+    '../presets/angular-cleanup/profile.js'
+  ) as typeof import('../presets/angular-cleanup/profile.js');
+
+  return {
+    ...actual,
+    loadProfileOverrides: jest.fn(actual.loadProfileOverrides),
+  };
+});
+
 import { logger, workspaceRoot } from '@nx/devkit';
 
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
+import * as profileModule from '../presets/angular-cleanup/profile.js';
 import {
   angularCleanupProfile,
   loadProfileOverrides,
@@ -24,6 +36,11 @@ import {
   runGovernanceSnapshot,
 } from './run-governance.js';
 
+const actualProfileModule = jest.requireActual(
+  '../presets/angular-cleanup/profile.js'
+) as typeof import('../presets/angular-cleanup/profile.js');
+const mockedLoadProfileOverrides = jest.mocked(profileModule.loadProfileOverrides);
+
 describe('runGovernance', () => {
   function writeSnapshotFile(
     directory: string,
@@ -37,6 +54,9 @@ describe('runGovernance', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    mockedLoadProfileOverrides.mockImplementation(
+      actualProfileModule.loadProfileOverrides
+    );
   });
 
   it('keeps report measurement ids stable across report types after signal-based metric wiring', async () => {
@@ -235,6 +255,110 @@ describe('runGovernance', () => {
       );
       expect(withConformance.assessment.health.score).toBeLessThanOrEqual(
         baseline.assessment.health.score
+      );
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('suppresses matching declared exceptions before conformance signals are built', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    const tempDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-conformance-')
+    );
+    const conformanceJson = path.join(tempDir, 'conformance.json');
+
+    writeFileSync(
+      conformanceJson,
+      JSON.stringify([
+        {
+          id: 'suppressed-finding',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          severity: 'error',
+          message: 'Suppressed conformance boundary violation',
+          projectId: 'packages/governance',
+          relatedProjectIds: ['packages/governance', 'packages/governance-e2e'],
+        },
+        {
+          id: 'active-finding',
+          ruleId: '@nx/conformance/ensure-owners',
+          severity: 'warning',
+          message: 'Active conformance ownership warning',
+          projectId: 'packages/governance',
+        },
+      ])
+    );
+
+    const baseline = await runGovernance({
+      reportType: 'health',
+      conformanceJson,
+    });
+
+    const resolvedOverrides = await loadProfileOverrides(
+      workspaceRoot,
+      'angular-cleanup'
+    );
+    mockedLoadProfileOverrides.mockResolvedValueOnce({
+      ...resolvedOverrides,
+      exceptions: [
+        {
+          id: 'suppress-conformance-boundary',
+          source: 'conformance',
+          scope: {
+            source: 'conformance',
+            ruleId: '@nx/conformance/enforce-project-boundaries',
+            projectId: 'packages/governance',
+          },
+          reason: 'Known migration overlap.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-06-01',
+          },
+        },
+      ],
+    });
+
+    try {
+      const withException = await runGovernance({
+        reportType: 'health',
+        conformanceJson,
+      });
+
+      expect(
+        baseline.assessment.signalBreakdown.bySource.find(
+          (entry) => entry.source === 'conformance'
+        )
+      ).toEqual({ source: 'conformance', count: 2 });
+      expect(
+        withException.assessment.signalBreakdown.bySource.find(
+          (entry) => entry.source === 'conformance'
+        )
+      ).toEqual({ source: 'conformance', count: 1 });
+      expect(
+        withException.assessment.topIssues.filter(
+          (issue) =>
+            issue.source === 'conformance' &&
+            issue.type === 'conformance-violation'
+        )
+      ).toEqual([
+        expect.objectContaining({
+          severity: 'warning',
+          count: 1,
+          message: 'Active conformance ownership warning',
+        }),
+      ]);
+      expect(withException.assessment.health.score).toBeGreaterThanOrEqual(
+        baseline.assessment.health.score
+      );
+      expect(
+        Object.keys(withException.assessment).sort((left, right) =>
+          left.localeCompare(right)
+        )
+      ).toEqual(
+        Object.keys(baseline.assessment).sort((left, right) =>
+          left.localeCompare(right)
+        )
       );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
