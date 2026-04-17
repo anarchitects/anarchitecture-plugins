@@ -21,6 +21,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 - [Concepts](#concepts)
   - [Profiles](#profiles)
   - [Boundary policy source](#boundary-policy-source)
+  - [Exceptions](#exceptions)
   - [Domain tags](#domain-tags)
   - [Layer tags](#layer-tags)
   - [Ownership signals](#ownership-signals)
@@ -152,6 +153,69 @@ Every profile has a `boundaryPolicySource` setting:
 | `"eslint"`  | The runtime helper `tools/governance/eslint/dependency-constraints.mjs` is loaded at assessment time and its merged constraints are used as the primary rule set. The profile map acts as a fallback/override layer. A warning is surfaced in every report. |
 
 Use `"eslint"` when you want ESLint's `@nx/enforce-module-boundaries` and the governance report to share a single source of truth, eliminating drift between the two enforcement layers.
+
+### Exceptions
+
+Profiles can declare explicit governance exceptions in the same
+`tools/governance/profiles/<name>.json` file used for the rest of the
+workspace policy.
+
+Use exceptions when a known deviation must remain visible and reviewable
+instead of being hidden inside generic overrides.
+
+```jsonc
+{
+  "exceptions": [
+    {
+      "id": "orders-shared-transition",
+      "source": "policy",
+      "scope": {
+        "source": "policy",
+        "ruleId": "domain-boundary",
+        "projectId": "orders-app",
+        "targetProjectId": "shared-util"
+      },
+      "reason": "Temporary migration path during extraction.",
+      "owner": "@org/architecture",
+      "review": {
+        "reviewBy": "2026-06-01"
+      }
+    },
+    {
+      "id": "nx-owner-warning-review",
+      "source": "conformance",
+      "scope": {
+        "source": "conformance",
+        "ruleId": "@nx/conformance/ensure-owners",
+        "projectId": "orders-app"
+      },
+      "reason": "Ownership handoff in progress.",
+      "owner": "@org/architecture",
+      "review": {
+        "expiresAt": "2026-07-01"
+      }
+    }
+  ]
+}
+```
+
+Practical fields:
+
+- `id`: stable identifier used in reports
+- `source`: `policy` or `conformance`
+- `scope`: exact finding scope to match
+- `reason`: why the deviation is tolerated for now
+- `owner`: who is accountable for review/removal
+- `review.reviewBy` / `review.expiresAt`: the lifecycle boundary for the exception
+
+Runtime semantics:
+
+- `active` exceptions suppress matching findings
+- `stale` exceptions no longer suppress; their matched findings become active governance debt again
+- `expired` exceptions no longer suppress; their matched findings also become active governance debt again
+
+Exception-backed findings stay explainable in reports through
+`assessment.exceptions` instead of being silently dropped.
 
 ### Domain tags
 
@@ -759,6 +823,17 @@ Each violation carries:
 | `details`        | Structured data (source/target domain, layer order, dependency type).          |
 | `recommendation` | Actionable guidance for resolving the violation.                               |
 
+Active governance burden remains in `violations`. Exception-backed
+findings that are currently suppressed do not appear here; they are
+reported separately under `assessment.exceptions.suppressedFindings`.
+
+When an exception becomes `stale` or `expired`, its matched finding is no
+longer suppressed and returns to the active report surfaces
+(`violations`, `signalBreakdown`, `topIssues`, `health`, and
+recommendations). The corresponding exception context is retained in
+`assessment.exceptions.reactivatedFindings` so the debt remains
+explainable.
+
 ### Recommendations
 
 Recommendations are generated automatically from the violation and metric set:
@@ -863,6 +938,63 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
       ]
     }
   },
+  "exceptions": {
+    "summary": {
+      "declaredCount": 2,
+      "matchedCount": 2,
+      "suppressedPolicyViolationCount": 1,
+      "suppressedConformanceFindingCount": 0,
+      "unusedExceptionCount": 0,
+      "activeExceptionCount": 1,
+      "staleExceptionCount": 1,
+      "expiredExceptionCount": 0,
+      "reactivatedPolicyViolationCount": 1,
+      "reactivatedConformanceFindingCount": 0
+    },
+    "used": [
+      {
+        "id": "orders-shared-transition",
+        "source": "policy",
+        "status": "active",
+        "reason": "Temporary migration path during extraction.",
+        "owner": "@org/architecture",
+        "review": {
+          "reviewBy": "2026-06-01"
+        },
+        "matchCount": 1
+      }
+    ],
+    "unused": [],
+    "suppressedFindings": [
+      {
+        "kind": "policy-violation",
+        "exceptionId": "orders-shared-transition",
+        "source": "policy",
+        "status": "active",
+        "ruleId": "domain-boundary",
+        "category": "boundary",
+        "severity": "error",
+        "projectId": "orders-app",
+        "targetProjectId": "shared-util",
+        "relatedProjectIds": ["orders-app", "shared-util"],
+        "message": "Known transition dependency."
+      }
+    ],
+    "reactivatedFindings": [
+      {
+        "kind": "conformance-finding",
+        "exceptionId": "nx-owner-warning-review",
+        "source": "conformance",
+        "status": "stale",
+        "ruleId": "@nx/conformance/ensure-owners",
+        "category": "ownership",
+        "severity": "warning",
+        "projectId": "orders-app",
+        "relatedProjectIds": [],
+        "message": "Ownership warning needs review."
+      }
+    ]
+  },
   "recommendations": [
     {
       "id": "reduce-cross-domain-dependencies",
@@ -919,6 +1051,39 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
     "documentationCompletenessWeight": 0.2,
     "layerIntegrityWeight": 0.2
   },
+
+  // Explicit exceptions for known, reviewable deviations.
+  "exceptions": [
+    {
+      "id": "orders-shared-transition",
+      "source": "policy",
+      "scope": {
+        "source": "policy",
+        "ruleId": "domain-boundary",
+        "projectId": "orders-app",
+        "targetProjectId": "shared-util"
+      },
+      "reason": "Temporary migration path during extraction.",
+      "owner": "@org/architecture",
+      "review": {
+        "reviewBy": "2026-06-01"
+      }
+    },
+    {
+      "id": "nx-owner-warning-review",
+      "source": "conformance",
+      "scope": {
+        "source": "conformance",
+        "category": "ownership",
+        "projectId": "orders-app"
+      },
+      "reason": "Ownership handoff in progress.",
+      "owner": "@org/architecture",
+      "review": {
+        "expiresAt": "2026-07-01"
+      }
+    }
+  ],
 
   // Per-project overrides — useful for projects that cannot carry tags or metadata
   "projectOverrides": {
