@@ -39,6 +39,18 @@ describe('snapshot-store', () => {
       },
       profile: 'angular-cleanup',
       warnings: [],
+      exceptions: {
+        summary: {
+          declaredCount: 0,
+          matchedCount: 0,
+          suppressedPolicyViolationCount: 0,
+          suppressedConformanceFindingCount: 0,
+          unusedExceptionCount: 0,
+        },
+        used: [],
+        unused: [],
+        suppressedFindings: [],
+      },
       violations: [],
       measurements: [
         {

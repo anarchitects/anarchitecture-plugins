@@ -82,6 +82,7 @@ import {
 import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import { buildExceptionReport } from './build-exception-report.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1603,6 +1604,7 @@ async function buildAssessmentArtifacts(
       workspace: enrichedInventory,
       profile: profileName,
       warnings: overrides.runtimeWarnings,
+      exceptions: buildExceptionReport(exceptionApplication),
       violations: filteredViolations,
       measurements: filteredMeasurements,
       signalBreakdown: buildSignalBreakdown(filteredSignals),

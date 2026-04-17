@@ -21,6 +21,16 @@ describe('governance report rendering', () => {
     expect(rendered).toContain('Signal Sources:');
     expect(rendered).toContain('Signal Types:');
     expect(rendered).toContain('Signal Severity:');
+    expect(rendered).toContain('Exceptions:');
+    expect(rendered).toContain('- declared: 2');
+    expect(rendered).toContain('- matched: 1');
+    expect(rendered).toContain('- unused: 1');
+    expect(rendered).toContain('- suppressed policy findings: 1');
+    expect(rendered).toContain('- suppressed conformance findings: 1');
+    expect(rendered).toContain('Suppressed Findings:');
+    expect(rendered).toContain(
+      '- suppress-domain :: policy/policy-violation :: [error] :: domain-boundary :: scope=orders-app -> shared-util -> related=orders-app,shared-util :: Suppressed domain boundary violation'
+    );
     expect(rendered).toContain('Metric Families:');
     expect(rendered).toContain('Top Issues:');
     expect(rendered).toContain('- graph: 3');
@@ -43,6 +53,12 @@ describe('governance report rendering', () => {
       rendered.indexOf('Signal Severity:')
     );
     expect(rendered.indexOf('Signal Severity:')).toBeLessThan(
+      rendered.indexOf('Exceptions:')
+    );
+    expect(rendered.indexOf('Exceptions:')).toBeLessThan(
+      rendered.indexOf('Metrics:')
+    );
+    expect(rendered.indexOf('Suppressed Findings:')).toBeLessThan(
       rendered.indexOf('Metrics:')
     );
     expect(rendered.indexOf('Metrics:')).toBeLessThan(
@@ -127,6 +143,64 @@ describe('governance report rendering', () => {
           ],
         },
       },
+      exceptions: {
+        summary: {
+          declaredCount: 2,
+          matchedCount: 1,
+          suppressedPolicyViolationCount: 1,
+          suppressedConformanceFindingCount: 1,
+          unusedExceptionCount: 1,
+        },
+        used: [
+          {
+            id: 'suppress-domain',
+            source: 'policy',
+            reason: 'Known transition.',
+            owner: '@org/architecture',
+            review: {
+              reviewBy: '2026-06-01',
+            },
+            matchCount: 2,
+          },
+        ],
+        unused: [
+          {
+            id: 'unused-owner-gap',
+            source: 'conformance',
+            reason: 'Reserved but currently unmatched.',
+            owner: '@org/architecture',
+            review: {
+              expiresAt: '2026-08-01',
+            },
+            matchCount: 0,
+          },
+        ],
+        suppressedFindings: expect.arrayContaining([
+          {
+            kind: 'policy-violation',
+            exceptionId: 'suppress-domain',
+            source: 'policy',
+            ruleId: 'domain-boundary',
+            category: 'boundary',
+            severity: 'error',
+            projectId: 'orders-app',
+            targetProjectId: 'shared-util',
+            relatedProjectIds: ['orders-app', 'shared-util'],
+            message: 'Suppressed domain boundary violation',
+          },
+          {
+            kind: 'conformance-finding',
+            exceptionId: 'suppress-domain',
+            source: 'conformance',
+            ruleId: '@nx/conformance/enforce-project-boundaries',
+            category: 'boundary',
+            severity: 'warning',
+            projectId: 'orders-app',
+            relatedProjectIds: ['orders-app', 'shared-util'],
+            message: 'Suppressed conformance boundary warning',
+          },
+        ]),
+      },
       signalBreakdown: {
         total: 6,
         bySource: [
@@ -198,6 +272,64 @@ function makeAssessment(): GovernanceAssessment {
     },
     profile: 'angular-cleanup',
     warnings: [],
+    exceptions: {
+      summary: {
+        declaredCount: 2,
+        matchedCount: 1,
+        suppressedPolicyViolationCount: 1,
+        suppressedConformanceFindingCount: 1,
+        unusedExceptionCount: 1,
+      },
+      used: [
+        {
+          id: 'suppress-domain',
+          source: 'policy',
+          reason: 'Known transition.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-06-01',
+          },
+          matchCount: 2,
+        },
+      ],
+      unused: [
+        {
+          id: 'unused-owner-gap',
+          source: 'conformance',
+          reason: 'Reserved but currently unmatched.',
+          owner: '@org/architecture',
+          review: {
+            expiresAt: '2026-08-01',
+          },
+          matchCount: 0,
+        },
+      ],
+      suppressedFindings: [
+        {
+          kind: 'policy-violation',
+          exceptionId: 'suppress-domain',
+          source: 'policy',
+          ruleId: 'domain-boundary',
+          category: 'boundary',
+          severity: 'error',
+          projectId: 'orders-app',
+          targetProjectId: 'shared-util',
+          relatedProjectIds: ['orders-app', 'shared-util'],
+          message: 'Suppressed domain boundary violation',
+        },
+        {
+          kind: 'conformance-finding',
+          exceptionId: 'suppress-domain',
+          source: 'conformance',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          category: 'boundary',
+          severity: 'warning',
+          projectId: 'orders-app',
+          relatedProjectIds: ['orders-app', 'shared-util'],
+          message: 'Suppressed conformance boundary warning',
+        },
+      ],
+    },
     violations: [],
     measurements: [
       {

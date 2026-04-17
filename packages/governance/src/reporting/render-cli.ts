@@ -43,6 +43,41 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
   }
 
   lines.push('');
+  lines.push('Exceptions:');
+  lines.push(`- declared: ${assessment.exceptions.summary.declaredCount}`);
+  lines.push(`- matched: ${assessment.exceptions.summary.matchedCount}`);
+  lines.push(`- unused: ${assessment.exceptions.summary.unusedExceptionCount}`);
+  lines.push(
+    `- suppressed policy findings: ${assessment.exceptions.summary.suppressedPolicyViolationCount}`
+  );
+  lines.push(
+    `- suppressed conformance findings: ${assessment.exceptions.summary.suppressedConformanceFindingCount}`
+  );
+
+  if (assessment.exceptions.suppressedFindings.length > 0) {
+    lines.push('Suppressed Findings:');
+    for (const finding of assessment.exceptions.suppressedFindings) {
+      const ruleIdSuffix = finding.ruleId ? ` :: ${finding.ruleId}` : '';
+      const projectScope = [
+        finding.projectId,
+        finding.targetProjectId,
+        finding.relatedProjectIds.length > 0
+          ? `related=${finding.relatedProjectIds.join(',')}`
+          : undefined,
+      ]
+        .filter((value): value is string => !!value)
+        .join(' -> ');
+      const projectScopeSuffix = projectScope
+        ? ` :: scope=${projectScope}`
+        : '';
+
+      lines.push(
+        `- ${finding.exceptionId} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${projectScopeSuffix} :: ${finding.message}`
+      );
+    }
+  }
+
+  lines.push('');
   lines.push('Metrics:');
 
   for (const metric of assessment.measurements) {
