@@ -262,6 +262,10 @@ const AI_PAYLOAD_LIMITS = {
   scorecardDeltas: 12,
 };
 
+interface GovernanceAssessmentArtifactsOptions {
+  asOf?: Date;
+}
+
 export async function runGovernance(
   options: GovernanceRunOptions = {}
 ): Promise<GovernanceRunResult> {
@@ -1459,7 +1463,8 @@ async function buildAssessment(
 }
 
 async function buildAssessmentArtifacts(
-  options: GovernanceRunOptions
+  options: GovernanceRunOptions,
+  artifactsOptions: GovernanceAssessmentArtifactsOptions = {}
 ): Promise<GovernanceAssessmentArtifacts> {
   const profileName = options.profile ?? 'angular-cleanup';
 
@@ -1515,6 +1520,7 @@ async function buildAssessmentArtifacts(
     exceptions: overrides.exceptions,
     policyViolations: coreViolations,
     conformanceFindings: conformanceSnapshot?.findings ?? [],
+    asOf: artifactsOptions.asOf ?? new Date(),
   });
   const extensionViolations = await evaluateGovernanceRulePacks(
     extensionRegistry,

@@ -169,11 +169,19 @@ export interface GovernanceExceptionSummary {
   suppressedPolicyViolationCount: number;
   suppressedConformanceFindingCount: number;
   unusedExceptionCount: number;
+  activeExceptionCount: number;
+  staleExceptionCount: number;
+  expiredExceptionCount: number;
+  reactivatedPolicyViolationCount: number;
+  reactivatedConformanceFindingCount: number;
 }
+
+export type GovernanceExceptionStatus = 'active' | 'stale' | 'expired';
 
 export interface GovernanceExceptionUsage {
   id: string;
   source: 'policy' | 'conformance';
+  status: GovernanceExceptionStatus;
   reason: string;
   owner: string;
   review: import('./exceptions.js').GovernanceExceptionReview;
@@ -184,6 +192,7 @@ export interface GovernanceExceptionFinding {
   kind: 'policy-violation' | 'conformance-finding';
   exceptionId: string;
   source: 'policy' | 'conformance';
+  status: GovernanceExceptionStatus;
   ruleId?: string;
   category: GovernanceSignalCategory | 'architecture' | 'documentation';
   severity: GovernanceSignalSeverity;
@@ -199,6 +208,7 @@ export interface GovernanceExceptionReport {
   used: GovernanceExceptionUsage[];
   unused: GovernanceExceptionUsage[];
   suppressedFindings: GovernanceExceptionFinding[];
+  reactivatedFindings: GovernanceExceptionFinding[];
 }
 
 export interface GovernanceAssessment {

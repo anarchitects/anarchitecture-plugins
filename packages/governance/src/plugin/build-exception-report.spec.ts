@@ -84,11 +84,17 @@ describe('buildExceptionReport', () => {
       suppressedPolicyViolationCount: 1,
       suppressedConformanceFindingCount: 1,
       unusedExceptionCount: 1,
+      activeExceptionCount: 2,
+      staleExceptionCount: 0,
+      expiredExceptionCount: 0,
+      reactivatedPolicyViolationCount: 0,
+      reactivatedConformanceFindingCount: 0,
     });
     expect(result.used).toEqual([
       {
         id: 'a-policy',
         source: 'policy',
+        status: 'active',
         reason: 'Active migration.',
         owner: '@org/architecture',
         review: {
@@ -101,6 +107,7 @@ describe('buildExceptionReport', () => {
       {
         id: 'z-unused',
         source: 'conformance',
+        status: 'active',
         reason: 'Unused exception.',
         owner: '@org/architecture',
         review: {
@@ -114,6 +121,7 @@ describe('buildExceptionReport', () => {
         kind: 'policy-violation',
         exceptionId: 'a-policy',
         source: 'policy',
+        status: 'active',
         ruleId: 'domain-boundary',
         category: 'boundary',
         severity: 'error',
@@ -127,6 +135,7 @@ describe('buildExceptionReport', () => {
         kind: 'conformance-finding',
         exceptionId: 'a-policy',
         source: 'conformance',
+        status: 'active',
         ruleId: '@nx/conformance/enforce-project-boundaries',
         category: 'boundary',
         severity: 'warning',
@@ -136,6 +145,7 @@ describe('buildExceptionReport', () => {
         sourcePluginId: 'conformance-plugin',
       },
     ]);
+    expect(result.reactivatedFindings).toEqual([]);
   });
 });
 
@@ -146,11 +156,16 @@ function makeApplicationResult(input: {
 }): GovernanceExceptionApplicationResult {
   return {
     declaredExceptions: input.declaredExceptions,
+    exceptionStatuses: Object.fromEntries(
+      input.declaredExceptions.map((exception) => [exception.id, 'active'])
+    ) as GovernanceExceptionApplicationResult['exceptionStatuses'],
     policyViolations: [],
     conformanceFindings: [],
     activePolicyViolations: [],
     suppressedPolicyViolations: input.suppressedPolicyViolations,
+    reactivatedPolicyViolations: [],
     activeConformanceFindings: [],
     suppressedConformanceFindings: input.suppressedConformanceFindings,
+    reactivatedConformanceFindings: [],
   };
 }
