@@ -1,26 +1,8 @@
 import { logger, workspaceRoot } from '@nx/devkit';
 
-import { GovernanceAssessment, GovernanceProfile } from '../core/index.js';
-import {
-  buildRecommendations,
-  calculateHealthScore,
-} from '../health-engine/calculate-health.js';
-import { buildInventory } from '../inventory/build-inventory.js';
-import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
-import { readNxWorkspaceSnapshot } from '../nx-adapter/read-workspace.js';
-import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
-import {
-  angularCleanupProfile,
-  loadProfileOverrides,
-} from '../presets/angular-cleanup/profile.js';
+import { GovernanceAssessment } from '../core/index.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
-import { buildMetricBreakdown } from '../reporting/metric-breakdown.js';
-import {
-  buildSignalBreakdown,
-  filterSignalsForReportType,
-} from '../reporting/signal-breakdown.js';
-import { buildTopIssues } from '../reporting/top-issues.js';
 import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
@@ -32,12 +14,10 @@ import {
   compareSnapshots,
   summarizeDrift,
 } from '../drift-analysis/index.js';
-import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import {
   DriftSummary,
   DriftSignal,
   GovernanceDependency,
-  GovernanceWorkspace,
   SnapshotComparison,
   SnapshotViolation,
 } from '../core/index.js';
@@ -64,21 +44,9 @@ import {
 import { AiAnalysisRequest, AiAnalysisResult } from '../core/models.js';
 import { execFileSync } from 'node:child_process';
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
-import { resolveConformanceInput } from './resolve-conformance-input.js';
 import {
-  buildConformanceSignals,
-  buildGraphSignals,
-  buildPolicySignals,
-  mergeGovernanceSignals,
-} from '../signal-engine/index.js';
-import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
-import {
-  applyGovernanceEnrichers,
-  collectGovernanceMeasurements,
-  collectGovernanceSignals,
-  evaluateGovernanceRulePacks,
-  registerGovernanceExtensions,
-} from '../extensions/host.js';
+  buildGovernanceAssessmentArtifacts,
+} from './build-assessment-artifacts.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -261,7 +229,7 @@ const AI_PAYLOAD_LIMITS = {
 export async function runGovernance(
   options: GovernanceRunOptions = {}
 ): Promise<GovernanceRunResult> {
-  const assessment = await buildAssessment(options);
+  const { assessment } = await buildGovernanceAssessmentArtifacts(options);
 
   const rendered =
     options.output === 'json'
@@ -287,7 +255,7 @@ export async function runGovernance(
 export async function runGovernanceSnapshot(
   options: GovernanceSnapshotRunOptions = {}
 ): Promise<GovernanceSnapshotRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -399,7 +367,7 @@ export async function runGovernanceDrift(
 export async function runGovernanceAiRootCause(
   options: GovernanceAiRootCauseRunOptions = {}
 ): Promise<GovernanceAiRootCauseRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -530,7 +498,7 @@ export async function runGovernanceAiRootCause(
 export async function runGovernanceAiPrImpact(
   options: GovernanceAiPrImpactRunOptions = {}
 ): Promise<GovernanceAiPrImpactRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -807,7 +775,7 @@ export async function runGovernanceAiDrift(
 export async function runGovernanceAiCognitiveLoad(
   options: GovernanceAiCognitiveLoadRunOptions = {}
 ): Promise<GovernanceAiCognitiveLoadRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -927,7 +895,7 @@ export async function runGovernanceAiCognitiveLoad(
 export async function runGovernanceAiRecommendations(
   options: GovernanceAiRecommendationsRunOptions = {}
 ): Promise<GovernanceAiRecommendationsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -996,7 +964,7 @@ export async function runGovernanceAiRecommendations(
 export async function runGovernanceAiSmellClusters(
   options: GovernanceAiSmellClustersRunOptions = {}
 ): Promise<GovernanceAiSmellClustersRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1079,7 +1047,7 @@ export async function runGovernanceAiSmellClusters(
 export async function runGovernanceAiRefactoringSuggestions(
   options: GovernanceAiRefactoringSuggestionsRunOptions = {}
 ): Promise<GovernanceAiRefactoringSuggestionsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1204,7 +1172,7 @@ export async function runGovernanceAiRefactoringSuggestions(
 export async function runGovernanceAiScorecard(
   options: GovernanceAiScorecardRunOptions = {}
 ): Promise<GovernanceAiScorecardRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1345,7 +1313,7 @@ export async function runGovernanceAiScorecard(
 export async function runGovernanceAiOnboarding(
   options: GovernanceAiOnboardingRunOptions = {}
 ): Promise<GovernanceAiOnboardingRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildGovernanceAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1446,263 +1414,6 @@ export async function runGovernanceAiOnboarding(
   };
 }
 
-async function buildAssessment(
-  options: GovernanceRunOptions
-): Promise<GovernanceAssessment> {
-  const profileName = options.profile ?? 'angular-cleanup';
-
-  const overrides = await loadProfileOverrides(workspaceRoot, profileName);
-  const effectiveProfile: GovernanceProfile = {
-    ...angularCleanupProfile,
-    layers: overrides.layers ?? angularCleanupProfile.layers,
-    allowedDomainDependencies:
-      overrides.allowedDomainDependencies ??
-      angularCleanupProfile.allowedDomainDependencies,
-    ownership: {
-      ...angularCleanupProfile.ownership,
-      ...(overrides.ownership ?? {}),
-    },
-    health: {
-      statusThresholds: {
-        ...angularCleanupProfile.health.statusThresholds,
-        ...(overrides.health?.statusThresholds ?? {}),
-      },
-    },
-    metrics: {
-      ...angularCleanupProfile.metrics,
-      ...normalizeMetricWeights(overrides.metrics),
-    },
-  };
-
-  const snapshot = await readNxWorkspaceSnapshot();
-  const inventory = buildInventory(snapshot, overrides);
-  const extensionRegistry = await registerGovernanceExtensions({
-    workspaceRoot,
-    profileName,
-    options: { ...options },
-    snapshot,
-    inventory,
-  });
-  const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
-    workspace: inventory,
-    profile: effectiveProfile,
-    context: {
-      workspaceRoot,
-      profileName,
-      options: { ...options },
-      snapshot,
-      inventory,
-    },
-  });
-  const coreViolations = evaluatePolicies(enrichedInventory, effectiveProfile);
-  const extensionViolations = await evaluateGovernanceRulePacks(
-    extensionRegistry,
-    {
-      workspace: enrichedInventory,
-      profile: effectiveProfile,
-      context: {
-        workspaceRoot,
-        profileName,
-        options: { ...options },
-        snapshot,
-        inventory,
-      },
-    }
-  );
-  const allViolations = [...coreViolations, ...extensionViolations];
-  const graphSignals = buildGraphSignals(
-    toWorkspaceGraphSnapshot(enrichedInventory)
-  );
-  const policySignals = buildPolicySignals(allViolations);
-  const resolvedConformanceInput = resolveConformanceInput(
-    options.conformanceJson
-  );
-  const conformanceSignals = loadConformanceSignals(resolvedConformanceInput);
-  const coreSignals = mergeGovernanceSignals(
-    graphSignals,
-    conformanceSignals,
-    policySignals
-  );
-  const extensionSignals = await collectGovernanceSignals(extensionRegistry, {
-    workspace: enrichedInventory,
-    profile: effectiveProfile,
-    violations: allViolations,
-    signals: coreSignals,
-    context: {
-      workspaceRoot,
-      profileName,
-      options: { ...options },
-      snapshot,
-      inventory,
-    },
-  });
-  const allSignals = mergeGovernanceSignals(coreSignals, extensionSignals);
-  const coreMeasurements = calculateMetrics({
-    workspace: enrichedInventory,
-    signals: allSignals,
-  });
-  const extensionMeasurements = await collectGovernanceMeasurements(
-    extensionRegistry,
-    {
-      workspace: enrichedInventory,
-      profile: effectiveProfile,
-      signals: allSignals,
-      measurements: coreMeasurements,
-      violations: allViolations,
-      context: {
-        workspaceRoot,
-        profileName,
-        options: { ...options },
-        snapshot,
-        inventory,
-      },
-    }
-  );
-  const allMeasurements = [...coreMeasurements, ...extensionMeasurements];
-  const allTopIssues = buildTopIssues(allSignals);
-  const filteredMeasurements = filterMeasurements(
-    allMeasurements,
-    options.reportType
-  );
-  const filteredSignals = filterSignalsForReportType(
-    allSignals,
-    options.reportType
-  );
-  const filteredViolations = filterViolations(
-    allViolations,
-    options.reportType
-  );
-
-  return {
-    workspace: enrichedInventory,
-    profile: profileName,
-    warnings: overrides.runtimeWarnings,
-    violations: filteredViolations,
-    measurements: filteredMeasurements,
-    signalBreakdown: buildSignalBreakdown(filteredSignals),
-    metricBreakdown: buildMetricBreakdown(filteredMeasurements),
-    topIssues: buildTopIssues(filteredSignals),
-    health: calculateHealthScore(
-      allMeasurements,
-      effectiveProfile.metrics,
-      effectiveProfile.health.statusThresholds,
-      {
-        topIssues: allTopIssues,
-      }
-    ),
-    recommendations: buildRecommendations(allViolations, allMeasurements),
-  };
-}
-
-function toWorkspaceGraphSnapshot(
-  workspace: GovernanceWorkspace
-): WorkspaceGraphSnapshot {
-  const extractedAt = new Date().toISOString();
-
-  return {
-    source: 'nx-graph',
-    extractedAt,
-    projects: workspace.projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      root: project.root,
-      type: project.type === 'tool' ? 'unknown' : project.type,
-      tags: project.tags,
-      domain: project.domain,
-      layer: project.layer,
-    })),
-    dependencies: workspace.dependencies.map((dependency) => ({
-      sourceProjectId: dependency.source,
-      targetProjectId: dependency.target,
-      type: dependency.type,
-    })),
-  };
-}
-
-function filterViolations(
-  violations: GovernanceAssessment['violations'],
-  reportType: GovernanceRunOptions['reportType']
-): GovernanceAssessment['violations'] {
-  if (reportType === 'boundaries') {
-    return violations.filter((violation) => violation.category === 'boundary');
-  }
-
-  if (reportType === 'ownership') {
-    return violations.filter((violation) => violation.category === 'ownership');
-  }
-
-  if (reportType === 'architecture') {
-    return violations.filter((violation) => violation.category !== 'ownership');
-  }
-
-  return violations;
-}
-
-function filterMeasurements(
-  measurements: GovernanceAssessment['measurements'],
-  reportType: GovernanceRunOptions['reportType']
-): GovernanceAssessment['measurements'] {
-  if (reportType === 'boundaries') {
-    return measurements.filter(
-      (measurement) => measurement.family === 'boundaries'
-    );
-  }
-
-  if (reportType === 'ownership') {
-    return measurements.filter(
-      (measurement) => measurement.family === 'ownership'
-    );
-  }
-
-  if (reportType === 'architecture') {
-    return measurements.filter(
-      (measurement) =>
-        measurement.family !== 'ownership' &&
-        measurement.family !== 'documentation'
-    );
-  }
-
-  return measurements;
-}
-
-function normalizeMetricWeights(
-  metrics: Record<string, number | undefined> | undefined
-): GovernanceProfile['metrics'] {
-  if (!metrics) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(metrics).filter(
-      (entry): entry is [string, number] => typeof entry[1] === 'number'
-    )
-  );
-}
-
-function loadConformanceSignals(
-  input: ReturnType<typeof resolveConformanceInput>
-) {
-  if (!input.conformanceJson) {
-    return [];
-  }
-
-  try {
-    return buildConformanceSignals(
-      readConformanceSnapshot({ conformanceJson: input.conformanceJson })
-    );
-  } catch (error) {
-    if (input.source === 'nx-json') {
-      throw new Error(
-        `Unable to load Nx Conformance output configured in nx.json at "${
-          input.conformanceJson
-        }": ${toErrorMessage(error)}`
-      );
-    }
-
-    throw error;
-  }
-}
-
 function resolveSnapshotPath(
   explicitPath: string | undefined,
   fallbackPath: string | undefined
@@ -1714,10 +1425,6 @@ function resolveSnapshotPath(
   return path.isAbsolute(explicitPath)
     ? explicitPath
     : path.resolve(workspaceRoot, explicitPath);
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unknown error.';
 }
 
 function renderDriftCliReport(
