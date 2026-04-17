@@ -261,6 +261,25 @@ describe('runGovernance', () => {
     }
   });
 
+  it('returns an empty exception report when no exceptions are declared', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    const result = await runGovernance({ reportType: 'health' });
+
+    expect(result.assessment.exceptions).toEqual({
+      summary: {
+        declaredCount: 0,
+        matchedCount: 0,
+        suppressedPolicyViolationCount: 0,
+        suppressedConformanceFindingCount: 0,
+        unusedExceptionCount: 0,
+      },
+      used: [],
+      unused: [],
+      suppressedFindings: [],
+    });
+  });
+
   it('suppresses matching declared exceptions before conformance signals are built', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 
@@ -335,6 +354,40 @@ describe('runGovernance', () => {
           (entry) => entry.source === 'conformance'
         )
       ).toEqual({ source: 'conformance', count: 1 });
+      expect(withException.assessment.exceptions.summary).toEqual({
+        declaredCount: 1,
+        matchedCount: 1,
+        suppressedPolicyViolationCount: 0,
+        suppressedConformanceFindingCount: 1,
+        unusedExceptionCount: 0,
+      });
+      expect(withException.assessment.exceptions.used).toEqual([
+        {
+          id: 'suppress-conformance-boundary',
+          source: 'conformance',
+          reason: 'Known migration overlap.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-06-01',
+          },
+          matchCount: 1,
+        },
+      ]);
+      expect(withException.assessment.exceptions.suppressedFindings).toEqual([
+        expect.objectContaining({
+          kind: 'conformance-finding',
+          exceptionId: 'suppress-conformance-boundary',
+          source: 'conformance',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          category: 'boundary',
+          severity: 'error',
+          projectId: 'packages/governance',
+          relatedProjectIds: [
+            'packages/governance-e2e',
+          ],
+          message: 'Suppressed conformance boundary violation',
+        }),
+      ]);
       expect(
         withException.assessment.topIssues.filter(
           (issue) =>
@@ -363,6 +416,67 @@ describe('runGovernance', () => {
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  it('reports declared but unused exceptions without affecting active burden', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    const baseline = await runGovernance({ reportType: 'health' });
+    const resolvedOverrides = await loadProfileOverrides(
+      workspaceRoot,
+      'angular-cleanup'
+    );
+    mockedLoadProfileOverrides.mockResolvedValueOnce({
+      ...resolvedOverrides,
+      exceptions: [
+        {
+          id: 'unused-policy-exception',
+          source: 'policy',
+          scope: {
+            source: 'policy',
+            ruleId: 'domain-boundary',
+            projectId: 'missing-project',
+          },
+          reason: 'Reserved for future migration.',
+          owner: '@org/architecture',
+          review: {
+            expiresAt: '2026-08-01',
+          },
+        },
+      ],
+    });
+
+    const withUnusedException = await runGovernance({ reportType: 'health' });
+
+    expect(withUnusedException.assessment.exceptions.summary).toEqual({
+      declaredCount: 1,
+      matchedCount: 0,
+      suppressedPolicyViolationCount: 0,
+      suppressedConformanceFindingCount: 0,
+      unusedExceptionCount: 1,
+    });
+    expect(withUnusedException.assessment.exceptions.used).toEqual([]);
+    expect(withUnusedException.assessment.exceptions.unused).toEqual([
+      {
+        id: 'unused-policy-exception',
+        source: 'policy',
+        reason: 'Reserved for future migration.',
+        owner: '@org/architecture',
+        review: {
+          expiresAt: '2026-08-01',
+        },
+        matchCount: 0,
+      },
+    ]);
+    expect(withUnusedException.assessment.exceptions.suppressedFindings).toEqual(
+      []
+    );
+    expect(withUnusedException.assessment.violations).toEqual(
+      baseline.assessment.violations
+    );
+    expect(withUnusedException.assessment.signalBreakdown).toEqual(
+      baseline.assessment.signalBreakdown
+    );
   });
 
   it('auto-discovers conformance output from nx.json when no override is provided', async () => {

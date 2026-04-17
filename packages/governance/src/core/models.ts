@@ -163,10 +163,49 @@ export interface GovernanceTopIssue {
   sourcePluginId?: string;
 }
 
+export interface GovernanceExceptionSummary {
+  declaredCount: number;
+  matchedCount: number;
+  suppressedPolicyViolationCount: number;
+  suppressedConformanceFindingCount: number;
+  unusedExceptionCount: number;
+}
+
+export interface GovernanceExceptionUsage {
+  id: string;
+  source: 'policy' | 'conformance';
+  reason: string;
+  owner: string;
+  review: import('./exceptions.js').GovernanceExceptionReview;
+  matchCount: number;
+}
+
+export interface GovernanceExceptionFinding {
+  kind: 'policy-violation' | 'conformance-finding';
+  exceptionId: string;
+  source: 'policy' | 'conformance';
+  ruleId?: string;
+  category: GovernanceSignalCategory | 'architecture' | 'documentation';
+  severity: GovernanceSignalSeverity;
+  projectId?: string;
+  targetProjectId?: string;
+  relatedProjectIds: string[];
+  message: string;
+  sourcePluginId?: string;
+}
+
+export interface GovernanceExceptionReport {
+  summary: GovernanceExceptionSummary;
+  used: GovernanceExceptionUsage[];
+  unused: GovernanceExceptionUsage[];
+  suppressedFindings: GovernanceExceptionFinding[];
+}
+
 export interface GovernanceAssessment {
   workspace: GovernanceWorkspace;
   profile: string;
   warnings: string[];
+  exceptions: GovernanceExceptionReport;
   violations: Violation[];
   measurements: Measurement[];
   signalBreakdown: SignalBreakdown;
