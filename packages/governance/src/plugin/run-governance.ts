@@ -73,6 +73,7 @@ import {
   mergeGovernanceSignals,
 } from '../signal-engine/index.js';
 import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
+import { registerGovernanceExtensions } from '../extensions/host.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1470,6 +1471,13 @@ async function buildAssessment(
 
   const snapshot = await readNxWorkspaceSnapshot();
   const inventory = buildInventory(snapshot, overrides);
+  await registerGovernanceExtensions({
+    workspaceRoot,
+    profileName,
+    options: { ...options },
+    snapshot,
+    inventory,
+  });
   const allViolations = evaluatePolicies(inventory, effectiveProfile);
   const graphSignals = buildGraphSignals(toWorkspaceGraphSnapshot(inventory));
   const policySignals = buildPolicySignals(allViolations);
