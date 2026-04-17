@@ -22,6 +22,8 @@ import {
   angularCleanupProfile,
   loadProfileOverrides,
 } from '../presets/angular-cleanup/profile.js';
+import { renderCliReport } from '../reporting/render-cli.js';
+import { renderJsonReport } from '../reporting/render-json.js';
 import type {
   GovernanceExtensionHost,
   GovernanceMetricProviderInput,
@@ -605,6 +607,236 @@ describe('runGovernance', () => {
         }),
       ]);
     } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('loads declared exceptions from a real profile file and keeps assessment plus rendered output aligned', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-17T00:00:00.000Z'));
+
+    const tempDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-exceptions-e2e-')
+    );
+    const conformanceJson = path.join(tempDir, 'conformance.json');
+    const profilePath = path.join(
+      workspaceRoot,
+      'tools/governance/profiles/issue-102-e2e.json'
+    );
+
+    writeFileSync(
+      conformanceJson,
+      JSON.stringify([
+        {
+          id: 'active-boundary-finding',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          severity: 'error',
+          message: 'Suppressed conformance boundary violation',
+          projectId: 'packages/governance',
+          relatedProjectIds: ['packages/governance', 'packages/governance-e2e'],
+        },
+        {
+          id: 'stale-owner-finding',
+          ruleId: '@nx/conformance/ensure-owners',
+          severity: 'warning',
+          message: 'Reactivated conformance ownership warning',
+          projectId: 'packages/governance',
+        },
+      ])
+    );
+    writeFileSync(
+      profilePath,
+      `${JSON.stringify(
+        {
+          exceptions: [
+            {
+              id: 'stale-owner-gap',
+              source: 'conformance',
+              scope: {
+                source: 'conformance',
+                ruleId: '@nx/conformance/ensure-owners',
+                projectId: 'packages/governance',
+              },
+              reason: 'Needs review.',
+              owner: '@org/architecture',
+              review: {
+                reviewBy: '2026-04-01',
+              },
+            },
+            {
+              id: 'suppress-boundary',
+              source: 'conformance',
+              scope: {
+                source: 'conformance',
+                ruleId: '@nx/conformance/enforce-project-boundaries',
+                projectId: 'packages/governance',
+              },
+              reason: 'Known transition.',
+              owner: '@org/architecture',
+              review: {
+                reviewBy: '2026-06-01',
+              },
+            },
+            {
+              id: 'unused-expired-gap',
+              source: 'policy',
+              scope: {
+                source: 'policy',
+                ruleId: 'ownership-presence',
+                projectId: 'missing-project',
+              },
+              reason: 'Leftover waiver to remove.',
+              owner: '@org/architecture',
+              review: {
+                expiresAt: '2026-03-01',
+              },
+            },
+          ],
+        },
+        null,
+        2
+      )}\n`
+    );
+
+    try {
+      const result = await runGovernance({
+        profile: 'issue-102-e2e',
+        reportType: 'health',
+        conformanceJson,
+      });
+
+      expect(result.assessment.exceptions.summary).toEqual({
+        declaredCount: 3,
+        matchedCount: 2,
+        suppressedPolicyViolationCount: 0,
+        suppressedConformanceFindingCount: 1,
+        unusedExceptionCount: 1,
+        activeExceptionCount: 1,
+        staleExceptionCount: 1,
+        expiredExceptionCount: 1,
+        reactivatedPolicyViolationCount: 0,
+        reactivatedConformanceFindingCount: 1,
+      });
+      expect(result.assessment.exceptions.used).toEqual([
+        {
+          id: 'stale-owner-gap',
+          source: 'conformance',
+          status: 'stale',
+          reason: 'Needs review.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-04-01',
+          },
+          matchCount: 1,
+        },
+        {
+          id: 'suppress-boundary',
+          source: 'conformance',
+          status: 'active',
+          reason: 'Known transition.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-06-01',
+          },
+          matchCount: 1,
+        },
+      ]);
+      expect(result.assessment.exceptions.unused).toEqual([
+        {
+          id: 'unused-expired-gap',
+          source: 'policy',
+          status: 'expired',
+          reason: 'Leftover waiver to remove.',
+          owner: '@org/architecture',
+          review: {
+            expiresAt: '2026-03-01',
+          },
+          matchCount: 0,
+        },
+      ]);
+      expect(result.assessment.exceptions.suppressedFindings).toEqual([
+        expect.objectContaining({
+          kind: 'conformance-finding',
+          exceptionId: 'suppress-boundary',
+          status: 'active',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          projectId: 'packages/governance',
+          relatedProjectIds: ['packages/governance-e2e'],
+          message: 'Suppressed conformance boundary violation',
+        }),
+      ]);
+      expect(result.assessment.exceptions.reactivatedFindings).toEqual([
+        expect.objectContaining({
+          kind: 'conformance-finding',
+          exceptionId: 'stale-owner-gap',
+          status: 'stale',
+          ruleId: '@nx/conformance/ensure-owners',
+          projectId: 'packages/governance',
+          relatedProjectIds: [],
+          message: 'Reactivated conformance ownership warning',
+        }),
+      ]);
+
+      const cliReport = renderCliReport(result.assessment);
+      expect(cliReport).toContain('Exceptions:');
+      expect(cliReport).toContain('- declared: 3');
+      expect(cliReport).toContain('- active: 1');
+      expect(cliReport).toContain('- stale: 1');
+      expect(cliReport).toContain('- expired: 1');
+      expect(cliReport).toContain('- suppressed conformance findings: 1');
+      expect(cliReport).toContain('- reactivated conformance findings: 1');
+      expect(cliReport).toContain(
+        '- suppress-boundary :: active :: conformance/conformance-finding :: [error] :: @nx/conformance/enforce-project-boundaries :: scope=packages/governance -> related=packages/governance-e2e :: Suppressed conformance boundary violation'
+      );
+      expect(cliReport).toContain(
+        '- stale-owner-gap :: stale :: conformance/conformance-finding :: [warning] :: @nx/conformance/ensure-owners :: scope=packages/governance :: Reactivated conformance ownership warning'
+      );
+
+      expect(JSON.parse(renderJsonReport(result.assessment))).toMatchObject({
+        profile: 'issue-102-e2e',
+        exceptions: {
+          summary: {
+            declaredCount: 3,
+            matchedCount: 2,
+            suppressedConformanceFindingCount: 1,
+            unusedExceptionCount: 1,
+            activeExceptionCount: 1,
+            staleExceptionCount: 1,
+            expiredExceptionCount: 1,
+            reactivatedConformanceFindingCount: 1,
+          },
+          used: [
+            {
+              id: 'stale-owner-gap',
+              status: 'stale',
+            },
+            {
+              id: 'suppress-boundary',
+              status: 'active',
+            },
+          ],
+          unused: [
+            {
+              id: 'unused-expired-gap',
+              status: 'expired',
+            },
+          ],
+          suppressedFindings: [
+            {
+              exceptionId: 'suppress-boundary',
+              status: 'active',
+            },
+          ],
+          reactivatedFindings: [
+            {
+              exceptionId: 'stale-owner-gap',
+              status: 'stale',
+            },
+          ],
+        },
+      });
+    } finally {
+      rmSync(profilePath, { force: true });
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
