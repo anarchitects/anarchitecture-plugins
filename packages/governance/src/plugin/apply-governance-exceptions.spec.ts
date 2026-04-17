@@ -1,5 +1,8 @@
 import type { GovernanceException, Violation } from '../core/index.js';
-import type { ConformanceFinding, ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import type {
+  ConformanceFinding,
+  ConformanceSnapshot,
+} from '../conformance-adapter/conformance-adapter.js';
 import {
   buildConformanceSignals,
   buildPolicySignals,
@@ -65,6 +68,7 @@ describe('applyGovernanceExceptions', () => {
       exceptions,
       policyViolations: violations,
       conformanceFindings: [],
+      asOf: new Date('2026-04-17T00:00:00.000Z'),
     });
 
     expect(result.activePolicyViolations).toEqual([]);
@@ -129,6 +133,7 @@ describe('applyGovernanceExceptions', () => {
       ],
       policyViolations: [violation],
       conformanceFindings: [],
+      asOf: new Date('2026-04-17T00:00:00.000Z'),
     });
 
     expect(result.suppressedPolicyViolations).toEqual([
@@ -167,6 +172,7 @@ describe('applyGovernanceExceptions', () => {
       ],
       policyViolations: [],
       conformanceFindings: [finding],
+      asOf: new Date('2026-04-17T00:00:00.000Z'),
     });
 
     expect(result.activeConformanceFindings).toEqual([]);
@@ -178,7 +184,9 @@ describe('applyGovernanceExceptions', () => {
       }),
     ]);
     expect(
-      buildConformanceSignals(makeConformanceSnapshot(result.activeConformanceFindings))
+      buildConformanceSignals(
+        makeConformanceSnapshot(result.activeConformanceFindings)
+      )
     ).toEqual([]);
   });
 
@@ -238,6 +246,7 @@ describe('applyGovernanceExceptions', () => {
       ],
       policyViolations: [],
       conformanceFindings: findings,
+      asOf: new Date('2026-04-17T00:00:00.000Z'),
     });
 
     expect(result.suppressedConformanceFindings).toEqual([
@@ -247,6 +256,87 @@ describe('applyGovernanceExceptions', () => {
       }),
     ]);
     expect(result.activeConformanceFindings).toEqual([findings[1]]);
+  });
+
+  it('reactivates stale and expired exception matches instead of suppressing them', () => {
+    const policyViolation: Violation = {
+      id: 'orders-shared-domain',
+      ruleId: 'domain-boundary',
+      project: 'orders-app',
+      severity: 'error',
+      category: 'boundary',
+      message: 'Domain boundary violation.',
+      details: {
+        targetProject: 'shared-util',
+      },
+    };
+    const conformanceFinding: ConformanceFinding = {
+      id: 'finding-1',
+      ruleId: '@nx/conformance/enforce-project-boundaries',
+      category: 'boundary',
+      severity: 'warning',
+      projectId: 'orders-app',
+      relatedProjectIds: ['shared-util'],
+      message: 'Boundary warning.',
+    };
+
+    const result = applyGovernanceExceptions({
+      exceptions: [
+        {
+          id: 'stale-policy',
+          source: 'policy',
+          scope: {
+            source: 'policy',
+            ruleId: 'domain-boundary',
+            projectId: 'orders-app',
+            targetProjectId: 'shared-util',
+          },
+          reason: 'Needs review.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-04-01',
+          },
+        },
+        {
+          id: 'expired-conformance',
+          source: 'conformance',
+          scope: {
+            source: 'conformance',
+            ruleId: '@nx/conformance/enforce-project-boundaries',
+            projectId: 'orders-app',
+          },
+          reason: 'Expired exception.',
+          owner: '@org/architecture',
+          review: {
+            expiresAt: '2026-04-01',
+          },
+        },
+      ],
+      policyViolations: [policyViolation],
+      conformanceFindings: [conformanceFinding],
+      asOf: new Date('2026-04-17T00:00:00.000Z'),
+    });
+
+    expect(result.suppressedPolicyViolations).toEqual([]);
+    expect(result.suppressedConformanceFindings).toEqual([]);
+    expect(result.activePolicyViolations).toEqual([policyViolation]);
+    expect(result.activeConformanceFindings).toEqual([conformanceFinding]);
+    expect(result.reactivatedPolicyViolations).toEqual([
+      expect.objectContaining({
+        finding: policyViolation,
+        matchedExceptionId: 'stale-policy',
+        matchedExceptionStatus: 'stale',
+        outcome: 'active',
+      }),
+    ]);
+    expect(result.reactivatedConformanceFindings).toEqual([
+      expect.objectContaining({
+        finding: conformanceFinding,
+        matchedExceptionId: 'expired-conformance',
+        matchedExceptionStatus: 'expired',
+        outcome: 'active',
+      }),
+    ]);
   });
 });
 

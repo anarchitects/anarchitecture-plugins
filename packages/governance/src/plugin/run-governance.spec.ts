@@ -39,7 +39,9 @@ import {
 const actualProfileModule = jest.requireActual(
   '../presets/angular-cleanup/profile.js'
 ) as typeof import('../presets/angular-cleanup/profile.js');
-const mockedLoadProfileOverrides = jest.mocked(profileModule.loadProfileOverrides);
+const mockedLoadProfileOverrides = jest.mocked(
+  profileModule.loadProfileOverrides
+);
 
 describe('runGovernance', () => {
   function writeSnapshotFile(
@@ -57,6 +59,7 @@ describe('runGovernance', () => {
     mockedLoadProfileOverrides.mockImplementation(
       actualProfileModule.loadProfileOverrides
     );
+    jest.useRealTimers();
   });
 
   it('keeps report measurement ids stable across report types after signal-based metric wiring', async () => {
@@ -273,10 +276,16 @@ describe('runGovernance', () => {
         suppressedPolicyViolationCount: 0,
         suppressedConformanceFindingCount: 0,
         unusedExceptionCount: 0,
+        activeExceptionCount: 0,
+        staleExceptionCount: 0,
+        expiredExceptionCount: 0,
+        reactivatedPolicyViolationCount: 0,
+        reactivatedConformanceFindingCount: 0,
       },
       used: [],
       unused: [],
       suppressedFindings: [],
+      reactivatedFindings: [],
     });
   });
 
@@ -339,6 +348,7 @@ describe('runGovernance', () => {
     });
 
     try {
+      jest.useFakeTimers().setSystemTime(new Date('2026-04-17T00:00:00.000Z'));
       const withException = await runGovernance({
         reportType: 'health',
         conformanceJson,
@@ -360,11 +370,17 @@ describe('runGovernance', () => {
         suppressedPolicyViolationCount: 0,
         suppressedConformanceFindingCount: 1,
         unusedExceptionCount: 0,
+        activeExceptionCount: 1,
+        staleExceptionCount: 0,
+        expiredExceptionCount: 0,
+        reactivatedPolicyViolationCount: 0,
+        reactivatedConformanceFindingCount: 0,
       });
       expect(withException.assessment.exceptions.used).toEqual([
         {
           id: 'suppress-conformance-boundary',
           source: 'conformance',
+          status: 'active',
           reason: 'Known migration overlap.',
           owner: '@org/architecture',
           review: {
@@ -378,16 +394,18 @@ describe('runGovernance', () => {
           kind: 'conformance-finding',
           exceptionId: 'suppress-conformance-boundary',
           source: 'conformance',
+          status: 'active',
           ruleId: '@nx/conformance/enforce-project-boundaries',
           category: 'boundary',
           severity: 'error',
           projectId: 'packages/governance',
-          relatedProjectIds: [
-            'packages/governance-e2e',
-          ],
+          relatedProjectIds: ['packages/governance-e2e'],
           message: 'Suppressed conformance boundary violation',
         }),
       ]);
+      expect(withException.assessment.exceptions.reactivatedFindings).toEqual(
+        []
+      );
       expect(
         withException.assessment.topIssues.filter(
           (issue) =>
@@ -454,12 +472,18 @@ describe('runGovernance', () => {
       suppressedPolicyViolationCount: 0,
       suppressedConformanceFindingCount: 0,
       unusedExceptionCount: 1,
+      activeExceptionCount: 1,
+      staleExceptionCount: 0,
+      expiredExceptionCount: 0,
+      reactivatedPolicyViolationCount: 0,
+      reactivatedConformanceFindingCount: 0,
     });
     expect(withUnusedException.assessment.exceptions.used).toEqual([]);
     expect(withUnusedException.assessment.exceptions.unused).toEqual([
       {
         id: 'unused-policy-exception',
         source: 'policy',
+        status: 'active',
         reason: 'Reserved for future migration.',
         owner: '@org/architecture',
         review: {
@@ -468,15 +492,121 @@ describe('runGovernance', () => {
         matchCount: 0,
       },
     ]);
-    expect(withUnusedException.assessment.exceptions.suppressedFindings).toEqual(
-      []
-    );
+    expect(
+      withUnusedException.assessment.exceptions.suppressedFindings
+    ).toEqual([]);
+    expect(
+      withUnusedException.assessment.exceptions.reactivatedFindings
+    ).toEqual([]);
     expect(withUnusedException.assessment.violations).toEqual(
       baseline.assessment.violations
     );
     expect(withUnusedException.assessment.signalBreakdown).toEqual(
       baseline.assessment.signalBreakdown
     );
+  });
+
+  it('reactivates findings when exceptions are stale or expired', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-17T00:00:00.000Z'));
+
+    const tempDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-conformance-')
+    );
+    const conformanceJson = path.join(tempDir, 'conformance.json');
+
+    writeFileSync(
+      conformanceJson,
+      JSON.stringify([
+        {
+          id: 'stale-finding',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          severity: 'error',
+          message: 'Reactivated conformance boundary violation',
+          projectId: 'packages/governance',
+          relatedProjectIds: ['packages/governance-e2e'],
+        },
+      ])
+    );
+
+    const resolvedOverrides = await loadProfileOverrides(
+      workspaceRoot,
+      'angular-cleanup'
+    );
+    mockedLoadProfileOverrides.mockResolvedValueOnce({
+      ...resolvedOverrides,
+      exceptions: [
+        {
+          id: 'stale-conformance-boundary',
+          source: 'conformance',
+          scope: {
+            source: 'conformance',
+            ruleId: '@nx/conformance/enforce-project-boundaries',
+            projectId: 'packages/governance',
+          },
+          reason: 'Needs review.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-04-01',
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = await runGovernance({
+        reportType: 'health',
+        conformanceJson,
+      });
+
+      expect(
+        result.assessment.signalBreakdown.bySource.find(
+          (entry) => entry.source === 'conformance'
+        )
+      ).toEqual({ source: 'conformance', count: 1 });
+      expect(result.assessment.exceptions.summary).toEqual({
+        declaredCount: 1,
+        matchedCount: 1,
+        suppressedPolicyViolationCount: 0,
+        suppressedConformanceFindingCount: 0,
+        unusedExceptionCount: 0,
+        activeExceptionCount: 0,
+        staleExceptionCount: 1,
+        expiredExceptionCount: 0,
+        reactivatedPolicyViolationCount: 0,
+        reactivatedConformanceFindingCount: 1,
+      });
+      expect(result.assessment.exceptions.used).toEqual([
+        {
+          id: 'stale-conformance-boundary',
+          source: 'conformance',
+          status: 'stale',
+          reason: 'Needs review.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-04-01',
+          },
+          matchCount: 1,
+        },
+      ]);
+      expect(result.assessment.exceptions.suppressedFindings).toEqual([]);
+      expect(result.assessment.exceptions.reactivatedFindings).toEqual([
+        expect.objectContaining({
+          kind: 'conformance-finding',
+          exceptionId: 'stale-conformance-boundary',
+          source: 'conformance',
+          status: 'stale',
+          ruleId: '@nx/conformance/enforce-project-boundaries',
+          category: 'boundary',
+          severity: 'error',
+          projectId: 'packages/governance',
+          relatedProjectIds: ['packages/governance-e2e'],
+          message: 'Reactivated conformance boundary violation',
+        }),
+      ]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('auto-discovers conformance output from nx.json when no override is provided', async () => {

@@ -22,14 +22,23 @@ describe('governance report rendering', () => {
     expect(rendered).toContain('Signal Types:');
     expect(rendered).toContain('Signal Severity:');
     expect(rendered).toContain('Exceptions:');
-    expect(rendered).toContain('- declared: 2');
-    expect(rendered).toContain('- matched: 1');
+    expect(rendered).toContain('- declared: 3');
+    expect(rendered).toContain('- matched: 2');
     expect(rendered).toContain('- unused: 1');
+    expect(rendered).toContain('- active: 1');
+    expect(rendered).toContain('- stale: 1');
+    expect(rendered).toContain('- expired: 1');
     expect(rendered).toContain('- suppressed policy findings: 1');
     expect(rendered).toContain('- suppressed conformance findings: 1');
+    expect(rendered).toContain('- reactivated policy findings: 1');
+    expect(rendered).toContain('- reactivated conformance findings: 0');
     expect(rendered).toContain('Suppressed Findings:');
     expect(rendered).toContain(
-      '- suppress-domain :: policy/policy-violation :: [error] :: domain-boundary :: scope=orders-app -> shared-util -> related=orders-app,shared-util :: Suppressed domain boundary violation'
+      '- suppress-domain :: active :: policy/policy-violation :: [error] :: domain-boundary :: scope=orders-app -> shared-util -> related=orders-app,shared-util :: Suppressed domain boundary violation'
+    );
+    expect(rendered).toContain('Reactivated Findings:');
+    expect(rendered).toContain(
+      '- stale-owner-gap :: stale :: policy/policy-violation :: [warning] :: ownership-presence :: scope=payments-feature :: Reactivated ownership gap'
     );
     expect(rendered).toContain('Metric Families:');
     expect(rendered).toContain('Top Issues:');
@@ -145,16 +154,22 @@ describe('governance report rendering', () => {
       },
       exceptions: {
         summary: {
-          declaredCount: 2,
-          matchedCount: 1,
+          declaredCount: 3,
+          matchedCount: 2,
           suppressedPolicyViolationCount: 1,
           suppressedConformanceFindingCount: 1,
           unusedExceptionCount: 1,
+          activeExceptionCount: 1,
+          staleExceptionCount: 1,
+          expiredExceptionCount: 1,
+          reactivatedPolicyViolationCount: 1,
+          reactivatedConformanceFindingCount: 0,
         },
         used: [
           {
             id: 'suppress-domain',
             source: 'policy',
+            status: 'active',
             reason: 'Known transition.',
             owner: '@org/architecture',
             review: {
@@ -162,15 +177,27 @@ describe('governance report rendering', () => {
             },
             matchCount: 2,
           },
+          {
+            id: 'stale-owner-gap',
+            source: 'policy',
+            status: 'stale',
+            reason: 'Needs review.',
+            owner: '@org/architecture',
+            review: {
+              reviewBy: '2026-04-01',
+            },
+            matchCount: 1,
+          },
         ],
         unused: [
           {
             id: 'unused-owner-gap',
             source: 'conformance',
+            status: 'expired',
             reason: 'Reserved but currently unmatched.',
             owner: '@org/architecture',
             review: {
-              expiresAt: '2026-08-01',
+              expiresAt: '2026-03-01',
             },
             matchCount: 0,
           },
@@ -180,6 +207,7 @@ describe('governance report rendering', () => {
             kind: 'policy-violation',
             exceptionId: 'suppress-domain',
             source: 'policy',
+            status: 'active',
             ruleId: 'domain-boundary',
             category: 'boundary',
             severity: 'error',
@@ -192,6 +220,7 @@ describe('governance report rendering', () => {
             kind: 'conformance-finding',
             exceptionId: 'suppress-domain',
             source: 'conformance',
+            status: 'active',
             ruleId: '@nx/conformance/enforce-project-boundaries',
             category: 'boundary',
             severity: 'warning',
@@ -200,6 +229,20 @@ describe('governance report rendering', () => {
             message: 'Suppressed conformance boundary warning',
           },
         ]),
+        reactivatedFindings: [
+          {
+            kind: 'policy-violation',
+            exceptionId: 'stale-owner-gap',
+            source: 'policy',
+            status: 'stale',
+            ruleId: 'ownership-presence',
+            category: 'ownership',
+            severity: 'warning',
+            projectId: 'payments-feature',
+            relatedProjectIds: [],
+            message: 'Reactivated ownership gap',
+          },
+        ],
       },
       signalBreakdown: {
         total: 6,
@@ -274,16 +317,22 @@ function makeAssessment(): GovernanceAssessment {
     warnings: [],
     exceptions: {
       summary: {
-        declaredCount: 2,
-        matchedCount: 1,
+        declaredCount: 3,
+        matchedCount: 2,
         suppressedPolicyViolationCount: 1,
         suppressedConformanceFindingCount: 1,
         unusedExceptionCount: 1,
+        activeExceptionCount: 1,
+        staleExceptionCount: 1,
+        expiredExceptionCount: 1,
+        reactivatedPolicyViolationCount: 1,
+        reactivatedConformanceFindingCount: 0,
       },
       used: [
         {
           id: 'suppress-domain',
           source: 'policy',
+          status: 'active',
           reason: 'Known transition.',
           owner: '@org/architecture',
           review: {
@@ -291,15 +340,27 @@ function makeAssessment(): GovernanceAssessment {
           },
           matchCount: 2,
         },
+        {
+          id: 'stale-owner-gap',
+          source: 'policy',
+          status: 'stale',
+          reason: 'Needs review.',
+          owner: '@org/architecture',
+          review: {
+            reviewBy: '2026-04-01',
+          },
+          matchCount: 1,
+        },
       ],
       unused: [
         {
           id: 'unused-owner-gap',
           source: 'conformance',
+          status: 'expired',
           reason: 'Reserved but currently unmatched.',
           owner: '@org/architecture',
           review: {
-            expiresAt: '2026-08-01',
+            expiresAt: '2026-03-01',
           },
           matchCount: 0,
         },
@@ -309,6 +370,7 @@ function makeAssessment(): GovernanceAssessment {
           kind: 'policy-violation',
           exceptionId: 'suppress-domain',
           source: 'policy',
+          status: 'active',
           ruleId: 'domain-boundary',
           category: 'boundary',
           severity: 'error',
@@ -321,12 +383,27 @@ function makeAssessment(): GovernanceAssessment {
           kind: 'conformance-finding',
           exceptionId: 'suppress-domain',
           source: 'conformance',
+          status: 'active',
           ruleId: '@nx/conformance/enforce-project-boundaries',
           category: 'boundary',
           severity: 'warning',
           projectId: 'orders-app',
           relatedProjectIds: ['orders-app', 'shared-util'],
           message: 'Suppressed conformance boundary warning',
+        },
+      ],
+      reactivatedFindings: [
+        {
+          kind: 'policy-violation',
+          exceptionId: 'stale-owner-gap',
+          source: 'policy',
+          status: 'stale',
+          ruleId: 'ownership-presence',
+          category: 'ownership',
+          severity: 'warning',
+          projectId: 'payments-feature',
+          relatedProjectIds: [],
+          message: 'Reactivated ownership gap',
         },
       ],
     },
