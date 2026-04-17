@@ -10,8 +10,10 @@
 This roadmap prioritizes **Nx ecosystem alignment** over Angular-specific expansion.
 
 Goal:
+
 - Become **complementary to Nx PowerPack (Conformance)** and **Nx Graph / PolyGraph**
 - Build a **signal-driven governance engine**
+- Establish `@anarchitects/nx-governance` as the shared core plugin for future ecosystem-specific governance extensions
 
 ---
 
@@ -122,21 +124,27 @@ Goal:
 
 ---
 
-# 🅰️ Phase 5 — Angular Specialization (LATER)
+# 🧩 Phase 5 — Ecosystem Extension Plugins (LATER)
 
-## Angular Metrics
+## Core Extension Model
 
-- [ ] Facade Bypass Ratio
-- [ ] Smart Component Density
-- [ ] Shared UI Coupling
-- [ ] Standalone Component Complexity
-- [ ] Module Boundary Violations
+- [x] Define extension registration and lifecycle in the core plugin
+- [x] Export extension authoring contracts from `@anarchitects/nx-governance`
+- [ ] Document extension packaging and authoring model
 
-## Angular Profile
+## Angular Reference Plugin
 
-- [ ] Implement Angular preset
-- [ ] Apply Angular-specific policies
-- [ ] Add Angular Architecture Score
+- [ ] Implement `@anarchitects/nx-governance-angular`
+- [ ] Add Angular-specific enrichers, rule packs, signals, and metrics
+- [ ] Ship Angular plugin docs and adoption guidance
+
+## Future Ecosystem Engines
+
+- [ ] TypeScript extension plugin
+- [ ] React extension plugin
+- [ ] Maven extension plugin
+- [ ] Gradle extension plugin
+- [ ] .NET extension plugin
 
 ---
 
@@ -157,10 +165,12 @@ Nx Governance builds on:
 - Nx Cloud / PolyGraph (future)
 
 It does NOT:
+
 - replace Nx features
 - duplicate rule engines
 
 It DOES:
+
 - interpret signals
 - provide health insights
 - enable architectural decision-making

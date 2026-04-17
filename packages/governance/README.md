@@ -17,6 +17,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 - [Installation](#installation)
 - [Supported Nx versions](#supported-nx-versions)
 - [Quick start](#quick-start)
+- [Extension model](#extension-model)
 - [Concepts](#concepts)
   - [Profiles](#profiles)
   - [Boundary policy source](#boundary-policy-source)
@@ -109,13 +110,37 @@ nx repo-architecture
 
 ---
 
+## Extension model
+
+`@anarchitects/nx-governance` is the shared governance core for Nx workspaces.
+
+The core package owns:
+
+- governance orchestration
+- shared governance models
+- scoring and health aggregation
+- CLI and JSON reporting
+- extension discovery and lifecycle
+
+Ecosystem-specific intelligence can be added through separate Nx plugins. Those plugins contribute enrichers, rule packs, signals, and metrics into the core pipeline instead of creating their own governance model.
+
+The first reference engine is Angular, positioned as a separate plugin:
+
+- `@anarchitects/nx-governance-angular`
+
+That keeps framework-specific behavior out of the core package and establishes the model for future engines such as TypeScript, React, Maven, Gradle, and .NET.
+
+If you are building an ecosystem plugin, see [EXTENSIONS.md](./EXTENSIONS.md).
+
+---
+
 ## Concepts
 
 ### Profiles
 
 A **governance profile** is a JSON file at `tools/governance/profiles/<name>.json`. It is the single source of truth for what the workspace architecture _should_ look like. Every run of any governance executor reads this file and evaluates the live project graph against it.
 
-The built-in preset is `angular-cleanup`, modelled on Angular workspace conventions (layered architecture, domain-driven boundaries). You can adjust every aspect of it by editing the JSON file — no TypeScript required.
+The built-in preset is `angular-cleanup`, a starter profile modelled on layered, domain-driven workspace conventions. It is a profile shipped by the core package, not an Angular engine implementation. You can adjust every aspect of it by editing the JSON file — no TypeScript required.
 
 ### Boundary policy source
 
