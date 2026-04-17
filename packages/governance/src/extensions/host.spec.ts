@@ -53,12 +53,12 @@ describe('registerGovernanceExtensions', () => {
             governanceExtension: {
               id: 'plugin-a',
               register(host: {
-                registerAnalyzer(value: unknown): void;
                 registerMetricProvider(value: unknown): void;
+                registerRulePack(value: unknown): void;
               }) {
                 registrationOrder.push('plugin-a');
-                host.registerAnalyzer('analyzer-a');
                 host.registerMetricProvider('metric-a');
+                host.registerRulePack('rule-a');
               },
             },
           };
@@ -88,11 +88,13 @@ describe('registerGovernanceExtensions', () => {
 
     expect(registrationOrder).toEqual(['plugin-a', 'plugin-b']);
     expect(registry).toEqual({
-      analyzers: ['analyzer-a'],
-      metricProviders: ['metric-a'],
-      signalProviders: ['signal-b'],
-      rulePacks: ['rule-b'],
-      enrichers: ['enricher-b'],
+      metricProviders: [{ pluginId: 'plugin-a', contribution: 'metric-a' }],
+      signalProviders: [{ pluginId: 'plugin-b', contribution: 'signal-b' }],
+      rulePacks: [
+        { pluginId: 'plugin-a', contribution: 'rule-a' },
+        { pluginId: 'plugin-b', contribution: 'rule-b' },
+      ],
+      enrichers: [{ pluginId: 'plugin-b', contribution: 'enricher-b' }],
     });
   });
 
@@ -129,7 +131,6 @@ describe('registerGovernanceExtensions', () => {
         },
       })
     ).resolves.toEqual({
-      analyzers: [],
       metricProviders: [],
       signalProviders: [],
       rulePacks: [],

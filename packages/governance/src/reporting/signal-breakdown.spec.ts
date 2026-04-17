@@ -44,6 +44,7 @@ describe('signal breakdown helpers', () => {
         { source: 'graph', count: 2 },
         { source: 'conformance', count: 1 },
         { source: 'policy', count: 1 },
+        { source: 'extension', count: 0 },
       ],
       byType: [
         { type: 'structural-dependency', count: 1 },
@@ -76,6 +77,7 @@ describe('signal breakdown helpers', () => {
         { source: 'graph', count: 1 },
         { source: 'conformance', count: 0 },
         { source: 'policy', count: 0 },
+        { source: 'extension', count: 0 },
       ],
       byType: [{ type: 'structural-dependency', count: 1 }],
       bySeverity: [

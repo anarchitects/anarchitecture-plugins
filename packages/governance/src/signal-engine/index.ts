@@ -3,6 +3,7 @@ export type {
   GovernanceSignalCategory,
   GovernanceSignalSeverity,
   GovernanceSignalSource,
+  KnownGovernanceSignalType,
   GovernanceSignalType,
 } from './types.js';
 export {

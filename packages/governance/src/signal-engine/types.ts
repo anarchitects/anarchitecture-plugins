@@ -1,6 +1,8 @@
 import type { Category } from '../conformance-adapter/conformance-adapter.js';
 
-export type GovernanceSignalType =
+export type GovernanceSignalType = KnownGovernanceSignalType | (string & {});
+
+export type KnownGovernanceSignalType =
   | 'structural-dependency'
   | 'cross-domain-dependency'
   | 'missing-domain-context'
@@ -14,7 +16,11 @@ export type GovernanceSignalSeverity = 'info' | 'warning' | 'error';
 
 export type GovernanceSignalCategory = Category | 'structure';
 
-export type GovernanceSignalSource = 'graph' | 'conformance' | 'policy';
+export type GovernanceSignalSource =
+  | 'graph'
+  | 'conformance'
+  | 'policy'
+  | 'extension';
 
 export interface GovernanceSignal {
   id: string;
@@ -27,5 +33,6 @@ export interface GovernanceSignal {
   message: string;
   metadata?: Record<string, unknown>;
   source: GovernanceSignalSource;
+  sourcePluginId?: string;
   createdAt: string;
 }

@@ -3,16 +3,17 @@ import type {
   GovernanceSignal,
   GovernanceSignalSeverity,
   GovernanceSignalSource,
-  GovernanceSignalType,
+  KnownGovernanceSignalType,
 } from '../signal-engine/index.js';
 
 const SOURCE_ORDER: Record<GovernanceSignalSource, number> = {
   graph: 0,
   conformance: 1,
   policy: 2,
+  extension: 3,
 };
 
-const TYPE_ORDER: Record<GovernanceSignalType, number> = {
+const TYPE_ORDER: Record<KnownGovernanceSignalType, number> = {
   'structural-dependency': 0,
   'cross-domain-dependency': 1,
   'missing-domain-context': 2,
@@ -48,6 +49,9 @@ export function buildTopIssues(
       if (!existing.issue.ruleId) {
         existing.issue.ruleId = readRuleId(signal);
       }
+      if (!existing.issue.sourcePluginId) {
+        existing.issue.sourcePluginId = signal.sourcePluginId;
+      }
       continue;
     }
 
@@ -60,6 +64,7 @@ export function buildTopIssues(
         projects: projectsFromSignal(signal),
         ruleId: readRuleId(signal),
         message: signal.message,
+        sourcePluginId: signal.sourcePluginId,
       },
     });
   }
@@ -120,9 +125,22 @@ function compareTopIssues(
     return countOrder;
   }
 
-  const typeOrder = TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
-  if (typeOrder !== 0) {
+  const knownTypeOrderA = TYPE_ORDER[a.type as KnownGovernanceSignalType];
+  const knownTypeOrderB = TYPE_ORDER[b.type as KnownGovernanceSignalType];
+  const typeOrder = knownTypeOrderA - knownTypeOrderB;
+  if (
+    knownTypeOrderA !== undefined &&
+    knownTypeOrderB !== undefined &&
+    typeOrder !== 0
+  ) {
     return typeOrder;
+  }
+
+  if (!(a.type in TYPE_ORDER) || !(b.type in TYPE_ORDER)) {
+    const dynamicTypeOrder = a.type.localeCompare(b.type);
+    if (dynamicTypeOrder !== 0) {
+      return dynamicTypeOrder;
+    }
   }
 
   const sourceOrder = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];

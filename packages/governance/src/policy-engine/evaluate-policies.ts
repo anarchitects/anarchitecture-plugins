@@ -35,6 +35,7 @@ export function evaluatePolicies(
         ruleId: 'domain-boundary',
         project: source.name,
         severity: 'error',
+        category: 'boundary',
         message: `Project ${source.name} in domain ${source.domain} depends on ${target.name} in domain ${target.domain}.`,
         details: {
           targetProject: target.name,
@@ -60,6 +61,7 @@ export function evaluatePolicies(
         ruleId: 'layer-boundary',
         project: source.name,
         severity: 'warning',
+        category: 'boundary',
         message: `Layer violation: ${source.name} (${source.layer}) depends on ${target.name} (${target.layer}).`,
         details: {
           targetProject: target.name,
@@ -84,6 +86,7 @@ export function evaluatePolicies(
           ruleId: 'ownership-presence',
           project: project.name,
           severity: 'warning',
+          category: 'ownership',
           message: `Project ${project.name} has no ownership metadata or CODEOWNERS mapping.`,
           recommendation:
             'Add ownership metadata in project configuration or ensure CODEOWNERS covers the project root.',

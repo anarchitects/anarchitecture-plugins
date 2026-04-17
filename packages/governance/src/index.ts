@@ -30,3 +30,4 @@ export * from './nx-adapter/graph-adapter.js';
 export * from './conformance-adapter/conformance-adapter.js';
 export * from './signal-engine/index.js';
 export * from './metric-engine/calculate-metrics.js';
+export * from './extensions/contracts.js';

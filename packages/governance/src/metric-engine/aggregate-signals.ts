@@ -22,6 +22,7 @@ const SOURCE_SORT_ORDER: Record<GovernanceSignalSource, number> = {
   graph: 0,
   conformance: 1,
   policy: 2,
+  extension: 3,
 };
 
 const SEVERITY_SORT_ORDER: Record<GovernanceSignalSeverity, number> = {
@@ -47,7 +48,9 @@ const SIGNAL_TYPE_WEIGHTS: Record<GovernanceSignalType, number> = {
   'ownership-gap': 0.5,
 };
 
-export function aggregateSignals(signals: GovernanceSignal[]): SignalAggregate[] {
+export function aggregateSignals(
+  signals: GovernanceSignal[]
+): SignalAggregate[] {
   const groupedSignals = new Map<string, SignalAggregate>();
 
   for (const signal of signals) {
@@ -119,7 +122,10 @@ function signalWeight(signal: GovernanceSignal): number {
   );
 }
 
-function compareSignalAggregates(a: SignalAggregate, b: SignalAggregate): number {
+function compareSignalAggregates(
+  a: SignalAggregate,
+  b: SignalAggregate
+): number {
   const sourceOrder = SOURCE_SORT_ORDER[a.source] - SOURCE_SORT_ORDER[b.source];
   if (sourceOrder !== 0) {
     return sourceOrder;
@@ -150,7 +156,9 @@ function compareSignalAggregates(a: SignalAggregate, b: SignalAggregate): number
     return targetProjectOrder;
   }
 
-  return a.relatedProjectIds.join(',').localeCompare(b.relatedProjectIds.join(','));
+  return a.relatedProjectIds
+    .join(',')
+    .localeCompare(b.relatedProjectIds.join(','));
 }
 
 function roundWeight(value: number): number {

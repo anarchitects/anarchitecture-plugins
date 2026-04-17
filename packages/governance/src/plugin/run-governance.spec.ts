@@ -10,6 +10,13 @@ import {
   angularCleanupProfile,
   loadProfileOverrides,
 } from '../presets/angular-cleanup/profile.js';
+import type {
+  GovernanceExtensionHost,
+  GovernanceMetricProviderInput,
+  GovernanceRulePackInput,
+  GovernanceSignalProviderInput,
+  GovernanceWorkspaceEnricherInput,
+} from '../extensions/contracts.js';
 import {
   runGovernance,
   runGovernanceAiDrift,
@@ -39,23 +46,23 @@ describe('runGovernance', () => {
     const overrides = await loadProfileOverrides(workspaceRoot, profileName);
     const resolvedWeights = {
       'architectural-entropy':
-        overrides.metrics?.architecturalEntropyWeight ??
-        angularCleanupProfile.metrics.architecturalEntropyWeight,
+        overrides.metrics?.['architectural-entropy'] ??
+        angularCleanupProfile.metrics['architectural-entropy'],
       'dependency-complexity':
-        overrides.metrics?.dependencyComplexityWeight ??
-        angularCleanupProfile.metrics.dependencyComplexityWeight,
+        overrides.metrics?.['dependency-complexity'] ??
+        angularCleanupProfile.metrics['dependency-complexity'],
       'domain-integrity':
-        overrides.metrics?.domainIntegrityWeight ??
-        angularCleanupProfile.metrics.domainIntegrityWeight,
+        overrides.metrics?.['domain-integrity'] ??
+        angularCleanupProfile.metrics['domain-integrity'],
       'ownership-coverage':
-        overrides.metrics?.ownershipCoverageWeight ??
-        angularCleanupProfile.metrics.ownershipCoverageWeight,
+        overrides.metrics?.['ownership-coverage'] ??
+        angularCleanupProfile.metrics['ownership-coverage'],
       'documentation-completeness':
-        overrides.metrics?.documentationCompletenessWeight ??
-        angularCleanupProfile.metrics.documentationCompletenessWeight,
+        overrides.metrics?.['documentation-completeness'] ??
+        angularCleanupProfile.metrics['documentation-completeness'],
       'layer-integrity':
-        overrides.metrics?.layerIntegrityWeight ??
-        angularCleanupProfile.metrics.layerIntegrityWeight,
+        overrides.metrics?.['layer-integrity'] ??
+        angularCleanupProfile.metrics['layer-integrity'],
     };
     const resolvedStatusThresholds =
       overrides.health?.statusThresholds ??
@@ -76,7 +83,7 @@ describe('runGovernance', () => {
     ]);
     expect(
       boundaries.assessment.measurements.map((metric) => metric.id)
-    ).toEqual(['architectural-entropy', 'domain-integrity', 'layer-integrity']);
+    ).toEqual(['domain-integrity', 'layer-integrity']);
     expect(
       ownership.assessment.measurements.map((metric) => metric.id)
     ).toEqual(['ownership-coverage']);
@@ -86,6 +93,7 @@ describe('runGovernance', () => {
       'architectural-entropy',
       'dependency-complexity',
       'domain-integrity',
+      'layer-integrity',
     ]);
 
     expect(health.assessment.health).toEqual(
@@ -118,6 +126,7 @@ describe('runGovernance', () => {
         source: 'policy',
         count: health.assessment.signalBreakdown.bySource[2].count,
       },
+      { source: 'extension', count: 0 },
     ]);
     expect(health.assessment.signalBreakdown.bySeverity).toEqual([
       {
@@ -146,7 +155,7 @@ describe('runGovernance', () => {
       boundaries.assessment.metricBreakdown.families.map(
         (entry) => entry.family
       )
-    ).toEqual(['architecture', 'boundaries']);
+    ).toEqual(['boundaries']);
     expect(
       ownership.assessment.metricBreakdown.families.map((entry) => entry.family)
     ).toEqual(['ownership']);
@@ -388,6 +397,151 @@ describe('runGovernance', () => {
     expect(withGovernanceDiscovery.assessment).toEqual(baseline.assessment);
   });
 
+  it('consumes typed extension enrichers, rule packs, signals, and metrics in a governance run', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    const nxJsonPath = path.join(workspaceRoot, 'nx.json');
+    const actualReadFileSync = fs.readFileSync;
+
+    jest.doMock(
+      'test-plugin/governance-extension',
+      () => ({
+        governanceExtension: {
+          id: 'test-plugin',
+          register(host: GovernanceExtensionHost) {
+            host.registerEnricher({
+              enrichWorkspace({ workspace }: GovernanceWorkspaceEnricherInput) {
+                return {
+                  ...workspace,
+                  projects: workspace.projects.map((project, index) =>
+                    index === 0
+                      ? {
+                          ...project,
+                          metadata: {
+                            ...project.metadata,
+                            extensionTouched: true,
+                          },
+                        }
+                      : project
+                  ),
+                };
+              },
+            });
+            host.registerRulePack({
+              evaluate({ workspace }: GovernanceRulePackInput) {
+                return [
+                  {
+                    id: 'extension-violation',
+                    ruleId: 'extension-boundary',
+                    project: workspace.projects[0]?.name ?? 'unknown',
+                    severity: 'warning',
+                    category: 'boundary',
+                    message: 'Extension rule violation',
+                  },
+                ];
+              },
+            });
+            host.registerSignalProvider({
+              provideSignals({
+                workspace,
+                violations,
+                signals,
+              }: GovernanceSignalProviderInput) {
+                return [
+                  {
+                    id: 'extension-signal',
+                    type: 'extension-warning',
+                    sourceProjectId: workspace.projects[0]?.name,
+                    relatedProjectIds: workspace.projects[0]
+                      ? [workspace.projects[0].name]
+                      : [],
+                    severity: 'warning',
+                    category: 'boundary',
+                    message: `Extension signal for ${violations.length} violations and ${signals.length} core signals.`,
+                    source: 'extension',
+                    createdAt: new Date().toISOString(),
+                  },
+                ];
+              },
+            });
+            host.registerMetricProvider({
+              provideMetrics({
+                workspace,
+                measurements,
+              }: GovernanceMetricProviderInput) {
+                return [
+                  {
+                    id: 'extension-coverage',
+                    name: 'Extension Coverage',
+                    family: 'architecture',
+                    value: workspace.projects.length > 0 ? 1 : 0,
+                    score: 80,
+                    maxScore: 100,
+                    unit: 'ratio',
+                  },
+                ].filter(() => measurements.length > 0);
+              },
+            });
+          },
+        },
+      }),
+      { virtual: true }
+    );
+
+    jest.spyOn(fs, 'readFileSync').mockImplementation(((filePath, encoding) => {
+      if (path.resolve(String(filePath)) === nxJsonPath) {
+        return JSON.stringify({
+          plugins: ['test-plugin'],
+        });
+      }
+
+      return actualReadFileSync(filePath, encoding as never);
+    }) as typeof fs.readFileSync);
+
+    const result = await runGovernance({ reportType: 'health' });
+
+    expect(
+      result.assessment.workspace.projects[0]?.metadata.extensionTouched
+    ).toBe(true);
+    expect(
+      result.assessment.violations.find(
+        (violation) => violation.ruleId === 'extension-boundary'
+      )
+    ).toEqual(
+      expect.objectContaining({
+        category: 'boundary',
+        sourcePluginId: 'test-plugin',
+      })
+    );
+    expect(result.assessment.signalBreakdown.bySource).toContainEqual({
+      source: 'extension',
+      count: 1,
+    });
+    expect(result.assessment.signalBreakdown.byType).toContainEqual({
+      type: 'extension-warning',
+      count: 1,
+    });
+    expect(
+      result.assessment.measurements.find(
+        (measurement) => measurement.id === 'extension-coverage'
+      )
+    ).toEqual(
+      expect.objectContaining({
+        family: 'architecture',
+        sourcePluginId: 'test-plugin',
+      })
+    );
+    expect(result.assessment.metricBreakdown.families).toContainEqual(
+      expect.objectContaining({
+        family: 'architecture',
+        measurements: expect.arrayContaining([
+          expect.objectContaining({ id: 'extension-coverage' }),
+        ]),
+      })
+    );
+
+    jest.dontMock('test-plugin/governance-extension');
+  });
+
   it('filters type and severity breakdowns to the active report type', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 
@@ -440,6 +594,7 @@ describe('runGovernance', () => {
         { source: 'graph', count: 0 },
         { source: 'conformance', count: 1 },
         { source: 'policy', count: 0 },
+        { source: 'extension', count: 0 },
       ]);
       expect(ownership.assessment.signalBreakdown.byType).toEqual([
         { type: 'conformance-violation', count: 1 },

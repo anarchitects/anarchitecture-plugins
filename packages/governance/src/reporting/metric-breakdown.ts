@@ -11,33 +11,27 @@ const FAMILY_ORDER: GovernanceMetricFamily[] = [
   'documentation',
 ];
 
-const FAMILY_MEASUREMENT_IDS: Record<
-  GovernanceMetricFamily,
-  Measurement['id'][]
-> = {
-  architecture: [
-    'architectural-entropy',
-    'dependency-complexity',
-    'domain-integrity',
-    'layer-integrity',
-  ],
-  boundaries: ['architectural-entropy', 'domain-integrity', 'layer-integrity'],
-  ownership: ['ownership-coverage'],
-  documentation: ['documentation-completeness'],
-};
-
 export function buildMetricBreakdown(
   measurements: Measurement[]
 ): MetricBreakdown {
-  const measurementsById = new Map(
-    measurements.map((measurement) => [measurement.id, measurement] as const)
+  const measurementsByFamily = new Map<GovernanceMetricFamily, Measurement[]>();
+
+  for (const measurement of measurements) {
+    const existing = measurementsByFamily.get(measurement.family) ?? [];
+    existing.push(measurement);
+    measurementsByFamily.set(measurement.family, existing);
+  }
+
+  const orderedFamilies = sortKnownThenAlphabetical(
+    [...measurementsByFamily.keys()],
+    FAMILY_ORDER
   );
 
   return {
-    families: FAMILY_ORDER.flatMap((family) => {
-      const familyMeasurements = FAMILY_MEASUREMENT_IDS[family]
-        .map((id) => measurementsById.get(id))
-        .filter((measurement): measurement is Measurement => !!measurement)
+    families: orderedFamilies.flatMap((family) => {
+      const familyMeasurements = (measurementsByFamily.get(family) ?? [])
+        .slice()
+        .sort((a, b) => a.id.localeCompare(b.id))
         .map((measurement) => ({
           id: measurement.id,
           name: measurement.name,
@@ -63,4 +57,17 @@ export function buildMetricBreakdown(
       ];
     }),
   };
+}
+
+function sortKnownThenAlphabetical<T extends string>(
+  values: T[],
+  knownOrder: readonly T[]
+): T[] {
+  const seen = new Set(values);
+  const orderedKnown = knownOrder.filter((value) => seen.has(value));
+  const orderedExtras = values
+    .filter((value) => !knownOrder.includes(value))
+    .sort((a, b) => a.localeCompare(b));
+
+  return [...orderedKnown, ...orderedExtras];
 }
