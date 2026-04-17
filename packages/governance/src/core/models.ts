@@ -1,4 +1,5 @@
 import type {
+  GovernanceSignalCategory,
   GovernanceSignalSeverity,
   GovernanceSignalSource,
   GovernanceSignalType,
@@ -42,18 +43,32 @@ export interface Violation {
   ruleId: string;
   project: string;
   severity: 'error' | 'warning' | 'info';
+  category: GovernanceSignalCategory | 'architecture' | 'documentation';
   message: string;
   details?: Record<string, unknown>;
   recommendation?: string;
+  sourcePluginId?: string;
 }
+
+export type KnownGovernanceMetricFamily =
+  | 'architecture'
+  | 'boundaries'
+  | 'ownership'
+  | 'documentation';
+
+export type GovernanceMetricFamily =
+  | KnownGovernanceMetricFamily
+  | (string & {});
 
 export interface Measurement {
   id: string;
   name: string;
+  family: GovernanceMetricFamily;
   value: number;
   score: number;
   maxScore: number;
   unit: 'ratio' | 'count' | 'score';
+  sourcePluginId?: string;
 }
 
 export interface Recommendation {
@@ -100,7 +115,7 @@ export interface HealthScore {
 }
 
 export interface SignalBreakdownEntry {
-  source: 'graph' | 'conformance' | 'policy';
+  source: GovernanceSignalSource;
   count: number;
 }
 
@@ -120,12 +135,6 @@ export interface SignalBreakdown {
   byType: SignalTypeBreakdownEntry[];
   bySeverity: SignalSeverityBreakdownEntry[];
 }
-
-export type GovernanceMetricFamily =
-  | 'architecture'
-  | 'boundaries'
-  | 'ownership'
-  | 'documentation';
 
 export interface MetricBreakdownMeasurement {
   id: Measurement['id'];
@@ -151,6 +160,7 @@ export interface GovernanceTopIssue {
   projects: string[];
   ruleId?: string;
   message: string;
+  sourcePluginId?: string;
 }
 
 export interface GovernanceAssessment {

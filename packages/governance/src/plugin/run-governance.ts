@@ -4,7 +4,6 @@ import { GovernanceAssessment, GovernanceProfile } from '../core/index.js';
 import {
   buildRecommendations,
   calculateHealthScore,
-  MetricWeights,
 } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
 import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
@@ -73,7 +72,13 @@ import {
   mergeGovernanceSignals,
 } from '../signal-engine/index.js';
 import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
-import { registerGovernanceExtensions } from '../extensions/host.js';
+import {
+  applyGovernanceEnrichers,
+  collectGovernanceMeasurements,
+  collectGovernanceSignals,
+  evaluateGovernanceRulePacks,
+  registerGovernanceExtensions,
+} from '../extensions/host.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1465,42 +1470,102 @@ async function buildAssessment(
     },
     metrics: {
       ...angularCleanupProfile.metrics,
-      ...(overrides.metrics ?? {}),
+      ...normalizeMetricWeights(overrides.metrics),
     },
   };
 
   const snapshot = await readNxWorkspaceSnapshot();
   const inventory = buildInventory(snapshot, overrides);
-  await registerGovernanceExtensions({
+  const extensionRegistry = await registerGovernanceExtensions({
     workspaceRoot,
     profileName,
     options: { ...options },
     snapshot,
     inventory,
   });
-  const allViolations = evaluatePolicies(inventory, effectiveProfile);
-  const graphSignals = buildGraphSignals(toWorkspaceGraphSnapshot(inventory));
+  const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
+    workspace: inventory,
+    profile: effectiveProfile,
+    context: {
+      workspaceRoot,
+      profileName,
+      options: { ...options },
+      snapshot,
+      inventory,
+    },
+  });
+  const coreViolations = evaluatePolicies(enrichedInventory, effectiveProfile);
+  const extensionViolations = await evaluateGovernanceRulePacks(
+    extensionRegistry,
+    {
+      workspace: enrichedInventory,
+      profile: effectiveProfile,
+      context: {
+        workspaceRoot,
+        profileName,
+        options: { ...options },
+        snapshot,
+        inventory,
+      },
+    }
+  );
+  const allViolations = [...coreViolations, ...extensionViolations];
+  const graphSignals = buildGraphSignals(
+    toWorkspaceGraphSnapshot(enrichedInventory)
+  );
   const policySignals = buildPolicySignals(allViolations);
   const resolvedConformanceInput = resolveConformanceInput(
     options.conformanceJson
   );
   const conformanceSignals = loadConformanceSignals(resolvedConformanceInput);
-  const metricSignals = mergeGovernanceSignals(
+  const coreSignals = mergeGovernanceSignals(
     graphSignals,
     conformanceSignals,
     policySignals
   );
-  const allMeasurements = calculateMetrics({
-    workspace: inventory,
-    signals: metricSignals,
+  const extensionSignals = await collectGovernanceSignals(extensionRegistry, {
+    workspace: enrichedInventory,
+    profile: effectiveProfile,
+    violations: allViolations,
+    signals: coreSignals,
+    context: {
+      workspaceRoot,
+      profileName,
+      options: { ...options },
+      snapshot,
+      inventory,
+    },
   });
-  const allTopIssues = buildTopIssues(metricSignals);
+  const allSignals = mergeGovernanceSignals(coreSignals, extensionSignals);
+  const coreMeasurements = calculateMetrics({
+    workspace: enrichedInventory,
+    signals: allSignals,
+  });
+  const extensionMeasurements = await collectGovernanceMeasurements(
+    extensionRegistry,
+    {
+      workspace: enrichedInventory,
+      profile: effectiveProfile,
+      signals: allSignals,
+      measurements: coreMeasurements,
+      violations: allViolations,
+      context: {
+        workspaceRoot,
+        profileName,
+        options: { ...options },
+        snapshot,
+        inventory,
+      },
+    }
+  );
+  const allMeasurements = [...coreMeasurements, ...extensionMeasurements];
+  const allTopIssues = buildTopIssues(allSignals);
   const filteredMeasurements = filterMeasurements(
     allMeasurements,
     options.reportType
   );
   const filteredSignals = filterSignalsForReportType(
-    metricSignals,
+    allSignals,
     options.reportType
   );
   const filteredViolations = filterViolations(
@@ -1509,7 +1574,7 @@ async function buildAssessment(
   );
 
   return {
-    workspace: inventory,
+    workspace: enrichedInventory,
     profile: profileName,
     warnings: overrides.runtimeWarnings,
     violations: filteredViolations,
@@ -1519,7 +1584,7 @@ async function buildAssessment(
     topIssues: buildTopIssues(filteredSignals),
     health: calculateHealthScore(
       allMeasurements,
-      metricWeightsFromProfile(effectiveProfile.metrics),
+      effectiveProfile.metrics,
       effectiveProfile.health.statusThresholds,
       {
         topIssues: allTopIssues,
@@ -1554,46 +1619,20 @@ function toWorkspaceGraphSnapshot(
   };
 }
 
-function metricWeightsFromProfile(metrics: {
-  architecturalEntropyWeight: number;
-  dependencyComplexityWeight: number;
-  domainIntegrityWeight: number;
-  ownershipCoverageWeight: number;
-  documentationCompletenessWeight: number;
-  layerIntegrityWeight: number;
-}): MetricWeights {
-  return {
-    'architectural-entropy': metrics.architecturalEntropyWeight,
-    'dependency-complexity': metrics.dependencyComplexityWeight,
-    'domain-integrity': metrics.domainIntegrityWeight,
-    'ownership-coverage': metrics.ownershipCoverageWeight,
-    'documentation-completeness': metrics.documentationCompletenessWeight,
-    'layer-integrity': metrics.layerIntegrityWeight,
-  };
-}
-
 function filterViolations(
   violations: GovernanceAssessment['violations'],
   reportType: GovernanceRunOptions['reportType']
 ): GovernanceAssessment['violations'] {
   if (reportType === 'boundaries') {
-    return violations.filter(
-      (violation) =>
-        violation.ruleId === 'domain-boundary' ||
-        violation.ruleId === 'layer-boundary'
-    );
+    return violations.filter((violation) => violation.category === 'boundary');
   }
 
   if (reportType === 'ownership') {
-    return violations.filter(
-      (violation) => violation.ruleId === 'ownership-presence'
-    );
+    return violations.filter((violation) => violation.category === 'ownership');
   }
 
   if (reportType === 'architecture') {
-    return violations.filter(
-      (violation) => violation.ruleId !== 'ownership-presence'
-    );
+    return violations.filter((violation) => violation.category !== 'ownership');
   }
 
   return violations;
@@ -1604,30 +1643,40 @@ function filterMeasurements(
   reportType: GovernanceRunOptions['reportType']
 ): GovernanceAssessment['measurements'] {
   if (reportType === 'boundaries') {
-    return measurements.filter((measurement) =>
-      ['architectural-entropy', 'domain-integrity', 'layer-integrity'].includes(
-        measurement.id
-      )
+    return measurements.filter(
+      (measurement) => measurement.family === 'boundaries'
     );
   }
 
   if (reportType === 'ownership') {
     return measurements.filter(
-      (measurement) => measurement.id === 'ownership-coverage'
+      (measurement) => measurement.family === 'ownership'
     );
   }
 
   if (reportType === 'architecture') {
-    return measurements.filter((measurement) =>
-      [
-        'architectural-entropy',
-        'dependency-complexity',
-        'domain-integrity',
-      ].includes(measurement.id)
+    return measurements.filter(
+      (measurement) =>
+        measurement.family !== 'ownership' &&
+        measurement.family !== 'documentation'
     );
   }
 
   return measurements;
+}
+
+function normalizeMetricWeights(
+  metrics: Record<string, number | undefined> | undefined
+): GovernanceProfile['metrics'] {
+  if (!metrics) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(metrics).filter(
+      (entry): entry is [string, number] => typeof entry[1] === 'number'
+    )
+  );
 }
 
 function loadConformanceSignals(

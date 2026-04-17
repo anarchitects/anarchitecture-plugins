@@ -20,7 +20,7 @@ describe('metric breakdown helpers', () => {
     expect(breakdown.families).toEqual([
       {
         family: 'architecture',
-        score: 83,
+        score: 78,
         measurements: [
           measurementSummary(
             'architectural-entropy',
@@ -32,19 +32,12 @@ describe('metric breakdown helpers', () => {
             'Dependency Complexity',
             89
           ),
-          measurementSummary('domain-integrity', 'Domain Integrity', 100),
-          measurementSummary('layer-integrity', 'Layer Integrity', 78),
         ],
       },
       {
         family: 'boundaries',
-        score: 81,
+        score: 89,
         measurements: [
-          measurementSummary(
-            'architectural-entropy',
-            'Architectural Entropy',
-            66
-          ),
           measurementSummary('domain-integrity', 'Domain Integrity', 100),
           measurementSummary('layer-integrity', 'Layer Integrity', 78),
         ],
@@ -97,11 +90,28 @@ function measurement(
   return {
     id,
     name,
+    family: familyForMeasurement(id),
     value: score / 100,
     score,
     maxScore: 100,
     unit: 'ratio',
   };
+}
+
+function familyForMeasurement(id: Measurement['id']): Measurement['family'] {
+  if (id === 'ownership-coverage') {
+    return 'ownership';
+  }
+
+  if (id === 'documentation-completeness') {
+    return 'documentation';
+  }
+
+  if (id === 'domain-integrity' || id === 'layer-integrity') {
+    return 'boundaries';
+  }
+
+  return 'architecture';
 }
 
 function measurementSummary(

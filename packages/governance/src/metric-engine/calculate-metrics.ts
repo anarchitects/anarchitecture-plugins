@@ -50,33 +50,39 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
     makeScore(
       'architectural-entropy',
       'Architectural Entropy',
+      'architecture',
       entropyPenaltyWeight / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'dependency-complexity',
       'Dependency Complexity',
+      'architecture',
       canonicalDependencyCount / projectCount / 4
     ),
     makeScore(
       'domain-integrity',
       'Domain Integrity',
+      'boundaries',
       domainViolationWeight / Math.max(canonicalDependencyCount, 1)
     ),
     makeScore(
       'ownership-coverage',
       'Ownership Coverage',
+      'ownership',
       ownedProjects / projectCount,
       true
     ),
     makeScore(
       'documentation-completeness',
       'Documentation Completeness',
+      'documentation',
       documentedProjects / projectCount,
       true
     ),
     makeScore(
       'layer-integrity',
       'Layer Integrity',
+      'boundaries',
       layerViolationWeight / Math.max(canonicalDependencyCount, 1)
     ),
   ];
@@ -85,6 +91,7 @@ export function calculateMetrics(input: MetricEngineInput): Measurement[] {
 function makeScore(
   id: string,
   name: string,
+  family: Measurement['family'],
   ratio: number,
   ratioIsPositive = false
 ): Measurement {
@@ -97,6 +104,7 @@ function makeScore(
   return {
     id,
     name,
+    family,
     value,
     score,
     maxScore: 100,

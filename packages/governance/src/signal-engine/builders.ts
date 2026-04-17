@@ -29,6 +29,7 @@ interface SignalDraft {
   message: string;
   metadata?: Record<string, unknown>;
   source: GovernanceSignalSource;
+  sourcePluginId?: string;
   createdAt: string;
   identityKey?: string;
 }
@@ -38,6 +39,7 @@ const SOURCE_SORT_ORDER: Record<GovernanceSignalSource, number> = {
   graph: 0,
   conformance: 1,
   policy: 2,
+  extension: 3,
 };
 const SEVERITY_SORT_ORDER: Record<GovernanceSignalSeverity, number> = {
   info: 0,
@@ -235,6 +237,7 @@ function mapViolationToPolicySignal(
       message: violation.message,
       metadata,
       source: 'policy',
+      sourcePluginId: violation.sourcePluginId,
       createdAt,
       identityKey: [
         'policy',
@@ -279,6 +282,7 @@ function finalizeSignal(draft: SignalDraft): GovernanceSignal {
     message: draft.message,
     metadata,
     source: draft.source,
+    sourcePluginId: draft.sourcePluginId,
     createdAt: draft.createdAt,
   };
 }

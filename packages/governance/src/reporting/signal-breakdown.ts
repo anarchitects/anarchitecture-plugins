@@ -1,7 +1,9 @@
 import type { SignalBreakdown } from '../core/index.js';
 import type {
   GovernanceSignal,
+  GovernanceSignalSource,
   GovernanceSignalSeverity,
+  KnownGovernanceSignalType,
   GovernanceSignalType,
 } from '../signal-engine/index.js';
 
@@ -11,9 +13,14 @@ export type GovernanceReportType =
   | 'ownership'
   | 'architecture';
 
-const SOURCE_ORDER = ['graph', 'conformance', 'policy'] as const;
+const SOURCE_ORDER: GovernanceSignalSource[] = [
+  'graph',
+  'conformance',
+  'policy',
+  'extension',
+];
 const SEVERITY_ORDER: GovernanceSignalSeverity[] = ['info', 'warning', 'error'];
-const TYPE_ORDER: GovernanceSignalType[] = [
+const TYPE_ORDER: KnownGovernanceSignalType[] = [
   'structural-dependency',
   'cross-domain-dependency',
   'missing-domain-context',
@@ -61,11 +68,25 @@ export function buildSignalBreakdown(
 
   return {
     total: signals.length,
-    bySource: SOURCE_ORDER.map((source) => ({
-      source,
-      count: sourceCounts.get(source) ?? 0,
-    })),
-    byType: TYPE_ORDER.flatMap((type) => {
+    bySource: [
+      ...SOURCE_ORDER.map((source) => ({
+        source,
+        count: sourceCounts.get(source) ?? 0,
+      })),
+      ...sortKnownThenAlphabetical<GovernanceSignalSource>(
+        [...sourceCounts.keys()] as GovernanceSignalSource[],
+        SOURCE_ORDER
+      )
+        .filter((source) => !SOURCE_ORDER.includes(source))
+        .map((source) => ({
+          source,
+          count: sourceCounts.get(source) ?? 0,
+        })),
+    ],
+    byType: sortKnownThenAlphabetical(
+      [...typeCounts.keys()],
+      TYPE_ORDER
+    ).flatMap((type) => {
       const count = typeCounts.get(type) ?? 0;
 
       return count > 0 ? [{ type, count }] : [];
@@ -75,4 +96,17 @@ export function buildSignalBreakdown(
       count: severityCounts.get(severity) ?? 0,
     })),
   };
+}
+
+function sortKnownThenAlphabetical<T extends string>(
+  values: T[],
+  knownOrder: readonly T[]
+): T[] {
+  const seen = new Set(values);
+  const orderedKnown = knownOrder.filter((value) => seen.has(value));
+  const orderedExtras = values
+    .filter((value) => !knownOrder.includes(value))
+    .sort((a, b) => a.localeCompare(b));
+
+  return [...orderedKnown, ...orderedExtras];
 }

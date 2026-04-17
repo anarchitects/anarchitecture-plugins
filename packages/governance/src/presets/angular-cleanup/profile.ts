@@ -6,8 +6,18 @@ import {
   DEFAULT_HEALTH_STATUS_THRESHOLDS,
   GovernanceProfile,
   HealthStatusThresholds,
+  Measurement,
   ProfileOverrides,
 } from '../../core/index.js';
+
+const LEGACY_PROFILE_METRIC_KEY_MAP = {
+  architecturalEntropyWeight: 'architectural-entropy',
+  dependencyComplexityWeight: 'dependency-complexity',
+  domainIntegrityWeight: 'domain-integrity',
+  ownershipCoverageWeight: 'ownership-coverage',
+  documentationCompletenessWeight: 'documentation-completeness',
+  layerIntegrityWeight: 'layer-integrity',
+} as const;
 
 export const angularCleanupProfile: GovernanceProfile = {
   name: 'angular-cleanup',
@@ -25,12 +35,12 @@ export const angularCleanupProfile: GovernanceProfile = {
     statusThresholds: DEFAULT_HEALTH_STATUS_THRESHOLDS,
   },
   metrics: {
-    architecturalEntropyWeight: 0.2,
-    dependencyComplexityWeight: 0.2,
-    domainIntegrityWeight: 0.2,
-    ownershipCoverageWeight: 0.2,
-    documentationCompletenessWeight: 0.2,
-    layerIntegrityWeight: 0.2,
+    'architectural-entropy': 0.2,
+    'dependency-complexity': 0.2,
+    'domain-integrity': 0.2,
+    'ownership-coverage': 0.2,
+    'documentation-completeness': 0.2,
+    'layer-integrity': 0.2,
   },
 };
 
@@ -68,7 +78,7 @@ export async function loadProfileOverrides(
     allowedDomainDependencies?: Record<string, string[]>;
     ownership?: ProfileOverrides['ownership'];
     health?: ProfileOverrides['health'];
-    metrics?: Partial<GovernanceProfile['metrics']>;
+    metrics?: Record<string, number>;
     projectOverrides?: ProfileOverrides['projectOverrides'];
   };
 
@@ -109,11 +119,36 @@ export async function loadProfileOverrides(
     },
     metrics: {
       ...angularCleanupProfile.metrics,
-      ...(raw.metrics ?? {}),
+      ...normalizeMetricWeights(raw.metrics),
     },
     projectOverrides: raw.projectOverrides ?? {},
     runtimeWarnings,
   };
+}
+
+function normalizeMetricWeights(
+  raw: Record<string, number> | undefined
+): Record<Measurement['id'], number> {
+  if (!raw) {
+    return {};
+  }
+
+  const normalized: Record<string, number> = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      continue;
+    }
+
+    const normalizedKey =
+      LEGACY_PROFILE_METRIC_KEY_MAP[
+        key as keyof typeof LEGACY_PROFILE_METRIC_KEY_MAP
+      ] ?? key;
+
+    normalized[normalizedKey] = value;
+  }
+
+  return normalized;
 }
 
 async function loadAllowedDomainDependenciesFromEslint(

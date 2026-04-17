@@ -1,4 +1,4 @@
-import { HealthStatusThresholds } from './models.js';
+import { HealthStatusThresholds, Measurement } from './models.js';
 
 export const DEFAULT_HEALTH_STATUS_THRESHOLDS: HealthStatusThresholds = {
   goodMinScore: 85,
@@ -18,14 +18,7 @@ export interface GovernanceProfile {
   health: {
     statusThresholds: HealthStatusThresholds;
   };
-  metrics: {
-    architecturalEntropyWeight: number;
-    dependencyComplexityWeight: number;
-    domainIntegrityWeight: number;
-    ownershipCoverageWeight: number;
-    documentationCompletenessWeight: number;
-    layerIntegrityWeight: number;
-  };
+  metrics: Record<Measurement['id'], number>;
 }
 
 export interface ProfileOverrides {
@@ -36,7 +29,7 @@ export interface ProfileOverrides {
   health?: {
     statusThresholds?: Partial<HealthStatusThresholds>;
   };
-  metrics?: Partial<GovernanceProfile['metrics']>;
+  metrics?: Partial<Record<string, number>>;
   projectOverrides: Record<
     string,
     {
