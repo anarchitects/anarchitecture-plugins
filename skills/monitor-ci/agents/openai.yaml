@@ -1,0 +1,3 @@
+interface:
+  display_name: Plugins Monitor CI
+  short_description: Diagnose and fix CI, Nx, plugin test, and release failures in the plugins repo.
