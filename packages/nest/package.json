@@ -3,8 +3,25 @@
   "version": "0.1.0",
   "description": "Foundation shell for the Anarchitects Nest Nx plugin.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "license": "Apache-2.0",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@anarchitecture-plugins/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "@anarchitecture-plugins/source": "./src/plugins/nest.ts",
+      "types": "./dist/plugins/nest.d.ts",
+      "import": "./dist/plugins/nest.js",
+      "default": "./dist/plugins/nest.js"
+    }
+  },
   "executors": "dist/index.json",
   "generators": "dist/index.json",
   "files": [
