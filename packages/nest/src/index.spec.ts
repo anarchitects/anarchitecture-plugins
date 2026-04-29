@@ -1,13 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import plugin, { name } from './index.js';
+import plugin, { createNodesV2, name } from './index.js';
 
 describe('nest package shell', () => {
-  it('exports plugin metadata without runtime hooks', () => {
+  it('exports plugin metadata and inference hooks', () => {
     expect(name).toBe('@anarchitects/nest');
-    expect(plugin).toEqual({ name: '@anarchitects/nest' });
-    expect(plugin).not.toHaveProperty('createNodesV2');
+    expect(createNodesV2).toBeDefined();
+    expect(plugin).toEqual({
+      name: '@anarchitects/nest',
+      createNodesV2,
+    });
   });
 
   it('declares empty manifest placeholders', () => {

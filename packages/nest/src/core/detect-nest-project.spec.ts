@@ -150,6 +150,36 @@ describe('detectNestProject', () => {
     expect(result.testRunner).toBeUndefined();
   });
 
+  it('detects ESLint from a workspace-level config', () => {
+    tree.write('eslint.config.mjs', 'export default [];');
+    writeJson(tree, 'package.json', {
+      name: 'workspace',
+      dependencies: {
+        '@nestjs/core': '^11.0.0',
+      },
+    });
+    tree.write(
+      'apps/api/src/main.ts',
+      "import { NestFactory } from '@nestjs/core';\n"
+    );
+
+    const result = detectNestProject(tree, 'apps/api');
+
+    expect(result.lintRunner).toBe('eslint');
+  });
+
+  it('detects oxlint from a project-level config', () => {
+    writeJson(tree, 'apps/api/nest-cli.json', {
+      sourceRoot: 'src',
+    });
+    tree.write('apps/api/src/main.ts', "import '@nestjs/core';\n");
+    tree.write('apps/api/oxlint.json', '{}');
+
+    const result = detectNestProject(tree, 'apps/api');
+
+    expect(result.lintRunner).toBe('oxlint');
+  });
+
   it('detects a Nest project from workspace dependencies only when main.ts imports @nestjs/core', () => {
     writeJson(tree, 'package.json', {
       name: 'workspace',
