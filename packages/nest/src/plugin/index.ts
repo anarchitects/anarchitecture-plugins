@@ -1,6 +1,6 @@
 export const name = '@anarchitects/nest';
 
-// TODO(#124): add Nest project detection and inference hooks.
+// TODO(#125): wire detection into createNodesV2 inference hooks.
 const plugin = {
   name,
 };
