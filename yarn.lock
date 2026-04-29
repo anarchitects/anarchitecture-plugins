@@ -9280,6 +9280,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"nx-nest-e2e@workspace:packages/nest-e2e":
+  version: 0.0.0-use.local
+  resolution: "nx-nest-e2e@workspace:packages/nest-e2e"
+  languageName: unknown
+  linkType: soft
+
 "nx-typeorm-e2e@workspace:packages/typeorm-e2e":
   version: 0.0.0-use.local
   resolution: "nx-typeorm-e2e@workspace:packages/typeorm-e2e"
