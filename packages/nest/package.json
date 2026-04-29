@@ -1,0 +1,73 @@
+{
+  "name": "@anarchitects/nest",
+  "version": "0.1.0",
+  "description": "Foundation shell for the Anarchitects Nest Nx plugin.",
+  "type": "module",
+  "main": "dist/index.js",
+  "license": "Apache-2.0",
+  "executors": "dist/index.json",
+  "generators": "dist/index.json",
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/nest"
+  },
+  "bugs": {
+    "url": "https://github.com/anarchitects/anarchitecture-plugins/issues"
+  },
+  "homepage": "https://github.com/anarchitects/anarchitecture-plugins#readme",
+  "nx": {
+    "name": "nx-nest",
+    "plugins": [
+      {
+        "plugin": "dist/plugin/index.js"
+      }
+    ],
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "packages/nest/dist",
+          "main": "packages/nest/src/index.ts",
+          "tsConfig": "packages/nest/tsconfig.lib.json",
+          "rootDir": "packages/nest/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./packages/nest/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            }
+          ]
+        }
+      },
+      "test": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/nest/jest.config.cts",
+          "passWithNoTests": true
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "tslib": "^2.6.2"
+  },
+  "peerDependencies": {
+    "nx": ">=19 <23"
+  }
+}
