@@ -115,6 +115,17 @@ runGovernance
 
 This preserves one governance truth even when multiple ecosystem engines contribute analysis.
 
+Exception-backed findings already have explicit report shapes in the core
+assessment model:
+
+- `suppressedFindings` for active, tolerated deviations
+- `reactivatedFindings` for stale or expired exception debt
+
+Future Governance Graph work should reuse those shapes directly so
+suppressed deviations stay explainable and reactivated findings stay
+visible as governance debt. Graph visualization remains out of scope for
+the current exception implementation.
+
 ## 6. Module structure
 
 The core package lives under:

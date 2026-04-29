@@ -79,6 +79,10 @@ import {
   evaluateGovernanceRulePacks,
   registerGovernanceExtensions,
 } from '../extensions/host.js';
+import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
+import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
+import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import { buildExceptionReport } from './build-exception-report.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -258,10 +262,14 @@ const AI_PAYLOAD_LIMITS = {
   scorecardDeltas: 12,
 };
 
+interface GovernanceAssessmentArtifactsOptions {
+  asOf?: Date;
+}
+
 export async function runGovernance(
   options: GovernanceRunOptions = {}
 ): Promise<GovernanceRunResult> {
-  const assessment = await buildAssessment(options);
+  const { assessment } = await buildAssessmentArtifacts(options);
 
   const rendered =
     options.output === 'json'
@@ -287,7 +295,7 @@ export async function runGovernance(
 export async function runGovernanceSnapshot(
   options: GovernanceSnapshotRunOptions = {}
 ): Promise<GovernanceSnapshotRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1449,6 +1457,15 @@ export async function runGovernanceAiOnboarding(
 async function buildAssessment(
   options: GovernanceRunOptions
 ): Promise<GovernanceAssessment> {
+  const { assessment } = await buildAssessmentArtifacts(options);
+
+  return assessment;
+}
+
+async function buildAssessmentArtifacts(
+  options: GovernanceRunOptions,
+  artifactsOptions: GovernanceAssessmentArtifactsOptions = {}
+): Promise<GovernanceAssessmentArtifacts> {
   const profileName = options.profile ?? 'angular-cleanup';
 
   const overrides = await loadProfileOverrides(workspaceRoot, profileName);
@@ -1495,6 +1512,16 @@ async function buildAssessment(
     },
   });
   const coreViolations = evaluatePolicies(enrichedInventory, effectiveProfile);
+  const resolvedConformanceInput = resolveConformanceInput(
+    options.conformanceJson
+  );
+  const conformanceSnapshot = loadConformanceSnapshot(resolvedConformanceInput);
+  const exceptionApplication = applyGovernanceExceptions({
+    exceptions: overrides.exceptions,
+    policyViolations: coreViolations,
+    conformanceFindings: conformanceSnapshot?.findings ?? [],
+    asOf: artifactsOptions.asOf ?? new Date(),
+  });
   const extensionViolations = await evaluateGovernanceRulePacks(
     extensionRegistry,
     {
@@ -1509,15 +1536,20 @@ async function buildAssessment(
       },
     }
   );
-  const allViolations = [...coreViolations, ...extensionViolations];
+  const allViolations = [
+    ...exceptionApplication.activePolicyViolations,
+    ...extensionViolations,
+  ];
   const graphSignals = buildGraphSignals(
     toWorkspaceGraphSnapshot(enrichedInventory)
   );
-  const policySignals = buildPolicySignals(allViolations);
-  const resolvedConformanceInput = resolveConformanceInput(
-    options.conformanceJson
+  const policySignals = buildPolicySignals(
+    exceptionApplication.activePolicyViolations
   );
-  const conformanceSignals = loadConformanceSignals(resolvedConformanceInput);
+  const conformanceSignals = buildConformanceSignalsForActiveFindings(
+    conformanceSnapshot,
+    exceptionApplication.activeConformanceFindings
+  );
   const coreSignals = mergeGovernanceSignals(
     graphSignals,
     conformanceSignals,
@@ -1574,23 +1606,28 @@ async function buildAssessment(
   );
 
   return {
-    workspace: enrichedInventory,
-    profile: profileName,
-    warnings: overrides.runtimeWarnings,
-    violations: filteredViolations,
-    measurements: filteredMeasurements,
-    signalBreakdown: buildSignalBreakdown(filteredSignals),
-    metricBreakdown: buildMetricBreakdown(filteredMeasurements),
-    topIssues: buildTopIssues(filteredSignals),
-    health: calculateHealthScore(
-      allMeasurements,
-      effectiveProfile.metrics,
-      effectiveProfile.health.statusThresholds,
-      {
-        topIssues: allTopIssues,
-      }
-    ),
-    recommendations: buildRecommendations(allViolations, allMeasurements),
+    assessment: {
+      workspace: enrichedInventory,
+      profile: profileName,
+      warnings: overrides.runtimeWarnings,
+      exceptions: buildExceptionReport(exceptionApplication),
+      violations: filteredViolations,
+      measurements: filteredMeasurements,
+      signalBreakdown: buildSignalBreakdown(filteredSignals),
+      metricBreakdown: buildMetricBreakdown(filteredMeasurements),
+      topIssues: buildTopIssues(filteredSignals),
+      health: calculateHealthScore(
+        allMeasurements,
+        effectiveProfile.metrics,
+        effectiveProfile.health.statusThresholds,
+        {
+          topIssues: allTopIssues,
+        }
+      ),
+      recommendations: buildRecommendations(allViolations, allMeasurements),
+    },
+    signals: allSignals,
+    exceptionApplication,
   };
 }
 
@@ -1679,17 +1716,15 @@ function normalizeMetricWeights(
   );
 }
 
-function loadConformanceSignals(
+function loadConformanceSnapshot(
   input: ReturnType<typeof resolveConformanceInput>
-) {
+): ConformanceSnapshot | undefined {
   if (!input.conformanceJson) {
-    return [];
+    return undefined;
   }
 
   try {
-    return buildConformanceSignals(
-      readConformanceSnapshot({ conformanceJson: input.conformanceJson })
-    );
+    return readConformanceSnapshot({ conformanceJson: input.conformanceJson });
   } catch (error) {
     if (input.source === 'nx-json') {
       throw new Error(
@@ -1701,6 +1736,20 @@ function loadConformanceSignals(
 
     throw error;
   }
+}
+
+function buildConformanceSignalsForActiveFindings(
+  snapshot: ConformanceSnapshot | undefined,
+  findings: ConformanceSnapshot['findings']
+) {
+  if (!snapshot) {
+    return [];
+  }
+
+  return buildConformanceSignals({
+    ...snapshot,
+    findings,
+  });
 }
 
 function resolveSnapshotPath(

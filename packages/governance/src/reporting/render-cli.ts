@@ -43,6 +43,75 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
   }
 
   lines.push('');
+  lines.push('Exceptions:');
+  lines.push(`- declared: ${assessment.exceptions.summary.declaredCount}`);
+  lines.push(`- matched: ${assessment.exceptions.summary.matchedCount}`);
+  lines.push(`- unused: ${assessment.exceptions.summary.unusedExceptionCount}`);
+  lines.push(`- active: ${assessment.exceptions.summary.activeExceptionCount}`);
+  lines.push(`- stale: ${assessment.exceptions.summary.staleExceptionCount}`);
+  lines.push(
+    `- expired: ${assessment.exceptions.summary.expiredExceptionCount}`
+  );
+  lines.push(
+    `- suppressed policy findings: ${assessment.exceptions.summary.suppressedPolicyViolationCount}`
+  );
+  lines.push(
+    `- suppressed conformance findings: ${assessment.exceptions.summary.suppressedConformanceFindingCount}`
+  );
+  lines.push(
+    `- reactivated policy findings: ${assessment.exceptions.summary.reactivatedPolicyViolationCount}`
+  );
+  lines.push(
+    `- reactivated conformance findings: ${assessment.exceptions.summary.reactivatedConformanceFindingCount}`
+  );
+
+  if (assessment.exceptions.suppressedFindings.length > 0) {
+    lines.push('Suppressed Findings:');
+    for (const finding of assessment.exceptions.suppressedFindings) {
+      const ruleIdSuffix = finding.ruleId ? ` :: ${finding.ruleId}` : '';
+      const projectScope = [
+        finding.projectId,
+        finding.targetProjectId,
+        finding.relatedProjectIds.length > 0
+          ? `related=${finding.relatedProjectIds.join(',')}`
+          : undefined,
+      ]
+        .filter((value): value is string => !!value)
+        .join(' -> ');
+      const projectScopeSuffix = projectScope
+        ? ` :: scope=${projectScope}`
+        : '';
+
+      lines.push(
+        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${projectScopeSuffix} :: ${finding.message}`
+      );
+    }
+  }
+
+  if (assessment.exceptions.reactivatedFindings.length > 0) {
+    lines.push('Reactivated Findings:');
+    for (const finding of assessment.exceptions.reactivatedFindings) {
+      const ruleIdSuffix = finding.ruleId ? ` :: ${finding.ruleId}` : '';
+      const projectScope = [
+        finding.projectId,
+        finding.targetProjectId,
+        finding.relatedProjectIds.length > 0
+          ? `related=${finding.relatedProjectIds.join(',')}`
+          : undefined,
+      ]
+        .filter((value): value is string => !!value)
+        .join(' -> ');
+      const projectScopeSuffix = projectScope
+        ? ` :: scope=${projectScope}`
+        : '';
+
+      lines.push(
+        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${projectScopeSuffix} :: ${finding.message}`
+      );
+    }
+  }
+
+  lines.push('');
   lines.push('Metrics:');
 
   for (const metric of assessment.measurements) {

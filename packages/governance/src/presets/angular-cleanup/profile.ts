@@ -4,10 +4,12 @@ import { pathToFileURL } from 'node:url';
 
 import {
   DEFAULT_HEALTH_STATUS_THRESHOLDS,
+  GovernanceException,
   GovernanceProfile,
   HealthStatusThresholds,
   Measurement,
   ProfileOverrides,
+  normalizeGovernanceException,
 } from '../../core/index.js';
 
 const LEGACY_PROFILE_METRIC_KEY_MAP = {
@@ -46,6 +48,7 @@ export const angularCleanupProfile: GovernanceProfile = {
 
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
+  exceptions: GovernanceException[];
   runtimeWarnings: string[];
 }
 
@@ -67,6 +70,7 @@ export async function loadProfileOverrides(
       ownership: angularCleanupProfile.ownership,
       health: angularCleanupProfile.health,
       metrics: angularCleanupProfile.metrics,
+      exceptions: [],
       projectOverrides: {},
       runtimeWarnings: [],
     };
@@ -79,6 +83,7 @@ export async function loadProfileOverrides(
     ownership?: ProfileOverrides['ownership'];
     health?: ProfileOverrides['health'];
     metrics?: Record<string, number>;
+    exceptions?: unknown;
     projectOverrides?: ProfileOverrides['projectOverrides'];
   };
 
@@ -96,6 +101,8 @@ export async function loadProfileOverrides(
           'Boundary policy source is ESLint constraints (tools/governance/eslint/dependency-constraints.mjs). Profile allowedDomainDependencies is treated as fallback.',
         ]
       : [];
+
+  const exceptions = normalizeProfileExceptions(raw.exceptions, filePath);
 
   return {
     boundaryPolicySource,
@@ -121,6 +128,7 @@ export async function loadProfileOverrides(
       ...angularCleanupProfile.metrics,
       ...normalizeMetricWeights(raw.metrics),
     },
+    exceptions,
     projectOverrides: raw.projectOverrides ?? {},
     runtimeWarnings,
   };
@@ -249,4 +257,65 @@ function normalizeThresholdValue(value: unknown, fallback: number): number {
   }
 
   return Math.max(0, Math.min(100, value));
+}
+
+function normalizeProfileExceptions(
+  raw: unknown,
+  filePath: string
+): GovernanceException[] {
+  if (raw === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(raw)) {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid exceptions: expected an array.`
+    );
+  }
+
+  const normalized = raw.map((entry, index) =>
+    normalizeProfileExceptionEntry(entry, index, filePath)
+  );
+  const ids = new Set<string>();
+
+  for (const exception of normalized) {
+    if (ids.has(exception.id)) {
+      throw new Error(
+        `Governance profile at ${filePath} has duplicate exception id "${exception.id}".`
+      );
+    }
+
+    ids.add(exception.id);
+  }
+
+  return normalized.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function normalizeProfileExceptionEntry(
+  entry: unknown,
+  index: number,
+  filePath: string
+): GovernanceException {
+  if (!entry || typeof entry !== 'object') {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid exception at index ${index}: expected an object.`
+    );
+  }
+
+  const candidate = entry as Partial<GovernanceException>;
+  const candidateId =
+    typeof candidate.id === 'string' && candidate.id.trim().length > 0
+      ? candidate.id.trim()
+      : `#${index}`;
+
+  try {
+    return normalizeGovernanceException(candidate as GovernanceException);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown exception error.';
+
+    throw new Error(
+      `Governance profile at ${filePath} has invalid exception "${candidateId}" at index ${index}: ${message}`
+    );
+  }
 }

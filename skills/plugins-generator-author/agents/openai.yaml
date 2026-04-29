@@ -1,0 +1,3 @@
+interface:
+  display_name: Plugins Generator Author
+  short_description: Implement generators, executors, and inference in the Nx plugins repo while preserving plugin standards.
