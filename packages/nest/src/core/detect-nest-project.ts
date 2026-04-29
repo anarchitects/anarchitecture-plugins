@@ -15,6 +15,7 @@ export interface NestProjectDetectionResult {
   hasMainEntrypoint: boolean;
   moduleSystem?: 'esm' | 'cjs';
   testRunner?: 'vitest' | 'jest';
+  lintRunner?: 'eslint' | 'oxlint';
   compiler?: 'tsc' | 'swc';
 }
 
@@ -72,6 +73,21 @@ const JEST_CONFIG_FILES = [
   'jest.preset.mjs',
   'jest.preset.cjs',
 ];
+const ESLINT_CONFIG_FILES = [
+  'eslint.config.js',
+  'eslint.config.mjs',
+  'eslint.config.cjs',
+  'eslint.config.ts',
+  'eslint.config.mts',
+  'eslint.config.cts',
+  '.eslintrc',
+  '.eslintrc.js',
+  '.eslintrc.cjs',
+  '.eslintrc.json',
+  '.eslintrc.yaml',
+  '.eslintrc.yml',
+];
+const OXLINT_CONFIG_FILES = ['oxlint.json', '.oxlintrc.json', '.oxlintrc'];
 const TS_CONFIG_FILES = [
   'tsconfig.app.json',
   'tsconfig.build.json',
@@ -140,6 +156,14 @@ export function detectNestProject(
     workspacePackageJson,
     workspacePackageJsonPath
   );
+  const lintRunner = detectLintRunner(
+    tree,
+    normalizedProjectRoot,
+    nearestPackageJson,
+    nearestPackageScope,
+    workspacePackageJson,
+    workspacePackageJsonPath
+  );
 
   const hasNestSignals =
     nestCliMatch.hasNestCliJson ||
@@ -179,6 +203,7 @@ export function detectNestProject(
     hasMainEntrypoint,
     moduleSystem,
     testRunner,
+    lintRunner,
     compiler,
   };
 }
@@ -613,6 +638,111 @@ function detectCompiler(
   }
 
   return projectHasTsConfig(tree, projectRoot) ? 'tsc' : undefined;
+}
+
+function detectLintRunner(
+  tree: Tree,
+  projectRoot: string,
+  nearestPackageJson: PackageJson | undefined,
+  nearestPackageScope: PackageSignalScope | undefined,
+  workspacePackageJson: PackageJson | undefined,
+  workspacePackageJsonPath: string | undefined
+): 'eslint' | 'oxlint' | undefined {
+  const projectConfigMatch = detectLintRunnerFromConfig(tree, projectRoot);
+  if (projectConfigMatch === 'eslint' || projectConfigMatch === 'oxlint') {
+    return projectConfigMatch;
+  }
+  if (projectConfigMatch === 'ambiguous') {
+    return undefined;
+  }
+
+  if (nearestPackageScope === 'project') {
+    const projectPackageMatch =
+      detectLintRunnerFromPackageJson(nearestPackageJson);
+    if (projectPackageMatch === 'eslint' || projectPackageMatch === 'oxlint') {
+      return projectPackageMatch;
+    }
+    if (projectPackageMatch === 'ambiguous') {
+      return undefined;
+    }
+  }
+
+  if (projectRoot) {
+    const workspaceConfigMatch = detectLintRunnerFromConfig(tree, '');
+    if (
+      workspaceConfigMatch === 'eslint' ||
+      workspaceConfigMatch === 'oxlint'
+    ) {
+      return workspaceConfigMatch;
+    }
+    if (workspaceConfigMatch === 'ambiguous') {
+      return undefined;
+    }
+  }
+
+  if (workspacePackageJsonPath) {
+    const workspacePackageMatch =
+      detectLintRunnerFromPackageJson(workspacePackageJson);
+    if (
+      workspacePackageMatch === 'eslint' ||
+      workspacePackageMatch === 'oxlint'
+    ) {
+      return workspacePackageMatch;
+    }
+  }
+
+  return undefined;
+}
+
+function detectLintRunnerFromConfig(
+  tree: Tree,
+  root: string
+): SignalMatch<'eslint' | 'oxlint'> {
+  const hasEslintConfig = ESLINT_CONFIG_FILES.some((fileName) =>
+    tree.exists(projectPath(root, fileName))
+  );
+  const hasOxlintConfig = OXLINT_CONFIG_FILES.some((fileName) =>
+    tree.exists(projectPath(root, fileName))
+  );
+
+  if (hasEslintConfig && hasOxlintConfig) {
+    return 'ambiguous';
+  }
+  if (hasEslintConfig) {
+    return 'eslint';
+  }
+  if (hasOxlintConfig) {
+    return 'oxlint';
+  }
+
+  return undefined;
+}
+
+function detectLintRunnerFromPackageJson(
+  packageJson: PackageJson | undefined
+): SignalMatch<'eslint' | 'oxlint'> {
+  if (!packageJson) {
+    return undefined;
+  }
+
+  const hasEslintSignal =
+    hasPackageDependency(packageJson, 'eslint') ||
+    packageScriptsContain(packageJson, 'eslint');
+  const hasOxlintSignal =
+    hasPackageDependency(packageJson, 'oxlint') ||
+    packageScriptsContain(packageJson, 'oxlint');
+
+  if (hasEslintSignal && hasOxlintSignal) {
+    return 'ambiguous';
+  }
+  if (hasEslintSignal) {
+    return 'eslint';
+  }
+  if (hasOxlintSignal) {
+    return 'oxlint';
+  }
+
+  return undefined;
 }
 
 function packageHasSwcSignals(packageJson: PackageJson | undefined): boolean {
