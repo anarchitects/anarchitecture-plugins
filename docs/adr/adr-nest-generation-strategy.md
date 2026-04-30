@@ -152,6 +152,7 @@ The `@anarchitects/nest` plugin will use the following generation strategy:
 Initial implementation should proceed in this order:
 
 1. Build the core Project Crystal layer:
+
    - package shell
    - project detection
    - `createNodesV2`
@@ -161,6 +162,7 @@ Initial implementation should proceed in this order:
    - minimal e2e validation
 
 2. Build a schematic adapter spike:
+
    - invoke `@nestjs/schematics:application`
    - test ESM app generation
    - test CJS app generation
@@ -168,6 +170,7 @@ Initial implementation should proceed in this order:
    - verify Nx Tree integration
 
 3. Build the application generator:
+
    - use Nest application schematic
    - add Nx metadata
    - add dependencies via Nx utilities
@@ -177,6 +180,22 @@ Initial implementation should proceed in this order:
    - library generator remains Nx-first
    - resource generator is value-add only
    - no thin artifact wrappers
+
+## Nest v12 prerelease alignment
+
+The Nest generation adapter targets Nest v12 behavior.
+
+While Nest v12 is in prerelease, adapter implementation and tests must use:
+
+- `@nestjs/schematics@next` for direct schematic integration
+- `@nestjs/cli@next` for CLI fallback scenarios
+
+Stable `@nestjs/schematics` and `@nestjs/cli` versions must not be used to infer v12 behavior.
+
+To avoid scattering version/package assumptions across the plugin, package identifiers are centralized in:
+
+```text
+packages/nest/src/utils/nest-version.ts
 
 ## Related issues
 
@@ -188,3 +207,4 @@ Initial implementation should proceed in this order:
 - #120 — EPIC: Optional schema-first validation support
 - #121 — EPIC: Migration engine
 - #122 — EPIC: Developer experience and polish
+```

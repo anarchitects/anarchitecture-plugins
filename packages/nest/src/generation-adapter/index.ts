@@ -1,4 +1,9 @@
 // TODO(#116): Keep this adapter internal until the generation surface settles.
+export {
+  assertCanOverwriteGeneratedNestFile,
+  createFileIfMissing,
+  updateJsonConfig,
+} from './additive-transform.guard.js';
 export type {
   NestSchematicName,
   NestSchematicOptions,
@@ -11,4 +16,7 @@ export type { TreeBridgeChangeSet } from './tree-bridge.js';
 export type {
   AdditiveTransformGuardContext,
   AdditiveTransformGuardResult,
+  JsonUpdate,
+  OverrideOptions,
+  SafeCreateFileOptions,
 } from './additive-transform.guard.js';
