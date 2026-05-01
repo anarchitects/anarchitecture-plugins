@@ -14,6 +14,7 @@ export {
   mapLibraryOptionsToNestSchematicOptions,
   mapResourceOptionsToNestSchematicOptions,
 } from './nest-schematic-options.mapper.js';
+export { runNestCliFallback } from './nest-cli-runner.js';
 export { runNestSchematic } from './schematic-runner.js';
 export type {
   NestSchematicName,
@@ -25,6 +26,11 @@ export type {
   NxNestLibraryOptions,
   NxNestResourceOptions,
 } from './nest-schematic-options.mapper.js';
+export type {
+  NestCliCommand,
+  NestCliCommandPlan,
+  RunNestCliOptions,
+} from './nest-cli-runner.js';
 export type {
   NestSchematicFileChange,
   RunNestSchematicOptions,
