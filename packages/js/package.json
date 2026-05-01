@@ -35,7 +35,8 @@
     "!**/*.tsbuildinfo"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": false
   },
   "peerDependencies": {
     "nx": ">=21.6.4 <23"

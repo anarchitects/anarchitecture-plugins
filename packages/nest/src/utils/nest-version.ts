@@ -6,5 +6,8 @@
  * `@nestjs/schematics@next` or `@nestjs/cli@next`.
  */
 
-export const NEST_SCHEMATICS_PACKAGE = '@nestjs/schematics@next';
-export const NEST_CLI_PACKAGE = '@nestjs/cli@next';
+export const NEST_SCHEMATICS_PACKAGE_NAME = '@nestjs/schematics';
+export const NEST_SCHEMATICS_PACKAGE = `${NEST_SCHEMATICS_PACKAGE_NAME}@next`;
+
+export const NEST_CLI_PACKAGE_NAME = '@nestjs/cli';
+export const NEST_CLI_PACKAGE = `${NEST_CLI_PACKAGE_NAME}@next`;
