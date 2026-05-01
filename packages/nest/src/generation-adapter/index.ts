@@ -4,6 +4,11 @@ export {
   createFileIfMissing,
   updateJsonConfig,
 } from './additive-transform.guard.js';
+export {
+  assertRequiredNestSchematicsAvailable,
+  loadNestSchematicsCollectionInfo,
+  resolveNestSchematicsCollectionPath,
+} from './nest-schematic-loader.js';
 export type {
   NestSchematicName,
   NestSchematicOptions,
@@ -20,3 +25,7 @@ export type {
   OverrideOptions,
   SafeCreateFileOptions,
 } from './additive-transform.guard.js';
+export type {
+  NestSchematicCollectionInfo,
+  RequiredNestSchematicName,
+} from './nest-schematic-loader.js';
