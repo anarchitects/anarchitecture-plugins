@@ -9,6 +9,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nest@workspace:packages/nest"
   dependencies:
+    "@angular-devkit/core": "npm:21.2.1"
+    "@angular-devkit/schematics": "npm:21.2.1"
+    jiti: "npm:2.4.2"
+    rxjs: "npm:7.8.2"
     tslib: "npm:^2.6.2"
   peerDependencies:
     "@nx/devkit": ">=19 <23"
