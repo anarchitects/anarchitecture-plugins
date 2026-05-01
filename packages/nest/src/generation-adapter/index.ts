@@ -9,11 +9,22 @@ export {
   loadNestSchematicsCollectionInfo,
   resolveNestSchematicsCollectionPath,
 } from './nest-schematic-loader.js';
+export {
+  mapApplicationOptionsToNestSchematicOptions,
+  mapLibraryOptionsToNestSchematicOptions,
+  mapResourceOptionsToNestSchematicOptions,
+} from './nest-schematic-options.mapper.js';
 export { runNestSchematic } from './schematic-runner.js';
 export type {
   NestSchematicName,
   NestSchematicOptions,
 } from './nest-schematic-options.js';
+export type {
+  NestModuleSystem,
+  NxNestApplicationOptions,
+  NxNestLibraryOptions,
+  NxNestResourceOptions,
+} from './nest-schematic-options.mapper.js';
 export type {
   NestSchematicFileChange,
   RunNestSchematicOptions,
