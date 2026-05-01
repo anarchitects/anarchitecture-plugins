@@ -9,13 +9,15 @@ export {
   loadNestSchematicsCollectionInfo,
   resolveNestSchematicsCollectionPath,
 } from './nest-schematic-loader.js';
+export { runNestSchematic } from './schematic-runner.js';
 export type {
   NestSchematicName,
   NestSchematicOptions,
 } from './nest-schematic-options.js';
 export type {
-  SchematicRunRequest,
-  SchematicRunResult,
+  NestSchematicFileChange,
+  RunNestSchematicOptions,
+  RunNestSchematicResult,
 } from './schematic-runner.js';
 export type { TreeBridgeChangeSet } from './tree-bridge.js';
 export type {

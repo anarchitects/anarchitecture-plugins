@@ -82,6 +82,10 @@
     }
   },
   "dependencies": {
+    "@angular-devkit/core": "21.2.1",
+    "@angular-devkit/schematics": "21.2.1",
+    "jiti": "2.4.2",
+    "rxjs": "7.8.2",
     "tslib": "^2.6.2"
   },
   "peerDependencies": {
