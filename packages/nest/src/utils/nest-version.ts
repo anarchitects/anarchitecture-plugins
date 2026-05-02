@@ -6,6 +6,8 @@
  * `@nestjs/schematics@next` or `@nestjs/cli@next`.
  */
 
+export const ANARCHITECTS_NEST_PLUGIN_PACKAGE = '@anarchitects/nest';
+
 export const NEST_VERSION = 'next';
 
 export const NEST_COMMON_PACKAGE = '@nestjs/common';
