@@ -12,6 +12,7 @@ import {
   NEST_CLI_PACKAGE_NAME,
   NEST_COMMON_PACKAGE,
   NEST_CORE_PACKAGE,
+  NEST_TESTING_PACKAGE,
   ANARCHITECTS_NEST_PLUGIN_PACKAGE,
 } from '../../utils/nest-version.js';
 
@@ -214,6 +215,39 @@ describe('initGenerator', () => {
     );
   });
 
+  it('preserves existing managed dependency sections and avoids cross-section duplicates', async () => {
+    updateJson(
+      tree,
+      'package.json',
+      (json: {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      }) => ({
+        ...json,
+        dependencies: {
+          ...(json.dependencies ?? {}),
+          [NEST_TESTING_PACKAGE]: '^10.0.0',
+        },
+        devDependencies: {
+          ...(json.devDependencies ?? {}),
+          [NEST_COMMON_PACKAGE]: '^10.0.0',
+        },
+      })
+    );
+
+    await initGenerator(tree, {});
+
+    const packageJson = readJson(tree, 'package.json') as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+
+    expect(packageJson.devDependencies?.[NEST_COMMON_PACKAGE]).toBe('^10.0.0');
+    expect(packageJson.dependencies?.[NEST_COMMON_PACKAGE]).toBeUndefined();
+    expect(packageJson.dependencies?.[NEST_TESTING_PACKAGE]).toBe('^10.0.0');
+    expect(packageJson.devDependencies?.[NEST_TESTING_PACKAGE]).toBeUndefined();
+  });
+
   it('overwrites existing managed dependency versions when forceVersions is true', async () => {
     updateJson(
       tree,
@@ -251,6 +285,45 @@ describe('initGenerator', () => {
     expect(packageJson.devDependencies?.[NEST_CLI_PACKAGE_NAME]).toBe(
       nestDevDependencies[NEST_CLI_PACKAGE_NAME]
     );
+  });
+
+  it('forceVersions updates managed packages without altering unrelated dependencies', async () => {
+    updateJson(
+      tree,
+      'package.json',
+      (json: {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      }) => ({
+        ...json,
+        dependencies: {
+          ...(json.dependencies ?? {}),
+          [NEST_COMMON_PACKAGE]: '^10.0.0',
+          lodash: '^4.17.0',
+        },
+        devDependencies: {
+          ...(json.devDependencies ?? {}),
+          [NEST_CLI_PACKAGE_NAME]: '^10.0.0',
+          vitest: '^1.0.0',
+        },
+      })
+    );
+
+    await initGenerator(tree, { forceVersions: true });
+
+    const packageJson = readJson(tree, 'package.json') as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+
+    expect(packageJson.dependencies?.[NEST_COMMON_PACKAGE]).toBe(
+      nestRuntimeDependencies[NEST_COMMON_PACKAGE]
+    );
+    expect(packageJson.devDependencies?.[NEST_CLI_PACKAGE_NAME]).toBe(
+      nestDevDependencies[NEST_CLI_PACKAGE_NAME]
+    );
+    expect(packageJson.dependencies?.lodash).toBe('^4.17.0');
+    expect(packageJson.devDependencies?.vitest).toBe('^1.0.0');
   });
 
   it('does not add optional add-on dependencies', async () => {
