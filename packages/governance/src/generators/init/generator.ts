@@ -12,6 +12,13 @@ interface RootPackageJson {
   };
 }
 
+interface RootTargetConfig {
+  executor?: string;
+  options?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 interface NxJson {
   plugins?: Array<
     string | { plugin: string; options?: Record<string, unknown> }
@@ -97,6 +104,17 @@ const GOVERNANCE_TARGETS = {
     metadata: {
       description:
         'Print Nx Conformance finding/error/warning counts from conformance JSON output.',
+    },
+  },
+  'governance-graph': {
+    executor: '@anarchitects/nx-governance:governance-graph',
+    options: {
+      format: 'html',
+      outputPath: 'dist/governance/graph.html',
+    },
+    metadata: {
+      description:
+        'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
     },
   },
   'repo-ai-root-cause': {
@@ -266,14 +284,57 @@ function ensureRootTargets(tree: Tree): void {
     for (const [targetName, targetConfig] of Object.entries(
       GOVERNANCE_TARGETS
     )) {
-      json.nx.targets[targetName] = {
-        ...(json.nx.targets[targetName] as Record<string, unknown>),
-        ...targetConfig,
-      };
+      json.nx.targets[targetName] = mergeRootTarget(
+        json.nx.targets[targetName] as RootTargetConfig | undefined,
+        targetConfig
+      );
     }
 
     return json;
   });
+}
+
+function mergeRootTarget(
+  existingTarget: RootTargetConfig | undefined,
+  defaultTarget: RootTargetConfig
+): RootTargetConfig {
+  const existingOptions = isRecord(existingTarget?.options)
+    ? existingTarget.options
+    : undefined;
+  const defaultOptions = isRecord(defaultTarget.options)
+    ? defaultTarget.options
+    : undefined;
+  const existingMetadata = isRecord(existingTarget?.metadata)
+    ? existingTarget.metadata
+    : undefined;
+  const defaultMetadata = isRecord(defaultTarget.metadata)
+    ? defaultTarget.metadata
+    : undefined;
+
+  return {
+    ...defaultTarget,
+    ...existingTarget,
+    ...(defaultOptions || existingOptions
+      ? {
+          options: {
+            ...(defaultOptions ?? {}),
+            ...(existingOptions ?? {}),
+          },
+        }
+      : {}),
+    ...(defaultMetadata || existingMetadata
+      ? {
+          metadata: {
+            ...(defaultMetadata ?? {}),
+            ...(existingMetadata ?? {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function ensureProfileConfig(tree: Tree): void {

@@ -37,6 +37,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
   - [repo-architecture](#repo-architecture)
   - [repo-snapshot](#repo-snapshot)
   - [repo-drift](#repo-drift)
+  - [governance-graph](#governance-graph)
   - [repo-ai-root-cause](#repo-ai-root-cause)
   - [repo-ai-drift](#repo-ai-drift)
   - [repo-ai-pr-impact](#repo-ai-pr-impact)
@@ -107,6 +108,10 @@ nx repo-health
 nx repo-boundaries
 nx repo-ownership
 nx repo-architecture
+
+# 6. Generate the governance graph viewer
+nx governance-graph
+nx governance-graph --format=json --outputPath=dist/governance/graph.json
 ```
 
 ---
@@ -314,6 +319,7 @@ nx g @anarchitects/nx-governance:init
 
 - Registers `@anarchitects/nx-governance` in `nx.json` plugins.
 - Writes root targets into `package.json > nx.targets` for graph diagnostics, health checks, snapshot/drift, and deterministic AI analysis workflows.
+- Adds a root `governance-graph` target that emits the static HTML viewer by default and supports JSON export via `--format=json`.
 - Creates `tools/governance/profiles/angular-cleanup.json` with sensible defaults (if it does not already exist).
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
 
@@ -385,6 +391,62 @@ nx workspace-conformance --conformanceJson=dist/conformance-result.json
 - `Warnings: Z`
 
 **Use when:** you need to validate conformance ingestion independently from governance scoring/reporting.
+
+---
+
+### `governance-graph`
+
+**Intent:** Generate a governance-enriched graph artifact that uses the Nx Project Graph as the structural backbone and overlays governance findings, health/status, ownership, documentation, metrics, and filterable facets.
+
+The MVP emits its own Governance Graph document and a static viewer. It does not replace the native Nx Graph UI.
+
+```bash
+# Root target added by the init generator
+nx governance-graph
+
+# JSON artifact for CI or debugging
+nx governance-graph --format=json --outputPath=dist/governance/graph.json
+
+# HTML viewer artifact
+nx governance-graph --format=html --outputPath=dist/governance/graph.html
+```
+
+**Output modes:**
+
+- `html` (default): emits a static, self-contained viewer that can be opened directly in a browser.
+- `json`: emits the Governance Graph document for CI artifacts, debugging, or future integrations.
+
+**What the Governance Graph contains:**
+
+- nodes and edges derived from the Nx Project Graph
+- governance findings attached to nodes and edges where resolution is possible
+- node and edge health/status derived from findings and metadata-backed status rules
+- ownership and documentation badges
+- summary counts and graph facets
+- an embedded graph payload that drives the static viewer
+
+**Static viewer MVP behaviour:**
+
+- renders node and edge lists with governance-specific status treatment
+- renders ownership and documentation badges
+- exposes filters for domain, layer, ownership, documentation, severity, and violation type
+- exposes a node inspector with metadata, score, findings, dependencies, and dependents
+- keeps all drilldown content traceable to the embedded Governance Graph document
+
+**MVP constraints:**
+
+- no native Nx Graph UI integration yet
+- no Nx Console integration yet
+- no Nx Cloud graph overlay yet
+- no historical trend view
+- no cross-snapshot comparison
+- no graph editing
+- no custom dashboards
+- the viewer is static and generated from one graph payload
+
+Native integration with the official Nx Graph UI is intentionally outside the MVP. The MVP uses the Nx Project Graph as input, then emits a governance-enriched graph document and static viewer. Nx Graph UI/Nx Console/Nx Cloud integration can be explored as a roadmap item.
+
+**Use when:** you want an explorable governance overlay without introducing a separate web application runtime.
 
 ---
 
