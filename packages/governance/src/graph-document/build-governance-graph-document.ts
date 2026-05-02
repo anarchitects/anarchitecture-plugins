@@ -17,12 +17,18 @@ import {
   type GovernanceGraphNode,
   type GovernanceGraphSummary,
 } from './contracts.js';
+import {
+  deriveGovernanceGraphEdgeStatus,
+  deriveGovernanceGraphNodeStatus,
+} from './derive-governance-graph-status.js';
 
 export interface GovernanceGraphBuilderInput {
   assessment: GovernanceAssessment;
   signals?: GovernanceSignal[];
   generatedAt?: string;
   schemaVersion?: string;
+  ownershipRequired?: boolean;
+  documentationRequired?: boolean;
 }
 
 interface DraftGraphFinding extends GovernanceGraphFinding {
@@ -30,12 +36,12 @@ interface DraftGraphFinding extends GovernanceGraphFinding {
 }
 
 interface DraftGraphNode {
-  node: Omit<GovernanceGraphNode, 'health' | 'findings'>;
+  node: Omit<GovernanceGraphNode, 'health' | 'score' | 'badges' | 'findings'>;
   findings: DraftGraphFinding[];
 }
 
 interface DraftGraphEdge {
-  edge: Omit<GovernanceGraphEdge, 'health' | 'findings'>;
+  edge: Omit<GovernanceGraphEdge, 'health' | 'score' | 'findings'>;
   findings: DraftGraphFinding[];
 }
 
@@ -56,8 +62,8 @@ const FINDING_SEVERITY_ORDER: Record<GovernanceSignalSeverity, number> = {
 const HEALTH_ORDER: Record<GovernanceGraphHealth, number> = {
   critical: 0,
   warning: 1,
-  healthy: 2,
-  unknown: 3,
+  unknown: 2,
+  healthy: 3,
 };
 
 /**
@@ -67,6 +73,8 @@ export function buildGovernanceGraphDocument(
   input: GovernanceGraphBuilderInput
 ): GovernanceGraphDocument {
   const workspace = input.assessment.workspace;
+  const ownershipRequired = resolveOwnershipRequirement(input);
+  const documentationRequired = resolveDocumentationRequirement(input);
   const nodes = [...workspace.projects].sort(compareProjects);
   const edges = [...workspace.dependencies].sort(compareDependencies);
 
@@ -133,19 +141,46 @@ export function buildGovernanceGraphDocument(
   }
 
   const finalizedNodes = [...nodeDrafts.values()]
-    .map(({ node, findings }) => ({
-      ...node,
-      findings: [...findings].sort(compareFindings).map(stripRelatedProjects),
-      health: deriveHealth(findings, true),
-    }))
+    .map(({ node, findings }) => {
+      const sortedFindings = [...findings].sort(compareFindings);
+      const resolvedNode = workspace.projects.find(
+        (project) => project.id === node.id
+      );
+      const nodeStatus = deriveGovernanceGraphNodeStatus({
+        findings: sortedFindings.map(stripRelatedProjects),
+        owner: node.owner,
+        ownershipSource: resolvedNode?.ownership?.source,
+        ownershipRequired,
+        documentation: node.metadata?.documentation,
+        documentationRequired,
+        isKnown: isKnownNode(resolvedNode),
+      });
+
+      return {
+        ...node,
+        findings: sortedFindings.map(stripRelatedProjects),
+        badges: nodeStatus.badges,
+        health: nodeStatus.health,
+        score: nodeStatus.score,
+      };
+    })
     .sort(compareGraphNodes);
 
   const finalizedEdges = [...edgeDrafts.values()]
-    .map(({ edge, findings }) => ({
-      ...edge,
-      findings: [...findings].sort(compareFindings).map(stripRelatedProjects),
-      health: deriveHealth(findings, true),
-    }))
+    .map(({ edge, findings }) => {
+      const sortedFindings = [...findings].sort(compareFindings);
+      const edgeStatus = deriveGovernanceGraphEdgeStatus({
+        findings: sortedFindings.map(stripRelatedProjects),
+        isKnown: isKnownEdge(edge),
+      });
+
+      return {
+        ...edge,
+        findings: sortedFindings.map(stripRelatedProjects),
+        health: edgeStatus.health,
+        score: edgeStatus.score,
+      };
+    })
     .sort(compareGraphEdges);
 
   return {
@@ -326,25 +361,6 @@ function buildFacets(
   };
 }
 
-function deriveHealth(
-  findings: DraftGraphFinding[],
-  isKnown: boolean
-): GovernanceGraphHealth {
-  if (findings.some((finding) => finding.severity === 'error')) {
-    return 'critical';
-  }
-
-  if (findings.some((finding) => finding.severity === 'warning')) {
-    return 'warning';
-  }
-
-  if (isKnown) {
-    return 'healthy';
-  }
-
-  return 'unknown';
-}
-
 function countHealth(
   healthValues: GovernanceGraphHealth[]
 ): Record<GovernanceGraphHealth, number> {
@@ -476,6 +492,48 @@ function buildFindingIdentity(finding: DraftGraphFinding): string {
     finding.sourcePluginId ?? '',
     finding.message,
   ].join('|');
+}
+
+function resolveOwnershipRequirement(
+  input: GovernanceGraphBuilderInput
+): boolean | undefined {
+  if (typeof input.ownershipRequired === 'boolean') {
+    return input.ownershipRequired;
+  }
+
+  return input.assessment.measurements.some(
+    (measurement) => measurement.id === 'ownership-coverage'
+  )
+    ? true
+    : undefined;
+}
+
+function resolveDocumentationRequirement(
+  input: GovernanceGraphBuilderInput
+): boolean | undefined {
+  if (typeof input.documentationRequired === 'boolean') {
+    return input.documentationRequired;
+  }
+
+  return input.assessment.measurements.some(
+    (measurement) => measurement.id === 'documentation-completeness'
+  )
+    ? true
+    : undefined;
+}
+
+function isKnownNode(project: GovernanceProject | undefined): boolean {
+  if (!project) {
+    return false;
+  }
+
+  return Boolean(project.id && project.name && project.root);
+}
+
+function isKnownEdge(
+  edge: Pick<GovernanceGraphEdge, 'source' | 'target'>
+): boolean {
+  return Boolean(edge.source && edge.target);
 }
 
 function mapSignalSource(

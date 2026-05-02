@@ -137,10 +137,27 @@ describe('buildGovernanceGraphDocument', () => {
         type: 'application',
         tags: ['domain:orders', 'layer:app'],
         owner: '@org/orders',
+        score: 70,
+        badges: [
+          {
+            id: 'ownership:present',
+            label: 'Owner',
+            kind: 'ownership',
+            status: 'healthy',
+            message: 'Owner metadata is present (@org/orders).',
+          },
+          {
+            id: 'documentation:missing',
+            label: 'Missing docs',
+            kind: 'documentation',
+            status: 'warning',
+            message: 'Documentation metadata is missing or incomplete.',
+          },
+        ],
         metadata: {
           score: 10,
         },
-        health: 'healthy',
+        health: 'warning',
         findings: [],
       },
       {
@@ -149,7 +166,24 @@ describe('buildGovernanceGraphDocument', () => {
         type: 'application',
         tags: ['domain:payments', 'layer:app'],
         owner: '@org/payments',
-        health: 'healthy',
+        score: 70,
+        badges: [
+          {
+            id: 'ownership:present',
+            label: 'Owner',
+            kind: 'ownership',
+            status: 'healthy',
+            message: 'Owner metadata is present (@org/payments).',
+          },
+          {
+            id: 'documentation:missing',
+            label: 'Missing docs',
+            kind: 'documentation',
+            status: 'warning',
+            message: 'Documentation metadata is missing or incomplete.',
+          },
+        ],
+        health: 'warning',
         findings: [],
       },
       {
@@ -158,6 +192,23 @@ describe('buildGovernanceGraphDocument', () => {
         type: 'library',
         tags: ['domain:shared', 'layer:shared'],
         owner: '@org/platform',
+        score: 70,
+        badges: [
+          {
+            id: 'ownership:present',
+            label: 'Owner',
+            kind: 'ownership',
+            status: 'healthy',
+            message: 'Owner metadata is present (@org/platform).',
+          },
+          {
+            id: 'documentation:missing',
+            label: 'Missing docs',
+            kind: 'documentation',
+            status: 'warning',
+            message: 'Documentation metadata is missing or incomplete.',
+          },
+        ],
         metadata: {
           criticality: 'high',
           documented: true,
@@ -204,6 +255,7 @@ describe('buildGovernanceGraphDocument', () => {
         source: 'orders-app',
         target: 'shared-util',
         type: 'static',
+        score: 40,
         health: 'critical',
         findings: [
           {
@@ -235,6 +287,7 @@ describe('buildGovernanceGraphDocument', () => {
         source: 'payments-app',
         target: 'shared-util',
         type: 'dynamic',
+        score: 100,
         health: 'healthy',
         findings: [
           {
@@ -255,8 +308,8 @@ describe('buildGovernanceGraphDocument', () => {
       nodeCount: 3,
       edgeCount: 2,
       findingCount: 6,
-      healthyNodeCount: 2,
-      warningNodeCount: 1,
+      healthyNodeCount: 0,
+      warningNodeCount: 3,
       criticalNodeCount: 0,
       unknownNodeCount: 0,
       healthyEdgeCount: 1,
@@ -399,7 +452,26 @@ function createAssessment(
       reactivatedFindings: [],
     },
     violations: input.violations ?? [],
-    measurements: [] satisfies Measurement[],
+    measurements: [
+      {
+        id: 'ownership-coverage',
+        name: 'Ownership Coverage',
+        family: 'ownership',
+        value: 1,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+      {
+        id: 'documentation-completeness',
+        name: 'Documentation Completeness',
+        family: 'documentation',
+        value: 1,
+        score: 100,
+        maxScore: 100,
+        unit: 'ratio',
+      },
+    ] satisfies Measurement[],
     signalBreakdown: {
       total: 0,
       bySource: [],
