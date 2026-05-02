@@ -29,6 +29,8 @@ export interface GovernanceGraphNode {
   tags: string[];
   owner?: string;
   health: GovernanceGraphHealth;
+  score?: number;
+  badges: GovernanceGraphBadge[];
   findings: GovernanceGraphFinding[];
   metadata?: Record<string, string | number | boolean | null>;
 }
@@ -39,6 +41,7 @@ export interface GovernanceGraphEdge {
   target: string;
   type: string;
   health: GovernanceGraphHealth;
+  score?: number;
   findings: GovernanceGraphFinding[];
 }
 
@@ -66,6 +69,20 @@ export interface GovernanceGraphFinding {
   category?: string;
   type?: string;
   sourcePluginId?: string;
+}
+
+export interface GovernanceGraphBadge {
+  id: string;
+  label: string;
+  kind:
+    | 'ownership'
+    | 'documentation'
+    | 'policy'
+    | 'conformance'
+    | 'metric'
+    | 'signal';
+  status: GovernanceGraphHealth;
+  message?: string;
 }
 
 export interface GovernanceGraphSummary {
