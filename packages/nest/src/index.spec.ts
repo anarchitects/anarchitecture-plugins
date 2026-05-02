@@ -21,7 +21,7 @@ describe('nest package shell', () => {
     expect(pluginCreateNodesV2).toBe(createNodesV2);
   });
 
-  it('declares empty manifest placeholders', () => {
+  it('declares the public generator manifest entry', () => {
     const currentDir = dirname(fileURLToPath(import.meta.url));
     const manifestPath = join(currentDir, 'index.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
@@ -29,10 +29,17 @@ describe('nest package shell', () => {
       generators: Record<string, unknown>;
     };
 
-    expect(manifest).toEqual({
-      executors: {},
-      generators: {},
-    });
+    expect(manifest).toEqual(
+      expect.objectContaining({
+        executors: {},
+        generators: {
+          init: {
+            implementation: './generators/init/generator',
+            schema: './generators/init/schema.json',
+          },
+        },
+      })
+    );
   });
 
   it('declares explicit public exports for the package root and plugin entrypoint', () => {
