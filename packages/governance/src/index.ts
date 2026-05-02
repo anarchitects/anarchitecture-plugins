@@ -15,6 +15,7 @@ export { default as repoAiScorecardExecutor } from './executors/repo-ai-scorecar
 export { default as repoAiOnboardingExecutor } from './executors/repo-ai-onboarding/executor.js';
 export { default as workspaceGraphExecutor } from './executors/workspace-graph/executor.js';
 export { default as workspaceConformanceExecutor } from './executors/workspace-conformance/executor.js';
+export { default as governanceGraphExecutor } from './executors/governance-graph/executor.js';
 
 export { default as initGenerator } from './generators/init/generator.js';
 
