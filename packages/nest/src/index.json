@@ -1,4 +1,9 @@
 {
   "executors": {},
-  "generators": {}
+  "generators": {
+    "init": {
+      "implementation": "./generators/init/generator",
+      "schema": "./generators/init/schema.json"
+    }
+  }
 }
