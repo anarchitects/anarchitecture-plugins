@@ -1462,6 +1462,13 @@ async function buildAssessment(
   return assessment;
 }
 
+export async function buildGovernanceAssessmentArtifacts(
+  options: GovernanceRunOptions,
+  artifactsOptions: GovernanceAssessmentArtifactsOptions = {}
+): Promise<GovernanceAssessmentArtifacts> {
+  return buildAssessmentArtifacts(options, artifactsOptions);
+}
+
 async function buildAssessmentArtifacts(
   options: GovernanceRunOptions,
   artifactsOptions: GovernanceAssessmentArtifactsOptions = {}

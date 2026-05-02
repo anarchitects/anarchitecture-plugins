@@ -55,3 +55,9 @@ export interface WorkspaceGraphExecutorOptions {
 export interface WorkspaceConformanceExecutorOptions {
   conformanceJson: string;
 }
+
+export interface GovernanceGraphExecutorOptions
+  extends GovernanceExecutorOptions {
+  outputPath?: string;
+  format?: 'json' | 'html';
+}

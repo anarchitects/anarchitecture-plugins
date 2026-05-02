@@ -67,6 +67,10 @@
     "workspace-conformance": {
       "implementation": "./executors/workspace-conformance/executor",
       "schema": "./executors/workspace-conformance/schema.json"
+    },
+    "governance-graph": {
+      "implementation": "./executors/governance-graph/executor",
+      "schema": "./executors/governance-graph/schema.json"
     }
   },
   "generators": {
