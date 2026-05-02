@@ -12,6 +12,7 @@ import {
   NEST_CLI_PACKAGE_NAME,
   NEST_COMMON_PACKAGE,
   NEST_CORE_PACKAGE,
+  ANARCHITECTS_NEST_PLUGIN_PACKAGE,
 } from '../../utils/nest-version.js';
 
 let createTreeWithEmptyWorkspace: (() => Tree) | undefined;
@@ -46,7 +47,6 @@ describe('initGenerator', () => {
     'accepts packageManager option %j without executing external commands',
     async (options) => {
       const spawnSpy = jest.spyOn(childProcess, 'spawn');
-      const nxJsonBefore = tree.read('nx.json', 'utf-8');
 
       await expect(
         initGenerator(tree, {
@@ -55,7 +55,13 @@ describe('initGenerator', () => {
         })
       ).resolves.toBe(undefined);
 
-      expect(tree.read('nx.json', 'utf-8')).toBe(nxJsonBefore);
+      const nxJson = readJson(tree, 'nx.json') as {
+        plugins?: Array<string | { plugin: string }>;
+      };
+
+      expect(nxJson.plugins).toEqual(
+        expect.arrayContaining([ANARCHITECTS_NEST_PLUGIN_PACKAGE])
+      );
       expect(tree.exists('demo-api/src/main.ts')).toBe(false);
       expect(tree.exists('demo-api/nest-cli.json')).toBe(false);
       expect(spawnSpy).not.toHaveBeenCalled();
@@ -64,13 +70,15 @@ describe('initGenerator', () => {
 
   it('adds Nest base runtime and dev dependencies by default', async () => {
     const spawnSpy = jest.spyOn(childProcess, 'spawn');
-    const nxJsonBefore = tree.read('nx.json', 'utf-8');
 
     await expect(initGenerator(tree, {})).resolves.toBe(undefined);
 
     const packageJson = readJson(tree, 'package.json') as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
+    };
+    const nxJson = readJson(tree, 'nx.json') as {
+      plugins?: Array<string | { plugin: string }>;
     };
 
     expect(packageJson.dependencies).toEqual(
@@ -79,7 +87,9 @@ describe('initGenerator', () => {
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining(nestDevDependencies)
     );
-    expect(tree.read('nx.json', 'utf-8')).toBe(nxJsonBefore);
+    expect(nxJson.plugins).toEqual(
+      expect.arrayContaining([ANARCHITECTS_NEST_PLUGIN_PACKAGE])
+    );
     expect(tree.exists('demo-api/src/main.ts')).toBe(false);
     expect(tree.exists('demo-api/nest-cli.json')).toBe(false);
     expect(spawnSpy).not.toHaveBeenCalled();
@@ -140,7 +150,6 @@ describe('initGenerator', () => {
   it('does not mutate package.json when skipPackageJson is true', async () => {
     const spawnSpy = jest.spyOn(childProcess, 'spawn');
     const packageJsonBefore = tree.read('package.json', 'utf-8');
-    const nxJsonBefore = tree.read('nx.json', 'utf-8');
 
     await expect(
       initGenerator(tree, {
@@ -152,17 +161,24 @@ describe('initGenerator', () => {
     ).resolves.toBe(undefined);
 
     expect(tree.read('package.json', 'utf-8')).toBe(packageJsonBefore);
-    expect(tree.read('nx.json', 'utf-8')).toBe(nxJsonBefore);
+    const nxJson = readJson(tree, 'nx.json') as {
+      plugins?: Array<string | { plugin: string }>;
+    };
+    expect(nxJson.plugins).toEqual(
+      expect.arrayContaining([ANARCHITECTS_NEST_PLUGIN_PACKAGE])
+    );
     expect(spawnSpy).not.toHaveBeenCalled();
   });
 
   it('is idempotent when run twice', async () => {
     await initGenerator(tree, {});
     const firstPackageJson = tree.read('package.json', 'utf-8');
+    const firstNxJson = tree.read('nx.json', 'utf-8');
 
     await initGenerator(tree, {});
 
     expect(tree.read('package.json', 'utf-8')).toBe(firstPackageJson);
+    expect(tree.read('nx.json', 'utf-8')).toBe(firstNxJson);
   });
 
   it('preserves existing dependency versions by default', async () => {
@@ -251,6 +267,111 @@ describe('initGenerator', () => {
 
     expect(dependencyKeys).not.toEqual(
       expect.arrayContaining(['@nestjs/platform-fastify', 'zod', '@swc/core'])
+    );
+  });
+
+  it('adds a plugins array when nx.json has no plugins field', async () => {
+    updateJson(tree, 'nx.json', (json: Record<string, unknown>) => {
+      const rest = { ...json };
+      delete rest.plugins;
+      return {
+        ...rest,
+        analytics: true,
+      };
+    });
+
+    await initGenerator(tree, { skipPackageJson: true });
+
+    const nxJson = readJson(tree, 'nx.json') as {
+      analytics?: boolean;
+      plugins?: Array<string | { plugin: string }>;
+    };
+
+    expect(nxJson.analytics).toBe(true);
+    expect(nxJson.plugins).toEqual([ANARCHITECTS_NEST_PLUGIN_PACKAGE]);
+  });
+
+  it('appends the Nest plugin when unrelated plugins exist', async () => {
+    updateJson(tree, 'nx.json', (json: Record<string, unknown>) => ({
+      ...json,
+      plugins: ['@nx/jest/plugin'],
+    }));
+
+    await initGenerator(tree, { skipPackageJson: true });
+
+    const nxJson = readJson(tree, 'nx.json') as {
+      plugins?: Array<string | { plugin: string }>;
+    };
+
+    expect(nxJson.plugins).toEqual([
+      '@nx/jest/plugin',
+      ANARCHITECTS_NEST_PLUGIN_PACKAGE,
+    ]);
+  });
+
+  it('does not duplicate string-form plugin registration', async () => {
+    updateJson(tree, 'nx.json', (json: Record<string, unknown>) => ({
+      ...json,
+      plugins: [ANARCHITECTS_NEST_PLUGIN_PACKAGE],
+    }));
+
+    await initGenerator(tree, { skipPackageJson: true });
+
+    const nxJson = readJson(tree, 'nx.json') as {
+      plugins?: Array<string | { plugin: string }>;
+    };
+
+    expect(nxJson.plugins).toEqual([ANARCHITECTS_NEST_PLUGIN_PACKAGE]);
+  });
+
+  it('does not duplicate object-form plugin registration', async () => {
+    updateJson(tree, 'nx.json', (json: Record<string, unknown>) => ({
+      ...json,
+      plugins: [{ plugin: ANARCHITECTS_NEST_PLUGIN_PACKAGE }],
+    }));
+
+    await initGenerator(tree, { skipPackageJson: true });
+
+    const nxJson = readJson(tree, 'nx.json') as {
+      plugins?: Array<string | { plugin: string }>;
+    };
+
+    expect(nxJson.plugins).toEqual([
+      { plugin: ANARCHITECTS_NEST_PLUGIN_PACKAGE },
+    ]);
+  });
+
+  it('preserves existing nx.json fields when registering the plugin', async () => {
+    updateJson(tree, 'nx.json', (json: Record<string, unknown>) => ({
+      ...json,
+      namedInputs: {
+        default: ['{projectRoot}/**/*'],
+      },
+      targetDefaults: {
+        build: {
+          cache: true,
+        },
+      },
+    }));
+
+    await initGenerator(tree, { skipPackageJson: true });
+
+    const nxJson = readJson(tree, 'nx.json') as {
+      namedInputs?: Record<string, unknown>;
+      targetDefaults?: Record<string, unknown>;
+      plugins?: Array<string | { plugin: string }>;
+    };
+
+    expect(nxJson.namedInputs).toEqual({
+      default: ['{projectRoot}/**/*'],
+    });
+    expect(nxJson.targetDefaults).toEqual({
+      build: {
+        cache: true,
+      },
+    });
+    expect(nxJson.plugins).toEqual(
+      expect.arrayContaining([ANARCHITECTS_NEST_PLUGIN_PACKAGE])
     );
   });
 });

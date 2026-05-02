@@ -3,6 +3,7 @@ import {
   nestDevDependencies,
   nestRuntimeDependencies,
 } from '../../utils/nest-dependencies.js';
+import { ANARCHITECTS_NEST_PLUGIN_PACKAGE } from '../../utils/nest-version.js';
 import type { InitGeneratorSchema } from './schema.js';
 
 interface RootPackageJson {
@@ -10,10 +11,18 @@ interface RootPackageJson {
   devDependencies?: Record<string, string>;
 }
 
+interface NxJson {
+  plugins?: Array<
+    string | { plugin: string; options?: Record<string, unknown> }
+  >;
+}
+
 export async function initGenerator(
   tree: Tree,
   options: InitGeneratorSchema = {}
 ): Promise<void> {
+  ensureNxPluginRegistration(tree);
+
   if (!options.skipPackageJson) {
     addNestBaseDependencies(tree, options.forceVersions === true);
   }
@@ -22,6 +31,26 @@ export async function initGenerator(
 }
 
 export default initGenerator;
+
+function ensureNxPluginRegistration(tree: Tree): void {
+  updateJson<NxJson>(tree, 'nx.json', (json) => {
+    const plugins = Array.isArray(json.plugins) ? [...json.plugins] : [];
+    const alreadyRegistered = plugins.some((entry) =>
+      typeof entry === 'string'
+        ? entry === ANARCHITECTS_NEST_PLUGIN_PACKAGE
+        : entry.plugin === ANARCHITECTS_NEST_PLUGIN_PACKAGE
+    );
+
+    if (!alreadyRegistered) {
+      plugins.push(ANARCHITECTS_NEST_PLUGIN_PACKAGE);
+    }
+
+    return {
+      ...json,
+      plugins,
+    };
+  });
+}
 
 function addNestBaseDependencies(tree: Tree, forceVersions: boolean): void {
   updateJson<RootPackageJson>(tree, 'package.json', (json) => {
