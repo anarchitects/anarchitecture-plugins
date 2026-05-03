@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)"
+  ],
+  "timezone": "Europe/Brussels",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchPackageNames": ["nx", "nx-cloud"],
+      "matchPackagePrefixes": ["@nx/"],
+      "groupName": "Nx packages"
+    },
+    {
+      "matchPackagePrefixes": ["@typescript-eslint/"],
+      "matchPackageNames": ["typescript-eslint"],
+      "groupName": "TypeScript ESLint packages"
+    },
+    {
+      "matchPackageNames": ["typescript"],
+      "groupName": "TypeScript"
+    },
+    {
+      "matchPackagePrefixes": ["@nestjs/"],
+      "groupName": "NestJS packages"
+    },
+    {
+      "matchPackagePrefixes": ["@angular/"],
+      "groupName": "Angular packages"
+    },
+    {
+      "matchPackageNames": ["jest"],
+      "matchPackagePrefixes": ["@jest/"],
+      "groupName": "Jest packages"
+    },
+    {
+      "matchPackageNames": ["vitest"],
+      "matchPackagePrefixes": ["@vitest/"],
+      "groupName": "Vitest packages"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 1
+}
