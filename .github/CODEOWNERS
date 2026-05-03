@@ -1,12 +1,12 @@
 # Workspace ownership
-* @anarchitects/platform
+* @vrxj81
 
-# Plugin ownership
-/packages/js/ @anarchitects/js
-/packages/typeorm/ @anarchitects/data
-/packages/governance/ @anarchitects/architecture
+# Package ownership
+/packages/js/ @vrxj81
+/packages/typeorm/ @vrxj81
+/packages/governance/ @vrxj81
 
 # End-to-end ownership
-/packages/js-e2e/ @anarchitects/qa
-/packages/typeorm-e2e/ @anarchitects/qa
-/packages/governance-e2e/ @anarchitects/qa
+/packages/js-e2e/ @vrxj81
+/packages/typeorm-e2e/ @vrxj81
+/packages/governance-e2e/ @vrxj81
