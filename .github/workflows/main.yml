@@ -33,7 +33,7 @@ jobs:
           cache: 'yarn'
 
       - run: yarn install --immutable
-      - uses: nrwl/nx-set-shas@v4
+      - uses: nrwl/nx-set-shas@v5
 
       - run: yarn nx affected -t build e2e-ci
       - run: yarn nx fix-ci
