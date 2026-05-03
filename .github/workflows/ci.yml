@@ -33,7 +33,7 @@ jobs:
           cache: 'yarn'
 
       - run: yarn install --immutable
-      - uses: nrwl/nx-set-shas@v4
+      - uses: nrwl/nx-set-shas@v5
 
       - run: yarn nx-cloud record -- yarn nx format:check
       - run: yarn nx affected -t lint test build typecheck --exclude "$(yarn nx show projects | grep -- '-e2e$' | paste -sd, -)"
