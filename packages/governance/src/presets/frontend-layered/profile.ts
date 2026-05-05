@@ -2,10 +2,8 @@ import {
   GOVERNANCE_DEFAULT_PROFILE_NAME,
   GOVERNANCE_LEGACY_PROFILE_NAME,
 } from '../../profile/runtime-profile.js';
-import type {
-  GovernanceProfile,
-  GovernanceProfileFile,
-} from '../../core/index.js';
+import type { GovernanceProfileFile } from '../../profile/runtime-profile.js';
+import type { GovernanceProfile } from '../../core/index.js';
 import type { ResolvedProfileOverrides } from '../../profile/load-profile-overrides.js';
 import {
   createBuiltInProfile,
