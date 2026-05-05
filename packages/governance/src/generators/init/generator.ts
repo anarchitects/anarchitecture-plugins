@@ -1,4 +1,9 @@
 import { formatFiles, logger, Tree, updateJson, writeJson } from '@nx/devkit';
+import {
+  GOVERNANCE_DEFAULT_PROFILE_NAME,
+  resolveGovernanceProfileRelativePath,
+} from '../../profile/runtime-profile.js';
+import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
 import { eslintIntegrationGenerator } from '../eslint-integration/generator.js';
 
 interface InitSchema {
@@ -31,7 +36,7 @@ const GOVERNANCE_TARGETS = {
   'repo-health': {
     executor: '@anarchitects/nx-governance:repo-health',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'cli',
     },
     metadata: {
@@ -41,7 +46,7 @@ const GOVERNANCE_TARGETS = {
   'repo-boundaries': {
     executor: '@anarchitects/nx-governance:repo-boundaries',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'cli',
     },
     metadata: {
@@ -51,7 +56,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ownership': {
     executor: '@anarchitects/nx-governance:repo-ownership',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'cli',
     },
     metadata: {
@@ -61,7 +66,7 @@ const GOVERNANCE_TARGETS = {
   'repo-architecture': {
     executor: '@anarchitects/nx-governance:repo-architecture',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'cli',
     },
     metadata: {
@@ -71,7 +76,7 @@ const GOVERNANCE_TARGETS = {
   'repo-snapshot': {
     executor: '@anarchitects/nx-governance:repo-snapshot',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'cli',
     },
     metadata: {
@@ -120,7 +125,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-root-cause': {
     executor: '@anarchitects/nx-governance:repo-ai-root-cause',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topViolations: 10,
     },
@@ -132,7 +137,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-drift': {
     executor: '@anarchitects/nx-governance:repo-ai-drift',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
     },
     metadata: {
@@ -143,7 +148,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-pr-impact': {
     executor: '@anarchitects/nx-governance:repo-ai-pr-impact',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       baseRef: 'main',
       headRef: 'HEAD',
@@ -156,7 +161,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-cognitive-load': {
     executor: '@anarchitects/nx-governance:repo-ai-cognitive-load',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topProjects: 10,
     },
@@ -168,7 +173,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-recommendations': {
     executor: '@anarchitects/nx-governance:repo-ai-recommendations',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topViolations: 10,
     },
@@ -180,7 +185,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-smell-clusters': {
     executor: '@anarchitects/nx-governance:repo-ai-smell-clusters',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topViolations: 10,
     },
@@ -192,7 +197,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-refactoring-suggestions': {
     executor: '@anarchitects/nx-governance:repo-ai-refactoring-suggestions',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topViolations: 10,
       topProjects: 5,
@@ -205,7 +210,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-scorecard': {
     executor: '@anarchitects/nx-governance:repo-ai-scorecard',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
     },
     metadata: {
@@ -216,7 +221,7 @@ const GOVERNANCE_TARGETS = {
   'repo-ai-onboarding': {
     executor: '@anarchitects/nx-governance:repo-ai-onboarding',
     options: {
-      profile: 'angular-cleanup',
+      profile: GOVERNANCE_DEFAULT_PROFILE_NAME,
       output: 'json',
       topViolations: 10,
       topProjects: 5,
@@ -338,38 +343,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function ensureProfileConfig(tree: Tree): void {
-  const filePath = 'tools/governance/profiles/angular-cleanup.json';
+  const filePath = resolveGovernanceProfileRelativePath(
+    GOVERNANCE_DEFAULT_PROFILE_NAME
+  );
 
   if (tree.exists(filePath)) {
     return;
   }
 
-  writeJson(tree, filePath, {
-    boundaryPolicySource: 'eslint',
-    layers: ['app', 'feature', 'ui', 'data-access', 'util'],
-    allowedDomainDependencies: {
-      '*': ['shared'],
-    },
-    ownership: {
-      required: true,
-      metadataField: 'ownership',
-    },
-    health: {
-      statusThresholds: {
-        goodMinScore: 85,
-        warningMinScore: 70,
-      },
-    },
-    metrics: {
-      architecturalEntropyWeight: 0.2,
-      dependencyComplexityWeight: 0.2,
-      domainIntegrityWeight: 0.2,
-      ownershipCoverageWeight: 0.2,
-      documentationCompletenessWeight: 0.2,
-      layerIntegrityWeight: 0.2,
-    },
-    projectOverrides: {},
-  });
+  writeJson(tree, filePath, createAngularCleanupStarterProfile());
 }
 
 export default initGenerator;

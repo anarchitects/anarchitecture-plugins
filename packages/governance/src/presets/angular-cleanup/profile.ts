@@ -11,6 +11,10 @@ import {
   ProfileOverrides,
   normalizeGovernanceException,
 } from '../../core/index.js';
+import {
+  GovernanceProfileFile,
+  resolveGovernanceProfilePath,
+} from '../../profile/runtime-profile.js';
 
 const LEGACY_PROFILE_METRIC_KEY_MAP = {
   architecturalEntropyWeight: 'architectural-entropy',
@@ -46,6 +50,38 @@ export const angularCleanupProfile: GovernanceProfile = {
   },
 };
 
+// This starter file is copied into a workspace during init when no user-owned
+// runtime profile exists yet. It stays separate from the built-in preset so the
+// workspace can own and evolve its runtime policy explicitly.
+export function createAngularCleanupStarterProfile(): GovernanceProfileFile {
+  return {
+    boundaryPolicySource: 'eslint',
+    layers: ['app', 'feature', 'ui', 'data-access', 'util'],
+    allowedDomainDependencies: {
+      '*': ['shared'],
+    },
+    ownership: {
+      required: true,
+      metadataField: 'ownership',
+    },
+    health: {
+      statusThresholds: {
+        goodMinScore: 85,
+        warningMinScore: 70,
+      },
+    },
+    metrics: {
+      architecturalEntropyWeight: 0.2,
+      dependencyComplexityWeight: 0.2,
+      domainIntegrityWeight: 0.2,
+      ownershipCoverageWeight: 0.2,
+      documentationCompletenessWeight: 0.2,
+      layerIntegrityWeight: 0.2,
+    },
+    projectOverrides: {},
+  };
+}
+
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
   exceptions: GovernanceException[];
@@ -56,10 +92,7 @@ export async function loadProfileOverrides(
   workspaceRoot: string,
   profileName: string
 ): Promise<ResolvedProfileOverrides> {
-  const filePath = join(
-    workspaceRoot,
-    `tools/governance/profiles/${profileName}.json`
-  );
+  const filePath = resolveGovernanceProfilePath(workspaceRoot, profileName);
 
   if (!existsSync(filePath)) {
     return {

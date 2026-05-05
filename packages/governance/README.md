@@ -148,6 +148,10 @@ A **governance profile** is a JSON file at `tools/governance/profiles/<name>.jso
 
 The built-in preset is `angular-cleanup`, a starter profile modelled on layered, domain-driven workspace conventions. It is a profile shipped by the core package, not an Angular engine implementation. You can adjust every aspect of it by editing the JSON file — no TypeScript required.
 
+For the current responsibility split between profiles, presets, executor
+options, and init wiring, see
+[`docs/governance/configuration-model.md`](../../docs/governance/configuration-model.md).
+
 ### Boundary policy source
 
 Every profile has a `boundaryPolicySource` setting:
