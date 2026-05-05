@@ -8,6 +8,10 @@ import { eslintIntegrationGenerator } from '../eslint-integration/generator.js';
 
 interface InitSchema {
   configureEslint?: boolean;
+  eslintConfigPath?: string;
+  governanceHelperPath?: string;
+  profile?: string;
+  profilePath?: string;
   skipFormat?: boolean;
 }
 
@@ -244,7 +248,13 @@ export async function initGenerator(
   ensureProfileConfig(tree);
 
   if (configureEslint) {
-    await eslintIntegrationGenerator(tree, { skipFormat: true });
+    await eslintIntegrationGenerator(tree, {
+      skipFormat: true,
+      eslintConfigPath: options.eslintConfigPath,
+      governanceHelperPath: options.governanceHelperPath,
+      profile: options.profile,
+      profilePath: options.profilePath,
+    });
   } else {
     logger.warn(
       'Nx Governance: ESLint integration generation was skipped. This makes ESLint the effective source of truth for boundaries and can drift from governance profiles, which is not recommended.'

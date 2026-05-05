@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 
 import type { GovernanceProfile, ProfileOverrides } from '../core/index.js';
 
@@ -7,9 +7,20 @@ import type { GovernanceProfile, ProfileOverrides } from '../core/index.js';
 // from the selected profile file.
 export const GOVERNANCE_PROFILE_DIRECTORY = 'tools/governance/profiles';
 export const GOVERNANCE_DEFAULT_PROFILE_NAME = 'angular-cleanup';
+export const GOVERNANCE_DEFAULT_ESLINT_CONFIG_PATH = 'eslint.config.mjs';
+export const GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH =
+  'tools/governance/eslint/dependency-constraints.mjs';
+export const GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS = [
+  'eslint.config.mjs',
+  'eslint.config.cjs',
+  'eslint.config.js',
+] as const;
 
 export interface GovernanceProfileFile extends ProfileOverrides {
   boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
+  eslint?: {
+    helperPath?: string;
+  };
 }
 
 export function resolveGovernanceProfileRelativePath(
@@ -27,4 +38,42 @@ export function resolveGovernanceProfilePath(
     GOVERNANCE_PROFILE_DIRECTORY,
     `${profileName}.json`
   );
+}
+
+export function resolveGovernanceSelectedProfileRelativePath(options?: {
+  profile?: string;
+  profilePath?: string;
+}): string {
+  if (options?.profilePath) {
+    return normalizeWorkspaceRelativePath(options.profilePath);
+  }
+
+  return resolveGovernanceProfileRelativePath(
+    options?.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME
+  );
+}
+
+export function resolveGovernanceProfilesDirectoryFromPath(
+  profilePath: string
+): string {
+  return normalizeWorkspaceRelativePath(dirname(profilePath));
+}
+
+export function toRelativeModuleSpecifier(
+  fromFilePath: string,
+  toFilePath: string
+): string {
+  const fromDir = posix.dirname(normalizeWorkspaceRelativePath(fromFilePath));
+  const toPath = normalizeWorkspaceRelativePath(toFilePath);
+  const relativePath = posix.relative(fromDir, toPath);
+
+  if (relativePath === '') {
+    return './';
+  }
+
+  return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
+}
+
+export function normalizeWorkspaceRelativePath(path: string): string {
+  return path.replace(/\\/g, '/');
 }

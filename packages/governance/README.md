@@ -329,10 +329,14 @@ nx g @anarchitects/nx-governance:init
 
 **Options:**
 
-| Option            | Type      | Default | Description                                                                  |
-| ----------------- | --------- | ------- | ---------------------------------------------------------------------------- |
-| `configureEslint` | `boolean` | `true`  | Generate the ESLint integration helper and wire it into `eslint.config.mjs`. |
-| `skipFormat`      | `boolean` | `false` | Skip Prettier formatting of generated files.                                 |
+| Option                 | Type      | Default                                                | Description                                                                                                                                                                             |
+| ---------------------- | --------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                              |
+| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`. |
+| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                |
+| `profile`              | `string`  | `"angular-cleanup"`                                    | Governance profile name used when migrating inline ESLint depConstraints.                                                                                                               |
+| `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                      |
+| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                            |
 
 ---
 
@@ -346,17 +350,23 @@ nx g @anarchitects/nx-governance:eslint-integration
 
 **What it does, in order:**
 
-1. **Migrates** any existing inline `depConstraints` array from `eslint.config.mjs` into `tools/governance/profiles/angular-cleanup.json`. This happens before ESLint is modified, making the profile the authoritative source first.
-2. **Writes** `tools/governance/eslint/dependency-constraints.mjs` — a pure ES module that reads all governance profile JSON files at import time, merges their `allowedDomainDependencies` maps, and exports a `governanceDepConstraints` array in the shape that `@nx/enforce-module-boundaries` expects.
-3. **Patches** `eslint.config.mjs` to import `governanceDepConstraints` from the helper and use it as the `depConstraints` value, replacing any previous inline array.
+1. **Migrates** any existing inline `depConstraints` array from the configured flat ESLint config into the selected governance profile file. When no explicit config path is provided, Nx Governance autodetects `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.
+2. **Writes** the governance depConstraints helper. By default this is `tools/governance/eslint/dependency-constraints.mjs`.
+3. **Patches** the configured flat ESLint config to import `governanceDepConstraints` from that helper using the correct relative module path.
 
 After running this generator, adding or changing domain dependency rules in a profile JSON automatically updates both governance reports _and_ ESLint enforcement on the next run — with no manual synchronisation required.
 
 **Options:**
 
-| Option       | Type      | Default | Description                                  |
-| ------------ | --------- | ------- | -------------------------------------------- |
-| `skipFormat` | `boolean` | `false` | Skip Prettier formatting of generated files. |
+| Option                 | Type      | Default                                                | Description                                                                                                                                           |
+| ---------------------- | --------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`. |
+| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Helper module output path.                                                                                                                            |
+| `profile`              | `string`  | `"angular-cleanup"`                                    | Profile name resolved under `tools/governance/profiles/`.                                                                                             |
+| `profilePath`          | `string`  | none                                                   | Profile path used directly for migration.                                                                                                             |
+| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                          |
+
+This integration currently patches flat ESLint config files only. Legacy `.eslintrc*` support is intentionally out of scope here because it is a different config model with different merge and patch semantics; this cleanup keeps the change bounded to flat config autodetection plus explicit override support.
 
 ---
 
@@ -1167,14 +1177,14 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
 
 ## ESLint alignment
 
-Running the `eslint-integration` generator creates a **shared runtime policy module** at `tools/governance/eslint/dependency-constraints.mjs`. This module:
+Running the `eslint-integration` generator creates a **shared runtime policy module**. By default this lives at `tools/governance/eslint/dependency-constraints.mjs`, but you can override it with `governanceHelperPath`. This module:
 
 1. Reads all `tools/governance/profiles/*.json` files at import time.
 2. Merges their `allowedDomainDependencies` maps.
 3. Converts each `domain:X → [domain:Y, ...]` entry into an `@nx/enforce-module-boundaries` depConstraint object.
 4. Exports the resulting array as `governanceDepConstraints`.
 
-Your `eslint.config.mjs` imports and uses this export directly:
+Your autodetected or explicitly selected flat ESLint config imports and uses this export directly:
 
 ```js
 import { governanceDepConstraints } from './tools/governance/eslint/dependency-constraints.mjs';
@@ -1198,7 +1208,7 @@ export default [
 
 **The consequence:** changing a domain rule in a profile JSON propagates automatically to both ESLint enforcement (on the next `lint` run) and governance reporting (on the next `repo-boundaries` run). No manual synchronisation, no drift.
 
-When `boundaryPolicySource` is `"eslint"` in a profile, the governance executor also imports this module at runtime to use the same resolved constraint set as the active boundary policy, ensuring reports and lint share identical semantics.
+When `boundaryPolicySource` is `"eslint"` in a profile, the governance executor also imports this module at runtime. If you generate the helper to a custom path, the generator stores that path in the migrated profile file so reports and lint keep using the same constraint source.
 
 ---
 
