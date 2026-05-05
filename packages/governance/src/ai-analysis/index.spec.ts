@@ -43,7 +43,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'root-cause',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         topViolations: [
           {
@@ -86,7 +86,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'pr-impact',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         affectedProjects: ['orders-state', 'payments-api', 'shared-utils'],
         metadata: {
@@ -113,7 +113,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'cognitive-load',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         affectedProjects: ['booking-state', 'payments-api', 'shared-utils'],
         metadata: {
@@ -142,7 +142,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'recommendations',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         topViolations: [
           {
@@ -190,7 +190,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'smell-clusters',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         topViolations: [
           {
@@ -247,7 +247,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'refactoring-suggestions',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         topViolations: [
           {
@@ -316,7 +316,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'scorecard',
       generatedAt: '2026-03-13T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         snapshot: {
           timestamp: '2026-03-13T12:00:00Z',
@@ -427,7 +427,7 @@ describe('ai-analysis', () => {
     const request: AiAnalysisRequest = {
       kind: 'onboarding',
       generatedAt: '2026-03-14T12:00:00Z',
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       inputs: {
         topViolations: [
           {

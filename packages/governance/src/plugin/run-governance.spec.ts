@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-jest.mock('../presets/angular-cleanup/profile.js', () => {
+jest.mock('../presets/frontend-layered/profile.js', () => {
   const actual = jest.requireActual(
-    '../presets/angular-cleanup/profile.js'
-  ) as typeof import('../presets/angular-cleanup/profile.js');
+    '../presets/frontend-layered/profile.js'
+  ) as typeof import('../presets/frontend-layered/profile.js');
 
   return {
     ...actual,
@@ -17,11 +17,11 @@ jest.mock('../presets/angular-cleanup/profile.js', () => {
 import { logger, workspaceRoot } from '@nx/devkit';
 
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
-import * as profileModule from '../presets/angular-cleanup/profile.js';
+import * as profileModule from '../presets/frontend-layered/profile.js';
 import {
-  angularCleanupProfile,
+  frontendLayeredProfile,
   loadProfileOverrides,
-} from '../presets/angular-cleanup/profile.js';
+} from '../presets/frontend-layered/profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
 import type {
@@ -39,8 +39,8 @@ import {
 } from './run-governance.js';
 
 const actualProfileModule = jest.requireActual(
-  '../presets/angular-cleanup/profile.js'
-) as typeof import('../presets/angular-cleanup/profile.js');
+  '../presets/frontend-layered/profile.js'
+) as typeof import('../presets/frontend-layered/profile.js');
 const mockedLoadProfileOverrides = jest.mocked(
   profileModule.loadProfileOverrides
 );
@@ -67,31 +67,31 @@ describe('runGovernance', () => {
   it('keeps report measurement ids stable across report types after signal-based metric wiring', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 
-    const profileName = 'angular-cleanup';
+    const profileName = 'frontend-layered';
     const overrides = await loadProfileOverrides(workspaceRoot, profileName);
     const resolvedWeights = {
       'architectural-entropy':
         overrides.metrics?.['architectural-entropy'] ??
-        angularCleanupProfile.metrics['architectural-entropy'],
+        frontendLayeredProfile.metrics['architectural-entropy'],
       'dependency-complexity':
         overrides.metrics?.['dependency-complexity'] ??
-        angularCleanupProfile.metrics['dependency-complexity'],
+        frontendLayeredProfile.metrics['dependency-complexity'],
       'domain-integrity':
         overrides.metrics?.['domain-integrity'] ??
-        angularCleanupProfile.metrics['domain-integrity'],
+        frontendLayeredProfile.metrics['domain-integrity'],
       'ownership-coverage':
         overrides.metrics?.['ownership-coverage'] ??
-        angularCleanupProfile.metrics['ownership-coverage'],
+        frontendLayeredProfile.metrics['ownership-coverage'],
       'documentation-completeness':
         overrides.metrics?.['documentation-completeness'] ??
-        angularCleanupProfile.metrics['documentation-completeness'],
+        frontendLayeredProfile.metrics['documentation-completeness'],
       'layer-integrity':
         overrides.metrics?.['layer-integrity'] ??
-        angularCleanupProfile.metrics['layer-integrity'],
+        frontendLayeredProfile.metrics['layer-integrity'],
     };
     const resolvedStatusThresholds =
       overrides.health?.statusThresholds ??
-      angularCleanupProfile.health.statusThresholds;
+      frontendLayeredProfile.health.statusThresholds;
 
     const health = await runGovernance({ reportType: 'health' });
     const boundaries = await runGovernance({ reportType: 'boundaries' });
@@ -341,7 +341,7 @@ describe('runGovernance', () => {
 
     const resolvedOverrides = await loadProfileOverrides(
       workspaceRoot,
-      'angular-cleanup'
+      'frontend-layered'
     );
     mockedLoadProfileOverrides.mockResolvedValueOnce({
       ...resolvedOverrides,
@@ -458,7 +458,7 @@ describe('runGovernance', () => {
     const baseline = await runGovernance({ reportType: 'health' });
     const resolvedOverrides = await loadProfileOverrides(
       workspaceRoot,
-      'angular-cleanup'
+      'frontend-layered'
     );
     mockedLoadProfileOverrides.mockResolvedValueOnce({
       ...resolvedOverrides,
@@ -547,7 +547,7 @@ describe('runGovernance', () => {
 
     const resolvedOverrides = await loadProfileOverrides(
       workspaceRoot,
-      'angular-cleanup'
+      'frontend-layered'
     );
     mockedLoadProfileOverrides.mockResolvedValueOnce({
       ...resolvedOverrides,

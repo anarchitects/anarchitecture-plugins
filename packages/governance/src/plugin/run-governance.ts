@@ -10,9 +10,9 @@ import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
 import { readNxWorkspaceSnapshot } from '../nx-adapter/read-workspace.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
-  angularCleanupProfile,
   loadProfileOverrides,
-} from '../presets/angular-cleanup/profile.js';
+  resolveBuiltInGovernanceProfile,
+} from '../presets/frontend-layered/profile.js';
 import { GOVERNANCE_DEFAULT_PROFILE_NAME } from '../profile/runtime-profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
@@ -1475,26 +1475,27 @@ async function buildAssessmentArtifacts(
   artifactsOptions: GovernanceAssessmentArtifactsOptions = {}
 ): Promise<GovernanceAssessmentArtifacts> {
   const profileName = options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
+  const builtInProfile = resolveBuiltInGovernanceProfile(profileName);
 
   const overrides = await loadProfileOverrides(workspaceRoot, profileName);
   const effectiveProfile: GovernanceProfile = {
-    ...angularCleanupProfile,
-    layers: overrides.layers ?? angularCleanupProfile.layers,
+    ...builtInProfile,
+    layers: overrides.layers ?? builtInProfile.layers,
     allowedDomainDependencies:
       overrides.allowedDomainDependencies ??
-      angularCleanupProfile.allowedDomainDependencies,
+      builtInProfile.allowedDomainDependencies,
     ownership: {
-      ...angularCleanupProfile.ownership,
+      ...builtInProfile.ownership,
       ...(overrides.ownership ?? {}),
     },
     health: {
       statusThresholds: {
-        ...angularCleanupProfile.health.statusThresholds,
+        ...builtInProfile.health.statusThresholds,
         ...(overrides.health?.statusThresholds ?? {}),
       },
     },
     metrics: {
-      ...angularCleanupProfile.metrics,
+      ...builtInProfile.metrics,
       ...normalizeMetricWeights(overrides.metrics),
     },
   };

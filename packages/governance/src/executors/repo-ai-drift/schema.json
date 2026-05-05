@@ -6,7 +6,7 @@
     "profile": {
       "type": "string",
       "description": "Governance profile used to label drift interpretation payloads.",
-      "default": "angular-cleanup"
+      "default": "frontend-layered"
     },
     "output": {
       "type": "string",

@@ -1,6 +1,6 @@
 import { logger, readJson, type Tree, updateJson } from '@nx/devkit';
 
-import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
+import { createFrontendLayeredStarterProfile } from '../../presets/frontend-layered/profile.js';
 import initGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
@@ -45,6 +45,21 @@ describe('governance initGenerator', () => {
           'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
       },
     });
+  });
+
+  it('uses frontend-layered as the default profile for newly added governance targets', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      skipFormat: true,
+    });
+
+    const packageJson = readJson(tree, 'package.json') as {
+      nx?: { targets?: Record<string, { options?: Record<string, unknown> }> };
+    };
+
+    expect(packageJson.nx?.targets?.['repo-health']?.options?.profile).toBe(
+      'frontend-layered'
+    );
   });
 
   it('is idempotent and registers the plugin only once', async () => {
@@ -177,7 +192,7 @@ describe('governance initGenerator', () => {
     };
 
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify(existingProfile, null, 2)}\n`
     );
 
@@ -188,11 +203,22 @@ describe('governance initGenerator', () => {
 
     expect(
       JSON.parse(
-        tree.read('tools/governance/profiles/angular-cleanup.json', 'utf-8') ??
+        tree.read('tools/governance/profiles/frontend-layered.json', 'utf-8') ??
           'null'
       )
     ).toEqual(existingProfile);
-    expect(existingProfile).not.toEqual(createAngularCleanupStarterProfile());
+    expect(existingProfile).not.toEqual(createFrontendLayeredStarterProfile());
+  });
+
+  it('creates a frontend-layered runtime profile for new workspaces', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      skipFormat: true,
+    });
+
+    expect(
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
+    ).toEqual(createFrontendLayeredStarterProfile());
   });
 });
 

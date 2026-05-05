@@ -2,7 +2,7 @@ import { calculateHealthScore } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
 import type { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
-import { angularCleanupProfile } from '../presets/angular-cleanup/profile.js';
+import { frontendLayeredProfile } from '../presets/frontend-layered/profile.js';
 import {
   buildGraphSignals,
   buildPolicySignals,
@@ -150,7 +150,7 @@ describe('workspace metric baselines', () => {
     'matches expected weighted metric baseline for $name',
     ({ snapshot, expected }) => {
       const inventory = buildInventory(snapshot, { projectOverrides: {} });
-      const violations = evaluatePolicies(inventory, angularCleanupProfile);
+      const violations = evaluatePolicies(inventory, frontendLayeredProfile);
       const signals = [
         ...buildGraphSignals(toWorkspaceGraphSnapshot(inventory)),
         ...buildPolicySignals(violations, {
@@ -165,18 +165,19 @@ describe('workspace metric baselines', () => {
         measurements,
         {
           'architectural-entropy':
-            angularCleanupProfile.metrics.architecturalEntropyWeight,
+            frontendLayeredProfile.metrics.architecturalEntropyWeight,
           'dependency-complexity':
-            angularCleanupProfile.metrics.dependencyComplexityWeight,
+            frontendLayeredProfile.metrics.dependencyComplexityWeight,
           'domain-integrity':
-            angularCleanupProfile.metrics.domainIntegrityWeight,
+            frontendLayeredProfile.metrics.domainIntegrityWeight,
           'ownership-coverage':
-            angularCleanupProfile.metrics.ownershipCoverageWeight,
+            frontendLayeredProfile.metrics.ownershipCoverageWeight,
           'documentation-completeness':
-            angularCleanupProfile.metrics.documentationCompletenessWeight,
-          'layer-integrity': angularCleanupProfile.metrics.layerIntegrityWeight,
+            frontendLayeredProfile.metrics.documentationCompletenessWeight,
+          'layer-integrity':
+            frontendLayeredProfile.metrics.layerIntegrityWeight,
         },
-        angularCleanupProfile.health.statusThresholds
+        frontendLayeredProfile.health.statusThresholds
       );
 
       expect(violations.map((violation) => violation.ruleId)).toEqual(

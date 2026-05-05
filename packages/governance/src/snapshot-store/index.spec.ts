@@ -37,7 +37,7 @@ describe('snapshot-store', () => {
         projects: [],
         dependencies: [],
       },
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       warnings: [],
       exceptions: {
         summary: {

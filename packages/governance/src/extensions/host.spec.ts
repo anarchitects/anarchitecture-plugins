@@ -6,7 +6,7 @@ import {
 describe('registerGovernanceExtensions', () => {
   const baseContext: GovernanceExtensionHostContext = {
     workspaceRoot: '/repo',
-    profileName: 'angular-cleanup',
+    profileName: 'frontend-layered',
     options: {
       output: 'cli',
       reportType: 'health',

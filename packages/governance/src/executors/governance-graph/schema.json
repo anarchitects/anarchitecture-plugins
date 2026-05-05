@@ -6,7 +6,7 @@
     "profile": {
       "type": "string",
       "description": "Governance profile to execute.",
-      "default": "angular-cleanup"
+      "default": "frontend-layered"
     },
     "failOnViolation": {
       "type": "boolean",

@@ -29,8 +29,11 @@ Presets are starter templates shipped by the plugin. They provide baseline
 defaults for init and documentation, but they are not the long-term runtime
 identity of a workspace.
 
-Today the built-in preset is `angular-cleanup` in
-`packages/governance/src/presets/angular-cleanup/profile.ts`.
+The recommended built-in preset is `frontend-layered` for the current
+UI-leaning layered Nx taxonomy. The core package also ships
+`backend-layered-3tier` and `backend-layered-ddd` starter presets for backend
+workspaces. `layered-workspace` remains available as a compatibility alias for
+the earlier neutral rename.
 
 Presets are used to:
 
@@ -76,9 +79,16 @@ The current behavior is intentionally preserved:
 
 ## Backward compatibility
 
-Existing explicit targets remain supported. Existing `angular-cleanup` profile
-and preset behavior remains supported. This clarification does not introduce
-Project Crystal target inference or reduce the current root target surface.
+Existing explicit targets remain supported. Existing `layered-workspace`
+profile files, target options, and preset references remain supported as
+compatibility aliases. New workspaces should prefer `frontend-layered` or one
+of the backend presets when those taxonomies fit better. This clarification
+does not introduce Project Crystal target inference or reduce the current root
+target surface.
+
+Framework-specific intelligence still belongs in extension plugins rather than
+the core preset identity. This issue does not implement the future Angular
+governance extension plugin.
 
 ## Relationship to future target inference
 

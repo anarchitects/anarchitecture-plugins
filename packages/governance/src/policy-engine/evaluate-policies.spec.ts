@@ -1,5 +1,5 @@
 import { GovernanceWorkspace } from '../core/index.js';
-import { angularCleanupProfile } from '../presets/angular-cleanup/profile.js';
+import { frontendLayeredProfile } from '../presets/frontend-layered/profile.js';
 
 import { evaluatePolicies } from './evaluate-policies.js';
 
@@ -42,23 +42,24 @@ describe('evaluatePolicies', () => {
   };
 
   it('flags cross-domain dependency that is not allowed', () => {
-    const violations = evaluatePolicies(baseWorkspace, angularCleanupProfile);
+    const violations = evaluatePolicies(baseWorkspace, frontendLayeredProfile);
 
     expect(violations.some((v) => v.ruleId === 'domain-boundary')).toBe(true);
   });
 
   it('flags ownership when ownership is required', () => {
-    const violations = evaluatePolicies(baseWorkspace, angularCleanupProfile);
+    const violations = evaluatePolicies(baseWorkspace, frontendLayeredProfile);
 
     expect(
-      violations.filter((violation) => violation.ruleId === 'ownership-presence')
-        .length
+      violations.filter(
+        (violation) => violation.ruleId === 'ownership-presence'
+      ).length
     ).toBe(2);
   });
 
   it('flags layer boundary when higher layer depends on lower-positioned layer', () => {
     const profile = {
-      ...angularCleanupProfile,
+      ...frontendLayeredProfile,
       layers: ['app', 'feature', 'ui', 'data-access', 'util'],
       allowedDomainDependencies: {
         '*': ['billing'],

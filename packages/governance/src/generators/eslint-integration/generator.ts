@@ -3,14 +3,16 @@ import {
   GOVERNANCE_DEFAULT_ESLINT_CONFIG_PATH,
   GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
   GOVERNANCE_DEFAULT_PROFILE_NAME,
+  GOVERNANCE_LEGACY_PROFILE_NAME,
   GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS,
   GovernanceProfileFile,
   normalizeWorkspaceRelativePath,
+  resolveGovernanceProfileRelativePath,
   resolveGovernanceProfilesDirectoryFromPath,
   resolveGovernanceSelectedProfileRelativePath,
   toRelativeModuleSpecifier,
 } from '../../profile/runtime-profile.js';
-import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
+import { createBuiltInGovernanceStarterProfile } from '../../presets/frontend-layered/profile.js';
 
 interface EslintIntegrationSchema {
   eslintConfigPath?: string;
@@ -243,6 +245,7 @@ interface ResolvedEslintIntegrationOptions {
   eslintConfigPath: string;
   eslintConfigPathWasExplicit: boolean;
   governanceHelperPath: string;
+  profileName: string | null;
   profilePath: string;
   profilesDirectory: string;
   helperImportPath: string;
@@ -264,15 +267,14 @@ function resolveOptions(
   const governanceHelperPath = normalizeWorkspaceRelativePath(
     options.governanceHelperPath ?? DEFAULT_ESLINT_OPTIONS.governanceHelperPath
   );
-  const profilePath = resolveGovernanceSelectedProfileRelativePath({
-    profile: options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
-    profilePath: options.profilePath,
-  });
+  const profileName = options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
+  const profilePath = resolveProfilePath(tree, options);
 
   return {
     eslintConfigPath,
     eslintConfigPathWasExplicit: explicitEslintConfigPath !== undefined,
     governanceHelperPath,
+    profileName: options.profilePath ? null : profileName,
     profilePath,
     profilesDirectory: resolveGovernanceProfilesDirectoryFromPath(profilePath),
     helperImportPath: toRelativeModuleSpecifier(
@@ -284,6 +286,39 @@ function resolveOptions(
       typeof options.profilePath === 'string' ||
       governanceHelperPath !== GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
   };
+}
+
+function resolveProfilePath(
+  tree: Tree,
+  options: EslintIntegrationSchema
+): string {
+  const explicitProfilePath =
+    typeof options.profilePath === 'string'
+      ? normalizeWorkspaceRelativePath(options.profilePath)
+      : undefined;
+
+  if (explicitProfilePath) {
+    return explicitProfilePath;
+  }
+
+  const selectedProfile = options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
+  const selectedPath = resolveGovernanceSelectedProfileRelativePath({
+    profile: selectedProfile,
+  });
+
+  if (options.profile || selectedProfile !== GOVERNANCE_DEFAULT_PROFILE_NAME) {
+    return selectedPath;
+  }
+
+  const legacyPath = resolveGovernanceProfileRelativePath(
+    GOVERNANCE_LEGACY_PROFILE_NAME
+  );
+
+  if (!tree.exists(selectedPath) && tree.exists(legacyPath)) {
+    return legacyPath;
+  }
+
+  return selectedPath;
 }
 
 function detectFlatEslintConfigPath(tree: Tree): string | null {
@@ -298,6 +333,7 @@ function detectFlatEslintConfigPath(tree: Tree): string | null {
 
 function readOrCreateProfile(
   tree: Tree,
+  profileName: string | null,
   profilePath: string,
   createsProfileIfMissing: boolean
 ): GovernanceProfileFile | null {
@@ -307,7 +343,9 @@ function readOrCreateProfile(
     }
 
     return {
-      ...createAngularCleanupStarterProfile(),
+      ...createBuiltInGovernanceStarterProfile(
+        profileName ?? GOVERNANCE_DEFAULT_PROFILE_NAME
+      ),
       allowedDomainDependencies: {},
     };
   }
@@ -330,6 +368,7 @@ function ensureProfileEslintSettings(
 
   const profile = readOrCreateProfile(
     tree,
+    options.profileName,
     options.profilePath,
     options.createsProfileIfMissing
   );
@@ -370,6 +409,7 @@ function migrateConstraintsToProfile(
 
   const profile = readOrCreateProfile(
     tree,
+    options.profileName,
     options.profilePath,
     options.createsProfileIfMissing
   );
