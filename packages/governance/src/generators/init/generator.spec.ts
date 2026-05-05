@@ -1,4 +1,6 @@
 import { logger, readJson, type Tree, updateJson } from '@nx/devkit';
+
+import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
 import initGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
@@ -161,6 +163,36 @@ describe('governance initGenerator', () => {
       },
     });
     expect(packageJson.nx?.targets?.['governance-graph']).toBeDefined();
+  });
+
+  it('preserves an existing runtime profile file instead of overwriting it with preset starter defaults', async () => {
+    const existingProfile = {
+      boundaryPolicySource: 'profile',
+      layers: ['domain', 'shared'],
+      projectOverrides: {
+        checkout: {
+          documentation: true,
+        },
+      },
+    };
+
+    tree.write(
+      'tools/governance/profiles/angular-cleanup.json',
+      `${JSON.stringify(existingProfile, null, 2)}\n`
+    );
+
+    await initGenerator(tree, {
+      configureEslint: false,
+      skipFormat: true,
+    });
+
+    expect(
+      JSON.parse(
+        tree.read('tools/governance/profiles/angular-cleanup.json', 'utf-8') ??
+          'null'
+      )
+    ).toEqual(existingProfile);
+    expect(existingProfile).not.toEqual(createAngularCleanupStarterProfile());
   });
 });
 

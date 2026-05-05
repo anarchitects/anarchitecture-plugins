@@ -2,7 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { loadProfileOverrides } from './profile.js';
+import {
+  createAngularCleanupStarterProfile,
+  loadProfileOverrides,
+} from './profile.js';
 
 describe('loadProfileOverrides', () => {
   afterEach(() => {
@@ -23,6 +26,35 @@ describe('loadProfileOverrides', () => {
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }
+  });
+
+  it('exposes a deterministic starter profile template for init seeding', () => {
+    expect(createAngularCleanupStarterProfile()).toEqual({
+      boundaryPolicySource: 'eslint',
+      layers: ['app', 'feature', 'ui', 'data-access', 'util'],
+      allowedDomainDependencies: {
+        '*': ['shared'],
+      },
+      ownership: {
+        required: true,
+        metadataField: 'ownership',
+      },
+      health: {
+        statusThresholds: {
+          goodMinScore: 85,
+          warningMinScore: 70,
+        },
+      },
+      metrics: {
+        architecturalEntropyWeight: 0.2,
+        dependencyComplexityWeight: 0.2,
+        domainIntegrityWeight: 0.2,
+        ownershipCoverageWeight: 0.2,
+        documentationCompletenessWeight: 0.2,
+        layerIntegrityWeight: 0.2,
+      },
+      projectOverrides: {},
+    });
   });
 
   it('keeps existing behavior when no exceptions are declared', async () => {
@@ -49,7 +81,10 @@ describe('loadProfileOverrides', () => {
         },
       });
 
-      const result = await loadProfileOverrides(workspaceRoot, 'angular-cleanup');
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'angular-cleanup'
+      );
 
       expect(result.exceptions).toEqual([]);
       expect(result.layers).toEqual(['app', 'feature', 'util']);
@@ -80,7 +115,11 @@ describe('loadProfileOverrides', () => {
             scope: {
               source: 'conformance',
               ruleId: ' enforce-module-boundaries ',
-              relatedProjectIds: ['payments-lib', 'checkout-app', 'payments-lib'],
+              relatedProjectIds: [
+                'payments-lib',
+                'checkout-app',
+                'payments-lib',
+              ],
             },
             reason: ' Known migration overlap. ',
             owner: ' @org/architecture ',
@@ -106,7 +145,10 @@ describe('loadProfileOverrides', () => {
         ],
       });
 
-      const result = await loadProfileOverrides(workspaceRoot, 'angular-cleanup');
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'angular-cleanup'
+      );
 
       expect(result.exceptions).toEqual([
         {

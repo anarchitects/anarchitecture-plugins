@@ -187,6 +187,20 @@ describe('runGovernance', () => {
     expect(health.assessment.topIssues.length).toBeGreaterThan(0);
   });
 
+  it('uses the explicit runtime profile option when resolving governance configuration', async () => {
+    jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+
+    await runGovernance({
+      profile: 'custom-profile',
+      reportType: 'health',
+    });
+
+    expect(mockedLoadProfileOverrides).toHaveBeenCalledWith(
+      workspaceRoot,
+      'custom-profile'
+    );
+  });
+
   it('loads conformance signals into the assessment pipeline when conformanceJson is provided', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 

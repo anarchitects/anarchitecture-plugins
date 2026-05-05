@@ -13,6 +13,7 @@ import {
   angularCleanupProfile,
   loadProfileOverrides,
 } from '../presets/angular-cleanup/profile.js';
+import { GOVERNANCE_DEFAULT_PROFILE_NAME } from '../profile/runtime-profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
 import { buildMetricBreakdown } from '../reporting/metric-breakdown.js';
@@ -683,7 +684,7 @@ export async function runGovernanceAiDrift(
   const request: AiAnalysisRequest = {
     kind: 'drift',
     generatedAt: new Date().toISOString(),
-    profile: options.profile ?? 'angular-cleanup',
+    profile: options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
     inputs: {
       comparison: comparison ?? undefined,
       metadata: {
@@ -1473,7 +1474,7 @@ async function buildAssessmentArtifacts(
   options: GovernanceRunOptions,
   artifactsOptions: GovernanceAssessmentArtifactsOptions = {}
 ): Promise<GovernanceAssessmentArtifacts> {
-  const profileName = options.profile ?? 'angular-cleanup';
+  const profileName = options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
 
   const overrides = await loadProfileOverrides(workspaceRoot, profileName);
   const effectiveProfile: GovernanceProfile = {
