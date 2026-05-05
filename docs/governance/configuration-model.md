@@ -61,9 +61,12 @@ The init generator bootstraps minimal setup. It currently:
 - registers the governance plugin in `nx.json`
 - adds a minimal default root target set to `package.json`
   - `repo-health`
+  - `governance-graph`
+- treats `governance-graph` as part of the minimal target surface because it is a core reporting artifact rather than an advanced diagnostic
 - adds the broader legacy target surface only when `targetPreset: "full"` is selected
-- seeds only the selected starter profile file when it is missing
-  - default preset/profile: `frontend-layered`
+- seeds one or more selected starter profile files when they are missing
+  - default preset/profile selection: `frontend-layered`
+  - when `profile` is omitted, the first selected preset becomes the default runtime profile for generated root targets
   - backend starter presets: `backend-layered-3tier` and `backend-layered-ddd`
   - `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive
 - runs ESLint integration unless disabled
@@ -91,8 +94,10 @@ of the backend presets when those taxonomies fit better. The broader governance
 target surface remains available through explicit targets and the init
 generator's `targetPreset: "full"` option. All executors remain available even
 when init writes only the minimal root target surface. `governance-graph`
-remains part of the full target preset, while issue #189 still owns the
-long-term default-target decision. This clarification does not
+belongs to both the minimal and full target presets, while snapshot/drift,
+diagnostic, and AI targets remain outside minimal. Graph generation stays
+target-surface driven rather than preset-driven, and it uses the currently
+selected governance profile at runtime. This clarification does not
 introduce Project Crystal target inference.
 
 Framework-specific intelligence still belongs in extension plugins rather than

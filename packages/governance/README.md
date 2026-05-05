@@ -333,16 +333,19 @@ nx g @anarchitects/nx-governance:init
 - Registers `@anarchitects/nx-governance` in `nx.json` plugins.
 - Writes a minimal default root target set into `package.json > nx.targets`:
   - `repo-health`
+  - `governance-graph`
 - Writes the previous broad governance target surface only when `targetPreset: "full"` is selected.
-- `targetPreset: "full"` includes drilldowns, snapshot/drift workflows, diagnostics, `governance-graph`, and AI helper targets.
-- Creates only the selected starter profile file when it is missing:
-  - default preset/profile: `frontend-layered`
-  - backend starter presets: `backend-layered-3tier` and `backend-layered-ddd`
+- `governance-graph` remains part of both `minimal` and `full` because it is a core reporting artifact after the MVP.
+- `targetPreset: "full"` adds drilldowns, snapshot/drift workflows, diagnostics, and AI helper targets on top of the minimal surface.
+- Seeds one or more selected starter profile files when they are missing:
+  - default preset/profile selection: `frontend-layered`
+  - supported starter presets: `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`
+  - when `profile` is omitted, the first selected preset becomes the default runtime profile for generated root targets
   - `layered-workspace` remains accepted as a compatibility alias for the frontend starter profile
-- `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive because init selects a single starter preset.
+- `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive and cannot be selected together.
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
 
-All governance executors remain available even when init writes the minimal target set. Project Crystal target inference is future work and is not implemented here. `governance-graph` remains part of the full target preset; issue #189 still owns the long-term default-target decision.
+All governance executors remain available even when init writes the minimal target set. Governance Graph wiring is target-surface driven rather than architecture-preset driven, so the selected preset controls profile content while `targetPreset` controls whether extra root targets are written. Graph generation uses the selected/current governance profile at runtime. Project Crystal target inference is future work and is not implemented here, and native Nx Graph UI integration is not part of this cleanup.
 
 **Options:**
 
@@ -351,10 +354,10 @@ All governance executors remain available even when init writes the minimal targ
 | `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                                                                                                                                 |
 | `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.                                                                                                    |
 | `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                                                                                                                   |
-| `preset`               | `string`  | `"frontend-layered"`                                   | Built-in starter preset used when init seeds a missing governance profile. Supported values are `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. Backend layered 3-tier and backend layered DDD are mutually exclusive because this option selects a single preset. |
-| `profile`              | `string`  | selected preset name                                   | Governance profile name wired into generated root targets and used as the default seeded profile filename. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias.                 |
+| `preset`               | `string[]`| `["frontend-layered"]`                                 | Built-in starter presets used when init seeds missing governance profile files. Supported values are `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. When `profile` is omitted, the first selected preset becomes the default runtime profile. The two backend presets are mutually exclusive. |
+| `profile`              | `string`  | first selected preset name                             | Governance profile name wired into generated root targets and used as the default seeded runtime profile. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias.                |
 | `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                                                                                                                         |
-| `targetPreset`         | `string`  | `"minimal"`                                            | Controls which root governance targets init writes. Use `"minimal"` for the default `repo-health`-only surface, or `"full"` to restore the broader governance, diagnostic, snapshot/drift, `governance-graph`, and AI target set.                                                          |
+| `targetPreset`         | `string`  | `"minimal"`                                            | Controls which root governance targets init writes. Use `"minimal"` for the default `repo-health` plus `governance-graph` surface, or `"full"` to restore the broader governance, diagnostic, snapshot/drift, and AI target set.                                                           |
 | `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                                                                                               |
 
 ---
@@ -434,7 +437,7 @@ nx workspace-conformance --conformanceJson=dist/conformance-result.json
 The MVP emits its own Governance Graph document and a static viewer. It does not replace the native Nx Graph UI.
 
 ```bash
-# Root target added by init when targetPreset is "full"
+# Root target added by init by default
 nx governance-graph
 
 # JSON artifact for CI or debugging
@@ -448,6 +451,8 @@ nx governance-graph --format=html --outputPath=dist/governance/graph.html
 
 - `html` (default): emits a static, self-contained viewer that can be opened directly in a browser.
 - `json`: emits the Governance Graph document for CI artifacts, debugging, or future integrations.
+- When init writes the root target, it defaults to `format: html` and `outputPath: dist/governance/graph.html`.
+- The graph executor evaluates the current selected governance profile at runtime; it is not tied to a specific starter preset.
 
 **What the Governance Graph contains:**
 
