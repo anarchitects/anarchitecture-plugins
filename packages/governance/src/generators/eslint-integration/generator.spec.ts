@@ -305,6 +305,43 @@ describe('eslintIntegrationGenerator', () => {
     });
   });
 
+  it('keeps explicit layer dependency matrices runtime-only while syncing domain constraints to ESLint', async () => {
+    tree.write(
+      'eslint.config.mjs',
+      buildFlatConfigWithInlineConstraints('depConstraints')
+    );
+    tree.write(
+      'tools/governance/profiles/frontend-layered.json',
+      `${JSON.stringify(
+        {
+          allowedLayerDependencies: {
+            feature: ['ui'],
+          },
+        },
+        null,
+        2
+      )}\n`
+    );
+
+    await eslintIntegrationGenerator(tree, { skipFormat: true });
+
+    expect(
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
+    ).toMatchObject({
+      allowedLayerDependencies: {
+        feature: ['ui'],
+      },
+      allowedDomainDependencies: {
+        billing: ['shared'],
+      },
+    });
+
+    const helperContent =
+      tree.read(GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH, 'utf8') ?? '';
+    expect(helperContent).toContain('allowedDomainDependencies');
+    expect(helperContent).not.toContain('allowedLayerDependencies');
+  });
+
   it('is idempotent for custom eslint and helper paths', async () => {
     tree.write(
       'config/eslint.config.mjs',

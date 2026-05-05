@@ -9,7 +9,7 @@
     },
     "governanceHelperPath": {
       "type": "string",
-      "description": "Path where the generated governance depConstraints helper module should be written.",
+      "description": "Path where the generated governance depConstraints helper module should be written. The helper syncs allowedDomainDependencies for ESLint; explicit allowedLayerDependencies remain runtime-governance policy.",
       "default": "tools/governance/eslint/dependency-constraints.mjs"
     },
     "profile": {
