@@ -285,7 +285,23 @@ Equivalent `project.json` configuration is also supported:
 }
 ```
 
-The profile defines the ordered list of layers. A dependency from a project at position `i` to one at position `j < i` (i.e. a lower-index, higher-level layer) is flagged as a `layer-boundary` violation.
+The profile always declares the canonical ordered `layers` list. When
+`allowedLayerDependencies` is absent, Nx Governance preserves the legacy
+ordered fallback: a dependency from a project at position `i` to one at
+position `j < i` (i.e. a lower-index, higher-level layer) is flagged as a
+`layer-boundary` violation.
+
+Profiles can opt into explicit layer rules with
+`allowedLayerDependencies: Record<string, string[]>`. When present, that map
+becomes the source of truth for layer-boundary validation, including same-layer
+dependencies. Missing source keys are interpreted strictly as allowing no
+outgoing layer dependencies from that source layer.
+Nx Governance validates explicit matrices against the declared `layers` list
+and rejects unknown source or target layer names when loading a profile.
+For example, `"data-access": ["feature", "util"]` can allow
+`data-access -> feature` even though the ordered fallback would reject it,
+while `"feature": ["ui"]` rejects `feature -> feature` even though the ordered
+fallback would allow it.
 
 ### Ownership signals
 
@@ -1133,9 +1149,22 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
   // "eslint" reads boundary rules from tools/governance/eslint/dependency-constraints.mjs
   "boundaryPolicySource": "eslint",
 
-  // Ordered layer hierarchy — lower index = higher architectural level
+  // Ordered layer hierarchy — lower index = higher architectural level.
+  // This remains the fallback rule set when allowedLayerDependencies is absent.
   "layers": ["app", "feature", "ui", "data-access", "util"],
 
+  // Optional explicit layer dependency matrix.
+  // When present, this replaces the ordered fallback for layer-boundary checks.
+  // This example allows app -> data-access directly, but rejects feature -> feature.
+  "allowedLayerDependencies": {
+    "app": ["feature", "ui", "data-access", "util"],
+    "feature": ["ui", "data-access", "util"],
+    "ui": ["util"],
+    "data-access": ["util"],
+    "util": []
+  },
+
+  // Domain rules remain separate from layer rules.
   // Which domains may depend on which. An empty array means no cross-domain imports.
   // Use "*" as source key for a wildcard rule applied to all domains.
   // Use "*" as a value to allow any target domain.
@@ -1223,6 +1252,11 @@ Running the `eslint-integration` generator creates a **shared runtime policy mod
 2. Merges their `allowedDomainDependencies` maps.
 3. Converts each `domain:X → [domain:Y, ...]` entry into an `@nx/enforce-module-boundaries` depConstraint object.
 4. Exports the resulting array as `governanceDepConstraints`.
+
+Explicit `allowedLayerDependencies` remain a runtime-governance feature. The
+ESLint helper intentionally syncs only `allowedDomainDependencies`, because Nx
+`depConstraints` do not currently model the same global layer matrix semantics
+without a broader refactor.
 
 Your autodetected or explicitly selected flat ESLint config imports and uses this export directly:
 

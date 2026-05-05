@@ -6,11 +6,14 @@ export const DEFAULT_HEALTH_STATUS_THRESHOLDS: HealthStatusThresholds = {
   warningMinScore: 70,
 };
 
+export type AllowedLayerDependencies = Record<string, string[]>;
+
 export interface GovernanceProfile {
   name: string;
   description?: string;
   boundaryPolicySource: 'profile' | 'eslint';
   layers: string[];
+  allowedLayerDependencies?: AllowedLayerDependencies;
   allowedDomainDependencies: Record<string, string[]>;
   ownership: {
     required: boolean;
@@ -25,6 +28,7 @@ export interface GovernanceProfile {
 export interface ProfileOverrides {
   boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
   layers?: string[];
+  allowedLayerDependencies?: AllowedLayerDependencies;
   allowedDomainDependencies?: Record<string, string[]>;
   ownership?: Partial<GovernanceProfile['ownership']>;
   health?: {
@@ -41,4 +45,12 @@ export interface ProfileOverrides {
       documentation?: boolean;
     }
   >;
+}
+
+export function deriveAllowedLayerDependenciesFromLayerOrder(
+  layers: string[]
+): AllowedLayerDependencies {
+  return Object.fromEntries(
+    layers.map((sourceLayer, index) => [sourceLayer, layers.slice(index)])
+  );
 }

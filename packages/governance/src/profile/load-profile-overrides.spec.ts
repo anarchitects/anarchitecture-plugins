@@ -88,6 +88,34 @@ describe('loadProfileOverrides', () => {
     }
   });
 
+  it('normalizes explicit layer dependency matrices deterministically', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        layers: ['app', 'feature', 'ui', 'data-access', 'util'],
+        allowedLayerDependencies: {
+          app: ['util', 'feature', 'ui', 'util'],
+          feature: ['data-access', 'ui', 'ui'],
+          util: [],
+        },
+      });
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.allowedLayerDependencies).toEqual({
+        app: ['feature', 'ui', 'util'],
+        feature: ['ui', 'data-access'],
+        util: [],
+      });
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
   it('resolves the frontend-layered profile name with the expected defaults', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 
@@ -302,6 +330,78 @@ describe('loadProfileOverrides', () => {
           },
         },
       ]);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects unknown allowedLayerDependencies source layers', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        layers: ['app', 'feature', 'util'],
+        allowedLayerDependencies: {
+          platform: ['util'],
+        },
+      });
+
+      await expect(
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
+      ).rejects.toThrow(
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} has invalid allowedLayerDependencies source layer "platform": layer is not declared in layers.`
+      );
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects unknown allowedLayerDependencies target layers', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        layers: ['app', 'feature', 'util'],
+        allowedLayerDependencies: {
+          app: ['feature', 'platform'],
+        },
+      });
+
+      await expect(
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
+      ).rejects.toThrow(
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} has invalid allowedLayerDependencies target layer "platform" for source layer "app": layer is not declared in layers.`
+      );
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects non-array allowedLayerDependencies target lists', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        layers: ['app', 'feature', 'util'],
+        allowedLayerDependencies: {
+          app: 'feature',
+        },
+      });
+
+      await expect(
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
+      ).rejects.toThrow(
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} has invalid allowedLayerDependencies target list for source layer "app": expected an array.`
+      );
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }

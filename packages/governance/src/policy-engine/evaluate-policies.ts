@@ -1,4 +1,5 @@
 import {
+  deriveAllowedLayerDependenciesFromLayerOrder,
   GovernanceProfile,
   GovernanceWorkspace,
   Violation,
@@ -12,9 +13,12 @@ export function evaluatePolicies(
   const projectByName = new Map(
     workspace.projects.map((project) => [project.name, project])
   );
-  const layerIndex = new Map(
-    profile.layers.map((layer, index) => [layer, index])
-  );
+  const declaredLayers = new Set(profile.layers);
+  const usesExplicitLayerDependencies =
+    profile.allowedLayerDependencies !== undefined;
+  const allowedLayerDependencies =
+    profile.allowedLayerDependencies ??
+    deriveAllowedLayerDependenciesFromLayerOrder(profile.layers);
 
   for (const dependency of workspace.dependencies) {
     const source = projectByName.get(dependency.source);
@@ -48,13 +52,16 @@ export function evaluatePolicies(
       });
     }
 
-    const sourceLayer = source.layer ? layerIndex.get(source.layer) : undefined;
-    const targetLayer = target.layer ? layerIndex.get(target.layer) : undefined;
-
     if (
-      sourceLayer !== undefined &&
-      targetLayer !== undefined &&
-      sourceLayer > targetLayer
+      source.layer &&
+      target.layer &&
+      declaredLayers.has(source.layer) &&
+      declaredLayers.has(target.layer) &&
+      !isLayerDependencyAllowed(
+        allowedLayerDependencies,
+        source.layer,
+        target.layer
+      )
     ) {
       violations.push({
         id: `${source.name}-${target.name}-layer`,
@@ -67,10 +74,17 @@ export function evaluatePolicies(
           targetProject: target.name,
           sourceLayer: source.layer,
           targetLayer: target.layer,
-          order: profile.layers,
+          ...(usesExplicitLayerDependencies
+            ? {
+                allowedTargets: allowedLayerDependencies[source.layer] ?? [],
+              }
+            : {
+                order: profile.layers,
+              }),
         },
-        recommendation:
-          'Refactor dependency direction so higher-level layers depend on same or lower-level layers only.',
+        recommendation: usesExplicitLayerDependencies
+          ? 'Refactor the dependency or update allowedLayerDependencies in the governance profile when the dependency is intentional.'
+          : 'Refactor dependency direction so higher-level layers depend on same or lower-level layers only.',
       });
     }
   }
@@ -114,4 +128,12 @@ function isDomainDependencyAllowed(
   }
 
   return false;
+}
+
+function isLayerDependencyAllowed(
+  allowedLayerDependencies: Record<string, string[]>,
+  sourceLayer: string,
+  targetLayer: string
+): boolean {
+  return (allowedLayerDependencies[sourceLayer] ?? []).includes(targetLayer);
 }

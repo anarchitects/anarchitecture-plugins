@@ -50,6 +50,9 @@ Profiles are the runtime governance configuration used by executors.
 - executors resolve runtime behavior from the selected profile name/path
 - profiles define layers, boundary policy, ownership expectations, health
   thresholds, metric weights, exceptions, and project overrides
+- profiles may optionally define `allowedLayerDependencies` as an explicit
+  source-layer allowlist; when absent, the ordered `layers` list remains the
+  fallback layer rule model
 
 Presets are starter templates used by init.
 
@@ -191,6 +194,10 @@ The generated helper reads governance profiles from
 `tools/governance/profiles/`, merges `allowedDomainDependencies`, and exports a
 deterministic `governanceDepConstraints` array for
 `@nx/enforce-module-boundaries`.
+
+Explicit `allowedLayerDependencies` remain a runtime governance feature. The
+current ESLint integration does not attempt to translate the layer matrix into
+`depConstraints`.
 
 Legacy `.eslintrc*` support is not part of this cleanup.
 

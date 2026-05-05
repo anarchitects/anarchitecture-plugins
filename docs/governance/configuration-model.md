@@ -15,6 +15,7 @@ Profiles are user-owned JSON files, typically under
 Profiles define runtime governance expectations such as:
 
 - policy and boundary settings
+- ordered `layers` plus optional explicit `allowedLayerDependencies`
 - ownership and documentation expectations
 - health thresholds and metric weights
 - exceptions and project overrides
@@ -24,6 +25,20 @@ configuration surface that should remain stable for CI, reports, and governance
 graph generation.
 Runtime profile loading belongs to the `src/profile/` layer rather than to any
 concrete preset module.
+
+Layer rules now have two modes:
+
+- If `allowedLayerDependencies` is absent, layer-boundary evaluation falls back
+  to the declared `layers` order exactly as before.
+- If `allowedLayerDependencies` is present, it becomes the explicit global
+  source-layer to target-layer allowlist. Missing source keys are interpreted
+  strictly as allowing no outgoing layer dependencies from that source layer.
+
+`allowedLayerDependencies` is separate from `allowedDomainDependencies`. Layer
+and domain boundary findings can both apply to the same dependency.
+The current ESLint integration continues to sync only
+`allowedDomainDependencies`; explicit layer matrices remain runtime-governance
+policy until a broader lint representation exists.
 
 ### Presets
 

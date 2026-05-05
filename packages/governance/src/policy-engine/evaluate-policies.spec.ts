@@ -76,4 +76,111 @@ describe('evaluatePolicies', () => {
 
     expect(violations.some((v) => v.ruleId === 'layer-boundary')).toBe(true);
   });
+
+  it('uses explicit layer dependencies to allow edges that ordered fallback would reject', () => {
+    const violations = evaluatePolicies(
+      {
+        ...baseWorkspace,
+        dependencies: [{ source: 'b', target: 'a', type: 'static' }],
+      },
+      {
+        ...frontendLayeredProfile,
+        allowedDomainDependencies: {
+          '*': ['shop'],
+        },
+        allowedLayerDependencies: {
+          'data-access': ['feature'],
+        },
+      }
+    );
+
+    expect(violations.some((v) => v.ruleId === 'layer-boundary')).toBe(false);
+  });
+
+  it('uses explicit layer dependencies to reject edges that ordered fallback would allow', () => {
+    const violations = evaluatePolicies(baseWorkspace, {
+      ...frontendLayeredProfile,
+      allowedDomainDependencies: {
+        '*': ['billing'],
+      },
+      allowedLayerDependencies: {
+        feature: ['ui'],
+      },
+    });
+
+    expect(violations.some((v) => v.ruleId === 'layer-boundary')).toBe(true);
+  });
+
+  it('uses explicit layer dependencies to govern same-layer edges', () => {
+    const workspace: GovernanceWorkspace = {
+      ...baseWorkspace,
+      projects: [
+        baseWorkspace.projects[0],
+        {
+          ...baseWorkspace.projects[1],
+          id: 'c',
+          name: 'c',
+          root: 'packages/c',
+          tags: ['domain:shop', 'layer:feature'],
+          domain: 'shop',
+          layer: 'feature',
+        },
+      ],
+      dependencies: [{ source: 'a', target: 'c', type: 'static' }],
+    };
+
+    const violations = evaluatePolicies(workspace, {
+      ...frontendLayeredProfile,
+      allowedDomainDependencies: {
+        '*': ['shop'],
+      },
+      allowedLayerDependencies: {
+        feature: ['ui'],
+      },
+    });
+
+    expect(violations.some((v) => v.ruleId === 'layer-boundary')).toBe(true);
+  });
+
+  it('preserves missing or unknown project layer behavior when explicit rules are present', () => {
+    const workspace: GovernanceWorkspace = {
+      ...baseWorkspace,
+      projects: [
+        {
+          ...baseWorkspace.projects[0],
+          tags: ['domain:shop', 'layer:unknown'],
+          layer: 'unknown',
+        },
+        baseWorkspace.projects[1],
+      ],
+    };
+
+    const violations = evaluatePolicies(workspace, {
+      ...frontendLayeredProfile,
+      allowedLayerDependencies: {
+        feature: ['ui'],
+      },
+    });
+
+    expect(violations.some((v) => v.ruleId === 'layer-boundary')).toBe(false);
+  });
+
+  it('can report both domain and layer violations for the same dependency', () => {
+    const violations = evaluatePolicies(baseWorkspace, {
+      ...frontendLayeredProfile,
+      allowedDomainDependencies: {
+        '*': [],
+      },
+      allowedLayerDependencies: {
+        feature: ['ui'],
+      },
+    });
+
+    expect(
+      violations.filter((v) => v.ruleId === 'domain-boundary')
+    ).toHaveLength(1);
+    expect(
+      violations.filter((v) => v.ruleId === 'layer-boundary')
+    ).toHaveLength(1);
+  });
 });

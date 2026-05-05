@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
+  AllowedLayerDependencies,
   GovernanceException,
   GovernanceProfile,
   HealthStatusThresholds,
@@ -51,8 +52,11 @@ export async function loadProfileOverrides(
   const raw = JSON.parse(
     readFileSync(filePath, 'utf8')
   ) as GovernanceProfileFile & {
+    allowedLayerDependencies?: unknown;
     exceptions?: unknown;
   };
+  const layers =
+    raw.layers && raw.layers.length > 0 ? raw.layers : builtInProfile.layers;
 
   const boundaryPolicySource =
     raw.boundaryPolicySource ?? builtInProfile.boundaryPolicySource;
@@ -75,11 +79,16 @@ export async function loadProfileOverrides(
       : [];
 
   const exceptions = normalizeProfileExceptions(raw.exceptions, filePath);
+  const allowedLayerDependencies = normalizeAllowedLayerDependencies(
+    raw.allowedLayerDependencies,
+    layers,
+    filePath
+  );
 
   return {
     boundaryPolicySource,
-    layers:
-      raw.layers && raw.layers.length > 0 ? raw.layers : builtInProfile.layers,
+    layers,
+    allowedLayerDependencies,
     allowedDomainDependencies: {
       ...builtInProfile.allowedDomainDependencies,
       ...(eslintAllowedDependencies ?? {}),
@@ -139,6 +148,7 @@ function buildDefaultResolvedOverrides(
   return {
     boundaryPolicySource: profile.boundaryPolicySource,
     layers: profile.layers,
+    allowedLayerDependencies: profile.allowedLayerDependencies,
     allowedDomainDependencies: profile.allowedDomainDependencies,
     ownership: profile.ownership,
     health: profile.health,
@@ -170,6 +180,71 @@ function normalizeMetricWeights(
       ] ?? key;
 
     normalized[normalizedKey] = value;
+  }
+
+  return normalized;
+}
+
+function normalizeAllowedLayerDependencies(
+  raw: unknown,
+  layers: string[],
+  filePath: string
+): AllowedLayerDependencies | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid allowedLayerDependencies: expected an object.`
+    );
+  }
+
+  const declaredLayers = new Set(layers);
+  const candidates = raw as Record<string, unknown>;
+
+  for (const sourceLayer of Object.keys(candidates)) {
+    if (!declaredLayers.has(sourceLayer)) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid allowedLayerDependencies source layer "${sourceLayer}": layer is not declared in layers.`
+      );
+    }
+  }
+
+  const normalized: AllowedLayerDependencies = {};
+
+  for (const sourceLayer of layers) {
+    if (!Object.prototype.hasOwnProperty.call(candidates, sourceLayer)) {
+      continue;
+    }
+
+    const rawTargets = candidates[sourceLayer];
+
+    if (!Array.isArray(rawTargets)) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid allowedLayerDependencies target list for source layer "${sourceLayer}": expected an array.`
+      );
+    }
+
+    const targetSet = new Set<string>();
+
+    for (const targetLayer of rawTargets) {
+      if (typeof targetLayer !== 'string') {
+        throw new Error(
+          `Governance profile at ${filePath} has invalid allowedLayerDependencies target entry for source layer "${sourceLayer}": expected a layer name string.`
+        );
+      }
+
+      if (!declaredLayers.has(targetLayer)) {
+        throw new Error(
+          `Governance profile at ${filePath} has invalid allowedLayerDependencies target layer "${targetLayer}" for source layer "${sourceLayer}": layer is not declared in layers.`
+        );
+      }
+
+      targetSet.add(targetLayer);
+    }
+
+    normalized[sourceLayer] = layers.filter((layer) => targetSet.has(layer));
   }
 
   return normalized;
