@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -7,11 +13,13 @@ import {
   backendLayeredDddProfile,
   createBackendLayered3TierStarterProfile,
   createBackendLayeredDddStarterProfile,
+} from '../presets/backend-layered/profile.js';
+import {
   createFrontendLayeredStarterProfile,
-  createLayeredWorkspaceStarterProfile,
   frontendLayeredProfile,
-  loadProfileOverrides,
-} from './profile.js';
+} from '../presets/frontend-layered/profile.js';
+import { createLayeredWorkspaceStarterProfile } from '../presets/layered-workspace/profile.js';
+import { loadProfileOverrides } from './load-profile-overrides.js';
 
 describe('loadProfileOverrides', () => {
   afterEach(() => {
@@ -34,36 +42,50 @@ describe('loadProfileOverrides', () => {
     }
   });
 
-  it('exposes a deterministic starter profile template for init seeding', () => {
-    expect(createFrontendLayeredStarterProfile()).toEqual({
-      boundaryPolicySource: 'eslint',
-      layers: ['app', 'feature', 'ui', 'data-access', 'util'],
-      allowedDomainDependencies: {
-        '*': ['shared'],
-      },
-      ownership: {
-        required: true,
-        metadataField: 'ownership',
-      },
-      health: {
-        statusThresholds: {
-          goodMinScore: 85,
-          warningMinScore: 70,
+  it('loads existing profile files and merges overrides', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        boundaryPolicySource: 'profile',
+        layers: ['app', 'feature', 'util'],
+        allowedDomainDependencies: {
+          '*': ['shared'],
         },
-      },
-      metrics: {
-        architecturalEntropyWeight: 0.2,
-        dependencyComplexityWeight: 0.2,
-        domainIntegrityWeight: 0.2,
-        ownershipCoverageWeight: 0.2,
-        documentationCompletenessWeight: 0.2,
-        layerIntegrityWeight: 0.2,
-      },
-      projectOverrides: {},
-    });
-    expect(createFrontendLayeredStarterProfile()).toEqual(
-      createLayeredWorkspaceStarterProfile()
-    );
+        ownership: {
+          required: false,
+          metadataField: 'ownership',
+        },
+        metrics: {
+          architecturalEntropyWeight: 0.4,
+        },
+        projectOverrides: {
+          'billing-app': {
+            documentation: true,
+          },
+        },
+      });
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.exceptions).toEqual([]);
+      expect(result.layers).toEqual(['app', 'feature', 'util']);
+      expect(result.ownership).toEqual({
+        required: false,
+        metadataField: 'ownership',
+      });
+      expect(result.metrics?.['architectural-entropy']).toBe(0.4);
+      expect(result.projectOverrides).toEqual({
+        'billing-app': {
+          documentation: true,
+        },
+      });
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
   });
 
   it('resolves the frontend-layered profile name with the expected defaults', async () => {
@@ -160,52 +182,6 @@ describe('loadProfileOverrides', () => {
     }
   });
 
-  it('keeps existing behavior when no exceptions are declared', async () => {
-    const workspaceRoot = mkTempWorkspaceRoot();
-
-    try {
-      writeProfile(workspaceRoot, {
-        boundaryPolicySource: 'profile',
-        layers: ['app', 'feature', 'util'],
-        allowedDomainDependencies: {
-          '*': ['shared'],
-        },
-        ownership: {
-          required: false,
-          metadataField: 'ownership',
-        },
-        metrics: {
-          architecturalEntropyWeight: 0.4,
-        },
-        projectOverrides: {
-          'billing-app': {
-            documentation: true,
-          },
-        },
-      });
-
-      const result = await loadProfileOverrides(
-        workspaceRoot,
-        'frontend-layered'
-      );
-
-      expect(result.exceptions).toEqual([]);
-      expect(result.layers).toEqual(['app', 'feature', 'util']);
-      expect(result.ownership).toEqual({
-        required: false,
-        metadataField: 'ownership',
-      });
-      expect(result.metrics?.['architectural-entropy']).toBe(0.4);
-      expect(result.projectOverrides).toEqual({
-        'billing-app': {
-          documentation: true,
-        },
-      });
-    } finally {
-      cleanupTempWorkspaceRoot(workspaceRoot);
-    }
-  });
-
   it('loads ESLint constraints from a custom helper path declared in the runtime profile', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 
@@ -239,6 +215,10 @@ describe('loadProfileOverrides', () => {
       expect(result.runtimeWarnings).toEqual([
         'Boundary policy source is ESLint constraints (tools/custom/governance-helper.mjs). Profile allowedDomainDependencies is treated as fallback.',
       ]);
+      expect(result.allowedDomainDependencies).toEqual({
+        '*': ['shared'],
+        billing: ['reporting', 'shared'],
+      });
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }
@@ -467,6 +447,21 @@ describe('loadProfileOverrides', () => {
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }
+  });
+
+  it('does not reintroduce angular-cleanup into runtime profile loading', () => {
+    const files = [
+      path.join(__dirname, 'load-profile-overrides.ts'),
+      path.join(__dirname, 'runtime-profile.ts'),
+    ];
+
+    for (const filePath of files) {
+      expect(readFileSync(filePath, 'utf8')).not.toContain('angular-cleanup');
+    }
+
+    expect(createLayeredWorkspaceStarterProfile()).toEqual(
+      createFrontendLayeredStarterProfile()
+    );
   });
 });
 

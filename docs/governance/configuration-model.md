@@ -22,6 +22,8 @@ Profiles define runtime governance expectations such as:
 Executors read the selected profile file at runtime. Profiles are the explicit
 configuration surface that should remain stable for CI, reports, and governance
 graph generation.
+Runtime profile loading belongs to the `src/profile/` layer rather than to any
+concrete preset module.
 
 ### Presets
 
@@ -42,6 +44,9 @@ Presets are used to:
 - document supported starter conventions
 
 Presets do not replace user-owned profile files.
+The implementation is intentionally split between concrete preset modules and a
+neutral built-in preset registry so no single preset module acts as the central
+runtime entrypoint.
 
 ### Executor options
 
