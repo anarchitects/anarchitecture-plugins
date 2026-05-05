@@ -146,7 +146,16 @@ If you are building an ecosystem plugin, see [EXTENSIONS.md](./EXTENSIONS.md).
 
 A **governance profile** is a JSON file at `tools/governance/profiles/<name>.json`. It is the single source of truth for what the workspace architecture _should_ look like. Every run of any governance executor reads this file and evaluates the live project graph against it.
 
-The built-in preset is `angular-cleanup`, a starter profile modelled on layered, domain-driven workspace conventions. It is a profile shipped by the core package, not an Angular engine implementation. You can adjust every aspect of it by editing the JSON file — no TypeScript required.
+The built-in presets are:
+
+- `frontend-layered` for the current UI-leaning Nx layered taxonomy
+- `backend-layered-3tier` for a three-tier backend taxonomy
+- `backend-layered-ddd` for a DDD-oriented backend taxonomy
+
+`layered-workspace` remains accepted as a compatibility alias for the earlier
+rename, but `frontend-layered` is the primary name going forward. You can
+adjust every aspect of these profiles by editing the JSON file — no TypeScript
+required.
 
 For the current responsibility split between profiles, presets, executor
 options, and init wiring, see
@@ -324,19 +333,19 @@ nx g @anarchitects/nx-governance:init
 - Registers `@anarchitects/nx-governance` in `nx.json` plugins.
 - Writes root targets into `package.json > nx.targets` for graph diagnostics, health checks, snapshot/drift, and deterministic AI analysis workflows.
 - Adds a root `governance-graph` target that emits the static HTML viewer by default and supports JSON export via `--format=json`.
-- Creates `tools/governance/profiles/angular-cleanup.json` with sensible defaults (if it does not already exist).
+- Creates `tools/governance/profiles/frontend-layered.json` with sensible defaults (if it does not already exist).
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
 
 **Options:**
 
-| Option                 | Type      | Default                                                | Description                                                                                                                                                                             |
-| ---------------------- | --------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                              |
-| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`. |
-| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                |
-| `profile`              | `string`  | `"angular-cleanup"`                                    | Governance profile name used when migrating inline ESLint depConstraints.                                                                                                               |
-| `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                      |
-| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                            |
+| Option                 | Type      | Default                                                | Description                                                                                                                                                                                                                               |
+| ---------------------- | --------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                                                                                |
+| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.                                                   |
+| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                                                                  |
+| `profile`              | `string`  | `"frontend-layered"`                                   | Governance profile name used when migrating inline ESLint depConstraints. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias. |
+| `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                                                                        |
+| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                                              |
 
 ---
 
@@ -358,13 +367,13 @@ After running this generator, adding or changing domain dependency rules in a pr
 
 **Options:**
 
-| Option                 | Type      | Default                                                | Description                                                                                                                                           |
-| ---------------------- | --------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`. |
-| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Helper module output path.                                                                                                                            |
-| `profile`              | `string`  | `"angular-cleanup"`                                    | Profile name resolved under `tools/governance/profiles/`.                                                                                             |
-| `profilePath`          | `string`  | none                                                   | Profile path used directly for migration.                                                                                                             |
-| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                          |
+| Option                 | Type      | Default                                                | Description                                                                                                                                                                                                               |
+| ---------------------- | --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.                                                                     |
+| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Helper module output path.                                                                                                                                                                                                |
+| `profile`              | `string`  | `"frontend-layered"`                                   | Profile name resolved under `tools/governance/profiles/`. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias. |
+| `profilePath`          | `string`  | none                                                   | Profile path used directly for migration.                                                                                                                                                                                 |
+| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                              |
 
 This integration currently patches flat ESLint config files only. Legacy `.eslintrc*` support is intentionally out of scope here because it is a different config model with different merge and patch semantics; this cleanup keeps the change bounded to flat config autodetection plus explicit override support.
 
@@ -466,12 +475,12 @@ Native integration with the official Nx Graph UI is intentionally outside the MV
 
 Base options used by governance and AI executors:
 
-| Option            | Type                | Default             | Description                                                                                                                                                           |
-| ----------------- | ------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `profile`         | `string`            | `"angular-cleanup"` | Name of the governance profile to load from `tools/governance/profiles/`.                                                                                             |
-| `output`          | `"cli"` \| `"json"` | `"cli"`             | Output format. `cli` prints a human-readable report via Nx logger. `json` writes structured JSON to stdout.                                                           |
-| `failOnViolation` | `boolean`           | `false`             | Exit with a non-zero code when any violation is found. Use this to gate CI.                                                                                           |
-| `conformanceJson` | `string`            | unset               | Optional override for the Nx Conformance JSON path. If omitted, governance will try `nx.json > conformance.outputPath` before continuing without conformance signals. |
+| Option            | Type                | Default              | Description                                                                                                                                                                                                            |
+| ----------------- | ------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profile`         | `string`            | `"frontend-layered"` | Name of the governance profile to load from `tools/governance/profiles/`. `layered-workspace` remains accepted as a compatibility alias, and backend runs can select `backend-layered-3tier` or `backend-layered-ddd`. |
+| `output`          | `"cli"` \| `"json"` | `"cli"`              | Output format. `cli` prints a human-readable report via Nx logger. `json` writes structured JSON to stdout.                                                                                                            |
+| `failOnViolation` | `boolean`           | `false`              | Exit with a non-zero code when any violation is found. Use this to gate CI.                                                                                                                                            |
+| `conformanceJson` | `string`            | unset                | Optional override for the Nx Conformance JSON path. If omitted, governance will try `nx.json > conformance.outputPath` before continuing without conformance signals.                                                  |
 
 Additional options are listed per command where applicable (`snapshotDir`, `snapshotPath`, `topViolations`, `topProjects`, `baseRef`, `headRef`, ...).
 
@@ -934,7 +943,7 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
 
 ```jsonc
 {
-  "profile": "angular-cleanup",
+  "profile": "frontend-layered",
   "warnings": ["..."], // runtime warnings
   "workspace": {
     "id": "workspace",
@@ -1087,7 +1096,7 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
 ## Profile reference
 
 ```jsonc
-// tools/governance/profiles/angular-cleanup.json
+// tools/governance/profiles/frontend-layered.json
 {
   // "profile" | "eslint"
   // "eslint" reads boundary rules from tools/governance/eslint/dependency-constraints.mjs

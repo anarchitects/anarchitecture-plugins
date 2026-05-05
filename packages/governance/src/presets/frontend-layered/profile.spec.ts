@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import {
-  createAngularCleanupStarterProfile,
+  backendLayered3TierProfile,
+  backendLayeredDddProfile,
+  createBackendLayered3TierStarterProfile,
+  createBackendLayeredDddStarterProfile,
+  createFrontendLayeredStarterProfile,
+  createLayeredWorkspaceStarterProfile,
+  frontendLayeredProfile,
   loadProfileOverrides,
 } from './profile.js';
 
@@ -29,7 +35,7 @@ describe('loadProfileOverrides', () => {
   });
 
   it('exposes a deterministic starter profile template for init seeding', () => {
-    expect(createAngularCleanupStarterProfile()).toEqual({
+    expect(createFrontendLayeredStarterProfile()).toEqual({
       boundaryPolicySource: 'eslint',
       layers: ['app', 'feature', 'ui', 'data-access', 'util'],
       allowedDomainDependencies: {
@@ -55,6 +61,103 @@ describe('loadProfileOverrides', () => {
       },
       projectOverrides: {},
     });
+    expect(createFrontendLayeredStarterProfile()).toEqual(
+      createLayeredWorkspaceStarterProfile()
+    );
+  });
+
+  it('resolves the frontend-layered profile name with the expected defaults', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.layers).toEqual(frontendLayeredProfile.layers);
+      expect(result.allowedDomainDependencies).toEqual(
+        frontendLayeredProfile.allowedDomainDependencies
+      );
+      expect(result.ownership).toEqual(frontendLayeredProfile.ownership);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('lets frontend-layered fall back to an existing layered-workspace runtime profile file', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(
+        workspaceRoot,
+        {
+          boundaryPolicySource: 'profile',
+          layers: ['app', 'feature', 'util'],
+          projectOverrides: {
+            checkout: {
+              documentation: true,
+            },
+          },
+        },
+        'layered-workspace'
+      );
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.layers).toEqual(['app', 'feature', 'util']);
+      expect(result.projectOverrides).toEqual({
+        checkout: {
+          documentation: true,
+        },
+      });
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('resolves backend-layered-3tier with its dedicated layer taxonomy', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'backend-layered-3tier'
+      );
+
+      expect(result.layers).toEqual(backendLayered3TierProfile.layers);
+      expect(createBackendLayered3TierStarterProfile().layers).toEqual([
+        'api',
+        'service',
+        'data-access',
+      ]);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('resolves backend-layered-ddd with its dedicated layer taxonomy', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'backend-layered-ddd'
+      );
+
+      expect(result.layers).toEqual(backendLayeredDddProfile.layers);
+      expect(createBackendLayeredDddStarterProfile().layers).toEqual([
+        'api',
+        'application',
+        'domain',
+        'infrastructure',
+      ]);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
   });
 
   it('keeps existing behavior when no exceptions are declared', async () => {
@@ -83,7 +186,7 @@ describe('loadProfileOverrides', () => {
 
       const result = await loadProfileOverrides(
         workspaceRoot,
-        'angular-cleanup'
+        'frontend-layered'
       );
 
       expect(result.exceptions).toEqual([]);
@@ -127,7 +230,7 @@ describe('loadProfileOverrides', () => {
 
       const result = await loadProfileOverrides(
         workspaceRoot,
-        'angular-cleanup'
+        'frontend-layered'
       );
 
       expect(result.eslintHelperPath).toBe(
@@ -185,7 +288,7 @@ describe('loadProfileOverrides', () => {
 
       const result = await loadProfileOverrides(
         workspaceRoot,
-        'angular-cleanup'
+        'frontend-layered'
       );
 
       expect(result.exceptions).toEqual([
@@ -235,11 +338,11 @@ describe('loadProfileOverrides', () => {
       });
 
       await expect(
-        loadProfileOverrides(workspaceRoot, 'angular-cleanup')
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
       ).rejects.toThrow(
         `Governance profile at ${path.join(
           workspaceRoot,
-          'tools/governance/profiles/angular-cleanup.json'
+          'tools/governance/profiles/frontend-layered.json'
         )} has invalid exceptions: expected an array.`
       );
     } finally {
@@ -269,12 +372,12 @@ describe('loadProfileOverrides', () => {
       });
 
       await expect(
-        loadProfileOverrides(workspaceRoot, 'angular-cleanup')
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
       ).rejects.toMatchObject({
         message: expect.stringContaining(
           `Governance profile at ${path.join(
             workspaceRoot,
-            'tools/governance/profiles/angular-cleanup.json'
+            'tools/governance/profiles/frontend-layered.json'
           )} has invalid exception "bad-review" at index 0: Governance exception review must define reviewBy or expiresAt.`
         ),
       });
@@ -320,11 +423,11 @@ describe('loadProfileOverrides', () => {
       });
 
       await expect(
-        loadProfileOverrides(workspaceRoot, 'angular-cleanup')
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
       ).rejects.toThrow(
         `Governance profile at ${path.join(
           workspaceRoot,
-          'tools/governance/profiles/angular-cleanup.json'
+          'tools/governance/profiles/frontend-layered.json'
         )} has duplicate exception id "duplicate-id".`
       );
     } finally {
@@ -355,7 +458,7 @@ describe('loadProfileOverrides', () => {
       });
 
       await expect(
-        loadProfileOverrides(workspaceRoot, 'angular-cleanup')
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
       ).rejects.toMatchObject({
         message: expect.stringContaining(
           'Exception "source-mismatch" has source "policy" but scope source "conformance".'
@@ -377,12 +480,13 @@ function cleanupTempWorkspaceRoot(workspaceRoot: string): void {
 
 function writeProfile(
   workspaceRoot: string,
-  content: Record<string, unknown>
+  content: Record<string, unknown>,
+  profileName = 'frontend-layered'
 ): void {
   const profilesDir = path.join(workspaceRoot, 'tools/governance/profiles');
   mkdirSync(profilesDir, { recursive: true });
   writeFileSync(
-    path.join(profilesDir, 'angular-cleanup.json'),
+    path.join(profilesDir, `${profileName}.json`),
     `${JSON.stringify(content, null, 2)}\n`
   );
 }

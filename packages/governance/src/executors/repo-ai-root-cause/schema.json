@@ -6,7 +6,7 @@
     "profile": {
       "type": "string",
       "description": "Governance profile to execute before preparing root-cause payloads.",
-      "default": "angular-cleanup"
+      "default": "frontend-layered"
     },
     "output": {
       "type": "string",

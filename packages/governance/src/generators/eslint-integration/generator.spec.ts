@@ -31,7 +31,7 @@ describe('eslintIntegrationGenerator', () => {
       buildFlatConfigWithInlineConstraints('depConstraints')
     );
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify({ projectOverrides: {} }, null, 2)}\n`
     );
 
@@ -45,7 +45,7 @@ describe('eslintIntegrationGenerator', () => {
       'depConstraints: governanceDepConstraints,'
     );
     expect(
-      readJson(tree, 'tools/governance/profiles/angular-cleanup.json')
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
     ).toMatchObject({
       allowedDomainDependencies: {
         billing: ['shared'],
@@ -60,7 +60,7 @@ describe('eslintIntegrationGenerator', () => {
       buildFlatConfigWithInlineConstraints('depConstraints')
     );
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify({}, null, 2)}\n`
     );
 
@@ -78,7 +78,7 @@ describe('eslintIntegrationGenerator', () => {
       buildFlatConfigWithInlineConstraints('depConstraints')
     );
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify({}, null, 2)}\n`
     );
 
@@ -99,7 +99,7 @@ describe('eslintIntegrationGenerator', () => {
       buildFlatConfigWithInlineConstraints('depConstraints')
     );
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify({}, null, 2)}\n`
     );
 
@@ -114,7 +114,7 @@ describe('eslintIntegrationGenerator', () => {
       "import { governanceDepConstraints } from '../tools/custom/governance-helper.mjs';"
     );
     expect(
-      readJson(tree, 'tools/governance/profiles/angular-cleanup.json')
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
     ).toMatchObject({
       eslint: {
         helperPath: 'tools/custom/governance-helper.mjs',
@@ -137,6 +137,76 @@ describe('eslintIntegrationGenerator', () => {
       readJson(tree, 'tools/governance/profiles/workspace-policy.json')
     ).toMatchObject({
       boundaryPolicySource: 'eslint',
+      allowedDomainDependencies: {
+        billing: ['shared'],
+      },
+    });
+  });
+
+  it('still supports the legacy layered-workspace profile name explicitly', async () => {
+    tree.write(
+      'eslint.config.mjs',
+      buildFlatConfigWithInlineConstraints('depConstraints')
+    );
+
+    await eslintIntegrationGenerator(tree, {
+      skipFormat: true,
+      profile: 'layered-workspace',
+    });
+
+    expect(
+      readJson(tree, 'tools/governance/profiles/layered-workspace.json')
+    ).toMatchObject({
+      boundaryPolicySource: 'eslint',
+      allowedDomainDependencies: {
+        billing: ['shared'],
+      },
+    });
+  });
+
+  it('reuses an existing layered-workspace runtime profile when running with new defaults', async () => {
+    tree.write(
+      'eslint.config.mjs',
+      buildFlatConfigWithInlineConstraints('depConstraints')
+    );
+    tree.write(
+      'tools/governance/profiles/layered-workspace.json',
+      `${JSON.stringify({ projectOverrides: {} }, null, 2)}\n`
+    );
+
+    await eslintIntegrationGenerator(tree, {
+      skipFormat: true,
+    });
+
+    expect(
+      readJson(tree, 'tools/governance/profiles/layered-workspace.json')
+    ).toMatchObject({
+      allowedDomainDependencies: {
+        billing: ['shared'],
+      },
+      projectOverrides: {},
+    });
+    expect(tree.exists('tools/governance/profiles/frontend-layered.json')).toBe(
+      false
+    );
+  });
+
+  it('seeds backend-layered-ddd with its backend layer taxonomy', async () => {
+    tree.write(
+      'eslint.config.mjs',
+      buildFlatConfigWithInlineConstraints('depConstraints')
+    );
+
+    await eslintIntegrationGenerator(tree, {
+      skipFormat: true,
+      profile: 'backend-layered-ddd',
+    });
+
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-ddd.json')
+    ).toMatchObject({
+      boundaryPolicySource: 'eslint',
+      layers: ['api', 'application', 'domain', 'infrastructure'],
       allowedDomainDependencies: {
         billing: ['shared'],
       },
@@ -170,7 +240,7 @@ describe('eslintIntegrationGenerator', () => {
 
   it('warns and skips patching when a custom eslint config path is missing', async () => {
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify({}, null, 2)}\n`
     );
 
@@ -202,7 +272,7 @@ describe('eslintIntegrationGenerator', () => {
       buildFlatConfigWithInlineConstraints('depConstraints')
     );
     tree.write(
-      'tools/governance/profiles/angular-cleanup.json',
+      'tools/governance/profiles/frontend-layered.json',
       `${JSON.stringify(
         {
           allowedDomainDependencies: {
@@ -222,7 +292,7 @@ describe('eslintIntegrationGenerator', () => {
     await eslintIntegrationGenerator(tree, { skipFormat: true });
 
     expect(
-      readJson(tree, 'tools/governance/profiles/angular-cleanup.json')
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
     ).toMatchObject({
       allowedDomainDependencies: {
         billing: ['shared', 'reporting'],

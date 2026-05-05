@@ -163,7 +163,7 @@ function createArtifacts(): GovernanceAssessmentArtifacts {
         projects: [],
         dependencies: [],
       },
-      profile: 'angular-cleanup',
+      profile: 'frontend-layered',
       warnings: [],
       exceptions: {
         summary: {

@@ -6,7 +6,8 @@ import type { GovernanceProfile, ProfileOverrides } from '../core/index.js';
 // seed these files during init, but executors always resolve runtime behavior
 // from the selected profile file.
 export const GOVERNANCE_PROFILE_DIRECTORY = 'tools/governance/profiles';
-export const GOVERNANCE_DEFAULT_PROFILE_NAME = 'angular-cleanup';
+export const GOVERNANCE_DEFAULT_PROFILE_NAME = 'frontend-layered';
+export const GOVERNANCE_LEGACY_PROFILE_NAME = 'layered-workspace';
 export const GOVERNANCE_DEFAULT_ESLINT_CONFIG_PATH = 'eslint.config.mjs';
 export const GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH =
   'tools/governance/eslint/dependency-constraints.mjs';

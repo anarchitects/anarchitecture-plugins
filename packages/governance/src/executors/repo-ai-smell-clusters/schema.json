@@ -6,7 +6,7 @@
     "profile": {
       "type": "string",
       "description": "Governance profile used to build deterministic workspace context.",
-      "default": "angular-cleanup"
+      "default": "frontend-layered"
     },
     "output": {
       "type": "string",

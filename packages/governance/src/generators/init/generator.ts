@@ -1,9 +1,10 @@
 import { formatFiles, logger, Tree, updateJson, writeJson } from '@nx/devkit';
 import {
   GOVERNANCE_DEFAULT_PROFILE_NAME,
+  GOVERNANCE_LEGACY_PROFILE_NAME,
   resolveGovernanceProfileRelativePath,
 } from '../../profile/runtime-profile.js';
-import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
+import { createFrontendLayeredStarterProfile } from '../../presets/frontend-layered/profile.js';
 import { eslintIntegrationGenerator } from '../eslint-integration/generator.js';
 
 interface InitSchema {
@@ -356,12 +357,15 @@ function ensureProfileConfig(tree: Tree): void {
   const filePath = resolveGovernanceProfileRelativePath(
     GOVERNANCE_DEFAULT_PROFILE_NAME
   );
+  const legacyFilePath = resolveGovernanceProfileRelativePath(
+    GOVERNANCE_LEGACY_PROFILE_NAME
+  );
 
-  if (tree.exists(filePath)) {
+  if (tree.exists(filePath) || tree.exists(legacyFilePath)) {
     return;
   }
 
-  writeJson(tree, filePath, createAngularCleanupStarterProfile());
+  writeJson(tree, filePath, createFrontendLayeredStarterProfile());
 }
 
 export default initGenerator;

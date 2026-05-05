@@ -14,6 +14,8 @@ import {
 import {
   GovernanceProfileFile,
   GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
+  GOVERNANCE_DEFAULT_PROFILE_NAME,
+  GOVERNANCE_LEGACY_PROFILE_NAME,
   resolveGovernanceProfilePath,
 } from '../../profile/runtime-profile.js';
 
@@ -26,45 +28,51 @@ const LEGACY_PROFILE_METRIC_KEY_MAP = {
   layerIntegrityWeight: 'layer-integrity',
 } as const;
 
-export const angularCleanupProfile: GovernanceProfile = {
-  name: 'angular-cleanup',
-  description: 'Angular-oriented governance defaults for Nx workspaces.',
-  boundaryPolicySource: 'profile',
-  layers: ['app', 'feature', 'ui', 'data-access', 'util'],
-  allowedDomainDependencies: {
-    '*': ['shared'],
-  },
-  ownership: {
-    required: true,
-    metadataField: 'ownership',
-  },
-  health: {
-    statusThresholds: DEFAULT_HEALTH_STATUS_THRESHOLDS,
-  },
-  metrics: {
-    'architectural-entropy': 0.2,
-    'dependency-complexity': 0.2,
-    'domain-integrity': 0.2,
-    'ownership-coverage': 0.2,
-    'documentation-completeness': 0.2,
-    'layer-integrity': 0.2,
-  },
+const BASE_PROFILE_METRICS: Record<Measurement['id'], number> = {
+  'architectural-entropy': 0.2,
+  'dependency-complexity': 0.2,
+  'domain-integrity': 0.2,
+  'ownership-coverage': 0.2,
+  'documentation-completeness': 0.2,
+  'layer-integrity': 0.2,
 };
 
-// This starter file is copied into a workspace during init when no user-owned
-// runtime profile exists yet. It stays separate from the built-in preset so the
-// workspace can own and evolve its runtime policy explicitly.
-export function createAngularCleanupStarterProfile(): GovernanceProfileFile {
+const BASE_PROFILE_OWNERSHIP: GovernanceProfile['ownership'] = {
+  required: true,
+  metadataField: 'ownership',
+};
+
+const BASE_PROFILE_ALLOWED_DOMAIN_DEPENDENCIES: Record<string, string[]> = {
+  '*': ['shared'],
+};
+
+const BASE_HEALTH_THRESHOLDS = DEFAULT_HEALTH_STATUS_THRESHOLDS;
+
+function createBuiltInProfile(
+  name: string,
+  description: string,
+  layers: string[]
+): GovernanceProfile {
+  return {
+    name,
+    description,
+    boundaryPolicySource: 'profile',
+    layers,
+    allowedDomainDependencies: BASE_PROFILE_ALLOWED_DOMAIN_DEPENDENCIES,
+    ownership: BASE_PROFILE_OWNERSHIP,
+    health: {
+      statusThresholds: BASE_HEALTH_THRESHOLDS,
+    },
+    metrics: BASE_PROFILE_METRICS,
+  };
+}
+
+function createBuiltInStarterProfile(layers: string[]): GovernanceProfileFile {
   return {
     boundaryPolicySource: 'eslint',
-    layers: ['app', 'feature', 'ui', 'data-access', 'util'],
-    allowedDomainDependencies: {
-      '*': ['shared'],
-    },
-    ownership: {
-      required: true,
-      metadataField: 'ownership',
-    },
+    layers,
+    allowedDomainDependencies: BASE_PROFILE_ALLOWED_DOMAIN_DEPENDENCIES,
+    ownership: BASE_PROFILE_OWNERSHIP,
     health: {
       statusThresholds: {
         goodMinScore: 85,
@@ -83,6 +91,46 @@ export function createAngularCleanupStarterProfile(): GovernanceProfileFile {
   };
 }
 
+export const frontendLayeredProfile = createBuiltInProfile(
+  GOVERNANCE_DEFAULT_PROFILE_NAME,
+  'Layered frontend-oriented governance defaults for Nx workspaces.',
+  ['app', 'feature', 'ui', 'data-access', 'util']
+);
+
+export const layeredWorkspaceProfile = createBuiltInProfile(
+  GOVERNANCE_LEGACY_PROFILE_NAME,
+  'Legacy compatibility alias for the frontend-layered governance defaults.',
+  frontendLayeredProfile.layers
+);
+
+export const backendLayered3TierProfile = createBuiltInProfile(
+  'backend-layered-3tier',
+  'Three-tier backend governance defaults for Nx workspaces.',
+  ['api', 'service', 'data-access']
+);
+
+export const backendLayeredDddProfile = createBuiltInProfile(
+  'backend-layered-ddd',
+  'DDD-oriented backend governance defaults for Nx workspaces.',
+  ['api', 'application', 'domain', 'infrastructure']
+);
+
+export function createFrontendLayeredStarterProfile(): GovernanceProfileFile {
+  return createBuiltInStarterProfile(frontendLayeredProfile.layers);
+}
+
+export function createLayeredWorkspaceStarterProfile(): GovernanceProfileFile {
+  return createFrontendLayeredStarterProfile();
+}
+
+export function createBackendLayered3TierStarterProfile(): GovernanceProfileFile {
+  return createBuiltInStarterProfile(backendLayered3TierProfile.layers);
+}
+
+export function createBackendLayeredDddStarterProfile(): GovernanceProfileFile {
+  return createBuiltInStarterProfile(backendLayeredDddProfile.layers);
+}
+
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
   exceptions: GovernanceException[];
@@ -90,26 +138,49 @@ export interface ResolvedProfileOverrides extends ProfileOverrides {
   runtimeWarnings: string[];
 }
 
+export function resolveBuiltInGovernanceProfile(
+  profileName: string
+): GovernanceProfile {
+  switch (profileName) {
+    case GOVERNANCE_LEGACY_PROFILE_NAME:
+      return layeredWorkspaceProfile;
+    case 'backend-layered-3tier':
+      return backendLayered3TierProfile;
+    case 'backend-layered-ddd':
+      return backendLayeredDddProfile;
+    case GOVERNANCE_DEFAULT_PROFILE_NAME:
+    default:
+      return frontendLayeredProfile;
+  }
+}
+
+export function createBuiltInGovernanceStarterProfile(
+  profileName: string
+): GovernanceProfileFile {
+  switch (profileName) {
+    case 'backend-layered-3tier':
+      return createBackendLayered3TierStarterProfile();
+    case 'backend-layered-ddd':
+      return createBackendLayeredDddStarterProfile();
+    case GOVERNANCE_LEGACY_PROFILE_NAME:
+      return createLayeredWorkspaceStarterProfile();
+    case GOVERNANCE_DEFAULT_PROFILE_NAME:
+    default:
+      return createFrontendLayeredStarterProfile();
+  }
+}
+
 export async function loadProfileOverrides(
   workspaceRoot: string,
   profileName: string
 ): Promise<ResolvedProfileOverrides> {
-  const filePath = resolveGovernanceProfilePath(workspaceRoot, profileName);
+  const builtInProfile = resolveBuiltInGovernanceProfile(profileName);
+  const filePath =
+    resolveExistingProfilePath(workspaceRoot, profileName) ??
+    resolveGovernanceProfilePath(workspaceRoot, profileName);
 
   if (!existsSync(filePath)) {
-    return {
-      boundaryPolicySource: angularCleanupProfile.boundaryPolicySource,
-      layers: angularCleanupProfile.layers,
-      allowedDomainDependencies:
-        angularCleanupProfile.allowedDomainDependencies,
-      ownership: angularCleanupProfile.ownership,
-      health: angularCleanupProfile.health,
-      metrics: angularCleanupProfile.metrics,
-      exceptions: [],
-      eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
-      projectOverrides: {},
-      runtimeWarnings: [],
-    };
+    return buildDefaultResolvedOverrides(builtInProfile);
   }
 
   const raw = JSON.parse(
@@ -119,7 +190,7 @@ export async function loadProfileOverrides(
   };
 
   const boundaryPolicySource =
-    raw.boundaryPolicySource ?? angularCleanupProfile.boundaryPolicySource;
+    raw.boundaryPolicySource ?? builtInProfile.boundaryPolicySource;
   const eslintHelperPath =
     raw.eslint?.helperPath ?? GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH;
 
@@ -143,31 +214,74 @@ export async function loadProfileOverrides(
   return {
     boundaryPolicySource,
     layers:
-      raw.layers && raw.layers.length > 0
-        ? raw.layers
-        : angularCleanupProfile.layers,
+      raw.layers && raw.layers.length > 0 ? raw.layers : builtInProfile.layers,
     allowedDomainDependencies: {
-      ...angularCleanupProfile.allowedDomainDependencies,
+      ...builtInProfile.allowedDomainDependencies,
       ...(eslintAllowedDependencies ?? {}),
       ...(raw.allowedDomainDependencies ?? {}),
     },
     ownership: {
-      ...angularCleanupProfile.ownership,
+      ...builtInProfile.ownership,
       ...(raw.ownership ?? {}),
     },
     health: {
       statusThresholds: normalizeHealthStatusThresholds(
-        raw.health?.statusThresholds
+        raw.health?.statusThresholds,
+        builtInProfile
       ),
     },
     metrics: {
-      ...angularCleanupProfile.metrics,
+      ...builtInProfile.metrics,
       ...normalizeMetricWeights(raw.metrics),
     },
     exceptions,
     eslintHelperPath,
     projectOverrides: raw.projectOverrides ?? {},
     runtimeWarnings,
+  };
+}
+
+function resolveExistingProfilePath(
+  workspaceRoot: string,
+  profileName: string
+): string | null {
+  for (const candidate of resolveProfileAliasCandidates(profileName)) {
+    const filePath = resolveGovernanceProfilePath(workspaceRoot, candidate);
+
+    if (existsSync(filePath)) {
+      return filePath;
+    }
+  }
+
+  return null;
+}
+
+function resolveProfileAliasCandidates(profileName: string): string[] {
+  if (profileName === GOVERNANCE_DEFAULT_PROFILE_NAME) {
+    return [GOVERNANCE_DEFAULT_PROFILE_NAME, GOVERNANCE_LEGACY_PROFILE_NAME];
+  }
+
+  if (profileName === GOVERNANCE_LEGACY_PROFILE_NAME) {
+    return [GOVERNANCE_LEGACY_PROFILE_NAME, GOVERNANCE_DEFAULT_PROFILE_NAME];
+  }
+
+  return [profileName];
+}
+
+function buildDefaultResolvedOverrides(
+  profile: GovernanceProfile
+): ResolvedProfileOverrides {
+  return {
+    boundaryPolicySource: profile.boundaryPolicySource,
+    layers: profile.layers,
+    allowedDomainDependencies: profile.allowedDomainDependencies,
+    ownership: profile.ownership,
+    health: profile.health,
+    metrics: profile.metrics,
+    exceptions: [],
+    eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
+    projectOverrides: {},
+    runtimeWarnings: [],
   };
 }
 
@@ -259,31 +373,27 @@ function depConstraintsToAllowedDomainDependencies(
       .filter((tag) => tag.startsWith('domain:'))
       .map((tag) => tag.replace(/^domain:/, ''));
 
-    if (!mapped[sourceDomain]) {
-      mapped[sourceDomain] = [];
-    }
-
-    mapped[sourceDomain].push(...targetDomains);
-    mapped[sourceDomain] = Array.from(new Set(mapped[sourceDomain]));
+    mapped[sourceDomain] = Array.from(new Set(targetDomains)).sort();
   }
 
   return mapped;
 }
 
 function normalizeHealthStatusThresholds(
-  raw?: Partial<HealthStatusThresholds>
+  rawThresholds: Partial<HealthStatusThresholds> | undefined,
+  profile: GovernanceProfile
 ): HealthStatusThresholds {
   const goodMinScore = normalizeThresholdValue(
-    raw?.goodMinScore,
-    angularCleanupProfile.health.statusThresholds.goodMinScore
+    rawThresholds?.goodMinScore,
+    profile.health.statusThresholds.goodMinScore
   );
   const warningMinScore = normalizeThresholdValue(
-    raw?.warningMinScore,
-    angularCleanupProfile.health.statusThresholds.warningMinScore
+    rawThresholds?.warningMinScore,
+    profile.health.statusThresholds.warningMinScore
   );
 
   if (goodMinScore <= warningMinScore) {
-    return angularCleanupProfile.health.statusThresholds;
+    return profile.health.statusThresholds;
   }
 
   return {
@@ -329,7 +439,7 @@ function normalizeProfileExceptions(
     ids.add(exception.id);
   }
 
-  return normalized.sort((a, b) => a.id.localeCompare(b.id));
+  return normalized.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function normalizeProfileExceptionEntry(

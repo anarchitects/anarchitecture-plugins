@@ -28,7 +28,7 @@ describe('buildGovernanceGraphDocument', () => {
         id: 'workspace',
         name: 'workspace',
         root: '.',
-        profile: 'angular-cleanup',
+        profile: 'frontend-layered',
       },
       summary: {
         nodeCount: 0,
@@ -431,7 +431,7 @@ function createAssessment(
       projects: input.workspaceProjects ?? [],
       dependencies: input.dependencies ?? [],
     },
-    profile: 'angular-cleanup',
+    profile: 'frontend-layered',
     warnings: [],
     exceptions: {
       summary: {
