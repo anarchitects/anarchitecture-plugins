@@ -72,7 +72,7 @@
       "repo-health": {
         "executor": "@anarchitects/nx-governance:repo-health",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "cli"
         },
         "metadata": {
@@ -82,7 +82,7 @@
       "repo-boundaries": {
         "executor": "@anarchitects/nx-governance:repo-boundaries",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "cli"
         },
         "metadata": {
@@ -92,7 +92,7 @@
       "repo-ownership": {
         "executor": "@anarchitects/nx-governance:repo-ownership",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "cli"
         },
         "metadata": {
@@ -102,7 +102,7 @@
       "repo-architecture": {
         "executor": "@anarchitects/nx-governance:repo-architecture",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "cli"
         },
         "metadata": {
@@ -112,7 +112,7 @@
       "repo-snapshot": {
         "executor": "@anarchitects/nx-governance:repo-snapshot",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "cli"
         },
         "metadata": {
@@ -143,10 +143,20 @@
           "description": "Print Nx Conformance finding/error/warning counts from conformance JSON output."
         }
       },
+      "governance-graph": {
+        "executor": "@anarchitects/nx-governance:governance-graph",
+        "options": {
+          "format": "html",
+          "outputPath": "dist/governance/graph.html"
+        },
+        "metadata": {
+          "description": "Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph."
+        }
+      },
       "repo-ai-root-cause": {
         "executor": "@anarchitects/nx-governance:repo-ai-root-cause",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topViolations": 10
         },
@@ -157,7 +167,7 @@
       "repo-ai-drift": {
         "executor": "@anarchitects/nx-governance:repo-ai-drift",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json"
         },
         "metadata": {
@@ -167,7 +177,7 @@
       "repo-ai-pr-impact": {
         "executor": "@anarchitects/nx-governance:repo-ai-pr-impact",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "baseRef": "main",
           "headRef": "HEAD"
@@ -179,7 +189,7 @@
       "repo-ai-cognitive-load": {
         "executor": "@anarchitects/nx-governance:repo-ai-cognitive-load",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topProjects": 10
         },
@@ -190,7 +200,7 @@
       "repo-ai-recommendations": {
         "executor": "@anarchitects/nx-governance:repo-ai-recommendations",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topViolations": 10
         },
@@ -201,7 +211,7 @@
       "repo-ai-smell-clusters": {
         "executor": "@anarchitects/nx-governance:repo-ai-smell-clusters",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topViolations": 10
         },
@@ -212,7 +222,7 @@
       "repo-ai-refactoring-suggestions": {
         "executor": "@anarchitects/nx-governance:repo-ai-refactoring-suggestions",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topViolations": 10,
           "topProjects": 5
@@ -224,7 +234,7 @@
       "repo-ai-scorecard": {
         "executor": "@anarchitects/nx-governance:repo-ai-scorecard",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json"
         },
         "metadata": {
@@ -234,7 +244,7 @@
       "repo-ai-onboarding": {
         "executor": "@anarchitects/nx-governance:repo-ai-onboarding",
         "options": {
-          "profile": "angular-cleanup",
+          "profile": "frontend-layered",
           "output": "json",
           "topViolations": 10,
           "topProjects": 5

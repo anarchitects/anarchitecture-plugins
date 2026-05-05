@@ -5,7 +5,7 @@
   "properties": {
     "profile": {
       "type": "string",
-      "description": "Governance profile to execute.",
+      "description": "Governance profile to evaluate when building the graph artifact.",
       "default": "frontend-layered"
     },
     "failOnViolation": {

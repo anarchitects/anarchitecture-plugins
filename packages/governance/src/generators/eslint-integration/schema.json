@@ -14,7 +14,7 @@
     },
     "profile": {
       "type": "string",
-      "description": "Governance profile name to seed or migrate when extracting inline ESLint depConstraints."
+      "description": "Governance profile name resolved under tools/governance/profiles/ when migrating inline ESLint depConstraints. When omitted, Nx Governance falls back to the default runtime profile name."
     },
     "profilePath": {
       "type": "string",
