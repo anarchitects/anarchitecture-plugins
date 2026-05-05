@@ -46,6 +46,7 @@ const GOVERNANCE_PLUGIN_NAME = '@anarchitects/nx-governance';
 
 interface ResolvedInitOptions {
   configureEslint: boolean;
+  profilePath?: string;
   selectedProfileName: string;
   selectedProfilePath: string;
   starterPreset: GovernanceStarterPresetName;
@@ -292,6 +293,7 @@ function resolveInitOptions(options: InitSchema): ResolvedInitOptions {
 
   return {
     configureEslint: options.configureEslint ?? true,
+    profilePath: options.profilePath,
     selectedProfileName:
       options.profile ?? options.preset ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
     selectedProfilePath: resolveGovernanceSelectedProfileRelativePath({
