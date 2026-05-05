@@ -3,11 +3,9 @@ import { join } from 'node:path';
 
 import { logger, readJson, Tree, updateJson } from '@nx/devkit';
 
-import {
-  createBackendLayered3TierStarterProfile,
-  createBackendLayeredDddStarterProfile,
-  createFrontendLayeredStarterProfile,
-} from '../../presets/frontend-layered/profile.js';
+import { createBackendLayered3TierStarterProfile } from '../../presets/backend-layered/profile.js';
+import { createBackendLayeredDddStarterProfile } from '../../presets/backend-layered/profile.js';
+import { createFrontendLayeredStarterProfile } from '../../presets/frontend-layered/profile.js';
 import initGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
@@ -566,7 +564,8 @@ describe('governance initGenerator', () => {
       default: ['frontend-layered'],
       description:
         'Built-in governance starter presets to seed when init creates missing profile files. When profile is omitted, the first selected preset becomes the default runtime profile for generated root targets. backend-layered-3tier and backend-layered-ddd are mutually exclusive.',
-      'x-prompt': 'Select one or more built-in governance starter presets to seed.',
+      'x-prompt':
+        'Select one or more built-in governance starter presets to seed.',
     });
     expect(schema.properties?.profile?.type).toBe('string');
   });

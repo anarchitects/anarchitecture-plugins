@@ -11,7 +11,7 @@ import {
   createBuiltInGovernanceStarterProfile,
   type GovernanceStarterPresetName,
   resolveGovernanceStarterPresetName,
-} from '../../presets/frontend-layered/profile.js';
+} from '../../presets/registry.js';
 import { eslintIntegrationGenerator } from '../eslint-integration/generator.js';
 
 interface InitSchema {
@@ -308,7 +308,9 @@ function resolveInitOptions(options: InitSchema): ResolvedInitOptions {
     profilePath: options.profilePath,
   });
   const selectedProfilePreset =
-    builtInProfilePreset ?? starterPresets[0] ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
+    builtInProfilePreset ??
+    starterPresets[0] ??
+    GOVERNANCE_DEFAULT_PROFILE_NAME;
 
   return {
     configureEslint: options.configureEslint ?? true,
@@ -332,8 +334,8 @@ function resolveStarterPresetSelections(
   const rawSelections = Array.isArray(presetOption)
     ? presetOption
     : presetOption
-      ? [presetOption]
-      : [];
+    ? [presetOption]
+    : [];
   const normalizedSelections = dedupeStarterPresets(
     rawSelections.map((selection) => {
       const normalized = resolveGovernanceStarterPresetName(selection);

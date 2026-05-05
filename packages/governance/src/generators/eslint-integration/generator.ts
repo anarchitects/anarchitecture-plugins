@@ -12,7 +12,7 @@ import {
   resolveGovernanceSelectedProfileRelativePath,
   toRelativeModuleSpecifier,
 } from '../../profile/runtime-profile.js';
-import { createBuiltInGovernanceStarterProfile } from '../../presets/frontend-layered/profile.js';
+import { createBuiltInGovernanceStarterProfile } from '../../presets/registry.js';
 
 interface EslintIntegrationSchema {
   eslintConfigPath?: string;
