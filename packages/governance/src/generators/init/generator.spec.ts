@@ -1,11 +1,61 @@
-import { logger, readJson, type Tree, updateJson } from '@nx/devkit';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-import { createFrontendLayeredStarterProfile } from '../../presets/frontend-layered/profile.js';
+import { logger, readJson, Tree, updateJson } from '@nx/devkit';
+
+import {
+  createBackendLayered3TierStarterProfile,
+  createBackendLayeredDddStarterProfile,
+  createFrontendLayeredStarterProfile,
+} from '../../presets/frontend-layered/profile.js';
 import initGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
   | typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace']
   | undefined;
+
+const MINIMAL_TARGET_NAMES = ['repo-health'] as const;
+const FULL_ONLY_TARGET_NAMES = [
+  'governance-graph',
+  'repo-boundaries',
+  'repo-ownership',
+  'repo-architecture',
+  'repo-snapshot',
+  'repo-drift',
+  'workspace-graph',
+  'workspace-conformance',
+  'repo-ai-root-cause',
+  'repo-ai-drift',
+  'repo-ai-pr-impact',
+  'repo-ai-cognitive-load',
+  'repo-ai-recommendations',
+  'repo-ai-smell-clusters',
+  'repo-ai-refactoring-suggestions',
+  'repo-ai-scorecard',
+  'repo-ai-onboarding',
+] as const;
+const FULL_TARGET_NAMES = [
+  ...MINIMAL_TARGET_NAMES,
+  ...FULL_ONLY_TARGET_NAMES,
+] as const;
+const AI_TARGET_NAMES = [
+  'repo-ai-root-cause',
+  'repo-ai-drift',
+  'repo-ai-pr-impact',
+  'repo-ai-cognitive-load',
+  'repo-ai-recommendations',
+  'repo-ai-smell-clusters',
+  'repo-ai-refactoring-suggestions',
+  'repo-ai-scorecard',
+  'repo-ai-onboarding',
+] as const;
+const SUPPORT_TARGET_NAMES = [
+  'governance-graph',
+  'repo-snapshot',
+  'repo-drift',
+  'workspace-graph',
+  'workspace-conformance',
+] as const;
 
 describe('governance initGenerator', () => {
   let tree: Tree;
@@ -24,17 +74,87 @@ describe('governance initGenerator', () => {
     warnSpy.mockRestore();
   });
 
-  it('adds the governance graph root target with the expected executor and defaults', async () => {
+  it('defaults to the minimal repo-health-only target preset', async () => {
     await initGenerator(tree, {
       configureEslint: false,
       skipFormat: true,
     });
 
-    const packageJson = readJson(tree, 'package.json') as {
-      nx?: { targets?: Record<string, unknown> };
-    };
+    const targets = readTargets(tree);
 
-    expect(packageJson.nx?.targets?.['governance-graph']).toEqual({
+    expect(Object.keys(targets).sort()).toEqual(
+      [...MINIMAL_TARGET_NAMES].sort()
+    );
+    expect(targets['repo-health']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-health',
+      options: {
+        profile: 'frontend-layered',
+        output: 'cli',
+      },
+      metadata: {
+        description: 'Run governance health assessment for the workspace.',
+      },
+    });
+
+    for (const targetName of FULL_ONLY_TARGET_NAMES) {
+      expect(targets[targetName]).toBeUndefined();
+    }
+
+    for (const targetName of AI_TARGET_NAMES) {
+      expect(targets[targetName]).toBeUndefined();
+    }
+
+    for (const targetName of SUPPORT_TARGET_NAMES) {
+      expect(targets[targetName]).toBeUndefined();
+    }
+  });
+
+  it('uses frontend-layered by default and seeds only that starter profile output', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'frontend-layered',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
+    ).toEqual(createFrontendLayeredStarterProfile());
+    expect(
+      tree.exists('tools/governance/profiles/backend-layered-3tier.json')
+    ).toBe(false);
+    expect(
+      tree.exists('tools/governance/profiles/backend-layered-ddd.json')
+    ).toBe(false);
+  });
+
+  it('supports explicitly requesting the minimal target preset', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      targetPreset: 'minimal',
+      skipFormat: true,
+    });
+
+    expect(Object.keys(readTargets(tree)).sort()).toEqual(
+      [...MINIMAL_TARGET_NAMES].sort()
+    );
+  });
+
+  it('supports requesting the full target preset with the previous broad target surface', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      targetPreset: 'full',
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(Object.keys(targets).sort()).toEqual([...FULL_TARGET_NAMES].sort());
+    expect(targets['governance-graph']).toEqual({
       executor: '@anarchitects/nx-governance:governance-graph',
       options: {
         format: 'html',
@@ -45,21 +165,73 @@ describe('governance initGenerator', () => {
           'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
       },
     });
+    expect(targets['repo-ai-onboarding']).toBeDefined();
+    expect(targets['repo-snapshot']).toBeDefined();
+    expect(targets['repo-drift']).toBeDefined();
+    expect(targets['workspace-graph']).toBeDefined();
+    expect(targets['workspace-conformance']).toBeDefined();
   });
 
-  it('uses frontend-layered as the default profile for newly added governance targets', async () => {
+  it('seeds backend-layered-3tier when selected explicitly', async () => {
     await initGenerator(tree, {
       configureEslint: false,
+      preset: 'backend-layered-3tier',
       skipFormat: true,
     });
 
-    const packageJson = readJson(tree, 'package.json') as {
-      nx?: { targets?: Record<string, { options?: Record<string, unknown> }> };
-    };
+    const targets = readTargets(tree);
 
-    expect(packageJson.nx?.targets?.['repo-health']?.options?.profile).toBe(
-      'frontend-layered'
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'backend-layered-3tier',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-3tier.json')
+    ).toEqual(createBackendLayered3TierStarterProfile());
+    expect(tree.exists('tools/governance/profiles/frontend-layered.json')).toBe(
+      false
     );
+  });
+
+  it('seeds backend-layered-ddd when selected explicitly', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      preset: 'backend-layered-ddd',
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'backend-layered-ddd',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-ddd.json')
+    ).toEqual(createBackendLayeredDddStarterProfile());
+    expect(tree.exists('tools/governance/profiles/frontend-layered.json')).toBe(
+      false
+    );
+  });
+
+  it('supports a custom profile name while seeding the selected starter preset', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      preset: 'backend-layered-ddd',
+      profile: 'workspace-policy',
+      targetPreset: 'full',
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'workspace-policy',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/workspace-policy.json')
+    ).toEqual(createBackendLayeredDddStarterProfile());
   });
 
   it('is idempotent and registers the plugin only once', async () => {
@@ -89,7 +261,7 @@ describe('governance initGenerator', () => {
     expect(tree.read('nx.json', 'utf-8')).toBe(firstNxJson);
   });
 
-  it('preserves existing governance graph target customizations while filling missing defaults', async () => {
+  it('preserves an existing governance-graph target when minimal init runs', async () => {
     updateJson(
       tree,
       'package.json',
@@ -117,14 +289,11 @@ describe('governance initGenerator', () => {
 
     await initGenerator(tree, {
       configureEslint: false,
+      targetPreset: 'minimal',
       skipFormat: true,
     });
 
-    const packageJson = readJson(tree, 'package.json') as {
-      nx?: { targets?: Record<string, unknown> };
-    };
-
-    expect(packageJson.nx?.targets?.['governance-graph']).toEqual({
+    expect(readTargets(tree)['governance-graph']).toEqual({
       executor: '@anarchitects/nx-governance:governance-graph',
       dependsOn: ['repo-health'],
       options: {
@@ -137,7 +306,7 @@ describe('governance initGenerator', () => {
     });
   });
 
-  it('adds the governance graph target without removing existing governance targets', async () => {
+  it('preserves existing governance targets and target options while filling missing defaults in minimal mode', async () => {
     updateJson(
       tree,
       'package.json',
@@ -153,6 +322,13 @@ describe('governance initGenerator', () => {
                 profile: 'custom-profile',
               },
             },
+            'repo-ai-scorecard': {
+              executor: '@anarchitects/nx-governance:repo-ai-scorecard',
+              options: {
+                profile: 'custom-profile',
+                output: 'json',
+              },
+            },
           },
         },
       })
@@ -163,11 +339,9 @@ describe('governance initGenerator', () => {
       skipFormat: true,
     });
 
-    const packageJson = readJson(tree, 'package.json') as {
-      nx?: { targets?: Record<string, unknown> };
-    };
+    const targets = readTargets(tree);
 
-    expect(packageJson.nx?.targets?.['repo-health']).toEqual({
+    expect(targets['repo-health']).toEqual({
       executor: '@anarchitects/nx-governance:repo-health',
       options: {
         profile: 'custom-profile',
@@ -177,10 +351,16 @@ describe('governance initGenerator', () => {
         description: 'Run governance health assessment for the workspace.',
       },
     });
-    expect(packageJson.nx?.targets?.['governance-graph']).toBeDefined();
+    expect(targets['repo-ai-scorecard']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-ai-scorecard',
+      options: {
+        profile: 'custom-profile',
+        output: 'json',
+      },
+    });
   });
 
-  it('preserves an existing runtime profile file instead of overwriting it with preset starter defaults', async () => {
+  it('preserves an existing selected runtime profile file instead of overwriting it', async () => {
     const existingProfile = {
       boundaryPolicySource: 'profile',
       layers: ['domain', 'shared'],
@@ -192,35 +372,147 @@ describe('governance initGenerator', () => {
     };
 
     tree.write(
-      'tools/governance/profiles/frontend-layered.json',
+      'tools/governance/profiles/backend-layered-ddd.json',
       `${JSON.stringify(existingProfile, null, 2)}\n`
     );
 
     await initGenerator(tree, {
       configureEslint: false,
+      preset: 'backend-layered-ddd',
       skipFormat: true,
     });
 
     expect(
       JSON.parse(
-        tree.read('tools/governance/profiles/frontend-layered.json', 'utf-8') ??
-          'null'
+        tree.read(
+          'tools/governance/profiles/backend-layered-ddd.json',
+          'utf-8'
+        ) ?? 'null'
       )
     ).toEqual(existingProfile);
-    expect(existingProfile).not.toEqual(createFrontendLayeredStarterProfile());
   });
 
-  it('creates a frontend-layered runtime profile for new workspaces', async () => {
+  it('does not remove existing optional targets when minimal init runs', async () => {
+    updateJson(
+      tree,
+      'package.json',
+      (json: { nx?: { targets?: Record<string, unknown> } }) => ({
+        ...json,
+        nx: {
+          ...(json.nx ?? {}),
+          targets: {
+            ...(json.nx?.targets ?? {}),
+            'workspace-conformance': {
+              executor: '@anarchitects/nx-governance:workspace-conformance',
+              options: {
+                conformanceJson: 'custom-conformance.json',
+              },
+            },
+          },
+        },
+      })
+    );
+
+    await initGenerator(tree, {
+      configureEslint: false,
+      targetPreset: 'minimal',
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['workspace-conformance']).toEqual({
+      executor: '@anarchitects/nx-governance:workspace-conformance',
+      options: {
+        conformanceJson: 'custom-conformance.json',
+      },
+    });
+    expect(targets['repo-health']).toBeDefined();
+    expect(targets['governance-graph']).toBeUndefined();
+  });
+
+  it('handles a missing package.json by creating the root governance target surface', async () => {
+    tree.delete('package.json');
+
     await initGenerator(tree, {
       configureEslint: false,
       skipFormat: true,
     });
 
+    expect(readTargets(tree)['repo-health']).toBeDefined();
+  });
+
+  it('exposes the targetPreset enum in the init schema', () => {
+    const schema = readSchema();
+
+    expect(schema.properties?.targetPreset).toEqual({
+      type: 'string',
+      enum: ['minimal', 'full'],
+      default: 'minimal',
+      description:
+        'Controls which root governance targets the init generator writes. Use "minimal" for the default repo-health-only surface, or "full" to restore the broader governance, diagnostic, snapshot/drift, governance-graph, and AI target set.',
+      'x-prompt': 'Select the governance root target preset to generate.',
+    });
+  });
+
+  it('exposes the starter preset option in the init schema', () => {
+    const schema = readSchema();
+
+    expect(schema.properties?.preset).toEqual({
+      type: 'string',
+      enum: [
+        'frontend-layered',
+        'backend-layered-3tier',
+        'backend-layered-ddd',
+      ],
+      default: 'frontend-layered',
+      description:
+        'Built-in governance starter preset to seed when init creates a missing profile. Backend layered 3-tier and backend layered DDD are mutually exclusive because this option selects a single preset.',
+      'x-prompt': 'Select the built-in governance starter preset to seed.',
+    });
+    expect(schema.properties?.profile?.type).toBe('string');
+  });
+
+  it('does not reintroduce angular-cleanup in generated targets, profiles, or schema', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      targetPreset: 'full',
+      skipFormat: true,
+    });
+
+    expect(tree.exists('tools/governance/profiles/angular-cleanup.json')).toBe(
+      false
+    );
+    expect(JSON.stringify(readTargets(tree))).not.toContain('angular-cleanup');
     expect(
-      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
-    ).toEqual(createFrontendLayeredStarterProfile());
+      tree.read('tools/governance/profiles/frontend-layered.json', 'utf8') ?? ''
+    ).not.toContain('angular-cleanup');
+    expect(JSON.stringify(readSchema())).not.toContain('angular-cleanup');
   });
 });
+
+function readSchema(): {
+  properties?: Record<string, Record<string, unknown>>;
+} {
+  const schemaPath = join(__dirname, 'schema.json');
+
+  return JSON.parse(readFileSync(schemaPath, 'utf-8')) as {
+    properties?: Record<string, Record<string, unknown>>;
+  };
+}
+
+interface RootTargetConfig {
+  options?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+function readTargets(tree: Tree): Record<string, RootTargetConfig> {
+  const packageJson = readJson(tree, 'package.json') as {
+    nx?: { targets?: Record<string, RootTargetConfig> };
+  };
+
+  return packageJson.nx?.targets ?? {};
+}
 
 beforeAll(async () => {
   ({ createTreeWithEmptyWorkspace } = await import('@nx/devkit/testing'));

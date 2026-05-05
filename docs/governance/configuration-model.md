@@ -59,8 +59,13 @@ the selected profile file.
 The init generator bootstraps minimal setup. It currently:
 
 - registers the governance plugin in `nx.json`
-- adds the current compatibility root targets to `package.json`
-- creates a starter profile file when it is missing
+- adds a minimal default root target set to `package.json`
+  - `repo-health`
+- adds the broader legacy target surface only when `targetPreset: "full"` is selected
+- seeds only the selected starter profile file when it is missing
+  - default preset/profile: `frontend-layered`
+  - backend starter presets: `backend-layered-3tier` and `backend-layered-ddd`
+  - `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive
 - runs ESLint integration unless disabled
 
 Init is not the long-term source of truth for runtime policy. It should seed
@@ -82,9 +87,13 @@ The current behavior is intentionally preserved:
 Existing explicit targets remain supported. Existing `layered-workspace`
 profile files, target options, and preset references remain supported as
 compatibility aliases. New workspaces should prefer `frontend-layered` or one
-of the backend presets when those taxonomies fit better. This clarification
-does not introduce Project Crystal target inference or reduce the current root
-target surface.
+of the backend presets when those taxonomies fit better. The broader governance
+target surface remains available through explicit targets and the init
+generator's `targetPreset: "full"` option. All executors remain available even
+when init writes only the minimal root target surface. `governance-graph`
+remains part of the full target preset, while issue #189 still owns the
+long-term default-target decision. This clarification does not
+introduce Project Crystal target inference.
 
 Framework-specific intelligence still belongs in extension plugins rather than
 the core preset identity. This issue does not implement the future Angular

@@ -322,7 +322,7 @@ Documentation completeness is resolved from three places in priority order:
 
 ### `init` generator
 
-Scaffolds governance configuration into any Nx workspace and registers governance, snapshot/drift, and deterministic AI root targets.
+Scaffolds governance configuration into any Nx workspace and registers a minimal default governance target surface.
 
 ```bash
 nx g @anarchitects/nx-governance:init
@@ -331,21 +331,31 @@ nx g @anarchitects/nx-governance:init
 **What it does:**
 
 - Registers `@anarchitects/nx-governance` in `nx.json` plugins.
-- Writes root targets into `package.json > nx.targets` for graph diagnostics, health checks, snapshot/drift, and deterministic AI analysis workflows.
-- Adds a root `governance-graph` target that emits the static HTML viewer by default and supports JSON export via `--format=json`.
-- Creates `tools/governance/profiles/frontend-layered.json` with sensible defaults (if it does not already exist).
+- Writes a minimal default root target set into `package.json > nx.targets`:
+  - `repo-health`
+- Writes the previous broad governance target surface only when `targetPreset: "full"` is selected.
+- `targetPreset: "full"` includes drilldowns, snapshot/drift workflows, diagnostics, `governance-graph`, and AI helper targets.
+- Creates only the selected starter profile file when it is missing:
+  - default preset/profile: `frontend-layered`
+  - backend starter presets: `backend-layered-3tier` and `backend-layered-ddd`
+  - `layered-workspace` remains accepted as a compatibility alias for the frontend starter profile
+- `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive because init selects a single starter preset.
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
+
+All governance executors remain available even when init writes the minimal target set. Project Crystal target inference is future work and is not implemented here. `governance-graph` remains part of the full target preset; issue #189 still owns the long-term default-target decision.
 
 **Options:**
 
-| Option                 | Type      | Default                                                | Description                                                                                                                                                                                                                               |
-| ---------------------- | --------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                                                                                |
-| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.                                                   |
-| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                                                                  |
-| `profile`              | `string`  | `"frontend-layered"`                                   | Governance profile name used when migrating inline ESLint depConstraints. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias. |
-| `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                                                                        |
-| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                                              |
+| Option                 | Type      | Default                                                | Description                                                                                                                                                                                                                                                                                |
+| ---------------------- | --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `configureEslint`      | `boolean` | `true`                                                 | Generate the ESLint integration helper and wire it into the configured flat ESLint config.                                                                                                                                                                                                 |
+| `eslintConfigPath`     | `string`  | autodetect                                             | Explicit flat ESLint config file to patch when `configureEslint` is enabled. When omitted, Nx Governance checks `eslint.config.mjs`, then `eslint.config.cjs`, then `eslint.config.js`.                                                                                                    |
+| `governanceHelperPath` | `string`  | `"tools/governance/eslint/dependency-constraints.mjs"` | Path where the generated depConstraints helper module should be written.                                                                                                                                                                                                                   |
+| `preset`               | `string`  | `"frontend-layered"`                                   | Built-in starter preset used when init seeds a missing governance profile. Supported values are `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. Backend layered 3-tier and backend layered DDD are mutually exclusive because this option selects a single preset. |
+| `profile`              | `string`  | selected preset name                                   | Governance profile name wired into generated root targets and used as the default seeded profile filename. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias.                 |
+| `profilePath`          | `string`  | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                                                                                                                         |
+| `targetPreset`         | `string`  | `"minimal"`                                            | Controls which root governance targets init writes. Use `"minimal"` for the default `repo-health`-only surface, or `"full"` to restore the broader governance, diagnostic, snapshot/drift, `governance-graph`, and AI target set.                                                          |
+| `skipFormat`           | `boolean` | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                                                                                               |
 
 ---
 
@@ -424,7 +434,7 @@ nx workspace-conformance --conformanceJson=dist/conformance-result.json
 The MVP emits its own Governance Graph document and a static viewer. It does not replace the native Nx Graph UI.
 
 ```bash
-# Root target added by the init generator
+# Root target added by init when targetPreset is "full"
 nx governance-graph
 
 # JSON artifact for CI or debugging
