@@ -172,7 +172,7 @@ export async function loadProfileOverrides(
 }
 
 function normalizeMetricWeights(
-  raw: Record<string, number> | undefined
+  raw: Partial<Record<string, number>> | undefined
 ): Record<Measurement['id'], number> {
   if (!raw) {
     return {};
