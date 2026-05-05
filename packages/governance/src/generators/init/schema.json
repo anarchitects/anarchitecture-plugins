@@ -9,6 +9,23 @@
       "description": "Generate runtime ESLint integration from all governance profiles.",
       "x-prompt": "Generate ESLint module-boundary integration from governance profiles? (recommended)"
     },
+    "eslintConfigPath": {
+      "type": "string",
+      "description": "Explicit path to the flat ESLint config file to patch when configureEslint is enabled. When omitted, Nx Governance autodetects eslint.config.mjs, eslint.config.cjs, then eslint.config.js."
+    },
+    "governanceHelperPath": {
+      "type": "string",
+      "default": "tools/governance/eslint/dependency-constraints.mjs",
+      "description": "Path where the generated governance depConstraints helper module should be written when configureEslint is enabled."
+    },
+    "profile": {
+      "type": "string",
+      "description": "Governance profile name to seed or migrate when extracting inline ESLint depConstraints."
+    },
+    "profilePath": {
+      "type": "string",
+      "description": "Governance profile path to seed or migrate when extracting inline ESLint depConstraints."
+    },
     "skipFormat": {
       "type": "boolean",
       "default": false,

@@ -13,6 +13,7 @@ import {
 } from '../../core/index.js';
 import {
   GovernanceProfileFile,
+  GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
   resolveGovernanceProfilePath,
 } from '../../profile/runtime-profile.js';
 
@@ -85,6 +86,7 @@ export function createAngularCleanupStarterProfile(): GovernanceProfileFile {
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
   exceptions: GovernanceException[];
+  eslintHelperPath: string;
   runtimeWarnings: string[];
 }
 
@@ -104,34 +106,35 @@ export async function loadProfileOverrides(
       health: angularCleanupProfile.health,
       metrics: angularCleanupProfile.metrics,
       exceptions: [],
+      eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
       projectOverrides: {},
       runtimeWarnings: [],
     };
   }
 
-  const raw = JSON.parse(readFileSync(filePath, 'utf8')) as {
-    boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
-    layers?: string[];
-    allowedDomainDependencies?: Record<string, string[]>;
-    ownership?: ProfileOverrides['ownership'];
-    health?: ProfileOverrides['health'];
-    metrics?: Record<string, number>;
+  const raw = JSON.parse(
+    readFileSync(filePath, 'utf8')
+  ) as GovernanceProfileFile & {
     exceptions?: unknown;
-    projectOverrides?: ProfileOverrides['projectOverrides'];
   };
 
   const boundaryPolicySource =
     raw.boundaryPolicySource ?? angularCleanupProfile.boundaryPolicySource;
+  const eslintHelperPath =
+    raw.eslint?.helperPath ?? GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH;
 
   const eslintAllowedDependencies =
     boundaryPolicySource === 'eslint'
-      ? await loadAllowedDomainDependenciesFromEslint(workspaceRoot)
+      ? await loadAllowedDomainDependenciesFromEslint(
+          workspaceRoot,
+          eslintHelperPath
+        )
       : undefined;
 
   const runtimeWarnings =
     boundaryPolicySource === 'eslint'
       ? [
-          'Boundary policy source is ESLint constraints (tools/governance/eslint/dependency-constraints.mjs). Profile allowedDomainDependencies is treated as fallback.',
+          `Boundary policy source is ESLint constraints (${eslintHelperPath}). Profile allowedDomainDependencies is treated as fallback.`,
         ]
       : [];
 
@@ -162,13 +165,14 @@ export async function loadProfileOverrides(
       ...normalizeMetricWeights(raw.metrics),
     },
     exceptions,
+    eslintHelperPath,
     projectOverrides: raw.projectOverrides ?? {},
     runtimeWarnings,
   };
 }
 
 function normalizeMetricWeights(
-  raw: Record<string, number> | undefined
+  raw: Partial<Record<string, number>> | undefined
 ): Record<Measurement['id'], number> {
   if (!raw) {
     return {};
@@ -193,30 +197,34 @@ function normalizeMetricWeights(
 }
 
 async function loadAllowedDomainDependenciesFromEslint(
-  workspaceRoot: string
+  workspaceRoot: string,
+  helperPath: string
 ): Promise<Record<string, string[]> | undefined> {
-  const helperPath = join(
-    workspaceRoot,
-    'tools/governance/eslint/dependency-constraints.mjs'
-  );
+  const resolvedHelperPath = join(workspaceRoot, helperPath);
 
-  if (!existsSync(helperPath)) {
+  if (!existsSync(resolvedHelperPath)) {
     return undefined;
   }
 
   try {
-    const moduleUrl = pathToFileURL(helperPath).href;
+    const moduleUrl = pathToFileURL(resolvedHelperPath).href;
     const mod = (await import(moduleUrl)) as {
       governanceDepConstraints?: unknown;
+      default?: {
+        governanceDepConstraints?: unknown;
+      };
     };
+    const governanceDepConstraints = Array.isArray(mod.governanceDepConstraints)
+      ? mod.governanceDepConstraints
+      : Array.isArray(mod.default?.governanceDepConstraints)
+      ? mod.default.governanceDepConstraints
+      : undefined;
 
-    if (!Array.isArray(mod.governanceDepConstraints)) {
+    if (!Array.isArray(governanceDepConstraints)) {
       return undefined;
     }
 
-    return depConstraintsToAllowedDomainDependencies(
-      mod.governanceDepConstraints
-    );
+    return depConstraintsToAllowedDomainDependencies(governanceDepConstraints);
   } catch {
     return undefined;
   }

@@ -103,6 +103,44 @@ describe('loadProfileOverrides', () => {
     }
   });
 
+  it('loads ESLint constraints from a custom helper path declared in the runtime profile', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        boundaryPolicySource: 'eslint',
+        eslint: {
+          helperPath: 'tools/custom/governance-helper.mjs',
+        },
+      });
+      writeHelper(
+        workspaceRoot,
+        'tools/custom/governance-helper.mjs',
+        `export const governanceDepConstraints = [
+  {
+    sourceTag: 'domain:billing',
+    onlyDependOnLibsWithTags: ['domain:shared', 'domain:reporting'],
+  },
+];
+`
+      );
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'angular-cleanup'
+      );
+
+      expect(result.eslintHelperPath).toBe(
+        'tools/custom/governance-helper.mjs'
+      );
+      expect(result.runtimeWarnings).toEqual([
+        'Boundary policy source is ESLint constraints (tools/custom/governance-helper.mjs). Profile allowedDomainDependencies is treated as fallback.',
+      ]);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
   it('loads and normalizes policy and conformance exceptions', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 
@@ -347,4 +385,14 @@ function writeProfile(
     path.join(profilesDir, 'angular-cleanup.json'),
     `${JSON.stringify(content, null, 2)}\n`
   );
+}
+
+function writeHelper(
+  workspaceRoot: string,
+  helperPath: string,
+  content: string
+): void {
+  const absolutePath = path.join(workspaceRoot, helperPath);
+  mkdirSync(path.dirname(absolutePath), { recursive: true });
+  writeFileSync(absolutePath, content);
 }

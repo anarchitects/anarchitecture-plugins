@@ -1,13 +1,32 @@
 import { formatFiles, logger, Tree } from '@nx/devkit';
+import {
+  GOVERNANCE_DEFAULT_ESLINT_CONFIG_PATH,
+  GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
+  GOVERNANCE_DEFAULT_PROFILE_NAME,
+  GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS,
+  GovernanceProfileFile,
+  normalizeWorkspaceRelativePath,
+  resolveGovernanceProfilesDirectoryFromPath,
+  resolveGovernanceSelectedProfileRelativePath,
+  toRelativeModuleSpecifier,
+} from '../../profile/runtime-profile.js';
+import { createAngularCleanupStarterProfile } from '../../presets/angular-cleanup/profile.js';
 
 interface EslintIntegrationSchema {
+  eslintConfigPath?: string;
+  governanceHelperPath?: string;
+  profile?: string;
+  profilePath?: string;
   skipFormat?: boolean;
 }
 
-const ESLINT_CONFIG_PATH = 'eslint.config.mjs';
-const HELPER_PATH = 'tools/governance/eslint/dependency-constraints.mjs';
+const DEFAULT_ESLINT_OPTIONS = {
+  eslintConfigPath: GOVERNANCE_DEFAULT_ESLINT_CONFIG_PATH,
+  governanceHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
+};
 
-const HELPER_CONTENT = `import { existsSync, readdirSync, readFileSync } from 'node:fs';
+function buildHelperContent(profilesDirectory: string): string {
+  return `import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 function toDomainTag(domain) {
@@ -15,7 +34,7 @@ function toDomainTag(domain) {
 }
 
 function listGovernanceProfiles() {
-  const profilesDir = join(process.cwd(), 'tools/governance/profiles');
+  const profilesDir = join(process.cwd(), ${JSON.stringify(profilesDirectory)});
   if (!existsSync(profilesDir)) {
     return [];
   }
@@ -117,30 +136,31 @@ function buildDepConstraintsFromGovernanceProfiles() {
 export const governanceDepConstraints =
   buildDepConstraintsFromGovernanceProfiles();
 `;
+}
 
 // ---------------------------------------------------------------------------
 // Migration: read inline ESLint depConstraints → governance profile JSON
 // ---------------------------------------------------------------------------
-
-const PROFILE_PATH = 'tools/governance/profiles/angular-cleanup.json';
 
 interface RawDepConstraint {
   sourceTag: string;
   onlyDependOnLibsWithTags: string[];
 }
 
-function extractInlineDepConstraints(eslintContent: string): RawDepConstraint[] {
+function extractInlineDepConstraints(
+  eslintContent: string
+): RawDepConstraint[] {
   // Already integrated — nothing to migrate.
   if (eslintContent.includes('governanceDepConstraints')) {
     return [];
   }
 
-  const depMatch = eslintContent.match(/depConstraints:\s*(\[[\s\S]*?\])\s*,/);
-  if (!depMatch) {
+  const block = extractDepConstraintsArrayLiteral(eslintContent);
+
+  if (!block) {
     return [];
   }
 
-  const block = depMatch[1];
   const results: RawDepConstraint[] = [];
   const constraintRegex =
     /\{\s*sourceTag:\s*['"](([^'"])+)['"]\s*,\s*onlyDependOnLibsWithTags:\s*\[([^\]]*)\]\s*\}/g;
@@ -159,6 +179,40 @@ function extractInlineDepConstraints(eslintContent: string): RawDepConstraint[] 
   }
 
   return results;
+}
+
+function extractDepConstraintsArrayLiteral(
+  eslintContent: string
+): string | null {
+  const depConstraintsIndex = eslintContent.indexOf('depConstraints:');
+
+  if (depConstraintsIndex === -1) {
+    return null;
+  }
+
+  const arrayStartIndex = eslintContent.indexOf('[', depConstraintsIndex);
+
+  if (arrayStartIndex === -1) {
+    return null;
+  }
+
+  let depth = 0;
+
+  for (let index = arrayStartIndex; index < eslintContent.length; index += 1) {
+    const character = eslintContent[index];
+
+    if (character === '[') {
+      depth += 1;
+    } else if (character === ']') {
+      depth -= 1;
+
+      if (depth === 0) {
+        return eslintContent.slice(arrayStartIndex, index + 1);
+      }
+    }
+  }
+
+  return null;
 }
 
 function buildAllowedDomainMapFromConstraints(
@@ -185,12 +239,124 @@ function buildAllowedDomainMapFromConstraints(
   return map;
 }
 
-function migrateConstraintsToProfile(tree: Tree): void {
-  if (!tree.exists(ESLINT_CONFIG_PATH) || !tree.exists(PROFILE_PATH)) {
+interface ResolvedEslintIntegrationOptions {
+  eslintConfigPath: string;
+  eslintConfigPathWasExplicit: boolean;
+  governanceHelperPath: string;
+  profilePath: string;
+  profilesDirectory: string;
+  helperImportPath: string;
+  createsProfileIfMissing: boolean;
+}
+
+function resolveOptions(
+  tree: Tree,
+  options: EslintIntegrationSchema
+): ResolvedEslintIntegrationOptions {
+  const explicitEslintConfigPath =
+    typeof options.eslintConfigPath === 'string'
+      ? normalizeWorkspaceRelativePath(options.eslintConfigPath)
+      : undefined;
+  const eslintConfigPath =
+    explicitEslintConfigPath ??
+    detectFlatEslintConfigPath(tree) ??
+    DEFAULT_ESLINT_OPTIONS.eslintConfigPath;
+  const governanceHelperPath = normalizeWorkspaceRelativePath(
+    options.governanceHelperPath ?? DEFAULT_ESLINT_OPTIONS.governanceHelperPath
+  );
+  const profilePath = resolveGovernanceSelectedProfileRelativePath({
+    profile: options.profile ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
+    profilePath: options.profilePath,
+  });
+
+  return {
+    eslintConfigPath,
+    eslintConfigPathWasExplicit: explicitEslintConfigPath !== undefined,
+    governanceHelperPath,
+    profilePath,
+    profilesDirectory: resolveGovernanceProfilesDirectoryFromPath(profilePath),
+    helperImportPath: toRelativeModuleSpecifier(
+      eslintConfigPath,
+      governanceHelperPath
+    ),
+    createsProfileIfMissing:
+      typeof options.profile === 'string' ||
+      typeof options.profilePath === 'string' ||
+      governanceHelperPath !== GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
+  };
+}
+
+function detectFlatEslintConfigPath(tree: Tree): string | null {
+  for (const candidate of GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS) {
+    if (tree.exists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function readOrCreateProfile(
+  tree: Tree,
+  profilePath: string,
+  createsProfileIfMissing: boolean
+): GovernanceProfileFile | null {
+  if (!tree.exists(profilePath)) {
+    if (!createsProfileIfMissing) {
+      return null;
+    }
+
+    return {
+      ...createAngularCleanupStarterProfile(),
+      allowedDomainDependencies: {},
+    };
+  }
+
+  return JSON.parse(
+    tree.read(profilePath, 'utf8') ?? '{}'
+  ) as GovernanceProfileFile;
+}
+
+function ensureProfileEslintSettings(
+  tree: Tree,
+  options: ResolvedEslintIntegrationOptions
+): void {
+  if (
+    options.governanceHelperPath === GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH &&
+    !options.createsProfileIfMissing
+  ) {
     return;
   }
 
-  const eslintContent = tree.read(ESLINT_CONFIG_PATH, 'utf8') ?? '';
+  const profile = readOrCreateProfile(
+    tree,
+    options.profilePath,
+    options.createsProfileIfMissing
+  );
+
+  if (!profile) {
+    return;
+  }
+
+  if (options.governanceHelperPath !== GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH) {
+    profile.eslint = {
+      ...(profile.eslint ?? {}),
+      helperPath: options.governanceHelperPath,
+    };
+  }
+
+  tree.write(options.profilePath, JSON.stringify(profile, null, 2) + '\n');
+}
+
+function migrateConstraintsToProfile(
+  tree: Tree,
+  options: ResolvedEslintIntegrationOptions
+): void {
+  if (!tree.exists(options.eslintConfigPath)) {
+    return;
+  }
+
+  const eslintContent = tree.read(options.eslintConfigPath, 'utf8') ?? '';
   const constraints = extractInlineDepConstraints(eslintContent);
 
   if (constraints.length === 0) {
@@ -202,23 +368,41 @@ function migrateConstraintsToProfile(tree: Tree): void {
     return;
   }
 
-  const profile = JSON.parse(
-    tree.read(PROFILE_PATH, 'utf8') ?? '{}'
-  ) as {
-    allowedDomainDependencies?: Record<string, string[]>;
-    [key: string]: unknown;
-  };
+  const profile = readOrCreateProfile(
+    tree,
+    options.profilePath,
+    options.createsProfileIfMissing
+  );
+
+  if (!profile) {
+    return;
+  }
 
   // Merge: existing profile entries take precedence (they were explicitly authored).
   const existing = profile.allowedDomainDependencies ?? {};
   const merged: Record<string, string[]> = { ...migrated };
 
-  for (const [domain, targets] of Object.entries(existing) as [string, string[]][]) {
-    merged[domain] = Array.from(new Set([...(merged[domain] ?? []), ...targets]));
+  for (const [domain, targets] of Object.entries(existing) as [
+    string,
+    string[]
+  ][]) {
+    merged[domain] = Array.from(
+      new Set([...(merged[domain] ?? []), ...targets])
+    );
+  }
+
+  if (
+    options.governanceHelperPath !== GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH ||
+    profile.eslint?.helperPath
+  ) {
+    profile.eslint = {
+      ...(profile.eslint ?? {}),
+      helperPath: options.governanceHelperPath,
+    };
   }
 
   profile.allowedDomainDependencies = merged;
-  tree.write(PROFILE_PATH, JSON.stringify(profile, null, 2) + '\n');
+  tree.write(options.profilePath, JSON.stringify(profile, null, 2) + '\n');
 
   logger.info(
     `Nx Governance: Migrated ${constraints.length} ESLint depConstraints rules into governance profile.`
@@ -229,40 +413,67 @@ export async function eslintIntegrationGenerator(
   tree: Tree,
   options: EslintIntegrationSchema
 ): Promise<void> {
-  migrateConstraintsToProfile(tree);
-  tree.write(HELPER_PATH, HELPER_CONTENT);
-  ensureEslintConfigIntegration(tree);
+  const resolved = resolveOptions(tree, options);
+
+  ensureProfileEslintSettings(tree, resolved);
+  migrateConstraintsToProfile(tree, resolved);
+  tree.write(
+    resolved.governanceHelperPath,
+    buildHelperContent(resolved.profilesDirectory)
+  );
+  ensureEslintConfigIntegration(tree, resolved);
 
   if (!options.skipFormat) {
     await formatFiles(tree);
   }
 }
 
-function ensureEslintConfigIntegration(tree: Tree): void {
-  if (!tree.exists(ESLINT_CONFIG_PATH)) {
-    logger.warn(
-      'Nx Governance: eslint.config.mjs was not found. Skipping ESLint integration generation.'
-    );
+function ensureEslintConfigIntegration(
+  tree: Tree,
+  options: ResolvedEslintIntegrationOptions
+): void {
+  if (!tree.exists(options.eslintConfigPath)) {
+    if (options.eslintConfigPathWasExplicit) {
+      logger.warn(
+        `Nx Governance: ${options.eslintConfigPath} was not found. Skipping ESLint integration generation.`
+      );
+    } else {
+      logger.warn(
+        `Nx Governance: No supported flat ESLint config was found. Checked ${GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS.join(
+          ', '
+        )}. Legacy .eslintrc* config detection is intentionally out of scope; use eslintConfigPath for an explicit flat config path.`
+      );
+    }
     return;
   }
 
-  let content = tree.read(ESLINT_CONFIG_PATH, 'utf8') ?? '';
+  let content = tree.read(options.eslintConfigPath, 'utf8') ?? '';
 
-  content = content.replace(/import\s+\{\s*readFileSync\s*\}\s+from\s+'node:fs';\n?/g, '');
+  content = content.replace(
+    /import\s+\{\s*readFileSync\s*\}\s+from\s+'node:fs';\n?/g,
+    ''
+  );
+  content = content.replace(
+    /import\s+\{\s*governanceDepConstraints\s*\}\s+from\s+['"][^'"]+['"];\n?/g,
+    ''
+  );
 
   content = content.replace(
     /function readGovernanceProfile\([\s\S]*?const governanceDepConstraints = buildDepConstraintsFromGovernance\([\s\S]*?\);\n\n/g,
     ''
   );
 
-  const integrationImport =
-    "import { governanceDepConstraints } from './tools/governance/eslint/dependency-constraints.mjs';\n";
+  const integrationImport = `import { governanceDepConstraints } from '${options.helperImportPath}';\n`;
 
   if (!content.includes(integrationImport.trim())) {
-    content = content.replace(
-      "import nx from '@nx/eslint-plugin';\n",
-      `import nx from '@nx/eslint-plugin';\n${integrationImport}`
-    );
+    if (content.includes("import nx from '@nx/eslint-plugin';\n")) {
+      content = content.replace(
+        "import nx from '@nx/eslint-plugin';\n",
+        `import nx from '@nx/eslint-plugin';\n${integrationImport}`
+      );
+    } else {
+      content = `${integrationImport}${content}`;
+    }
   }
 
   if (!content.includes('depConstraints: governanceDepConstraints')) {
@@ -272,7 +483,7 @@ function ensureEslintConfigIntegration(tree: Tree): void {
     );
   }
 
-  tree.write(ESLINT_CONFIG_PATH, content);
+  tree.write(options.eslintConfigPath, content);
 }
 
 export default eslintIntegrationGenerator;
