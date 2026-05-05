@@ -91,6 +91,17 @@ function createBuiltInStarterProfile(layers: string[]): GovernanceProfileFile {
   };
 }
 
+export const BACKEND_LAYERED_3TIER_PRESET_NAME = 'backend-layered-3tier';
+export const BACKEND_LAYERED_DDD_PRESET_NAME = 'backend-layered-ddd';
+export const GOVERNANCE_STARTER_PRESET_NAMES = [
+  GOVERNANCE_DEFAULT_PROFILE_NAME,
+  BACKEND_LAYERED_3TIER_PRESET_NAME,
+  BACKEND_LAYERED_DDD_PRESET_NAME,
+] as const;
+
+export type GovernanceStarterPresetName =
+  (typeof GOVERNANCE_STARTER_PRESET_NAMES)[number];
+
 export const frontendLayeredProfile = createBuiltInProfile(
   GOVERNANCE_DEFAULT_PROFILE_NAME,
   'Layered frontend-oriented governance defaults for Nx workspaces.',
@@ -104,13 +115,13 @@ export const layeredWorkspaceProfile = createBuiltInProfile(
 );
 
 export const backendLayered3TierProfile = createBuiltInProfile(
-  'backend-layered-3tier',
+  BACKEND_LAYERED_3TIER_PRESET_NAME,
   'Three-tier backend governance defaults for Nx workspaces.',
   ['api', 'service', 'data-access']
 );
 
 export const backendLayeredDddProfile = createBuiltInProfile(
-  'backend-layered-ddd',
+  BACKEND_LAYERED_DDD_PRESET_NAME,
   'DDD-oriented backend governance defaults for Nx workspaces.',
   ['api', 'application', 'domain', 'infrastructure']
 );
@@ -131,6 +142,39 @@ export function createBackendLayeredDddStarterProfile(): GovernanceProfileFile {
   return createBuiltInStarterProfile(backendLayeredDddProfile.layers);
 }
 
+export function isGovernanceStarterPresetName(
+  value: string
+): value is GovernanceStarterPresetName {
+  return (GOVERNANCE_STARTER_PRESET_NAMES as readonly string[]).includes(value);
+}
+
+export function resolveGovernanceStarterPresetName(
+  selection?: string
+): GovernanceStarterPresetName | null {
+  if (!selection) {
+    return null;
+  }
+
+  if (selection === GOVERNANCE_LEGACY_PROFILE_NAME) {
+    return GOVERNANCE_DEFAULT_PROFILE_NAME;
+  }
+
+  return isGovernanceStarterPresetName(selection) ? selection : null;
+}
+
+const BUILT_IN_GOVERNANCE_PROFILES: Record<string, GovernanceProfile> = {
+  [GOVERNANCE_DEFAULT_PROFILE_NAME]: frontendLayeredProfile,
+  [GOVERNANCE_LEGACY_PROFILE_NAME]: layeredWorkspaceProfile,
+  [BACKEND_LAYERED_3TIER_PRESET_NAME]: backendLayered3TierProfile,
+  [BACKEND_LAYERED_DDD_PRESET_NAME]: backendLayeredDddProfile,
+};
+
+const BUILT_IN_GOVERNANCE_STARTER_PROFILE_FACTORIES = {
+  [GOVERNANCE_DEFAULT_PROFILE_NAME]: createFrontendLayeredStarterProfile,
+  [BACKEND_LAYERED_3TIER_PRESET_NAME]: createBackendLayered3TierStarterProfile,
+  [BACKEND_LAYERED_DDD_PRESET_NAME]: createBackendLayeredDddStarterProfile,
+} satisfies Record<GovernanceStarterPresetName, () => GovernanceProfileFile>;
+
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
   exceptions: GovernanceException[];
@@ -141,33 +185,17 @@ export interface ResolvedProfileOverrides extends ProfileOverrides {
 export function resolveBuiltInGovernanceProfile(
   profileName: string
 ): GovernanceProfile {
-  switch (profileName) {
-    case GOVERNANCE_LEGACY_PROFILE_NAME:
-      return layeredWorkspaceProfile;
-    case 'backend-layered-3tier':
-      return backendLayered3TierProfile;
-    case 'backend-layered-ddd':
-      return backendLayeredDddProfile;
-    case GOVERNANCE_DEFAULT_PROFILE_NAME:
-    default:
-      return frontendLayeredProfile;
-  }
+  return BUILT_IN_GOVERNANCE_PROFILES[profileName] ?? frontendLayeredProfile;
 }
 
 export function createBuiltInGovernanceStarterProfile(
   profileName: string
 ): GovernanceProfileFile {
-  switch (profileName) {
-    case 'backend-layered-3tier':
-      return createBackendLayered3TierStarterProfile();
-    case 'backend-layered-ddd':
-      return createBackendLayeredDddStarterProfile();
-    case GOVERNANCE_LEGACY_PROFILE_NAME:
-      return createLayeredWorkspaceStarterProfile();
-    case GOVERNANCE_DEFAULT_PROFILE_NAME:
-    default:
-      return createFrontendLayeredStarterProfile();
-  }
+  const presetName =
+    resolveGovernanceStarterPresetName(profileName) ??
+    GOVERNANCE_DEFAULT_PROFILE_NAME;
+
+  return BUILT_IN_GOVERNANCE_STARTER_PROFILE_FACTORIES[presetName]();
 }
 
 export async function loadProfileOverrides(

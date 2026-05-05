@@ -18,13 +18,31 @@
       "default": "tools/governance/eslint/dependency-constraints.mjs",
       "description": "Path where the generated governance depConstraints helper module should be written when configureEslint is enabled."
     },
+    "preset": {
+      "type": "string",
+      "enum": [
+        "frontend-layered",
+        "backend-layered-3tier",
+        "backend-layered-ddd"
+      ],
+      "default": "frontend-layered",
+      "description": "Built-in governance starter preset to seed when init creates a missing profile. Backend layered 3-tier and backend layered DDD are mutually exclusive because this option selects a single preset.",
+      "x-prompt": "Select the built-in governance starter preset to seed."
+    },
     "profile": {
       "type": "string",
-      "description": "Governance profile name to seed or migrate when extracting inline ESLint depConstraints."
+      "description": "Governance profile name to wire into generated root targets and to seed under tools/governance/profiles/ when it is missing. Built-in options include frontend-layered, backend-layered-3tier, and backend-layered-ddd. layered-workspace remains accepted as a compatibility alias."
     },
     "profilePath": {
       "type": "string",
       "description": "Governance profile path to seed or migrate when extracting inline ESLint depConstraints."
+    },
+    "targetPreset": {
+      "type": "string",
+      "enum": ["minimal", "full"],
+      "default": "minimal",
+      "description": "Controls which root governance targets the init generator writes. Use \"minimal\" for the default repo-health-only surface, or \"full\" to restore the broader governance, diagnostic, snapshot/drift, governance-graph, and AI target set.",
+      "x-prompt": "Select the governance root target preset to generate."
     },
     "skipFormat": {
       "type": "boolean",
