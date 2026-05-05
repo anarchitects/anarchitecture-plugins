@@ -14,9 +14,8 @@ let createTreeWithEmptyWorkspace:
   | typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace']
   | undefined;
 
-const MINIMAL_TARGET_NAMES = ['repo-health'] as const;
+const MINIMAL_TARGET_NAMES = ['repo-health', 'governance-graph'] as const;
 const FULL_ONLY_TARGET_NAMES = [
-  'governance-graph',
   'repo-boundaries',
   'repo-ownership',
   'repo-architecture',
@@ -50,7 +49,6 @@ const AI_TARGET_NAMES = [
   'repo-ai-onboarding',
 ] as const;
 const SUPPORT_TARGET_NAMES = [
-  'governance-graph',
   'repo-snapshot',
   'repo-drift',
   'workspace-graph',
@@ -74,7 +72,7 @@ describe('governance initGenerator', () => {
     warnSpy.mockRestore();
   });
 
-  it('defaults to the minimal repo-health-only target preset', async () => {
+  it('defaults to the minimal repo-health-plus-governance-graph target preset', async () => {
     await initGenerator(tree, {
       configureEslint: false,
       skipFormat: true,
@@ -93,6 +91,17 @@ describe('governance initGenerator', () => {
       },
       metadata: {
         description: 'Run governance health assessment for the workspace.',
+      },
+    });
+    expect(targets['governance-graph']).toEqual({
+      executor: '@anarchitects/nx-governance:governance-graph',
+      options: {
+        format: 'html',
+        outputPath: 'dist/governance/graph.html',
+      },
+      metadata: {
+        description:
+          'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
       },
     });
 
@@ -121,6 +130,10 @@ describe('governance initGenerator', () => {
       profile: 'frontend-layered',
       output: 'cli',
     });
+    expect(targets['governance-graph']?.options).toEqual({
+      format: 'html',
+      outputPath: 'dist/governance/graph.html',
+    });
     expect(
       readJson(tree, 'tools/governance/profiles/frontend-layered.json')
     ).toEqual(createFrontendLayeredStarterProfile());
@@ -130,6 +143,27 @@ describe('governance initGenerator', () => {
     expect(
       tree.exists('tools/governance/profiles/backend-layered-ddd.json')
     ).toBe(false);
+  });
+
+  it('supports multiple preset selections and uses the first selected preset as the default runtime profile', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      preset: ['frontend-layered', 'backend-layered-3tier'],
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'frontend-layered',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
+    ).toEqual(createFrontendLayeredStarterProfile());
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-3tier.json')
+    ).toEqual(createBackendLayered3TierStarterProfile());
   });
 
   it('supports explicitly requesting the minimal target preset', async () => {
@@ -175,7 +209,7 @@ describe('governance initGenerator', () => {
   it('seeds backend-layered-3tier when selected explicitly', async () => {
     await initGenerator(tree, {
       configureEslint: false,
-      preset: 'backend-layered-3tier',
+      preset: ['backend-layered-3tier'],
       skipFormat: true,
     });
 
@@ -196,7 +230,7 @@ describe('governance initGenerator', () => {
   it('seeds backend-layered-ddd when selected explicitly', async () => {
     await initGenerator(tree, {
       configureEslint: false,
-      preset: 'backend-layered-ddd',
+      preset: ['backend-layered-ddd'],
       skipFormat: true,
     });
 
@@ -217,7 +251,7 @@ describe('governance initGenerator', () => {
   it('supports a custom profile name while seeding the selected starter preset', async () => {
     await initGenerator(tree, {
       configureEslint: false,
-      preset: 'backend-layered-ddd',
+      preset: ['frontend-layered', 'backend-layered-ddd'],
       profile: 'workspace-policy',
       targetPreset: 'full',
       skipFormat: true,
@@ -231,7 +265,57 @@ describe('governance initGenerator', () => {
     });
     expect(
       readJson(tree, 'tools/governance/profiles/workspace-policy.json')
+    ).toEqual(createFrontendLayeredStarterProfile());
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-ddd.json')
     ).toEqual(createBackendLayeredDddStarterProfile());
+  });
+
+  it('uses an explicit built-in profile with multi-select presets for generated root targets', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      preset: ['frontend-layered', 'backend-layered-ddd'],
+      profile: 'backend-layered-ddd',
+      skipFormat: true,
+    });
+
+    const targets = readTargets(tree);
+
+    expect(targets['repo-health']?.options).toEqual({
+      profile: 'backend-layered-ddd',
+      output: 'cli',
+    });
+    expect(
+      readJson(tree, 'tools/governance/profiles/frontend-layered.json')
+    ).toEqual(createFrontendLayeredStarterProfile());
+    expect(
+      readJson(tree, 'tools/governance/profiles/backend-layered-ddd.json')
+    ).toEqual(createBackendLayeredDddStarterProfile());
+  });
+
+  it('rejects mutually exclusive backend starter presets', async () => {
+    await expect(
+      initGenerator(tree, {
+        configureEslint: false,
+        preset: ['backend-layered-3tier', 'backend-layered-ddd'],
+        skipFormat: true,
+      })
+    ).rejects.toThrow(
+      'backend-layered-3tier and backend-layered-ddd are mutually exclusive. Choose one backend architecture preset.'
+    );
+  });
+
+  it('rejects mutually exclusive backend selections across preset and profile', async () => {
+    await expect(
+      initGenerator(tree, {
+        configureEslint: false,
+        preset: ['backend-layered-3tier'],
+        profile: 'backend-layered-ddd',
+        skipFormat: true,
+      })
+    ).rejects.toThrow(
+      'backend-layered-3tier and backend-layered-ddd are mutually exclusive. Choose one backend architecture preset.'
+    );
   });
 
   it('is idempotent and registers the plugin only once', async () => {
@@ -378,7 +462,7 @@ describe('governance initGenerator', () => {
 
     await initGenerator(tree, {
       configureEslint: false,
-      preset: 'backend-layered-ddd',
+      preset: ['backend-layered-ddd'],
       skipFormat: true,
     });
 
@@ -428,7 +512,17 @@ describe('governance initGenerator', () => {
       },
     });
     expect(targets['repo-health']).toBeDefined();
-    expect(targets['governance-graph']).toBeUndefined();
+    expect(targets['governance-graph']).toEqual({
+      executor: '@anarchitects/nx-governance:governance-graph',
+      options: {
+        format: 'html',
+        outputPath: 'dist/governance/graph.html',
+      },
+      metadata: {
+        description:
+          'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
+      },
+    });
   });
 
   it('handles a missing package.json by creating the root governance target surface', async () => {
@@ -450,7 +544,7 @@ describe('governance initGenerator', () => {
       enum: ['minimal', 'full'],
       default: 'minimal',
       description:
-        'Controls which root governance targets the init generator writes. Use "minimal" for the default repo-health-only surface, or "full" to restore the broader governance, diagnostic, snapshot/drift, governance-graph, and AI target set.',
+        'Controls which root governance targets the init generator writes. Use "minimal" for the default repo-health plus governance-graph surface, or "full" to restore the broader governance, diagnostic, snapshot/drift, and AI target set.',
       'x-prompt': 'Select the governance root target preset to generate.',
     });
   });
@@ -459,16 +553,20 @@ describe('governance initGenerator', () => {
     const schema = readSchema();
 
     expect(schema.properties?.preset).toEqual({
-      type: 'string',
-      enum: [
-        'frontend-layered',
-        'backend-layered-3tier',
-        'backend-layered-ddd',
-      ],
-      default: 'frontend-layered',
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: [
+          'frontend-layered',
+          'backend-layered-3tier',
+          'backend-layered-ddd',
+        ],
+      },
+      uniqueItems: true,
+      default: ['frontend-layered'],
       description:
-        'Built-in governance starter preset to seed when init creates a missing profile. Backend layered 3-tier and backend layered DDD are mutually exclusive because this option selects a single preset.',
-      'x-prompt': 'Select the built-in governance starter preset to seed.',
+        'Built-in governance starter presets to seed when init creates missing profile files. When profile is omitted, the first selected preset becomes the default runtime profile for generated root targets. backend-layered-3tier and backend-layered-ddd are mutually exclusive.',
+      'x-prompt': 'Select one or more built-in governance starter presets to seed.',
     });
     expect(schema.properties?.profile?.type).toBe('string');
   });
@@ -489,6 +587,23 @@ describe('governance initGenerator', () => {
     ).not.toContain('angular-cleanup');
     expect(JSON.stringify(readSchema())).not.toContain('angular-cleanup');
   });
+
+  it('documents HTML graph generation in the README', () => {
+    const readme = readGovernanceReadme();
+
+    expect(readme).toContain('nx governance-graph');
+    expect(readme).toContain('dist/governance/graph.html');
+    expect(readme).toContain('format: html');
+  });
+
+  it('documents JSON graph generation through executor options in the README', () => {
+    const readme = readGovernanceReadme();
+
+    expect(readme).toContain(
+      'nx governance-graph --format=json --outputPath=dist/governance/graph.json'
+    );
+    expect(readme).toContain('dist/governance/graph.json');
+  });
 });
 
 function readSchema(): {
@@ -499,6 +614,10 @@ function readSchema(): {
   return JSON.parse(readFileSync(schemaPath, 'utf-8')) as {
     properties?: Record<string, Record<string, unknown>>;
   };
+}
+
+function readGovernanceReadme(): string {
+  return readFileSync(join(__dirname, '../../../README.md'), 'utf-8');
 }
 
 interface RootTargetConfig {

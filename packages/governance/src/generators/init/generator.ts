@@ -6,6 +6,8 @@ import {
   resolveGovernanceSelectedProfileRelativePath,
 } from '../../profile/runtime-profile.js';
 import {
+  BACKEND_LAYERED_3TIER_PRESET_NAME,
+  BACKEND_LAYERED_DDD_PRESET_NAME,
   createBuiltInGovernanceStarterProfile,
   type GovernanceStarterPresetName,
   resolveGovernanceStarterPresetName,
@@ -16,7 +18,7 @@ interface InitSchema {
   configureEslint?: boolean;
   eslintConfigPath?: string;
   governanceHelperPath?: string;
-  preset?: GovernanceStarterPresetName;
+  preset?: GovernanceStarterPresetName | GovernanceStarterPresetName[];
   profile?: string;
   profilePath?: string;
   targetPreset?: 'minimal' | 'full';
@@ -49,11 +51,17 @@ interface ResolvedInitOptions {
   profilePath?: string;
   selectedProfileName: string;
   selectedProfilePath: string;
-  starterPreset: GovernanceStarterPresetName;
+  starterProfileSeeds: StarterProfileSeed[];
   targetPreset: 'minimal' | 'full';
 }
 
-const FULL_ONLY_GOVERNANCE_TARGETS = {
+interface StarterProfileSeed {
+  profileName: string;
+  profilePath: string;
+  starterPreset: GovernanceStarterPresetName;
+}
+
+const GOVERNANCE_GRAPH_TARGET = {
   'governance-graph': {
     executor: '@anarchitects/nx-governance:governance-graph',
     options: {
@@ -118,6 +126,7 @@ function createGovernanceTargets(
         output: 'cli',
       }
     ),
+    ...GOVERNANCE_GRAPH_TARGET,
   } satisfies Record<string, RootTargetConfig>;
 
   if (targetPreset === 'minimal') {
@@ -126,7 +135,6 @@ function createGovernanceTargets(
 
   return {
     ...minimalTargets,
-    ...FULL_ONLY_GOVERNANCE_TARGETS,
     'repo-boundaries': createGovernanceProfileTarget(
       'repo-boundaries',
       profileName,
@@ -286,25 +294,118 @@ export async function initGenerator(
 }
 
 function resolveInitOptions(options: InitSchema): ResolvedInitOptions {
-  const explicitPreset = resolveGovernanceStarterPresetName(options.preset);
   const builtInProfilePreset = resolveGovernanceStarterPresetName(
     options.profile
   );
+  const starterPresets = resolveStarterPresetSelections(
+    options.preset,
+    builtInProfilePreset
+  );
+  const selectedProfileName =
+    options.profile ?? starterPresets[0] ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
+  const selectedProfilePath = resolveGovernanceSelectedProfileRelativePath({
+    profile: selectedProfileName,
+    profilePath: options.profilePath,
+  });
+  const selectedProfilePreset =
+    builtInProfilePreset ?? starterPresets[0] ?? GOVERNANCE_DEFAULT_PROFILE_NAME;
 
   return {
     configureEslint: options.configureEslint ?? true,
     profilePath: options.profilePath,
-    selectedProfileName:
-      options.profile ?? options.preset ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
-    selectedProfilePath: resolveGovernanceSelectedProfileRelativePath({
-      profile:
-        options.profile ?? options.preset ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
-      profilePath: options.profilePath,
-    }),
-    starterPreset:
-      explicitPreset ?? builtInProfilePreset ?? GOVERNANCE_DEFAULT_PROFILE_NAME,
+    selectedProfileName,
+    selectedProfilePath,
+    starterProfileSeeds: buildStarterProfileSeeds(
+      selectedProfileName,
+      selectedProfilePath,
+      selectedProfilePreset,
+      starterPresets
+    ),
     targetPreset: options.targetPreset ?? 'minimal',
   };
+}
+
+function resolveStarterPresetSelections(
+  presetOption: InitSchema['preset'],
+  builtInProfilePreset: GovernanceStarterPresetName | null
+): GovernanceStarterPresetName[] {
+  const rawSelections = Array.isArray(presetOption)
+    ? presetOption
+    : presetOption
+      ? [presetOption]
+      : [];
+  const normalizedSelections = dedupeStarterPresets(
+    rawSelections.map((selection) => {
+      const normalized = resolveGovernanceStarterPresetName(selection);
+
+      if (!normalized) {
+        throw new Error(`Unsupported governance starter preset: ${selection}.`);
+      }
+
+      return normalized;
+    })
+  );
+  const activatedPresets = builtInProfilePreset
+    ? dedupeStarterPresets([...normalizedSelections, builtInProfilePreset])
+    : normalizedSelections;
+
+  validateStarterPresetSelections(activatedPresets);
+
+  if (normalizedSelections.length > 0) {
+    return normalizedSelections;
+  }
+
+  return [builtInProfilePreset ?? GOVERNANCE_DEFAULT_PROFILE_NAME];
+}
+
+function dedupeStarterPresets(
+  presets: GovernanceStarterPresetName[]
+): GovernanceStarterPresetName[] {
+  return Array.from(new Set(presets));
+}
+
+function validateStarterPresetSelections(
+  presets: GovernanceStarterPresetName[]
+): void {
+  if (
+    presets.includes(BACKEND_LAYERED_3TIER_PRESET_NAME) &&
+    presets.includes(BACKEND_LAYERED_DDD_PRESET_NAME)
+  ) {
+    throw new Error(
+      `${BACKEND_LAYERED_3TIER_PRESET_NAME} and ${BACKEND_LAYERED_DDD_PRESET_NAME} are mutually exclusive. Choose one backend architecture preset.`
+    );
+  }
+}
+
+function buildStarterProfileSeeds(
+  selectedProfileName: string,
+  selectedProfilePath: string,
+  selectedProfilePreset: GovernanceStarterPresetName,
+  starterPresets: GovernanceStarterPresetName[]
+): StarterProfileSeed[] {
+  const seeds: StarterProfileSeed[] = [
+    {
+      profileName: selectedProfileName,
+      profilePath: selectedProfilePath,
+      starterPreset: selectedProfilePreset,
+    },
+  ];
+
+  for (const preset of starterPresets) {
+    const profilePath = resolveGovernanceProfileRelativePath(preset);
+
+    if (profilePath === selectedProfilePath) {
+      continue;
+    }
+
+    seeds.push({
+      profileName: preset,
+      profilePath,
+      starterPreset: preset,
+    });
+  }
+
+  return seeds;
 }
 
 function ensureNxPluginRegistration(tree: Tree): void {
@@ -407,25 +508,27 @@ function ensureProfileConfig(tree: Tree, options: ResolvedInitOptions): void {
     GOVERNANCE_LEGACY_PROFILE_NAME
   );
 
-  if (tree.exists(options.selectedProfilePath)) {
-    return;
-  }
+  for (const seed of options.starterProfileSeeds) {
+    if (tree.exists(seed.profilePath)) {
+      continue;
+    }
 
-  if (
-    !options.profilePath &&
-    ((options.selectedProfileName === GOVERNANCE_DEFAULT_PROFILE_NAME &&
-      tree.exists(legacyProfilePath)) ||
-      (options.selectedProfileName === GOVERNANCE_LEGACY_PROFILE_NAME &&
-        tree.exists(defaultProfilePath)))
-  ) {
-    return;
-  }
+    if (
+      !options.profilePath &&
+      ((seed.profileName === GOVERNANCE_DEFAULT_PROFILE_NAME &&
+        tree.exists(legacyProfilePath)) ||
+        (seed.profileName === GOVERNANCE_LEGACY_PROFILE_NAME &&
+          tree.exists(defaultProfilePath)))
+    ) {
+      continue;
+    }
 
-  writeJson(
-    tree,
-    options.selectedProfilePath,
-    createBuiltInGovernanceStarterProfile(options.starterPreset)
-  );
+    writeJson(
+      tree,
+      seed.profilePath,
+      createBuiltInGovernanceStarterProfile(seed.starterPreset)
+    );
+  }
 }
 
 export default initGenerator;
