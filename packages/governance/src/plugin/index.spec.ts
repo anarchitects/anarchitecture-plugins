@@ -9,6 +9,12 @@ describe('governance plugin createNodesV2', () => {
     nxJsonConfiguration: {} as CreateNodesContextV2['nxJsonConfiguration'],
   };
 
+  it('returns no inferred targets when no governance profile files are discovered', async () => {
+    const results = await createNodes([], undefined, context);
+
+    expect(results).toEqual([]);
+  });
+
   it('infers the four core governance targets for a single profile file', async () => {
     const results = await createNodes(
       ['tools/governance/profiles/backend-layered-ddd.json'],
@@ -56,6 +62,25 @@ describe('governance plugin createNodesV2', () => {
     expect(collectTargets(results)['governance-graph']).toBeUndefined();
   });
 
+  it('attaches inferred governance targets to the root project only', async () => {
+    const results = await createNodes(
+      ['tools/governance/profiles/frontend-layered.json'],
+      undefined,
+      context
+    );
+
+    expect(collectProjectRoots(results)).toEqual(['.']);
+    expect(collectTargets(results)['repo-health']).toEqual(
+      expect.objectContaining({
+        executor: '@anarchitects/nx-governance:repo-health',
+        options: {
+          profile: 'frontend-layered',
+          output: 'cli',
+        },
+      })
+    );
+  });
+
   it('prefers frontend-layered when multiple profiles exist', async () => {
     const results = await createNodes(
       [
@@ -70,6 +95,27 @@ describe('governance plugin createNodesV2', () => {
       profile: 'frontend-layered',
       output: 'cli',
     });
+  });
+
+  it('keeps inferred target configuration deterministic regardless of profile file order', async () => {
+    const forward = await createNodes(
+      [
+        'tools/governance/profiles/z-team.json',
+        'tools/governance/profiles/a-team.json',
+      ],
+      undefined,
+      context
+    );
+    const reverse = await createNodes(
+      [
+        'tools/governance/profiles/a-team.json',
+        'tools/governance/profiles/z-team.json',
+      ],
+      undefined,
+      context
+    );
+
+    expect(collectTargets(forward)).toEqual(collectTargets(reverse));
   });
 
   it('falls back to lexical-first profile name when frontend-layered is absent', async () => {
@@ -263,6 +309,18 @@ function collectTargets(
   }
 
   return collected;
+}
+
+function collectProjectRoots(results: CreateNodesResultV2): string[] {
+  const roots = new Set<string>();
+
+  for (const [, result] of results) {
+    for (const root of Object.keys(result.projects ?? {})) {
+      roots.add(root);
+    }
+  }
+
+  return [...roots].sort((left, right) => left.localeCompare(right));
 }
 
 async function mergeTargets(
