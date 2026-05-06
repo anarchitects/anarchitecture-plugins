@@ -136,6 +136,117 @@ describe('governance plugin createNodesV2', () => {
       output: 'cli',
     });
   });
+
+  it('preserves explicit-only governance target options without requiring inference', async () => {
+    const mergedTargets = await mergeTargets(
+      {},
+      {
+        'governance-graph': {
+          executor: '@anarchitects/nx-governance:governance-graph',
+          options: {
+            profile: 'custom-graph',
+            format: 'json',
+            outputPath: 'dist/custom/governance-graph.json',
+          },
+          metadata: {
+            description: 'Explicit graph target.',
+          },
+        },
+      }
+    );
+
+    expect(mergedTargets['governance-graph']).toEqual({
+      executor: '@anarchitects/nx-governance:governance-graph',
+      options: {
+        profile: 'custom-graph',
+        format: 'json',
+        outputPath: 'dist/custom/governance-graph.json',
+      },
+      metadata: {
+        description: 'Explicit graph target.',
+      },
+    });
+  });
+
+  it('keeps explicit repo-health configuration authoritative when the same target is also inferred', async () => {
+    const results = await createNodes(
+      ['tools/governance/profiles/frontend-layered.json'],
+      undefined,
+      context
+    );
+
+    const mergedTargets = await mergeTargets(collectTargets(results), {
+      'repo-health': {
+        executor: '@anarchitects/nx-governance:repo-health',
+        options: {
+          profile: 'custom-health',
+          output: 'json',
+          failOnViolation: true,
+        },
+        metadata: {
+          description: 'Explicit health target.',
+        },
+      },
+    });
+
+    expect(mergedTargets['repo-health']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-health',
+      cache: true,
+      inputs: [
+        'default',
+        '{workspaceRoot}/tools/governance/**/*',
+        '{workspaceRoot}/nx.json',
+      ],
+      outputs: [],
+      options: {
+        profile: 'custom-health',
+        output: 'json',
+        failOnViolation: true,
+      },
+      metadata: {
+        description: 'Explicit health target.',
+      },
+    });
+    expect(mergedTargets['repo-boundaries']?.options).toEqual({
+      profile: 'frontend-layered',
+      output: 'cli',
+    });
+  });
+
+  it('keeps explicit governance-graph targets alongside inferred core targets because graph inference is disabled', async () => {
+    const results = await createNodes(
+      ['tools/governance/profiles/frontend-layered.json'],
+      undefined,
+      context
+    );
+
+    const mergedTargets = await mergeTargets(collectTargets(results), {
+      'governance-graph': {
+        executor: '@anarchitects/nx-governance:governance-graph',
+        options: {
+          format: 'html',
+          outputPath: 'dist/governance/graph.html',
+        },
+      },
+    });
+
+    expect(mergedTargets['governance-graph']).toEqual({
+      executor: '@anarchitects/nx-governance:governance-graph',
+      options: {
+        format: 'html',
+        outputPath: 'dist/governance/graph.html',
+      },
+    });
+    expect(Object.keys(mergedTargets)).toEqual(
+      expect.arrayContaining([
+        'repo-health',
+        'repo-boundaries',
+        'repo-ownership',
+        'repo-architecture',
+        'governance-graph',
+      ])
+    );
+  });
 });
 
 function collectTargets(
@@ -152,4 +263,44 @@ function collectTargets(
   }
 
   return collected;
+}
+
+async function mergeTargets(
+  inferredTargets: Record<string, Record<string, unknown>>,
+  explicitTargets: Record<string, Record<string, unknown>>
+): Promise<Record<string, Record<string, unknown>>> {
+  const { mergeProjectConfigurationIntoRootMap } = await import(
+    'nx/src/project-graph/utils/project-configuration-utils'
+  );
+  const projectRootMap: Record<
+    string,
+    {
+      name?: string;
+      root: string;
+      targets?: Record<string, Record<string, unknown>>;
+    }
+  > = {};
+
+  mergeProjectConfigurationIntoRootMap(
+    projectRootMap,
+    {
+      root: '.',
+      name: '@anarchitecture-plugins/source',
+      targets: inferredTargets,
+    },
+    undefined,
+    ['tools/governance/profiles/frontend-layered.json', 'governance-inference']
+  );
+  mergeProjectConfigurationIntoRootMap(
+    projectRootMap,
+    {
+      root: '.',
+      name: '@anarchitecture-plugins/source',
+      targets: explicitTargets,
+    },
+    undefined,
+    ['package.json', 'package-json']
+  );
+
+  return projectRootMap['.']?.targets ?? {};
 }

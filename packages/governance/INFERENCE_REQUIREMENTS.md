@@ -87,6 +87,11 @@ Recommended strategy:
 
 If explicit targets already exist in workspace config or package scripts, behavior must remain functional.
 
+Required precedence:
+
+- Explicit workspace-owned targets remain authoritative when the same target
+  name is also inferred from `tools/governance/profiles/*.json`.
+
 No breaking change to current command invocations in CI.
 
 ### FR-7 Error Handling
