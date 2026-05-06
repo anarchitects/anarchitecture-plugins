@@ -51,10 +51,10 @@ export const createNodesV2 = [
 ];
 ```
 
-For Nx Governance, the current plugin already exposes a valid no-op
-`createNodesV2` entrypoint in `packages/governance/src/plugin/index.ts`. This
-contract defines what that hook should infer later; it does not implement it
-now.
+For Nx Governance, `packages/governance/src/plugin/index.ts` now implements
+`createNodesV2` for the four core report targets. This contract remains the
+authoritative definition of what the inferred targets should look like and how
+they must coexist with explicit workspace-owned targets.
 
 ## Authoritative inference source
 
@@ -233,11 +233,14 @@ Compatibility contract:
 
 - if a root or project target named `repo-health`, `repo-boundaries`,
   `repo-ownership`, or `repo-architecture` is already explicitly configured,
-  the inferred target with the same name is skipped
+  the explicit target remains authoritative after Nx merges inferred and
+  explicit configuration
 - inferred targets must not override explicit `executor`, `options`,
   `metadata`, `inputs`, or `outputs`
 - explicit targets may continue to use custom `profile`, `conformanceJson`, or
   other supported executor options
+- explicit `governance-graph` targets remain fully supported, including custom
+  `format` and `outputPath`, because `governance-graph` is not inferred in MVP
 - inference must not emit a migration-breaking error for duplicates
 
 Warning behavior:

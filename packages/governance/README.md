@@ -374,6 +374,11 @@ This repository's own root `package.json` keeps a broader explicit governance
 target surface as repository-owned configuration. That is a workspace choice,
 not the init generator default for new adopters.
 
+If an explicit root target and an inferred target share the same name, the
+explicit target remains authoritative. Use explicit targets when you need
+workspace-owned custom `profile`, `conformanceJson`, graph `outputPath`, or
+other executor options beyond the inferred defaults.
+
 **Options:**
 
 | Option                 | Type       | Default                                                | Description                                                                                                                                                                                                                                                                                                            |

@@ -71,6 +71,10 @@ function createGovernanceNodesFromProfile(
   return {
     projects: {
       '.': {
+        // These inferred targets are intentionally additive. Nx loads
+        // user-specified plugins before its built-in package-json/project-json
+        // plugins, so explicit workspace targets with the same names are merged
+        // afterwards and remain authoritative without plugin-side override logic.
         targets: Object.fromEntries(
           INFERRED_TARGET_NAMES.map((targetName) => [
             targetName,

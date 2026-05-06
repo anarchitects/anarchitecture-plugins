@@ -143,6 +143,38 @@ describe('governance initGenerator', () => {
     ).toBe(false);
   });
 
+  it('keeps writing explicit minimal targets even when the seeded profile also enables Project Crystal inference', async () => {
+    await initGenerator(tree, {
+      configureEslint: false,
+      skipFormat: true,
+    });
+
+    expect(tree.exists('tools/governance/profiles/frontend-layered.json')).toBe(
+      true
+    );
+    expect(readTargets(tree)['repo-health']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-health',
+      options: {
+        profile: 'frontend-layered',
+        output: 'cli',
+      },
+      metadata: {
+        description: 'Run governance health assessment for the workspace.',
+      },
+    });
+    expect(readTargets(tree)['governance-graph']).toEqual({
+      executor: '@anarchitects/nx-governance:governance-graph',
+      options: {
+        format: 'html',
+        outputPath: 'dist/governance/graph.html',
+      },
+      metadata: {
+        description:
+          'Generate a governance-enriched graph artifact and static HTML viewer from the Nx Project Graph.',
+      },
+    });
+  });
+
   it('supports multiple preset selections and uses the first selected preset as the default runtime profile', async () => {
     await initGenerator(tree, {
       configureEslint: false,
