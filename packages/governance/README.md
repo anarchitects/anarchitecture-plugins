@@ -83,9 +83,10 @@ nx g @anarchitects/nx-governance:init
 This plugin supports Nx versions `>=19 <23`.
 
 The supported range reflects the Nx APIs currently used and validated by this
-plugin. Explicit governance targets remain supported today. Project Crystal
-target inference is planned future work rather than a current compatibility
-requirement. The upper bound is intentionally capped to avoid claiming
+plugin. Explicit governance targets remain supported today, and core
+Project Crystal governance target inference is now implemented for profile
+files under `tools/governance/profiles/*.json`. The upper bound is
+intentionally capped to avoid claiming
 compatibility with future major Nx releases before validation.
 
 For package consumers, the compatibility contract is declared in `peerDependencies` in `packages/governance/package.json`.
@@ -367,7 +368,7 @@ nx g @anarchitects/nx-governance:init
 - `backend-layered-3tier` and `backend-layered-ddd` are mutually exclusive and cannot be selected together.
 - Optionally runs the `eslint-integration` generator (prompted, default: yes).
 
-All governance executors remain available even when init writes the minimal target set. Governance Graph wiring is target-surface driven rather than architecture-preset driven, so the selected preset controls profile content while `targetPreset` controls whether extra root targets are written. Graph generation uses the selected/current governance profile at runtime. Project Crystal target inference is future work and is not implemented here, and native Nx Graph UI integration is not part of this cleanup.
+All governance executors remain available even when init writes the minimal target set. Governance Graph wiring is target-surface driven rather than architecture-preset driven, so the selected preset controls profile content while `targetPreset` controls whether extra root targets are written. Graph generation uses the selected/current governance profile at runtime. Project Crystal now infers the four core governance report targets from `tools/governance/profiles/*.json` when explicit targets are absent, while explicit root targets remain supported. Native Nx Graph UI integration is not part of this cleanup.
 
 This repository's own root `package.json` keeps a broader explicit governance
 target surface as repository-owned configuration. That is a workspace choice,

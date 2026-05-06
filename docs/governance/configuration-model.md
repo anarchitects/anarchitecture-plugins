@@ -117,8 +117,10 @@ when init writes only the minimal root target surface. `governance-graph`
 belongs to both the minimal and full target presets, while snapshot/drift,
 diagnostic, and AI targets remain outside minimal. Graph generation stays
 target-surface driven rather than preset-driven, and it uses the currently
-selected governance profile at runtime. This clarification does not
-introduce Project Crystal target inference.
+selected governance profile at runtime. Core Project Crystal inference now
+supplies the four root-oriented governance report targets from
+`tools/governance/profiles/*.json` when explicit targets are absent, without
+overriding explicit user-owned targets.
 
 Framework-specific intelligence still belongs in extension plugins rather than
 the core preset identity. This issue does not implement the future Angular

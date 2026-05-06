@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This audit captures the **current explicit Nx Governance surface** before
-Project Crystal target inference is defined for epic #181.
+This audit captures the governance surface that informed the Project Crystal
+inference contract for epic #181.
 
 It is intentionally factual:
 
@@ -17,11 +17,11 @@ The implementation contract derived from this audit lives in
 
 Current plugin status:
 
-- `packages/governance/src/plugin/index.ts` already registers a valid but
-  **no-op** `createNodesV2` hook
+- `packages/governance/src/plugin/index.ts` now exports a real `createNodesV2`
+  implementation for the core governance report targets
 - the file pattern is `tools/governance/profiles/*.json`
-- the hook currently returns `[]`, so governance behavior still depends on
-  explicit root targets
+- explicit root targets remain supported and still coexist with inferred
+  targets for backward compatibility
 
 ## Current explicit targets
 
@@ -418,8 +418,8 @@ Compatibility constraints visible in code today:
 - init is additive and non-destructive
 - existing profile files must remain valid
 - executor option schemas are already public and should be treated as stable
-- the current no-op `createNodesV2` hook must not be mistaken for active
-  inference behavior
+- active inference must not override explicit target ownership or executor
+  option behavior
 
 ## Open decisions for Project Crystal inference
 
