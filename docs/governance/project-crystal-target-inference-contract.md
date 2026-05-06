@@ -9,6 +9,8 @@ Crystal work for epic #181.
 Its role is to make #206 directly implementable while preserving the current
 governance runtime model and backward compatibility surface documented in
 [configuration-surface-audit.md](./configuration-surface-audit.md).
+User-facing usage examples live in
+[../../packages/governance/README.md#project-crystal-inference](../../packages/governance/README.md#project-crystal-inference).
 
 ## Non-goals
 
@@ -55,6 +57,21 @@ For Nx Governance, `packages/governance/src/plugin/index.ts` now implements
 `createNodesV2` for the four core report targets. This contract remains the
 authoritative definition of what the inferred targets should look like and how
 they must coexist with explicit workspace-owned targets.
+
+Current implementation shape:
+
+```ts
+export const createNodesV2 = [
+  'tools/governance/profiles/*.json',
+  async (profileFiles, options, context) =>
+    createNodesFromFiles(
+      createGovernanceNodesFromProfile,
+      profileFiles,
+      options,
+      context
+    ),
+];
+```
 
 ## Authoritative inference source
 
@@ -215,6 +232,14 @@ Contract:
 6. User provides explicit profile via CLI override.
    - existing executor behavior remains supported, for example:
      `nx repo-health --profile=other-profile`
+
+Current usage note:
+
+- users normally continue to run the inferred root targets directly, for
+  example `nx repo-health`
+- if a workspace prefers explicit root-project addressing, the target can also
+  be invoked through the root project name, for example
+  `nx run <root-project-name>:repo-health`
 
 Rationale:
 

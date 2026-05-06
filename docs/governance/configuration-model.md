@@ -4,6 +4,10 @@ This document captures the current responsibility split described in
 [the configuration surface audit](./configuration-surface-audit.md) and
 stabilized by issue #187.
 
+Project Crystal target inference usage and compatibility are documented in
+[the inference contract](./project-crystal-target-inference-contract.md) and in
+[the package README](../../packages/governance/README.md#project-crystal-inference).
+
 ## Responsibility split
 
 ### Profiles
@@ -103,7 +107,8 @@ The current behavior is intentionally preserved:
 3. Profile files are runtime configuration.
 4. Presets are starter templates used to create or seed profile files.
 5. Init must preserve existing profile and target configuration.
-6. Future inferred targets should fill missing targets, not override explicit targets.
+6. Inferred targets fill missing root targets; explicit targets remain
+   authoritative when the same name exists in workspace config.
 
 ## Backward compatibility
 
@@ -126,8 +131,17 @@ Framework-specific intelligence still belongs in extension plugins rather than
 the core preset identity. This issue does not implement the future Angular
 governance extension plugin.
 
-## Relationship to future target inference
+## Relationship to target inference
 
-Future Project Crystal inference should supply missing governance targets
-without overriding explicit targets already present in workspace configuration.
-That work remains outside issue #187.
+Core Project Crystal inference is now implemented for the four report targets:
+
+- `repo-health`
+- `repo-boundaries`
+- `repo-ownership`
+- `repo-architecture`
+
+Inference discovers profile files from `tools/governance/profiles/*.json` and
+uses one deterministic default profile for those stable target names.
+`governance-graph` remains explicit-only. Broader inference questions such as
+snapshot/drift, diagnostics, AI targets, and any future cleanup of redundant
+explicit root targets remain follow-up work.
