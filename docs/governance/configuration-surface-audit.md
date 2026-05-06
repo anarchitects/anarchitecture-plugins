@@ -12,6 +12,9 @@ It is intentionally factual:
 - which files and options encode today’s behavior
 - which assumptions later inference work must preserve or explicitly replace
 
+The implementation contract derived from this audit lives in
+[project-crystal-target-inference-contract.md](./project-crystal-target-inference-contract.md).
+
 Current plugin status:
 
 - `packages/governance/src/plugin/index.ts` already registers a valid but
