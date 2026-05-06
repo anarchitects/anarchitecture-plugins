@@ -4,6 +4,15 @@
 
 Project Crystal inference for Nx Governance commands.
 
+Current implementation status:
+
+- `createNodesV2` is implemented in `packages/governance/src/plugin/index.ts`
+- authoritative discovery is `tools/governance/profiles/*.json`
+- the current MVP infers `repo-health`, `repo-boundaries`,
+  `repo-ownership`, and `repo-architecture`
+- `governance-graph` remains explicit-only
+- the only current plugin option is `profileGlob?: string`
+
 ## Problem Statement
 
 Today, governance commands are configured explicitly by generator output. Adding or changing governance profiles requires manual config updates.
@@ -52,6 +61,7 @@ For the workspace root project, infer these targets:
 - repo-architecture
 
 Each inferred target must map to the existing executors in @anarchitects/nx-governance.
+They remain additive to explicit root targets rather than replacing them.
 
 ### FR-3 Profile Resolution
 
@@ -105,6 +115,12 @@ If no profile files exist, inference must not create governance targets.
 Init/setup generator should stop writing redundant explicit governance targets once inference is enabled by default.
 
 Migration path must preserve existing workspaces.
+
+Current status:
+
+- init still writes explicit compatibility targets
+- removing or reducing those explicit root targets remains follow-up work, not
+  part of the current MVP
 
 ## Non-Functional Requirements
 

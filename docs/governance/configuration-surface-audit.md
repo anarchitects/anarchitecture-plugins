@@ -14,6 +14,8 @@ It is intentionally factual:
 
 The implementation contract derived from this audit lives in
 [project-crystal-target-inference-contract.md](./project-crystal-target-inference-contract.md).
+User-facing usage guidance lives in
+[../../packages/governance/README.md#project-crystal-inference](../../packages/governance/README.md#project-crystal-inference).
 
 Current plugin status:
 
@@ -194,11 +196,20 @@ Current runtime output conventions from docs/tests:
 
 Visible current assumptions:
 
-- executor registration is explicit; no inferred targets are created yet
+- executor registration remains explicit in `packages/governance/src/index.json`
+- Project Crystal inference now creates the four core report targets from
+  `tools/governance/profiles/*.json`
+- inferred report targets are cacheable and currently use:
+  - inputs:
+    - `default`
+    - `{workspaceRoot}/tools/governance/**/*`
+    - `{workspaceRoot}/nx.json`
+  - outputs:
+    - none, because the core inferred report targets are CLI-first
 - governance executor schemas do not define Nx caching metadata themselves
 - the `nx-governance` package project has normal `build`, `lint`, `test`, and
   `typecheck` project target metadata, but governance runtime targets are
-  currently user/root targets, not inferred package project targets
+  still root-oriented rather than package-project-local targets
 - `governance-graph` has a concrete file output convention
 - snapshot and AI flows persist artifacts in workspace-local directories
 
@@ -317,7 +328,8 @@ Current stable naming pattern:
 
 Current naming facts:
 
-- there is no separate inferred target naming layer yet
+- the inferred target naming layer now reuses the existing stable root target
+  names directly
 - target names are workspace-root oriented, not project-scoped per library/app
 - profiles have a compatibility alias (`layered-workspace`), but targets do
   not have alias names
@@ -326,11 +338,12 @@ Current naming facts:
   - diagnostics: `workspace-*`
   - graph artifact: `governance-graph`
 
-Current ambiguity to preserve for later design discussion:
+Current resolved naming contract:
 
-- explicit target names are stable today
-- there is not yet a formal naming contract for how those names should behave
-  when multiple governance profile files exist
+- explicit target names remain stable
+- inferred targets use the same stable names
+- multiple governance profile files affect default profile selection, not
+  inferred target naming
 
 ## Current output path conventions
 
@@ -421,41 +434,26 @@ Compatibility constraints visible in code today:
 - active inference must not override explicit target ownership or executor
   option behavior
 
-## Open decisions for Project Crystal inference
+## Open decisions for future Project Crystal expansion
 
-The following points are **not** resolved by current code and should remain
-open for #205 and later inference work:
+The following points remain open after the current MVP contract and
+implementation:
 
-- authoritative inference source:
-  - should `tools/governance/profiles/*.json` be the only source, or should
-    plugin config and explicit root targets also influence inference?
-- root attachment model:
-  - should inferred targets attach to the existing root project `.`
-    conventions, or to a synthetic governance project?
-- coexistence rules:
-  - how should explicit root targets and inferred targets interact when both
-    exist?
-  - which side wins for options, metadata, and descriptions?
-- multi-profile defaulting:
-  - current runtime supports multiple profile files, but current target naming
-    stays singular and stable
-  - inference must define how one default profile is selected deterministically
 - `governance-graph` inference:
-  - today it is part of the explicit minimal target surface
-  - later inference must decide whether it should also be inferred by default
-    or remain explicit-only
+  - it is still explicit-only today
+  - later work may decide whether it should be inferred or remain explicit
 - optional/full target inference scope:
-  - should inference create only the core report targets
-  - should it also infer `governance-graph`
-  - should it infer snapshot/drift, diagnostics, and AI targets, or leave
-    those explicit
-- inferred output path conventions:
-  - if targets are inferred instead of written explicitly, where should graph,
-    snapshot, and AI defaults live so they remain discoverable and stable?
-- plugin configuration:
-  - whether future inference should support plugin options for default profile
-    precedence or target selection
+  - snapshot/drift, diagnostics, and AI targets remain explicit today
+  - later work may define whether any of those should be inferred
+- inferred output path conventions beyond the core report targets:
+  - core inferred report targets are CLI-first and have no file outputs
+  - graph, snapshot, and AI flows still rely on explicit output/path
+    conventions
+- plugin configuration growth:
+  - the only current plugin option is `profileGlob`
+  - future work may decide whether profile precedence or target selection
+    should be configurable
 - init alignment:
-  - `INFERENCE_REQUIREMENTS.md` currently says a later phase may stop writing
-    redundant explicit targets
-  - that migration path is still open and should not be decided in this audit
+  - init still writes explicit compatibility targets
+  - any cleanup or reduction of redundant explicit root target generation is
+    still separate work

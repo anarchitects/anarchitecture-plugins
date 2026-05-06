@@ -143,7 +143,31 @@ The main architectural areas are:
 - `snapshot` and `ai` for downstream consumption
 - `extensions` for extension discovery, registration, and public contracts
 
-## 7. Angular as the reference extension
+## 7. Project Crystal inference
+
+Nx Governance now exposes Project Crystal inference through
+`packages/governance/src/plugin/index.ts`.
+
+The current architecture is intentionally narrow:
+
+- `createNodesV2` watches `tools/governance/profiles/*.json`
+- the hook infers the four core report targets
+  - `repo-health`
+  - `repo-boundaries`
+  - `repo-ownership`
+  - `repo-architecture`
+- inferred targets attach to the root project `.` and keep the stable existing
+  target names
+- `governance-graph` remains explicit-only in the current MVP because its
+  output semantics differ from the CLI-first report targets
+- explicit workspace-owned targets remain authoritative when the same name is
+  also inferred
+
+This keeps inference convention-based and deterministic while preserving the
+existing executor/runtime model. The stable contract for this behavior lives in
+[`../../docs/governance/project-crystal-target-inference-contract.md`](../../docs/governance/project-crystal-target-inference-contract.md).
+
+## 8. Angular as the reference extension
 
 Angular is the first reference ecosystem engine, but it should not be embedded directly into the core package.
 
@@ -156,7 +180,7 @@ The Angular plugin should contribute Angular-specific metrics, signals, rule pac
 
 This establishes the reference pattern for future engines such as TypeScript, React, Maven, Gradle, and .NET.
 
-## 8. Guiding principles
+## 9. Guiding principles
 
 - keep the core deterministic
 - keep ecosystem logic out of the core package

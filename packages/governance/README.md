@@ -17,6 +17,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 - [Installation](#installation)
 - [Supported Nx versions](#supported-nx-versions)
 - [Quick start](#quick-start)
+- [Project Crystal Inference](#project-crystal-inference)
 - [Extension model](#extension-model)
 - [Concepts](#concepts)
   - [Profiles](#profiles)
@@ -120,6 +121,103 @@ nx workspace-conformance --conformanceJson=dist/conformance-result.json
 # 6. Governance Graph also supports JSON output for downstream tooling
 nx governance-graph --format=json --outputPath=dist/governance/graph.json
 ```
+
+---
+
+## Project Crystal Inference
+
+Nx Governance now uses Project Crystal inference for the four core report
+targets. When one or more profile files exist under
+`tools/governance/profiles/*.json`, the plugin's `createNodesV2` hook infers
+root-oriented governance targets automatically instead of requiring redundant
+explicit target definitions for each report command.
+
+The authoritative discovery source is:
+
+- `tools/governance/profiles/*.json`
+
+Inferred targets attach to the root project internally and keep the existing
+stable command names, so the normal way to run them remains:
+
+```bash
+nx repo-health
+nx repo-boundaries
+nx repo-ownership
+nx repo-architecture
+```
+
+If you prefer fully explicit Nx syntax, use the root project target form
+supported by your workspace, for example `nx run <root-project-name>:repo-health`.
+
+### Inferred target surface
+
+| Target              | Inferred? | Source                                                                     | Executor                                        | Default output                                        | Notes                                                                                           |
+| ------------------- | --------: | -------------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `repo-health`       |       yes | workspace default profile selected from `tools/governance/profiles/*.json` | `@anarchitects/nx-governance:repo-health`       | CLI stdout by default                                 | accepts runtime `--profile`, `--output`, `--failOnViolation`, and `--conformanceJson` overrides |
+| `repo-boundaries`   |       yes | workspace default profile selected from `tools/governance/profiles/*.json` | `@anarchitects/nx-governance:repo-boundaries`   | CLI stdout by default                                 | same runtime option surface as the explicit target                                              |
+| `repo-ownership`    |       yes | workspace default profile selected from `tools/governance/profiles/*.json` | `@anarchitects/nx-governance:repo-ownership`    | CLI stdout by default                                 | same runtime option surface as the explicit target                                              |
+| `repo-architecture` |       yes | workspace default profile selected from `tools/governance/profiles/*.json` | `@anarchitects/nx-governance:repo-architecture` | CLI stdout by default                                 | same runtime option surface as the explicit target                                              |
+| `governance-graph`  |        no | explicit target only in the current MVP                                    | `@anarchitects/nx-governance:governance-graph`  | `dist/governance/graph.html` when using init defaults | stays explicit because it has graph-specific file output semantics                              |
+
+### Default profile selection
+
+Inference does not derive different target names from different profile files.
+Instead, the four inferred report targets share one deterministic default
+profile:
+
+- when exactly one profile file exists, its basename becomes the inferred
+  `profile` option
+- when multiple profile files exist, `frontend-layered` wins if present
+- otherwise the lexical-first profile basename wins
+- runtime CLI overrides such as `nx repo-health --profile=backend-layered-ddd`
+  still work
+
+Unknown profile filenames remain valid inference inputs. They do not create new
+target names; they only influence the default `profile` option wired into the
+four stable inferred targets.
+
+### Explicit target compatibility
+
+Inferred targets are additive. Existing explicit governance targets remain
+supported.
+
+If an explicit target and an inferred target have the same name, the explicit
+target configuration takes precedence. Use explicit targets when you need
+custom `profile`, `conformanceJson`, graph `outputPath`, or other executor
+options beyond the inferred defaults.
+
+Use explicit targets when:
+
+- the runtime profile is outside `tools/governance/profiles/*.json`
+- you need a checked-in custom graph `outputPath`
+- you want target-local executor options committed in workspace config
+- you are preserving existing CI or root-target conventions during migration
+
+### Plugin options
+
+The current inference implementation keeps plugin configuration minimal:
+
+| Option        | Type     | Default                            | Purpose                                                                  |
+| ------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `profileGlob` | `string` | `tools/governance/profiles/*.json` | Narrows the authoritative profile discovery glob used by `createNodesV2` |
+
+### Init and inferred targets
+
+The init generator still writes explicit root targets today. That is
+intentional for compatibility:
+
+- minimal init still writes `repo-health` and `governance-graph`
+- `targetPreset: "full"` still restores the broader explicit governance target
+  surface
+- existing generated targets remain valid even when inference is also active
+
+Cleanup of redundant explicit root targets is separate work; this plugin does
+not remove them automatically.
+
+For the stable inference contract, see
+[`docs/governance/project-crystal-target-inference-contract.md`](../../docs/governance/project-crystal-target-inference-contract.md).
+For the current configuration and executor surface, see
+[`docs/governance/configuration-surface-audit.md`](../../docs/governance/configuration-surface-audit.md).
 
 ---
 
