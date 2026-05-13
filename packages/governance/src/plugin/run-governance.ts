@@ -8,6 +8,7 @@ import {
 import { buildInventory } from '../inventory/build-inventory.js';
 import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
 import { readNxWorkspaceSnapshot } from '../nx-adapter/read-workspace.js';
+import { toGovernanceWorkspaceAdapterResult } from '../nx-adapter/to-governance-workspace-adapter-result.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
   loadProfileOverrides,
@@ -1504,7 +1505,10 @@ async function buildAssessmentArtifacts(
   };
 
   const snapshot = await readNxWorkspaceSnapshot();
-  const inventory = buildInventory(snapshot, overrides);
+  const inventory = buildInventory(
+    toGovernanceWorkspaceAdapterResult(snapshot),
+    overrides
+  );
   const extensionRegistry = await registerGovernanceExtensions({
     workspaceRoot,
     profileName,

@@ -1,44 +1,54 @@
 import {
+  GovernanceDependencyInput,
+  GovernanceProjectInput,
+  GovernanceWorkspaceAdapterResult,
   GovernanceDependency,
   GovernanceProject,
   GovernanceWorkspace,
   Ownership,
   ProfileOverrides,
 } from '../core/index.js';
-import { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
 
-// TODO(#248): Switch inventory normalization to the Core-owned
-// GovernanceWorkspaceAdapterResult contract without changing behavior.
 export function buildInventory(
-  snapshot: AdapterWorkspaceSnapshot,
+  adapterResult: GovernanceWorkspaceAdapterResult,
   overrides: ProfileOverrides = { projectOverrides: {} }
 ): GovernanceWorkspace {
-  const projects: GovernanceProject[] = snapshot.projects.map((project) => {
-    const override = overrides.projectOverrides[project.name] ?? {};
-    const domain =
-      override.domain ?? tagValue(project.tags, 'domain') ?? tagValue(project.tags, 'scope');
-    const layer = override.layer ?? tagValue(project.tags, 'layer');
+  const projectsInput = resolveProjects(adapterResult);
+  const dependenciesInput = resolveDependencies(adapterResult);
 
-    const ownershipFromMeta = readOwnershipFromMetadata(project.metadata);
-    const codeowners = snapshot.codeownersByProject[project.name] ?? [];
+  const projects: GovernanceProject[] = projectsInput.map((project) => {
+    const projectId = normalizeProjectId(project);
+    const projectName = normalizeProjectName(project);
+    const projectTags = project.tags ?? [];
+    const projectMetadata = project.metadata ?? {};
+    const override = overrides.projectOverrides[projectName] ?? {};
+    const domain =
+      override.domain ??
+      project.domain ??
+      tagValue(projectTags, 'domain') ??
+      tagValue(projectTags, 'scope');
+    const layer =
+      override.layer ?? project.layer ?? tagValue(projectTags, 'layer');
+
+    const ownershipFromMeta = readOwnershipFromMetadata(projectMetadata);
 
     const ownership: Ownership = resolveOwnership(
       ownershipFromMeta,
       override.ownershipTeam,
-      codeowners
+      project.ownership
     );
 
     return {
-      id: project.name,
-      name: project.name,
-      root: project.root,
+      id: projectId,
+      name: projectName,
+      root: project.root ?? '',
       type: normalizeProjectType(project.type),
-      tags: project.tags,
+      tags: projectTags,
       domain,
       layer,
       ownership,
       metadata: {
-        ...project.metadata,
+        ...projectMetadata,
         ...(override.documentation !== undefined
           ? { documentation: override.documentation }
           : {}),
@@ -46,20 +56,74 @@ export function buildInventory(
     };
   });
 
-  const dependencies: GovernanceDependency[] = snapshot.dependencies.map((dep) => ({
-    source: dep.source,
-    target: dep.target,
+  const dependencies: GovernanceDependency[] = dependenciesInput.map((dep) => ({
+    source: dep.sourceProjectId,
+    target: dep.targetProjectId,
     type: normalizeDependencyType(dep.type),
     sourceFile: dep.sourceFile,
   }));
 
   return {
-    id: 'workspace',
-    name: 'workspace',
-    root: snapshot.root,
+    id: adapterResult.workspaceId ?? adapterResult.workspace?.id ?? 'workspace',
+    name:
+      adapterResult.workspaceName ??
+      adapterResult.workspace?.name ??
+      'workspace',
+    root: adapterResult.workspaceRoot ?? adapterResult.workspace?.root ?? '',
     projects,
     dependencies,
   };
+}
+
+function resolveProjects(
+  adapterResult: GovernanceWorkspaceAdapterResult
+): GovernanceProjectInput[] {
+  if (adapterResult.projects) {
+    return adapterResult.projects;
+  }
+
+  if (adapterResult.workspace) {
+    return adapterResult.workspace.projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      root: project.root,
+      type: project.type,
+      domain: project.domain,
+      layer: project.layer,
+      tags: project.tags,
+      ownership: project.ownership,
+      metadata: project.metadata,
+    }));
+  }
+
+  return [];
+}
+
+function resolveDependencies(
+  adapterResult: GovernanceWorkspaceAdapterResult
+): GovernanceDependencyInput[] {
+  if (adapterResult.dependencies) {
+    return adapterResult.dependencies;
+  }
+
+  if (adapterResult.workspace) {
+    return adapterResult.workspace.dependencies.map((dependency) => ({
+      sourceProjectId: dependency.source,
+      targetProjectId: dependency.target,
+      type: dependency.type,
+      sourceFile: dependency.sourceFile,
+    }));
+  }
+
+  return [];
+}
+
+function normalizeProjectId(project: GovernanceProjectInput): string {
+  return project.id;
+}
+
+function normalizeProjectName(project: GovernanceProjectInput): string {
+  return project.name ?? project.id;
 }
 
 function tagValue(tags: string[], prefix: string): string | undefined {
@@ -68,7 +132,7 @@ function tagValue(tags: string[], prefix: string): string | undefined {
 }
 
 function normalizeProjectType(
-  type: string
+  type: string | undefined
 ): 'application' | 'library' | 'tool' | 'unknown' {
   if (type === 'application' || type === 'app') return 'application';
   if (type === 'library' || type === 'lib') return 'library';
@@ -77,7 +141,7 @@ function normalizeProjectType(
 }
 
 function normalizeDependencyType(
-  type: string
+  type: string | undefined
 ): 'static' | 'dynamic' | 'implicit' | 'unknown' {
   if (type === 'static' || type === 'dynamic' || type === 'implicit') {
     return type;
@@ -106,14 +170,21 @@ function readOwnershipFromMetadata(
 function resolveOwnership(
   metadataTeam: string | undefined,
   overrideTeam: string | undefined,
-  codeowners: string[]
+  adapterOwnership:
+    | {
+        team?: string;
+        contacts?: string[];
+        source?: string;
+      }
+    | undefined
 ): Ownership {
-  const team = overrideTeam ?? metadataTeam;
+  const contacts = adapterOwnership?.contacts ?? [];
+  const team = overrideTeam ?? metadataTeam ?? adapterOwnership?.team;
 
-  if (team && codeowners.length) {
+  if (team && contacts.length) {
     return {
       team,
-      contacts: codeowners,
+      contacts,
       source: 'merged',
     };
   }
@@ -122,13 +193,13 @@ function resolveOwnership(
     return {
       team,
       contacts: [],
-      source: 'project-metadata',
+      source: normalizeOwnershipSource(adapterOwnership?.source),
     };
   }
 
-  if (codeowners.length) {
+  if (contacts.length) {
     return {
-      contacts: codeowners,
+      contacts,
       source: 'codeowners',
     };
   }
@@ -136,4 +207,18 @@ function resolveOwnership(
   return {
     source: 'none',
   };
+}
+
+function normalizeOwnershipSource(
+  source: string | undefined
+): Ownership['source'] {
+  if (source === 'merged' || source === 'project-metadata') {
+    return source;
+  }
+
+  if (source === 'codeowners') {
+    return 'codeowners';
+  }
+
+  return 'project-metadata';
 }
