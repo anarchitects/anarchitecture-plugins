@@ -23,7 +23,7 @@ export interface GovernanceExtensionDefinition {
 export interface GovernanceExtensionHost {
   readonly context: GovernanceExtensionHostContext;
   registerEnricher(enricher: GovernanceWorkspaceEnricher): void;
-  registerRulePack(rulePack: GovernanceRulePack): void;
+  registerRulePack(rulePack: GovernanceExtensionRulePack): void;
   registerSignalProvider(signalProvider: GovernanceSignalProvider): void;
   registerMetricProvider(metricProvider: GovernanceMetricProvider): void;
 }
@@ -58,7 +58,7 @@ export interface GovernanceWorkspaceEnricher {
   ): GovernanceWorkspace | Promise<GovernanceWorkspace>;
 }
 
-export interface GovernanceRulePack {
+export interface GovernanceExtensionRulePack {
   evaluate(input: GovernanceRulePackInput): Violation[] | Promise<Violation[]>;
 }
 

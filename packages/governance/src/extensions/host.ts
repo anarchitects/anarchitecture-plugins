@@ -10,8 +10,8 @@ import {
   GovernanceExtensionHostContext,
   GovernanceMetricProvider,
   GovernanceMetricProviderInput,
-  GovernanceRulePack,
-  GovernanceRulePackInput,
+  GovernanceExtensionRulePack,
+  GovernanceExtensionRulePackInput,
   GovernanceSignalProvider,
   GovernanceSignalProviderInput,
   GovernanceWorkspaceEnricher,
@@ -26,7 +26,7 @@ interface RegisteredGovernanceContribution<T> {
 export interface GovernanceExtensionRegistry {
   metricProviders: RegisteredGovernanceContribution<GovernanceMetricProvider>[];
   signalProviders: RegisteredGovernanceContribution<GovernanceSignalProvider>[];
-  rulePacks: RegisteredGovernanceContribution<GovernanceRulePack>[];
+  rulePacks: RegisteredGovernanceContribution<GovernanceExtensionRulePack>[];
   enrichers: RegisteredGovernanceContribution<GovernanceWorkspaceEnricher>[];
 }
 
@@ -93,7 +93,7 @@ export class GovernanceExtensionHost
     });
   }
 
-  registerRulePack(rulePack: GovernanceRulePack): void {
+  registerRulePack(rulePack: GovernanceExtensionRulePack): void {
     this.registry.rulePacks.push({
       pluginId: this.pluginId,
       contribution: rulePack,
@@ -211,9 +211,9 @@ export async function applyGovernanceEnrichers(
   return workspace;
 }
 
-export async function evaluateGovernanceRulePacks(
+export async function evaluateGovernanceExtensionRulePacks(
   registry: GovernanceExtensionRegistry,
-  input: GovernanceRulePackInput
+  input: GovernanceExtensionRulePackInput
 ): Promise<Violation[]> {
   const violations = await Promise.all(
     registry.rulePacks.map(async (rulePack) => {
