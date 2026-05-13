@@ -378,17 +378,95 @@ function isMissingGovernanceEntrypoint(
   }
 
   const errorCode = errorRecord?.code;
-  const isModuleNotFoundCode =
-    errorCode === 'ERR_MODULE_NOT_FOUND' || errorCode === 'MODULE_NOT_FOUND';
-  const mentionsModuleSpecifier =
-    message.includes(`'${moduleSpecifier}'`) ||
-    message.includes(`"${moduleSpecifier}"`) ||
-    message.includes(` ${moduleSpecifier} `) ||
-    message.endsWith(moduleSpecifier);
+  if (errorCode === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+    return matchesGovernanceEntrypointSubpath(message, moduleSpecifier);
+  }
 
-  return isModuleNotFoundCode
-    ? mentionsModuleSpecifier
-    : message.startsWith('Cannot find module') && mentionsModuleSpecifier;
+  if (
+    errorCode === 'ERR_MODULE_NOT_FOUND' ||
+    errorCode === 'MODULE_NOT_FOUND'
+  ) {
+    return matchesGovernanceEntrypointLookup(message, moduleSpecifier);
+  }
+
+  return (
+    message.startsWith('Cannot find module') &&
+    matchesGovernanceEntrypointLookup(message, moduleSpecifier)
+  );
+}
+
+function matchesGovernanceEntrypointSubpath(
+  message: string,
+  moduleSpecifier: string
+): boolean {
+  const { packageName, subpath } = splitPackageSubpath(moduleSpecifier);
+
+  return (
+    message.includes('Package subpath') &&
+    message.includes(packageName) &&
+    message.includes(subpath)
+  );
+}
+
+function matchesGovernanceEntrypointLookup(
+  message: string,
+  moduleSpecifier: string
+): boolean {
+  const normalizedSpecifier = normalizeLookupTarget(moduleSpecifier);
+  const quotedTargets = extractQuotedValues(message);
+
+  return quotedTargets.some((target) =>
+    isMatchingGovernanceLookupTarget(target, normalizedSpecifier)
+  );
+}
+
+function isMatchingGovernanceLookupTarget(
+  target: string,
+  normalizedSpecifier: string
+): boolean {
+  const normalizedTarget = normalizeLookupTarget(target);
+
+  return (
+    normalizedTarget === normalizedSpecifier ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}.js`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}.mjs`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}.cjs`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}/index.js`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}/index.mjs`) ||
+    normalizedTarget.endsWith(`/${normalizedSpecifier}/index.cjs`)
+  );
+}
+
+function extractQuotedValues(message: string): string[] {
+  return [...message.matchAll(/['"]([^'"]+)['"]/g)].map(
+    (match) => match[1] ?? ''
+  );
+}
+
+function normalizeLookupTarget(target: string): string {
+  return target
+    .replace(/^file:\/\/\/?/, '/')
+    .replaceAll('\\', '/')
+    .replace(/\/+/g, '/')
+    .replace(/\/$/, '');
+}
+
+function splitPackageSubpath(moduleSpecifier: string): {
+  packageName: string;
+  subpath: string;
+} {
+  const segments = moduleSpecifier.split('/');
+  const packageSegments = moduleSpecifier.startsWith('@')
+    ? segments.slice(0, 2)
+    : segments.slice(0, 1);
+  const packageName = packageSegments.join('/');
+  const subpathSegments = segments.slice(packageSegments.length);
+
+  return {
+    packageName,
+    subpath: `./${subpathSegments.join('/')}`,
+  };
 }
 
 function toErrorMessage(error: unknown): string {
