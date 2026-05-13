@@ -71,8 +71,8 @@
     ]
   },
   "dependencies": {
-    "tslib": "^2.6.2",
-    "minimatch": "9.0.5"
+    "minimatch": "9.0.5",
+    "tslib": "^2.6.2"
   },
   "peerDependencies": {
     "@nx/devkit": ">=19 <23",
