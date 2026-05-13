@@ -3,7 +3,7 @@ import type {
   GovernanceSignalSeverity,
   GovernanceSignalSource,
   GovernanceSignalType,
-} from '../signal-engine/types.js';
+} from './signals.js';
 
 export interface GovernanceWorkspace {
   id: string;

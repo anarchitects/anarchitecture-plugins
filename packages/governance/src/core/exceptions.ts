@@ -1,4 +1,4 @@
-import type { Category } from '../conformance-adapter/conformance-adapter.js';
+import type { GovernanceConformanceCategory } from './signals.js';
 
 export type GovernanceExceptionSource = 'policy' | 'conformance';
 
@@ -18,7 +18,7 @@ export interface GovernancePolicyExceptionScope {
 export interface GovernanceConformanceExceptionScope {
   source: 'conformance';
   ruleId?: string;
-  category?: Category;
+  category?: GovernanceConformanceCategory;
   projectId?: string;
   relatedProjectIds?: string[];
 }
@@ -195,7 +195,9 @@ function normalizeRelatedProjectIds(
 }
 
 function normalizeOptionalCategory(
-  category: Category | undefined
-): Category | undefined {
-  return normalizeOptionalString(category) as Category | undefined;
+  category: GovernanceConformanceCategory | undefined
+): GovernanceConformanceCategory | undefined {
+  return normalizeOptionalString(category) as
+    | GovernanceConformanceCategory
+    | undefined;
 }
