@@ -11,7 +11,7 @@ import {
   GovernanceMetricProvider,
   GovernanceMetricProviderInput,
   GovernanceExtensionRulePack,
-  GovernanceExtensionRulePackInput,
+  GovernanceRulePackInput,
   GovernanceSignalProvider,
   GovernanceSignalProviderInput,
   GovernanceWorkspaceEnricher,
@@ -211,9 +211,9 @@ export async function applyGovernanceEnrichers(
   return workspace;
 }
 
-export async function evaluateGovernanceExtensionRulePacks(
+export async function evaluateGovernanceRulePacks(
   registry: GovernanceExtensionRegistry,
-  input: GovernanceExtensionRulePackInput
+  input: GovernanceRulePackInput
 ): Promise<Violation[]> {
   const violations = await Promise.all(
     registry.rulePacks.map(async (rulePack) => {
