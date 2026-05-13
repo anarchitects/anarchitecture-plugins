@@ -35,9 +35,6 @@ describe('core ai handoff payload builders', () => {
       violations: [],
       signals: [],
       measurements: [],
-      signalBreakdown: undefined as never,
-      metricBreakdown: undefined as never,
-      topIssues: [],
       health: {
         score: 100,
         status: 'good',
@@ -53,7 +50,7 @@ describe('core ai handoff payload builders', () => {
         },
       },
       recommendations: [],
-    } as Parameters<typeof buildGovernanceAssessment>[0]);
+    });
 
     const request: AiAnalysisRequest = {
       kind: 'root-cause',
@@ -221,5 +218,56 @@ describe('core ai handoff payload builders', () => {
       headRef: 'feature/branch',
     });
     expect(payload.useCase).toBe('pr-impact');
+  });
+
+  it('returns identical payloads for identical input', () => {
+    const request: AiAnalysisRequest = {
+      kind: 'pr-impact',
+      generatedAt: '2026-05-13T10:00:00.000Z',
+      profile: 'frontend-layered',
+      inputs: {
+        affectedProjects: ['platform-shell'],
+        dependencies: coreTestWorkspace.dependencies,
+        metadata: {
+          baseRef: 'main',
+          headRef: 'feature/branch',
+          changedFilesCount: 3,
+        },
+      },
+    };
+    const analysis: AiAnalysisResult = {
+      kind: 'pr-impact',
+      summary: 'Medium impact.',
+      findings: [],
+      recommendations: [],
+    };
+
+    const first = buildAiPrImpactHandoffPayload({
+      request,
+      analysis,
+      payloadScope: {
+        dependencies: {
+          total: coreTestWorkspace.dependencies.length,
+          included: coreTestWorkspace.dependencies.length,
+          limit: 120,
+          truncated: false,
+        },
+      },
+    });
+    const second = buildAiPrImpactHandoffPayload({
+      request,
+      analysis,
+      payloadScope: {
+        dependencies: {
+          total: coreTestWorkspace.dependencies.length,
+          included: coreTestWorkspace.dependencies.length,
+          limit: 120,
+          truncated: false,
+        },
+      },
+    });
+
+    expect(second).toEqual(first);
+    expect(JSON.parse(JSON.stringify(first))).toEqual(first);
   });
 });

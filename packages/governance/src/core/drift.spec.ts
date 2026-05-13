@@ -183,4 +183,24 @@ describe('core drift comparison', () => {
       },
     ]);
   });
+
+  it('keeps plain snapshot fixtures JSON-serializable without host storage helpers', () => {
+    const snapshot = makeSnapshot({
+      topIssues: [
+        {
+          type: 'domain-boundary-violation',
+          source: 'policy',
+          severity: 'error',
+          count: 1,
+          projects: ['booking-ui', 'platform-shell'],
+          ruleId: 'domain-boundary',
+          message: 'Cross-domain dependency.',
+        },
+      ],
+    });
+
+    expect(JSON.parse(JSON.stringify(snapshot)) as MetricSnapshot).toEqual(
+      snapshot
+    );
+  });
 });

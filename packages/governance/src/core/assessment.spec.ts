@@ -169,6 +169,8 @@ describe('buildGovernanceAssessment', () => {
   it('assembles a deterministic JSON-safe governance assessment without Nx APIs', () => {
     const assessment = buildGovernanceAssessment(baseAssessmentInput);
 
+    expect(assessment.workspace).toBe(coreTestWorkspace);
+    expect(assessment.profile).toBe('frontend-layered');
     expect(assessment.violations).toHaveLength(2);
     expect(assessment.measurements).toHaveLength(3);
     expect(assessment.signalBreakdown.total).toBe(3);
@@ -210,5 +212,18 @@ describe('buildGovernanceAssessment', () => {
     expect(assessment.recommendations).toEqual(
       baseAssessmentInput.recommendations
     );
+  });
+
+  it('defaults optional warnings and recommendations consistently', () => {
+    const assessment = buildGovernanceAssessment({
+      ...baseAssessmentInput,
+      warnings: undefined,
+      recommendations: undefined,
+    });
+
+    expect(assessment.warnings).toEqual([]);
+    expect(assessment.recommendations).toEqual([]);
+    expect(assessment.workspace).toBe(coreTestWorkspace);
+    expect(assessment.profile).toBe('frontend-layered');
   });
 });
