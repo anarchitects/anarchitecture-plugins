@@ -8,6 +8,11 @@ import { ownersForProjectRoot, readCodeowners } from './codeowners.js';
 import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
+export interface NxGovernanceWorkspaceContext {
+  snapshot: AdapterWorkspaceSnapshot;
+  adapterResult: GovernanceWorkspaceAdapterResult;
+}
+
 export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapshot> {
   const graph = await createProjectGraphAsync();
   const codeownersEntries = readCodeowners(workspaceRoot);
@@ -77,6 +82,15 @@ export function createNxWorkspaceAdapterResult(
 
 export async function readNxWorkspaceAdapterResult(): Promise<GovernanceWorkspaceAdapterResult> {
   return createNxWorkspaceAdapterResult(await readNxWorkspaceSnapshot());
+}
+
+export async function loadNxGovernanceWorkspaceContext(): Promise<NxGovernanceWorkspaceContext> {
+  const snapshot = await readNxWorkspaceSnapshot();
+
+  return {
+    snapshot,
+    adapterResult: createNxWorkspaceAdapterResult(snapshot),
+  };
 }
 
 export function resolveProjectTagsAndMetadata(
