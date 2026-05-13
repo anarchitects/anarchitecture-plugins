@@ -15,17 +15,24 @@ describe('ai-handoff', () => {
   });
 
   it('exports payload and prompt files for root-cause handoff', () => {
+    const payload = {
+      useCase: 'root-cause' as const,
+      request: {
+        kind: 'root-cause',
+      },
+    };
     const artifacts = exportAiHandoffArtifacts({
       workspaceRoot,
       useCase: 'root-cause',
-      payload: {
-        useCase: 'root-cause',
-        request: {
-          kind: 'root-cause',
-        },
-      },
+      payload,
     });
 
+    expect(artifacts.payloadRelativePath).toBe(
+      '.governance-metrics/ai/root-cause.payload.json'
+    );
+    expect(artifacts.promptRelativePath).toBe(
+      '.governance-metrics/ai/root-cause.prompt.md'
+    );
     expect(
       existsSync(path.join(workspaceRoot, artifacts.payloadRelativePath))
     ).toBe(true);
@@ -42,6 +49,14 @@ describe('ai-handoff', () => {
     expect(promptContent).toContain('## Grounding Constraints');
     expect(promptContent).toContain('## Output Structure');
     expect(promptContent).toContain('## Safety and Discipline Constraints');
+    expect(
+      JSON.parse(
+        readFileSync(
+          path.join(workspaceRoot, artifacts.payloadRelativePath),
+          'utf8'
+        )
+      )
+    ).toEqual(payload);
   });
 
   it('renders root-cause prompt with discipline constraints', () => {
