@@ -1,6 +1,11 @@
 import { logger, workspaceRoot } from '@nx/devkit';
 
-import { GovernanceAssessment, GovernanceProfile } from '../core/index.js';
+import {
+  buildGovernanceAssessment,
+  buildTopIssues,
+  GovernanceAssessment,
+  GovernanceProfile,
+} from '../core/index.js';
 import {
   buildRecommendations,
   calculateHealthScore,
@@ -19,12 +24,6 @@ import {
 import { GOVERNANCE_DEFAULT_PROFILE_NAME } from '../profile/runtime-profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
-import { buildMetricBreakdown } from '../reporting/metric-breakdown.js';
-import {
-  buildSignalBreakdown,
-  filterSignalsForReportType,
-} from '../reporting/signal-breakdown.js';
-import { buildTopIssues } from '../reporting/top-issues.js';
 import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
@@ -1614,40 +1613,29 @@ async function buildAssessmentArtifacts(
   );
   const allMeasurements = [...coreMeasurements, ...extensionMeasurements];
   const allTopIssues = buildTopIssues(allSignals);
-  const filteredMeasurements = filterMeasurements(
+  const health = calculateHealthScore(
     allMeasurements,
-    options.reportType
+    effectiveProfile.metrics,
+    effectiveProfile.health.statusThresholds,
+    {
+      topIssues: allTopIssues,
+    }
   );
-  const filteredSignals = filterSignalsForReportType(
-    allSignals,
-    options.reportType
-  );
-  const filteredViolations = filterViolations(
-    allViolations,
-    options.reportType
-  );
+  const recommendations = buildRecommendations(allViolations, allMeasurements);
 
   return {
-    assessment: {
+    assessment: buildGovernanceAssessment({
       workspace: enrichedInventory,
       profile: profileName,
       warnings: overrides.runtimeWarnings,
       exceptions: buildExceptionReport(exceptionApplication),
-      violations: filteredViolations,
-      measurements: filteredMeasurements,
-      signalBreakdown: buildSignalBreakdown(filteredSignals),
-      metricBreakdown: buildMetricBreakdown(filteredMeasurements),
-      topIssues: buildTopIssues(filteredSignals),
-      health: calculateHealthScore(
-        allMeasurements,
-        effectiveProfile.metrics,
-        effectiveProfile.health.statusThresholds,
-        {
-          topIssues: allTopIssues,
-        }
-      ),
-      recommendations: buildRecommendations(allViolations, allMeasurements),
-    },
+      violations: allViolations,
+      signals: allSignals,
+      measurements: allMeasurements,
+      health,
+      recommendations,
+      reportType: options.reportType,
+    }),
     signals: allSignals,
     exceptionApplication,
   };
@@ -1676,52 +1664,6 @@ function toWorkspaceGraphSnapshot(
       type: dependency.type,
     })),
   };
-}
-
-function filterViolations(
-  violations: GovernanceAssessment['violations'],
-  reportType: GovernanceRunOptions['reportType']
-): GovernanceAssessment['violations'] {
-  if (reportType === 'boundaries') {
-    return violations.filter((violation) => violation.category === 'boundary');
-  }
-
-  if (reportType === 'ownership') {
-    return violations.filter((violation) => violation.category === 'ownership');
-  }
-
-  if (reportType === 'architecture') {
-    return violations.filter((violation) => violation.category !== 'ownership');
-  }
-
-  return violations;
-}
-
-function filterMeasurements(
-  measurements: GovernanceAssessment['measurements'],
-  reportType: GovernanceRunOptions['reportType']
-): GovernanceAssessment['measurements'] {
-  if (reportType === 'boundaries') {
-    return measurements.filter(
-      (measurement) => measurement.family === 'boundaries'
-    );
-  }
-
-  if (reportType === 'ownership') {
-    return measurements.filter(
-      (measurement) => measurement.family === 'ownership'
-    );
-  }
-
-  if (reportType === 'architecture') {
-    return measurements.filter(
-      (measurement) =>
-        measurement.family !== 'ownership' &&
-        measurement.family !== 'documentation'
-    );
-  }
-
-  return measurements;
 }
 
 function normalizeMetricWeights(
