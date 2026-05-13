@@ -1,7 +1,10 @@
 import type { GovernanceProject, Violation } from './models.js';
 import {
   deriveAllowedLayerDependenciesFromLayerOrder,
-  type GovernanceProfile,
+  normalizeGovernanceProfile,
+  type GovernanceDomainBoundaryRuleOptions,
+  type GovernanceLayerBoundaryRuleOptions,
+  type GovernanceOwnershipPresenceRuleOptions,
 } from './profile.js';
 import type { GovernanceRule, GovernanceRuleContext } from './rules.js';
 
@@ -17,6 +20,12 @@ export const domainBoundaryRule: GovernanceRule = {
       return {};
     }
 
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[domainBoundaryRule.id];
+    const options = ruleConfig?.options as
+      | GovernanceDomainBoundaryRuleOptions
+      | undefined;
+    const severity = ruleConfig?.severity ?? domainBoundaryRule.defaultSeverity;
     const projectByName = projectByNameMap(workspace.projects);
     const violations = workspace.dependencies.flatMap((dependency) => {
       const source = projectByName.get(dependency.source);
@@ -26,7 +35,10 @@ export const domainBoundaryRule: GovernanceRule = {
         source,
         target,
         dependency,
-        profile
+        options ?? {
+          allowedDependencies: profile.allowedDomainDependencies,
+        },
+        severity
       );
     });
 
@@ -46,13 +58,21 @@ export const layerBoundaryRule: GovernanceRule = {
       return {};
     }
 
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[layerBoundaryRule.id];
+    const options = ruleConfig?.options as
+      | GovernanceLayerBoundaryRuleOptions
+      | undefined;
+    const normalizedOptions = options ?? {
+      allowedDependencies:
+        profile.allowedLayerDependencies ??
+        deriveAllowedLayerDependenciesFromLayerOrder(profile.layers),
+      layers: [...profile.layers],
+      usesExplicitDependencies: profile.allowedLayerDependencies !== undefined,
+    };
+    const severity = ruleConfig?.severity ?? layerBoundaryRule.defaultSeverity;
     const projectByName = projectByNameMap(workspace.projects);
-    const declaredLayers = new Set(profile.layers);
-    const usesExplicitLayerDependencies =
-      profile.allowedLayerDependencies !== undefined;
-    const allowedLayerDependencies =
-      profile.allowedLayerDependencies ??
-      deriveAllowedLayerDependenciesFromLayerOrder(profile.layers);
+    const declaredLayers = new Set(normalizedOptions.layers);
 
     const violations = workspace.dependencies.flatMap((dependency) => {
       const source = projectByName.get(dependency.source);
@@ -63,9 +83,8 @@ export const layerBoundaryRule: GovernanceRule = {
         target,
         dependency,
         declaredLayers,
-        usesExplicitLayerDependencies,
-        allowedLayerDependencies,
-        profile
+        normalizedOptions,
+        severity
       );
     });
 
@@ -81,12 +100,28 @@ export const ownershipPresenceRule: GovernanceRule = {
   category: 'ownership',
   defaultSeverity: 'warning',
   evaluate({ workspace, profile }) {
-    if (!profile?.ownership.required) {
+    if (!profile) {
+      return {};
+    }
+
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[ownershipPresenceRule.id];
+    const options = ruleConfig?.options as
+      | GovernanceOwnershipPresenceRuleOptions
+      | undefined;
+    const normalizedOptions = options ?? {
+      required: profile.ownership.required,
+      metadataField: profile.ownership.metadataField,
+    };
+    const severity =
+      ruleConfig?.severity ?? ownershipPresenceRule.defaultSeverity;
+
+    if (!normalizedOptions.required) {
       return {};
     }
 
     const violations = workspace.projects.flatMap((project) =>
-      evaluateOwnershipPresence(project)
+      evaluateOwnershipPresence(project, severity)
     );
 
     return { violations };
@@ -107,13 +142,38 @@ export function evaluateCoreBuiltInPolicyViolations(
   }
 
   const { workspace, profile } = context;
+  const normalizedProfile = normalizeGovernanceProfile(profile);
+  const domainRuleConfig = normalizedProfile.rules[domainBoundaryRule.id];
+  const domainOptions = (domainRuleConfig?.options as
+    | GovernanceDomainBoundaryRuleOptions
+    | undefined) ?? {
+    allowedDependencies: profile.allowedDomainDependencies,
+  };
+  const domainSeverity =
+    domainRuleConfig?.severity ?? domainBoundaryRule.defaultSeverity;
+  const layerRuleConfig = normalizedProfile.rules[layerBoundaryRule.id];
+  const layerOptions = (layerRuleConfig?.options as
+    | GovernanceLayerBoundaryRuleOptions
+    | undefined) ?? {
+    allowedDependencies:
+      profile.allowedLayerDependencies ??
+      deriveAllowedLayerDependenciesFromLayerOrder(profile.layers),
+    layers: [...profile.layers],
+    usesExplicitDependencies: profile.allowedLayerDependencies !== undefined,
+  };
+  const layerSeverity =
+    layerRuleConfig?.severity ?? layerBoundaryRule.defaultSeverity;
+  const ownershipRuleConfig = normalizedProfile.rules[ownershipPresenceRule.id];
+  const ownershipOptions = (ownershipRuleConfig?.options as
+    | GovernanceOwnershipPresenceRuleOptions
+    | undefined) ?? {
+    required: profile.ownership.required,
+    metadataField: profile.ownership.metadataField,
+  };
+  const ownershipSeverity =
+    ownershipRuleConfig?.severity ?? ownershipPresenceRule.defaultSeverity;
   const projectByName = projectByNameMap(workspace.projects);
-  const declaredLayers = new Set(profile.layers);
-  const usesExplicitLayerDependencies =
-    profile.allowedLayerDependencies !== undefined;
-  const allowedLayerDependencies =
-    profile.allowedLayerDependencies ??
-    deriveAllowedLayerDependenciesFromLayerOrder(profile.layers);
+  const declaredLayers = new Set(layerOptions.layers);
   const violations: Violation[] = [];
 
   for (const dependency of workspace.dependencies) {
@@ -121,7 +181,13 @@ export function evaluateCoreBuiltInPolicyViolations(
     const target = projectByName.get(dependency.target);
 
     violations.push(
-      ...evaluateDomainBoundaryDependency(source, target, dependency, profile)
+      ...evaluateDomainBoundaryDependency(
+        source,
+        target,
+        dependency,
+        domainOptions,
+        domainSeverity
+      )
     );
     violations.push(
       ...evaluateLayerBoundaryDependency(
@@ -129,16 +195,15 @@ export function evaluateCoreBuiltInPolicyViolations(
         target,
         dependency,
         declaredLayers,
-        usesExplicitLayerDependencies,
-        allowedLayerDependencies,
-        profile
+        layerOptions,
+        layerSeverity
       )
     );
   }
 
-  if (profile.ownership.required) {
+  if (ownershipOptions.required) {
     for (const project of workspace.projects) {
-      violations.push(...evaluateOwnershipPresence(project));
+      violations.push(...evaluateOwnershipPresence(project, ownershipSeverity));
     }
   }
 
@@ -149,7 +214,8 @@ function evaluateDomainBoundaryDependency(
   source: GovernanceProject | undefined,
   target: GovernanceProject | undefined,
   dependency: GovernanceRuleContext['workspace']['dependencies'][number],
-  profile: GovernanceProfile
+  options: GovernanceDomainBoundaryRuleOptions,
+  severity: Violation['severity']
 ): Violation[] {
   if (!source || !target) {
     return [];
@@ -159,7 +225,11 @@ function evaluateDomainBoundaryDependency(
     !source.domain ||
     !target.domain ||
     source.domain === target.domain ||
-    isDomainDependencyAllowed(profile, source.domain, target.domain)
+    isDomainDependencyAllowed(
+      options.allowedDependencies,
+      source.domain,
+      target.domain
+    )
   ) {
     return [];
   }
@@ -169,7 +239,7 @@ function evaluateDomainBoundaryDependency(
       id: `${source.name}-${target.name}-domain`,
       ruleId: 'domain-boundary',
       project: source.name,
-      severity: 'error',
+      severity,
       category: 'boundary',
       message: `Project ${source.name} in domain ${source.domain} depends on ${target.name} in domain ${target.domain}.`,
       details: {
@@ -189,9 +259,8 @@ function evaluateLayerBoundaryDependency(
   target: GovernanceProject | undefined,
   _dependency: GovernanceRuleContext['workspace']['dependencies'][number],
   declaredLayers: Set<string>,
-  usesExplicitLayerDependencies: boolean,
-  allowedLayerDependencies: Record<string, string[]>,
-  profile: GovernanceProfile
+  options: GovernanceLayerBoundaryRuleOptions,
+  severity: Violation['severity']
 ): Violation[] {
   if (!source || !target) {
     return [];
@@ -203,7 +272,7 @@ function evaluateLayerBoundaryDependency(
     !declaredLayers.has(source.layer) ||
     !declaredLayers.has(target.layer) ||
     isLayerDependencyAllowed(
-      allowedLayerDependencies,
+      options.allowedDependencies,
       source.layer,
       target.layer
     )
@@ -216,29 +285,32 @@ function evaluateLayerBoundaryDependency(
       id: `${source.name}-${target.name}-layer`,
       ruleId: 'layer-boundary',
       project: source.name,
-      severity: 'warning',
+      severity,
       category: 'boundary',
       message: `Layer violation: ${source.name} (${source.layer}) depends on ${target.name} (${target.layer}).`,
       details: {
         targetProject: target.name,
         sourceLayer: source.layer,
         targetLayer: target.layer,
-        ...(usesExplicitLayerDependencies
+        ...(options.usesExplicitDependencies
           ? {
-              allowedTargets: allowedLayerDependencies[source.layer] ?? [],
+              allowedTargets: options.allowedDependencies[source.layer] ?? [],
             }
           : {
-              order: profile.layers,
+              order: options.layers,
             }),
       },
-      recommendation: usesExplicitLayerDependencies
+      recommendation: options.usesExplicitDependencies
         ? 'Refactor the dependency or update allowedLayerDependencies in the governance profile when the dependency is intentional.'
         : 'Refactor dependency direction so higher-level layers depend on same or lower-level layers only.',
     },
   ];
 }
 
-function evaluateOwnershipPresence(project: GovernanceProject): Violation[] {
+function evaluateOwnershipPresence(
+  project: GovernanceProject,
+  severity: Violation['severity']
+): Violation[] {
   if (
     project.ownership?.team ||
     (project.ownership?.contacts?.length ?? 0) > 0
@@ -251,7 +323,7 @@ function evaluateOwnershipPresence(project: GovernanceProject): Violation[] {
       id: `${project.name}-ownership`,
       ruleId: 'ownership-presence',
       project: project.name,
-      severity: 'warning',
+      severity,
       category: 'ownership',
       message: `Project ${project.name} has no ownership metadata or CODEOWNERS mapping.`,
       recommendation:
@@ -267,16 +339,16 @@ function projectByNameMap(
 }
 
 function isDomainDependencyAllowed(
-  profile: GovernanceProfile,
+  allowedDependencies: Record<string, string[]>,
   sourceDomain: string,
   targetDomain: string
 ): boolean {
-  const direct = profile.allowedDomainDependencies[sourceDomain];
+  const direct = allowedDependencies[sourceDomain];
   if (direct && (direct.includes(targetDomain) || direct.includes('*'))) {
     return true;
   }
 
-  const wildcard = profile.allowedDomainDependencies['*'];
+  const wildcard = allowedDependencies['*'];
   if (wildcard && (wildcard.includes(targetDomain) || wildcard.includes('*'))) {
     return true;
   }
