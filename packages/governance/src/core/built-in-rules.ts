@@ -30,6 +30,9 @@ export const domainBoundaryRule: GovernanceRule = {
 
     const normalizedProfile = normalizeGovernanceProfile(profile);
     const ruleConfig = normalizedProfile.rules[domainBoundaryRule.id];
+    if (ruleConfig?.enabled === false) {
+      return {};
+    }
     const options = ruleConfig?.options as
       | GovernanceDomainBoundaryRuleOptions
       | undefined;
@@ -68,6 +71,9 @@ export const layerBoundaryRule: GovernanceRule = {
 
     const normalizedProfile = normalizeGovernanceProfile(profile);
     const ruleConfig = normalizedProfile.rules[layerBoundaryRule.id];
+    if (ruleConfig?.enabled === false) {
+      return {};
+    }
     const options = ruleConfig?.options as
       | GovernanceLayerBoundaryRuleOptions
       | undefined;
@@ -114,6 +120,9 @@ export const ownershipPresenceRule: GovernanceRule = {
 
     const normalizedProfile = normalizeGovernanceProfile(profile);
     const ruleConfig = normalizedProfile.rules[ownershipPresenceRule.id];
+    if (ruleConfig?.enabled === false) {
+      return {};
+    }
     const options = ruleConfig?.options as
       | GovernanceOwnershipPresenceRuleOptions
       | undefined;
@@ -285,6 +294,7 @@ export function evaluateCoreBuiltInPolicyViolations(
   const { workspace, profile } = context;
   const normalizedProfile = normalizeGovernanceProfile(profile);
   const domainRuleConfig = normalizedProfile.rules[domainBoundaryRule.id];
+  const domainEnabled = domainRuleConfig?.enabled !== false;
   const domainOptions = (domainRuleConfig?.options as
     | GovernanceDomainBoundaryRuleOptions
     | undefined) ?? {
@@ -293,6 +303,7 @@ export function evaluateCoreBuiltInPolicyViolations(
   const domainSeverity =
     domainRuleConfig?.severity ?? domainBoundaryRule.defaultSeverity;
   const layerRuleConfig = normalizedProfile.rules[layerBoundaryRule.id];
+  const layerEnabled = layerRuleConfig?.enabled !== false;
   const layerOptions = (layerRuleConfig?.options as
     | GovernanceLayerBoundaryRuleOptions
     | undefined) ?? {
@@ -305,6 +316,7 @@ export function evaluateCoreBuiltInPolicyViolations(
   const layerSeverity =
     layerRuleConfig?.severity ?? layerBoundaryRule.defaultSeverity;
   const ownershipRuleConfig = normalizedProfile.rules[ownershipPresenceRule.id];
+  const ownershipEnabled = ownershipRuleConfig?.enabled !== false;
   const ownershipOptions = (ownershipRuleConfig?.options as
     | GovernanceOwnershipPresenceRuleOptions
     | undefined) ?? {
@@ -321,28 +333,32 @@ export function evaluateCoreBuiltInPolicyViolations(
     const source = projectByName.get(dependency.source);
     const target = projectByName.get(dependency.target);
 
-    violations.push(
-      ...evaluateDomainBoundaryDependency(
-        source,
-        target,
-        dependency,
-        domainOptions,
-        domainSeverity
-      )
-    );
-    violations.push(
-      ...evaluateLayerBoundaryDependency(
-        source,
-        target,
-        dependency,
-        declaredLayers,
-        layerOptions,
-        layerSeverity
-      )
-    );
+    if (domainEnabled) {
+      violations.push(
+        ...evaluateDomainBoundaryDependency(
+          source,
+          target,
+          dependency,
+          domainOptions,
+          domainSeverity
+        )
+      );
+    }
+    if (layerEnabled) {
+      violations.push(
+        ...evaluateLayerBoundaryDependency(
+          source,
+          target,
+          dependency,
+          declaredLayers,
+          layerOptions,
+          layerSeverity
+        )
+      );
+    }
   }
 
-  if (ownershipOptions.required) {
+  if (ownershipEnabled && ownershipOptions.required) {
     for (const project of workspace.projects) {
       violations.push(...evaluateOwnershipPresence(project, ownershipSeverity));
     }

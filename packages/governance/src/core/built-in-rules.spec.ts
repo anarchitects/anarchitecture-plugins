@@ -11,6 +11,11 @@ import {
   type GovernanceProfile,
   type GovernanceWorkspace,
 } from './index.js';
+import { resolveBuiltInGovernanceProfile } from '../presets/registry.js';
+import {
+  bookingTeamOwnership,
+  coreTestWorkspace,
+} from './testing/workspace.fixtures.js';
 
 describe('Core built-in policy rules', () => {
   const baseProfile: GovernanceProfile = {
@@ -126,6 +131,40 @@ describe('Core built-in policy rules', () => {
     ]);
   });
 
+  it('does not report a domain violation when the migrated rule is explicitly disabled', () => {
+    const result = domainBoundaryRule.evaluate({
+      workspace: baseWorkspace,
+      profile: {
+        ...baseProfile,
+        rules: {
+          'domain-boundary': {
+            enabled: false,
+          },
+        },
+      },
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+  });
+
+  it('keeps missing domain behavior compatibility-safe for migrated boundary checks', () => {
+    const result = domainBoundaryRule.evaluate({
+      workspace: {
+        ...baseWorkspace,
+        projects: [
+          {
+            ...baseWorkspace.projects[0],
+            domain: undefined,
+          },
+          ...baseWorkspace.projects.slice(1),
+        ],
+      },
+      profile: baseProfile,
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+  });
+
   it('does not report a layer violation for allowed layer dependencies', () => {
     const result = layerBoundaryRule.evaluate({
       workspace: baseWorkspace,
@@ -176,6 +215,57 @@ describe('Core built-in policy rules', () => {
     ]);
   });
 
+  it('does not report a layer violation when the migrated rule is explicitly disabled', () => {
+    const result = layerBoundaryRule.evaluate({
+      workspace: {
+        ...baseWorkspace,
+        dependencies: [
+          {
+            source: 'shared-data',
+            target: 'booking-feature',
+            type: 'static',
+          },
+        ],
+      },
+      profile: {
+        ...baseProfile,
+        allowedDomainDependencies: {
+          shared: ['booking'],
+        },
+        rules: {
+          'layer-boundary': {
+            enabled: false,
+          },
+        },
+      },
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+  });
+
+  it('keeps missing layer behavior compatibility-safe for migrated boundary checks', () => {
+    const result = layerBoundaryRule.evaluate({
+      workspace: {
+        ...baseWorkspace,
+        projects: [
+          {
+            ...baseWorkspace.projects[0],
+            layer: undefined,
+          },
+          ...baseWorkspace.projects.slice(1),
+        ],
+      },
+      profile: {
+        ...baseProfile,
+        allowedDomainDependencies: {
+          booking: ['payments'],
+        },
+      },
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+  });
+
   it('reports an ownership violation when ownership is missing', () => {
     const result = ownershipPresenceRule.evaluate({
       workspace: {
@@ -213,6 +303,57 @@ describe('Core built-in policy rules', () => {
     });
 
     expect(result.violations ?? []).toEqual([]);
+  });
+
+  it('does not report an ownership violation when the migrated rule is explicitly disabled', () => {
+    const result = ownershipPresenceRule.evaluate({
+      workspace: {
+        ...baseWorkspace,
+        projects: [
+          {
+            ...baseWorkspace.projects[0],
+            ownership: {
+              source: 'none',
+            },
+          },
+        ],
+        dependencies: [],
+      },
+      profile: {
+        ...baseProfile,
+        rules: {
+          'ownership-presence': {
+            enabled: false,
+          },
+        },
+      },
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+  });
+
+  it('treats CODEOWNERS-style ownership as present without mutating ownership source metadata', () => {
+    const workspace: GovernanceWorkspace = {
+      ...baseWorkspace,
+      projects: [
+        {
+          ...baseWorkspace.projects[0],
+          ownership: {
+            contacts: ['@booking-team'],
+            source: 'codeowners',
+          },
+        },
+      ],
+      dependencies: [],
+    };
+
+    const result = ownershipPresenceRule.evaluate({
+      workspace,
+      profile: baseProfile,
+    });
+
+    expect(result.violations ?? []).toEqual([]);
+    expect(workspace.projects[0].ownership?.source).toBe('codeowners');
   });
 
   it('registers the migrated rules in the built-in core rule pack', () => {
@@ -261,6 +402,37 @@ describe('Core built-in policy rules', () => {
       'layer-boundary',
       'ownership-presence',
     ]);
+  });
+
+  it('keeps generic convention and metadata rules inactive for the default compatibility profile', async () => {
+    const result = await evaluateRulePack(coreBuiltInRulePack, {
+      workspace: {
+        ...coreTestWorkspace,
+        projects: [
+          {
+            ...coreTestWorkspace.projects[0],
+            name: 'BookingUI',
+            domain: undefined,
+            layer: undefined,
+            tags: ['scope:Booking'],
+            ownership: bookingTeamOwnership,
+          },
+        ],
+        dependencies: [],
+      },
+      profile: resolveBuiltInGovernanceProfile('frontend-layered'),
+    });
+
+    expect(
+      result.violations.filter((violation) =>
+        [
+          'project-name-convention',
+          'tag-convention',
+          'missing-domain',
+          'missing-layer',
+        ].includes(violation.ruleId)
+      )
+    ).toEqual([]);
   });
 });
 
