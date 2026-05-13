@@ -26,10 +26,17 @@ describe('registerGovernanceExtensions', () => {
     },
   };
 
-  function createMissingModuleError(specifier: string): Error {
-    const error = new Error(`Cannot find module '${specifier}'`);
-    (error as Error & { code: string }).code = 'MODULE_NOT_FOUND';
+  function createErrorWithCode(message: string, code: string): Error {
+    const error = new Error(message);
+    (error as Error & { code: string }).code = code;
     return error;
+  }
+
+  function createMissingModuleError(specifier: string): Error {
+    return createErrorWithCode(
+      `Cannot find module '${specifier}'`,
+      'MODULE_NOT_FOUND'
+    );
   }
 
   it('discovers extensions from string and object plugin entries and registers them in nx.json order', async () => {
@@ -136,6 +143,64 @@ describe('registerGovernanceExtensions', () => {
       rulePacks: [],
       enrichers: [],
     });
+  });
+
+  it('ignores plugins whose governance entrypoint subpath is not exported', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          plugins: ['@nx/jest/plugin'],
+        },
+        moduleLoader: async () => {
+          throw createErrorWithCode(
+            'Package subpath \'./plugin/governance-extension\' is not defined by "exports" in /repo/node_modules/@nx/jest/package.json',
+            'ERR_PACKAGE_PATH_NOT_EXPORTED'
+          );
+        },
+      })
+    ).resolves.toEqual({
+      metricProviders: [],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+    });
+  });
+
+  it('ignores absolute-path module lookup failures for missing governance entrypoints', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          plugins: ['@nx/playwright/plugin'],
+        },
+        moduleLoader: async () => {
+          throw createErrorWithCode(
+            "Cannot find module '/repo/node_modules/@nx/playwright/plugin/governance-extension/index.js' imported from /repo/dist/index.js",
+            'ERR_MODULE_NOT_FOUND'
+          );
+        },
+      })
+    ).resolves.toEqual({
+      metricProviders: [],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+    });
+  });
+
+  it('rethrows unrelated module resolution errors', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          plugins: ['plugin-a'],
+        },
+        moduleLoader: async () => {
+          throw createErrorWithCode(
+            "Cannot find module 'plugin-a/runtime-dependency'",
+            'MODULE_NOT_FOUND'
+          );
+        },
+      })
+    ).rejects.toThrow("Cannot find module 'plugin-a/runtime-dependency'");
   });
 
   it('rejects invalid governance extension modules without a named export', async () => {
