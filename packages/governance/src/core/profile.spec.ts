@@ -212,4 +212,15 @@ describe('normalizeGovernanceProfile', () => {
     expect(normalized.rules['project-name-convention']).toBeUndefined();
     expect(normalized.rules['metadata-presence']).toBeUndefined();
   });
+
+  it('keeps starter presets compatibility-safe by leaving opt-in generic rules disabled', () => {
+    const normalized = normalizeGovernanceProfile(
+      resolveBuiltInGovernanceProfile('frontend-layered')
+    );
+
+    expect(normalized.rules['project-name-convention']).toBeUndefined();
+    expect(normalized.rules['tag-convention']).toBeUndefined();
+    expect(normalized.rules['missing-domain']).toBeUndefined();
+    expect(normalized.rules['missing-layer']).toBeUndefined();
+  });
 });
