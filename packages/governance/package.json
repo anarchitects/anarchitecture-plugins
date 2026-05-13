@@ -1,6 +1,6 @@
 {
   "name": "@anarchitects/nx-governance",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Nx governance plugin for workspace health, boundaries, ownership, and architecture reporting.",
   "type": "module",
   "main": "dist/index.js",
