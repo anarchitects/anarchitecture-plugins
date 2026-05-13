@@ -16,10 +16,7 @@ import {
 } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
 import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
-import {
-  createNxWorkspaceAdapterResult,
-  readNxWorkspaceSnapshot,
-} from '../nx-adapter/read-workspace.js';
+import { loadNxGovernanceWorkspaceContext } from '../nx-adapter/read-workspace.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
   loadProfileOverrides,
@@ -1509,11 +1506,8 @@ async function buildAssessmentArtifacts(
     },
   };
 
-  const snapshot = await readNxWorkspaceSnapshot();
-  const inventory = buildInventory(
-    createNxWorkspaceAdapterResult(snapshot),
-    overrides
-  );
+  const { snapshot, adapterResult } = await loadNxGovernanceWorkspaceContext();
+  const inventory = buildInventory(adapterResult, overrides);
   const extensionRegistry = await registerGovernanceExtensions({
     workspaceRoot,
     profileName,
