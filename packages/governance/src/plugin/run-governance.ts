@@ -2,6 +2,10 @@ import { logger, workspaceRoot } from '@nx/devkit';
 
 import {
   buildGovernanceAssessment,
+  buildAiDriftHandoffPayload,
+  buildAiPrImpactHandoffPayload,
+  buildAiRootCauseHandoffPayload,
+  buildAiScorecardHandoffPayload,
   buildTopIssues,
   GovernanceAssessment,
   GovernanceProfile,
@@ -485,8 +489,7 @@ export async function runGovernanceAiRootCause(
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
     useCase: 'root-cause',
-    payload: {
-      useCase: 'root-cause',
+    payload: buildAiRootCauseHandoffPayload({
       request: scopedRootCauseRequest,
       analysis,
       payloadScope: {
@@ -495,7 +498,7 @@ export async function runGovernanceAiRootCause(
       metadata: {
         snapshotPath: path.relative(workspaceRoot, snapshotSource),
       },
-    },
+    }),
   });
 
   const relativeSnapshotPath = path.relative(workspaceRoot, snapshotSource);
@@ -622,14 +625,13 @@ export async function runGovernanceAiPrImpact(
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
     useCase: 'pr-impact',
-    payload: {
-      useCase: 'pr-impact',
+    payload: buildAiPrImpactHandoffPayload({
       request: scopedPrImpactRequest,
       analysis,
       payloadScope: {
         dependencies: prImpactDependencySlice.truncation,
       },
-    },
+    }),
   });
 
   const rendered =
@@ -765,8 +767,7 @@ export async function runGovernanceAiDrift(
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
     useCase: 'drift',
-    payload: {
-      useCase: 'drift',
+    payload: buildAiDriftHandoffPayload({
       request: scopedDriftRequest,
       analysis,
       payloadScope: {
@@ -776,7 +777,7 @@ export async function runGovernanceAiDrift(
         newViolations: newViolationSlice.truncation,
         resolvedViolations: resolvedViolationSlice.truncation,
       },
-    },
+    }),
   });
 
   const rendered =
@@ -1315,8 +1316,7 @@ export async function runGovernanceAiScorecard(
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
     useCase: 'scorecard',
-    payload: {
-      useCase: 'scorecard',
+    payload: buildAiScorecardHandoffPayload({
       request: scopedScorecardRequest,
       analysis,
       payloadScope: {
@@ -1324,7 +1324,7 @@ export async function runGovernanceAiScorecard(
         metricDeltas: scorecardMetricDeltaSlice.truncation,
         scoreDeltas: scorecardScoreDeltaSlice.truncation,
       },
-    },
+    }),
   });
 
   const rendered =

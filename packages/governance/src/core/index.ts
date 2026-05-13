@@ -1,5 +1,6 @@
 export * from './adapter.js';
 export * from './assessment.js';
+export * from './ai.js';
 export * from './built-in-rule-pack.js';
 export * from './built-in-rules.js';
 export * from './drift.js';
