@@ -5,9 +5,9 @@ import { execSync } from 'node:child_process';
 import { workspaceRoot } from '@nx/devkit';
 
 import {
+  buildMetricSnapshot,
   GovernanceAssessment,
   MetricSnapshot,
-  SnapshotViolation,
 } from '../core/index.js';
 
 const DEFAULT_SNAPSHOT_DIR = '.governance-metrics/snapshots';
@@ -39,7 +39,7 @@ export async function saveMetricSnapshot(
     options.snapshotDir ?? DEFAULT_SNAPSHOT_DIR
   );
 
-  const snapshot = buildSnapshot(options.assessment, {
+  const snapshot = buildMetricSnapshot(options.assessment, {
     timestamp,
     repo: options.repo ?? inferRepoName(),
     branch: options.branch ?? inferGitRef('branch'),
@@ -97,66 +97,6 @@ export function formatTimestampForFilename(date: Date): string {
     .toISOString()
     .replace(/:/g, '-')
     .replace(/\.\d{3}Z$/, '');
-}
-
-function buildSnapshot(
-  assessment: GovernanceAssessment,
-  metadata: Omit<
-    MetricSnapshot,
-    | 'metrics'
-    | 'scores'
-    | 'violations'
-    | 'health'
-    | 'signalBreakdown'
-    | 'metricBreakdown'
-    | 'topIssues'
-  >
-): MetricSnapshot {
-  const metrics = Object.fromEntries(
-    assessment.measurements.map((measurement) => [
-      measurement.id,
-      measurement.value,
-    ])
-  );
-  const scores = {
-    workspaceHealth: assessment.health.score,
-    ...Object.fromEntries(
-      assessment.measurements.map((measurement) => [
-        measurement.id,
-        measurement.score,
-      ])
-    ),
-  };
-
-  const violations: SnapshotViolation[] = assessment.violations.map(
-    (violation) => ({
-      type: violation.ruleId,
-      source: violation.project,
-      target: asString(violation.details?.target),
-      ruleId: violation.ruleId,
-      severity: violation.severity,
-      message: violation.message,
-    })
-  );
-
-  return {
-    ...metadata,
-    metrics,
-    scores,
-    violations,
-    health: {
-      score: assessment.health.score,
-      status: assessment.health.status,
-      grade: assessment.health.grade,
-    },
-    signalBreakdown: assessment.signalBreakdown,
-    metricBreakdown: assessment.metricBreakdown,
-    topIssues: assessment.topIssues,
-  };
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }
 
 function inferRepoName(): string {
