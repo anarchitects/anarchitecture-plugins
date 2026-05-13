@@ -88,6 +88,55 @@ describe('loadProfileOverrides', () => {
     }
   });
 
+  it('passes through optional normalized rule configuration without changing legacy fields', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        rules: {
+          'project-name-convention': {
+            enabled: true,
+            options: {
+              pattern: '^[a-z-]+$',
+            },
+          },
+          'missing-domain': {
+            enabled: true,
+            options: {
+              required: true,
+            },
+          },
+        },
+      });
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.rules).toEqual({
+        'project-name-convention': {
+          enabled: true,
+          options: {
+            pattern: '^[a-z-]+$',
+          },
+        },
+        'missing-domain': {
+          enabled: true,
+          options: {
+            required: true,
+          },
+        },
+      });
+      expect(result.layers).toEqual(frontendLayeredProfile.layers);
+      expect(result.allowedDomainDependencies).toEqual(
+        frontendLayeredProfile.allowedDomainDependencies
+      );
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
   it('normalizes explicit layer dependency matrices deterministically', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 

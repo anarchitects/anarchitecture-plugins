@@ -2,11 +2,19 @@ import type { GovernanceProject, Violation } from './models.js';
 import {
   deriveAllowedLayerDependenciesFromLayerOrder,
   normalizeGovernanceProfile,
+  type MissingDomainOptions,
+  type MissingLayerOptions,
+  type ProjectNameConventionOptions,
+  type TagConventionOptions,
   type GovernanceDomainBoundaryRuleOptions,
   type GovernanceLayerBoundaryRuleOptions,
   type GovernanceOwnershipPresenceRuleOptions,
 } from './profile.js';
-import type { GovernanceRule, GovernanceRuleContext } from './rules.js';
+import type {
+  GovernanceRule,
+  GovernanceRuleContext,
+  GovernanceRuleResult,
+} from './rules.js';
 
 export const domainBoundaryRule: GovernanceRule = {
   id: 'domain-boundary',
@@ -128,10 +136,143 @@ export const ownershipPresenceRule: GovernanceRule = {
   },
 };
 
+export const projectNameConventionRule: GovernanceRule = {
+  id: 'project-name-convention',
+  name: 'Project Name Convention',
+  description:
+    'Validates project names against an explicitly configured regular expression.',
+  category: 'convention',
+  defaultSeverity: 'warning',
+  evaluate({ workspace, profile }) {
+    if (!profile) {
+      return {};
+    }
+
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[projectNameConventionRule.id];
+    const options = ruleConfig?.options as
+      | ProjectNameConventionOptions
+      | undefined;
+
+    if (!ruleConfig?.enabled || !options?.pattern) {
+      return {};
+    }
+
+    const pattern = new RegExp(options.pattern);
+    const severity =
+      ruleConfig.severity ?? projectNameConventionRule.defaultSeverity;
+
+    return {
+      violations: workspace.projects.flatMap((project) =>
+        evaluateProjectNameConvention(project, options, pattern, severity)
+      ),
+    };
+  },
+};
+
+export const tagConventionRule: GovernanceRule = {
+  id: 'tag-convention',
+  name: 'Tag Convention',
+  description:
+    'Validates required and allowed generic tag prefixes and tag value patterns.',
+  category: 'metadata',
+  defaultSeverity: 'warning',
+  evaluate({ workspace, profile }) {
+    if (!profile) {
+      return {};
+    }
+
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[tagConventionRule.id];
+    const options = ruleConfig?.options as TagConventionOptions | undefined;
+
+    if (
+      !ruleConfig?.enabled ||
+      !options ||
+      !hasTagConventionConfiguration(options)
+    ) {
+      return {};
+    }
+
+    const severity = ruleConfig.severity ?? tagConventionRule.defaultSeverity;
+    const valuePattern = options.valuePattern
+      ? new RegExp(options.valuePattern)
+      : undefined;
+
+    return {
+      violations: workspace.projects.flatMap((project) =>
+        evaluateTagConvention(project, options, valuePattern, severity)
+      ),
+    };
+  },
+};
+
+export const missingDomainRule: GovernanceRule = {
+  id: 'missing-domain',
+  name: 'Missing Domain',
+  description: 'Requires a domain on projects when explicitly configured.',
+  category: 'metadata',
+  defaultSeverity: 'warning',
+  evaluate({ workspace, profile }) {
+    if (!profile) {
+      return {};
+    }
+
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[missingDomainRule.id];
+    const options = ruleConfig?.options as MissingDomainOptions | undefined;
+
+    if (!ruleConfig?.enabled || !options?.required) {
+      return {};
+    }
+
+    const severity = ruleConfig.severity ?? missingDomainRule.defaultSeverity;
+
+    return {
+      violations: workspace.projects.flatMap((project) =>
+        evaluateMissingDomain(project, severity)
+      ),
+    };
+  },
+};
+
+export const missingLayerRule: GovernanceRule = {
+  id: 'missing-layer',
+  name: 'Missing Layer',
+  description: 'Requires a layer on projects when explicitly configured.',
+  category: 'metadata',
+  defaultSeverity: 'warning',
+  evaluate({ workspace, profile }) {
+    if (!profile) {
+      return {};
+    }
+
+    const normalizedProfile = normalizeGovernanceProfile(profile);
+    const ruleConfig = normalizedProfile.rules[missingLayerRule.id];
+    const options = ruleConfig?.options as MissingLayerOptions | undefined;
+
+    if (!ruleConfig?.enabled || !options?.required) {
+      return {};
+    }
+
+    const severity = ruleConfig.severity ?? missingLayerRule.defaultSeverity;
+
+    return {
+      violations: workspace.projects.flatMap((project) =>
+        evaluateMissingLayer(project, severity)
+      ),
+    };
+  },
+};
+
 export const coreBuiltInPolicyRules: GovernanceRule[] = [
   domainBoundaryRule,
   layerBoundaryRule,
   ownershipPresenceRule,
+  projectNameConventionRule,
+  tagConventionRule,
+  missingDomainRule,
+  missingLayerRule,
 ];
 
 export function evaluateCoreBuiltInPolicyViolations(
@@ -205,6 +346,15 @@ export function evaluateCoreBuiltInPolicyViolations(
     for (const project of workspace.projects) {
       violations.push(...evaluateOwnershipPresence(project, ownershipSeverity));
     }
+  }
+
+  for (const rule of [
+    projectNameConventionRule,
+    tagConventionRule,
+    missingDomainRule,
+    missingLayerRule,
+  ]) {
+    violations.push(...evaluateSynchronousRuleViolations(rule, context));
   }
 
   return violations;
@@ -332,6 +482,168 @@ function evaluateOwnershipPresence(
   ];
 }
 
+function evaluateProjectNameConvention(
+  project: GovernanceProject,
+  options: ProjectNameConventionOptions,
+  pattern: RegExp,
+  severity: Violation['severity']
+): Violation[] {
+  if (pattern.test(project.name)) {
+    return [];
+  }
+
+  return [
+    {
+      id: `${project.name}-project-name-convention`,
+      ruleId: 'project-name-convention',
+      project: project.name,
+      severity,
+      category: 'convention',
+      message:
+        options.message ??
+        `Project ${project.name} does not match the configured naming convention.`,
+      details: {
+        projectName: project.name,
+        pattern: options.pattern,
+      },
+      recommendation:
+        'Rename the project or update the configured name pattern when the convention is intentional.',
+    },
+  ];
+}
+
+function evaluateTagConvention(
+  project: GovernanceProject,
+  options: TagConventionOptions,
+  valuePattern: RegExp | undefined,
+  severity: Violation['severity']
+): Violation[] {
+  const violations: Violation[] = [];
+  const prefixSeparator = options.prefixSeparator ?? ':';
+
+  for (const requiredPrefix of options.requiredPrefixes ?? []) {
+    if (
+      !project.tags.some((tag) =>
+        tag.startsWith(`${requiredPrefix}${prefixSeparator}`)
+      )
+    ) {
+      violations.push({
+        id: `${project.name}-tag-convention-required-${requiredPrefix}`,
+        ruleId: 'tag-convention',
+        project: project.name,
+        severity,
+        category: 'metadata',
+        message: `Project ${project.name} is missing a tag with required prefix ${requiredPrefix}.`,
+        details: {
+          requiredPrefix,
+          tags: project.tags,
+        },
+        recommendation:
+          'Add a tag with the required prefix or relax the configured requiredPrefixes list.',
+      });
+    }
+  }
+
+  for (const tag of project.tags) {
+    const { prefix, value } = splitGovernanceTag(tag, prefixSeparator);
+
+    if (
+      options.allowedPrefixes &&
+      options.allowedPrefixes.length > 0 &&
+      !options.allowedPrefixes.includes(prefix)
+    ) {
+      violations.push({
+        id: `${project.name}-tag-convention-allowed-${tag}`,
+        ruleId: 'tag-convention',
+        project: project.name,
+        severity,
+        category: 'metadata',
+        message: `Project ${project.name} uses tag ${tag} with disallowed prefix ${prefix}.`,
+        details: {
+          tag,
+          prefix,
+          allowedPrefixes: options.allowedPrefixes,
+        },
+        recommendation:
+          'Rename the tag to use an allowed prefix or expand the allowedPrefixes rule configuration.',
+      });
+    }
+
+    if (valuePattern && !valuePattern.test(value)) {
+      violations.push({
+        id: `${project.name}-tag-convention-value-${tag}`,
+        ruleId: 'tag-convention',
+        project: project.name,
+        severity,
+        category: 'metadata',
+        message: `Project ${project.name} has tag ${tag} with a value that does not match the configured pattern.`,
+        details: {
+          tag,
+          value,
+          valuePattern: options.valuePattern,
+        },
+        recommendation:
+          'Normalize the tag value or update the configured valuePattern when the convention is intentional.',
+      });
+    }
+  }
+
+  return violations;
+}
+
+function evaluateMissingDomain(
+  project: GovernanceProject,
+  severity: Violation['severity']
+): Violation[] {
+  if (project.domain) {
+    return [];
+  }
+
+  return [
+    {
+      id: `${project.name}-missing-domain`,
+      ruleId: 'missing-domain',
+      project: project.name,
+      severity,
+      category: 'metadata',
+      message: `Project ${project.name} is missing domain metadata.`,
+      recommendation:
+        'Populate the project domain through adapter normalization, metadata, or project overrides.',
+    },
+  ];
+}
+
+function evaluateMissingLayer(
+  project: GovernanceProject,
+  severity: Violation['severity']
+): Violation[] {
+  if (project.layer) {
+    return [];
+  }
+
+  return [
+    {
+      id: `${project.name}-missing-layer`,
+      ruleId: 'missing-layer',
+      project: project.name,
+      severity,
+      category: 'metadata',
+      message: `Project ${project.name} is missing layer metadata.`,
+      recommendation:
+        'Populate the project layer through adapter normalization, metadata, or project overrides.',
+    },
+  ];
+}
+
+function evaluateSynchronousRuleViolations(
+  rule: GovernanceRule,
+  context: GovernanceRuleContext
+): Violation[] {
+  const result = rule.evaluate(context) as GovernanceRuleResult;
+
+  return result.violations ?? [];
+}
+
 function projectByNameMap(
   projects: GovernanceProject[]
 ): Map<string, GovernanceProject> {
@@ -362,4 +674,31 @@ function isLayerDependencyAllowed(
   targetLayer: string
 ): boolean {
   return (allowedLayerDependencies[sourceLayer] ?? []).includes(targetLayer);
+}
+
+function hasTagConventionConfiguration(options: TagConventionOptions): boolean {
+  return (
+    (options.requiredPrefixes?.length ?? 0) > 0 ||
+    (options.allowedPrefixes?.length ?? 0) > 0 ||
+    typeof options.valuePattern === 'string'
+  );
+}
+
+function splitGovernanceTag(
+  tag: string,
+  prefixSeparator: string
+): { prefix: string; value: string } {
+  const separatorIndex = tag.indexOf(prefixSeparator);
+
+  if (separatorIndex === -1) {
+    return {
+      prefix: tag,
+      value: tag,
+    };
+  }
+
+  return {
+    prefix: tag.slice(0, separatorIndex),
+    value: tag.slice(separatorIndex + prefixSeparator.length),
+  };
 }

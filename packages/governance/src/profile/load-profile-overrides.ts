@@ -6,6 +6,7 @@ import {
   AllowedLayerDependencies,
   GovernanceException,
   GovernanceProfile,
+  GovernanceRuleConfig,
   HealthStatusThresholds,
   Measurement,
   ProfileOverrides,
@@ -54,6 +55,7 @@ export async function loadProfileOverrides(
   ) as GovernanceProfileFile & {
     allowedLayerDependencies?: unknown;
     exceptions?: unknown;
+    rules?: unknown;
   };
   const layers =
     raw.layers && raw.layers.length > 0 ? raw.layers : builtInProfile.layers;
@@ -98,6 +100,7 @@ export async function loadProfileOverrides(
       ...builtInProfile.ownership,
       ...(raw.ownership ?? {}),
     },
+    rules: normalizeRuleConfigs(raw.rules),
     health: {
       statusThresholds: normalizeHealthStatusThresholds(
         raw.health?.statusThresholds,
@@ -151,6 +154,7 @@ function buildDefaultResolvedOverrides(
     allowedLayerDependencies: profile.allowedLayerDependencies,
     allowedDomainDependencies: profile.allowedDomainDependencies,
     ownership: profile.ownership,
+    rules: profile.rules,
     health: profile.health,
     metrics: profile.metrics,
     exceptions: [],
@@ -158,6 +162,41 @@ function buildDefaultResolvedOverrides(
     projectOverrides: {},
     runtimeWarnings: [],
   };
+}
+
+function normalizeRuleConfigs(
+  raw: unknown
+): Record<string, GovernanceRuleConfig> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return undefined;
+  }
+
+  const normalizedEntries = Object.entries(raw).flatMap(([ruleId, value]) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return [];
+    }
+
+    const candidate = value as Record<string, unknown>;
+    const config: GovernanceRuleConfig = {
+      ...(typeof candidate.enabled === 'boolean'
+        ? { enabled: candidate.enabled }
+        : {}),
+      ...(candidate.severity === 'error' ||
+      candidate.severity === 'warning' ||
+      candidate.severity === 'info'
+        ? { severity: candidate.severity }
+        : {}),
+      ...(candidate.options !== undefined
+        ? { options: candidate.options }
+        : {}),
+    };
+
+    return [[ruleId, config] as const];
+  });
+
+  return normalizedEntries.length > 0
+    ? Object.fromEntries(normalizedEntries)
+    : undefined;
 }
 
 function normalizeMetricWeights(
