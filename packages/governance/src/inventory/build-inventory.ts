@@ -7,6 +7,8 @@ import {
 } from '../core/index.js';
 import { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
 
+// TODO(#248): Switch inventory normalization to the Core-owned
+// GovernanceWorkspaceAdapterResult contract without changing behavior.
 export function buildInventory(
   snapshot: AdapterWorkspaceSnapshot,
   overrides: ProfileOverrides = { projectOverrides: {} }
