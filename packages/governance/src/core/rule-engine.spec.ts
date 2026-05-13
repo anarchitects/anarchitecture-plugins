@@ -50,7 +50,7 @@ describe('Core rule engine contracts', () => {
   });
 
   it('aggregates violations, signals, and measurements deterministically', async () => {
-    const firstViolation: Violation = {
+    const violation: Violation = {
       id: 'domain-violation',
       ruleId: 'domain-boundary',
       project: 'platform-shell',
@@ -58,7 +58,7 @@ describe('Core rule engine contracts', () => {
       category: 'boundary',
       message: 'Platform shell should not depend on booking UI.',
     };
-    const firstSignal: GovernanceSignal = {
+    const signal: GovernanceSignal = {
       id: 'signal-domain-violation',
       type: 'domain-boundary-violation',
       sourceProjectId: 'platform-shell',
@@ -70,7 +70,7 @@ describe('Core rule engine contracts', () => {
       source: 'policy',
       createdAt: '2026-05-13T00:00:00.000Z',
     };
-    const firstMeasurement: Measurement = {
+    const measurement: Measurement = {
       id: 'boundary-integrity',
       name: 'Boundary Integrity',
       family: 'boundaries',
@@ -80,24 +80,16 @@ describe('Core rule engine contracts', () => {
       unit: 'ratio',
     };
 
-    const secondViolation: Violation = {
-      id: 'ownership-violation',
-      ruleId: 'ownership-presence',
-      project: 'booking-domain',
-      severity: 'warning',
-      category: 'ownership',
-      message: 'Booking domain is missing ownership metadata.',
-    };
-
     const result = await evaluateRules(
       [
         testRule('aggregate-one', () => ({
-          violations: [firstViolation],
-          signals: [firstSignal],
+          violations: [violation],
         })),
         testRule('aggregate-two', () => ({
-          measurements: [firstMeasurement],
-          violations: [secondViolation],
+          signals: [signal],
+        })),
+        testRule('aggregate-three', () => ({
+          measurements: [measurement],
         })),
       ],
       {
@@ -105,9 +97,40 @@ describe('Core rule engine contracts', () => {
       }
     );
 
-    expect(result.violations).toEqual([firstViolation, secondViolation]);
-    expect(result.signals).toEqual([firstSignal]);
-    expect(result.measurements).toEqual([firstMeasurement]);
+    expect(result.violations).toEqual([violation]);
+    expect(result.signals).toEqual([signal]);
+    expect(result.measurements).toEqual([measurement]);
+  });
+
+  it('treats missing arrays as empty during aggregation', async () => {
+    const measurement: Measurement = {
+      id: 'ownership-coverage',
+      name: 'Ownership Coverage',
+      family: 'ownership',
+      value: 1,
+      score: 100,
+      maxScore: 100,
+      unit: 'ratio',
+    };
+
+    const result = await evaluateRules(
+      [
+        testRule('empty-result', () => ({})),
+        testRule('measurement-only', () => ({
+          measurements: [measurement],
+        })),
+        testRule('empty-result-two', () => ({})),
+      ],
+      {
+        workspace: coreTestWorkspace,
+      }
+    );
+
+    expect(result).toEqual({
+      violations: [],
+      signals: [],
+      measurements: [measurement],
+    });
   });
 
   it('supports plain governance workspace fixtures without Nx APIs', async () => {
