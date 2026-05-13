@@ -213,6 +213,31 @@ Naming and convention governance is a generic Core capability because it can be 
 | `domain-name-convention` | Deferred | Enforce domain naming where domain taxonomy becomes explicit. |
 | `layer-name-convention` | Deferred | Enforce layer naming where layer taxonomy becomes explicit. |
 
+### Core vs Extension-Specific Naming Conventions
+
+Core convention rules are limited to platform-independent workspace and project classification concepts:
+
+- project names
+- project roots, when a filesystem root exists
+- governance tags
+- domain names
+- layer names
+- scope/classification names, if later generalized
+
+Technology-specific naming conventions must be contributed by adapters or extensions through rule packs, not hardcoded into Core.
+
+Examples of extension-owned naming rules:
+
+| Extension / adapter | Example rule ids | Examples |
+|---|---|---|
+| Maven / Java extension | `maven-group-id-convention`, `java-package-name-convention`, `java-class-name-convention` | groupId format, Java package naming, class/interface naming. |
+| Angular extension | `angular-component-name-convention`, `angular-service-name-convention`, `angular-selector-convention` | component class suffixes, service suffixes, selector prefixes. |
+| TypeScript extension | `typescript-file-name-convention`, `typescript-symbol-name-convention`, `typescript-barrel-name-convention` | file naming, exported symbol naming, barrel file conventions. |
+| NestJS extension | `nestjs-controller-name-convention`, `nestjs-provider-name-convention`, `nestjs-module-name-convention` | controller/service/module suffixes. |
+| Nx adapter or Nx-specific extension | `nx-target-name-convention`, `nx-project-tag-convention` | target naming and Nx-specific tag semantics. |
+
+These rules should use the same `GovernanceRule`, `GovernanceViolation`, and profile configuration contracts as Core rules. Profiles may enable, disable, configure, and override extension naming rules in exactly the same way as Core rules.
+
 ### Ownership Governance
 
 | Rule id | Initial status | Purpose |
@@ -374,10 +399,19 @@ Profiles should be able to configure:
         "allowedPrefixes": ["scope", "type", "layer", "domain", "platform"],
         "valuePattern": "^[a-z][a-z0-9-]*$"
       }
+    },
+    "java-package-name-convention": {
+      "enabled": true,
+      "severity": "warning",
+      "options": {
+        "pattern": "^be\\.anarchitects(\\.[a-z][a-z0-9]*)+$"
+      }
     }
   }
 }
 ```
+
+The `java-package-name-convention` example illustrates that extension-contributed rules participate in the same profile model as Core rules, while the rule implementation remains outside Core.
 
 ## Backward Compatibility Mapping
 
@@ -545,6 +579,7 @@ Requirements:
 - extension violations use the same `GovernanceViolation` contract.
 - extension rule configuration lives under `profile.rules` and/or `profile.extensions`.
 - extension failures and optional extension behavior are finalized in #229.
+- technology-specific naming conventions are extension rules, not Core rules.
 
 ## Diagnostics Contract
 
