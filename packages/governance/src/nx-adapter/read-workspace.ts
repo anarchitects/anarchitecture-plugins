@@ -2,8 +2,11 @@ import { createProjectGraphAsync, workspaceRoot } from '@nx/devkit';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { GovernanceWorkspaceAdapterResult } from '../core/index.js';
+
 import { ownersForProjectRoot, readCodeowners } from './codeowners.js';
-import { AdapterWorkspaceSnapshot } from './types.js';
+import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
+import type { AdapterWorkspaceSnapshot } from './types.js';
 
 export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapshot> {
   const graph = await createProjectGraphAsync();
@@ -64,6 +67,16 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
     dependencies,
     codeownersByProject,
   };
+}
+
+export function createNxWorkspaceAdapterResult(
+  snapshot: AdapterWorkspaceSnapshot
+): GovernanceWorkspaceAdapterResult {
+  return toGovernanceWorkspaceAdapterResult(snapshot);
+}
+
+export async function readNxWorkspaceAdapterResult(): Promise<GovernanceWorkspaceAdapterResult> {
+  return createNxWorkspaceAdapterResult(await readNxWorkspaceSnapshot());
 }
 
 export function resolveProjectTagsAndMetadata(

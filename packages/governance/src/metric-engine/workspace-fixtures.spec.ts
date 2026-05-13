@@ -1,19 +1,18 @@
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
-import type { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
-import { toGovernanceWorkspaceAdapterResult } from '../nx-adapter/to-governance-workspace-adapter-result.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import { frontendLayeredProfile } from '../presets/frontend-layered/profile.js';
 import {
   buildGraphSignals,
   buildPolicySignals,
 } from '../signal-engine/index.js';
+import type { GovernanceWorkspaceAdapterResult } from '../core/index.js';
 
 import { calculateMetrics } from './calculate-metrics.js';
 
 const WORKSPACE_FIXTURES: Array<{
   name: string;
-  snapshot: AdapterWorkspaceSnapshot;
+  adapterResult: GovernanceWorkspaceAdapterResult;
   expected: {
     violationRuleIds: string[];
     measurements: Record<string, { value: number; score: number }>;
@@ -27,8 +26,8 @@ const WORKSPACE_FIXTURES: Array<{
 }> = [
   {
     name: 'healthy layered workspace',
-    snapshot: {
-      root: '/workspace',
+    adapterResult: {
+      workspaceRoot: '/workspace',
       projects: [
         project('shop-app', 'application', 'shop', 'app', true, true),
         project('shop-feature', 'library', 'shop', 'feature', true, true),
@@ -40,7 +39,6 @@ const WORKSPACE_FIXTURES: Array<{
         dependency('shop-feature', 'shop-ui'),
         dependency('shop-ui', 'shop-util'),
       ],
-      codeownersByProject: {},
     },
     expected: {
       violationRuleIds: [],
@@ -62,8 +60,8 @@ const WORKSPACE_FIXTURES: Array<{
   },
   {
     name: 'shared dependency warning workspace',
-    snapshot: {
-      root: '/workspace',
+    adapterResult: {
+      workspaceRoot: '/workspace',
       projects: [
         project('shop-app', 'application', 'shop', 'app', true, true),
         project('shop-feature', 'library', 'shop', 'feature', true, true),
@@ -75,7 +73,6 @@ const WORKSPACE_FIXTURES: Array<{
         dependency('shop-feature', 'shared-ui'),
         dependency('shared-ui', 'shared-util'),
       ],
-      codeownersByProject: {},
     },
     expected: {
       violationRuleIds: [],
@@ -97,8 +94,8 @@ const WORKSPACE_FIXTURES: Array<{
   },
   {
     name: 'boundary and ownership hotspot workspace',
-    snapshot: {
-      root: '/workspace',
+    adapterResult: {
+      workspaceRoot: '/workspace',
       projects: [
         project('orders-app', 'application', 'orders', 'app', true, true),
         project(
@@ -115,7 +112,6 @@ const WORKSPACE_FIXTURES: Array<{
         dependency('orders-app', 'payments-feature'),
         dependency('payments-ui', 'orders-app'),
       ],
-      codeownersByProject: {},
     },
     expected: {
       violationRuleIds: [
@@ -149,13 +145,10 @@ const WORKSPACE_FIXTURES: Array<{
 describe('workspace metric baselines', () => {
   it.each(WORKSPACE_FIXTURES)(
     'matches expected weighted metric baseline for $name',
-    ({ snapshot, expected }) => {
-      const inventory = buildInventory(
-        toGovernanceWorkspaceAdapterResult(snapshot),
-        {
-          projectOverrides: {},
-        }
-      );
+    ({ adapterResult, expected }) => {
+      const inventory = buildInventory(adapterResult, {
+        projectOverrides: {},
+      });
       const violations = evaluatePolicies(inventory, frontendLayeredProfile);
       const signals = [
         ...buildGraphSignals(toWorkspaceGraphSnapshot(inventory)),
@@ -237,6 +230,7 @@ function project(
   documented: boolean
 ) {
   return {
+    id: name,
     name,
     root: `packages/${name}`,
     type,
@@ -256,8 +250,8 @@ function project(
 
 function dependency(source: string, target: string) {
   return {
-    source,
-    target,
+    sourceProjectId: source,
+    targetProjectId: target,
     type: 'static' as const,
   };
 }
