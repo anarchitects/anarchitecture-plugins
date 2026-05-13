@@ -184,6 +184,10 @@ describe('Core rule engine contracts', () => {
       'domain-boundary',
       'layer-boundary',
       'ownership-presence',
+      'project-name-convention',
+      'tag-convention',
+      'missing-domain',
+      'missing-layer',
     ]);
     expect(coreBuiltInRulePacks).toEqual([coreBuiltInRulePack]);
   });

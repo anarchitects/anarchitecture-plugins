@@ -43,7 +43,12 @@ export interface Violation {
   ruleId: string;
   project: string;
   severity: 'error' | 'warning' | 'info';
-  category: GovernanceSignalCategory | 'architecture' | 'documentation';
+  category:
+    | GovernanceSignalCategory
+    | 'architecture'
+    | 'documentation'
+    | 'convention'
+    | 'metadata';
   message: string;
   details?: Record<string, unknown>;
   recommendation?: string;
@@ -194,7 +199,12 @@ export interface GovernanceExceptionFinding {
   source: 'policy' | 'conformance';
   status: GovernanceExceptionStatus;
   ruleId?: string;
-  category: GovernanceSignalCategory | 'architecture' | 'documentation';
+  category:
+    | GovernanceSignalCategory
+    | 'architecture'
+    | 'documentation'
+    | 'convention'
+    | 'metadata';
   severity: GovernanceSignalSeverity;
   projectId?: string;
   targetProjectId?: string;

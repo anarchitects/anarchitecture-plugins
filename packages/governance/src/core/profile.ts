@@ -20,6 +20,7 @@ export interface GovernanceProfile {
   description?: string;
   boundaryPolicySource: 'profile' | 'eslint';
   layers: string[];
+  rules?: Record<string, GovernanceRuleConfig>;
   allowedLayerDependencies?: AllowedLayerDependencies;
   allowedDomainDependencies: Record<string, string[]>;
   ownership: {
@@ -62,6 +63,41 @@ export interface GovernanceProfileCompatibility {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
 }
 
+export interface ProjectNameConventionOptions {
+  pattern: string;
+  message?: string;
+}
+
+export interface ProjectRootConventionOptions {
+  patterns: string[];
+  message?: string;
+  requireRoot?: boolean;
+}
+
+export interface TagConventionOptions {
+  requiredPrefixes?: string[];
+  allowedPrefixes?: string[];
+  valuePattern?: string;
+  prefixSeparator?: string;
+}
+
+export interface DocumentationPresenceOptions {
+  metadataKeys?: string[];
+  requireAny?: boolean;
+}
+
+export interface MissingDomainOptions {
+  required?: boolean;
+}
+
+export interface MissingLayerOptions {
+  required?: boolean;
+}
+
+export interface ForbiddenDependencyTypeOptions {
+  allowedTypes?: string[];
+}
+
 export interface NormalizedGovernanceProfile {
   name: string;
   description?: string;
@@ -75,6 +111,7 @@ export interface NormalizedGovernanceProfile {
 export interface ProfileOverrides {
   boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
   layers?: string[];
+  rules?: Record<string, GovernanceRuleConfig>;
   allowedLayerDependencies?: AllowedLayerDependencies;
   allowedDomainDependencies?: Record<string, string[]>;
   ownership?: Partial<GovernanceProfile['ownership']>;
@@ -103,36 +140,54 @@ export function normalizeGovernanceProfile(
   const allowedLayerDependencies =
     profile.allowedLayerDependencies ??
     deriveAllowedLayerDependenciesFromLayerOrder(profile.layers);
+  const compatibilityRules: Record<string, GovernanceRuleConfig> = {
+    'domain-boundary': {
+      enabled: true,
+      severity: 'error',
+      options: {
+        allowedDependencies: profile.allowedDomainDependencies,
+      } satisfies GovernanceDomainBoundaryRuleOptions,
+    },
+    'layer-boundary': {
+      enabled: true,
+      severity: 'warning',
+      options: {
+        allowedDependencies: allowedLayerDependencies,
+        layers: [...profile.layers],
+        usesExplicitDependencies:
+          profile.allowedLayerDependencies !== undefined,
+      } satisfies GovernanceLayerBoundaryRuleOptions,
+    },
+    'ownership-presence': {
+      enabled: true,
+      severity: 'warning',
+      options: {
+        required: profile.ownership.required,
+        metadataField: profile.ownership.metadataField,
+      } satisfies GovernanceOwnershipPresenceRuleOptions,
+    },
+  };
+  const explicitRules = Object.fromEntries(
+    Object.entries(profile.rules ?? {}).map(([ruleId, ruleConfig]) => [
+      ruleId,
+      {
+        ...(compatibilityRules[ruleId] ?? {}),
+        ...ruleConfig,
+        ...(ruleConfig.options !== undefined
+          ? { options: ruleConfig.options }
+          : compatibilityRules[ruleId]?.options !== undefined
+          ? { options: compatibilityRules[ruleId]?.options }
+          : {}),
+      } satisfies GovernanceRuleConfig,
+    ])
+  );
 
   return {
     name: profile.name,
     description: profile.description,
     rules: {
-      'domain-boundary': {
-        enabled: true,
-        severity: 'error',
-        options: {
-          allowedDependencies: profile.allowedDomainDependencies,
-        } satisfies GovernanceDomainBoundaryRuleOptions,
-      },
-      'layer-boundary': {
-        enabled: true,
-        severity: 'warning',
-        options: {
-          allowedDependencies: allowedLayerDependencies,
-          layers: [...profile.layers],
-          usesExplicitDependencies:
-            profile.allowedLayerDependencies !== undefined,
-        } satisfies GovernanceLayerBoundaryRuleOptions,
-      },
-      'ownership-presence': {
-        enabled: true,
-        severity: 'warning',
-        options: {
-          required: profile.ownership.required,
-          metadataField: profile.ownership.metadataField,
-        } satisfies GovernanceOwnershipPresenceRuleOptions,
-      },
+      ...compatibilityRules,
+      ...explicitRules,
     },
     scoring: {
       statusThresholds: profile.health.statusThresholds,

@@ -1484,6 +1484,10 @@ async function buildAssessmentArtifacts(
   const effectiveProfile: GovernanceProfile = {
     ...builtInProfile,
     layers: overrides.layers ?? builtInProfile.layers,
+    rules: {
+      ...(builtInProfile.rules ?? {}),
+      ...(overrides.rules ?? {}),
+    },
     allowedLayerDependencies:
       overrides.allowedLayerDependencies ??
       builtInProfile.allowedLayerDependencies,

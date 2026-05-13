@@ -144,6 +144,41 @@ describe('normalizeGovernanceProfile', () => {
     expect(normalized.rules['domain-boundary']).toBeDefined();
   });
 
+  it('preserves explicit generic rule configuration for opt-in rules', () => {
+    const normalized = normalizeGovernanceProfile({
+      ...baseProfile,
+      rules: {
+        'project-name-convention': {
+          enabled: true,
+          severity: 'info',
+          options: {
+            pattern: '^[a-z-]+$',
+          },
+        },
+        'missing-domain': {
+          enabled: true,
+          options: {
+            required: true,
+          },
+        },
+      },
+    });
+
+    expect(normalized.rules['project-name-convention']).toEqual({
+      enabled: true,
+      severity: 'info',
+      options: {
+        pattern: '^[a-z-]+$',
+      },
+    });
+    expect(normalized.rules['missing-domain']).toEqual({
+      enabled: true,
+      options: {
+        required: true,
+      },
+    });
+  });
+
   it('normalizes built-in presets without changing default rule activation', () => {
     const presetNames = [
       'frontend-layered',
