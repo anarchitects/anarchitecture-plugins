@@ -1,11 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-export type AiHandoffUseCase =
-  | 'root-cause'
-  | 'drift'
-  | 'pr-impact'
-  | 'scorecard';
+import type {
+  AiHandoffUseCase,
+  GovernanceAiHandoffPayload,
+} from '../core/index.js';
 
 export interface AiHandoffArtifacts {
   payloadAbsolutePath: string;
@@ -18,7 +17,7 @@ export interface AiHandoffArtifacts {
 export interface ExportAiHandoffArtifactsParams {
   workspaceRoot: string;
   useCase: AiHandoffUseCase;
-  payload: Record<string, unknown>;
+  payload: GovernanceAiHandoffPayload;
   outputDir?: string;
 }
 
