@@ -1,6 +1,9 @@
 import type {
+  GovernanceDependencyInput,
   GovernanceDependency,
+  GovernanceProjectInput,
   GovernanceProject,
+  GovernanceWorkspaceAdapterResult,
   GovernanceWorkspace,
   Ownership,
 } from '../index.js';
@@ -76,6 +79,64 @@ export const coreTestWorkspace = {
   projects: coreTestProjects,
   dependencies: coreTestDependencies,
 } satisfies GovernanceWorkspace;
+
+export const coreTestAdapterProjects = [
+  {
+    id: 'booking-ui',
+    root: 'libs/booking/ui',
+    type: 'library',
+    tags: ['scope:booking', 'layer:ui', 'type:ui'],
+    metadata: {
+      documentation: true,
+    },
+  },
+  {
+    id: 'booking-domain',
+    root: 'libs/booking/domain',
+    type: 'library',
+    tags: ['scope:booking', 'layer:domain', 'type:domain'],
+    ownership: {
+      contacts: ['@booking-team'],
+      source: 'codeowners',
+    },
+    metadata: {
+      ownership: {
+        team: 'booking-team',
+      },
+    },
+  },
+  {
+    id: 'platform-shell',
+    root: 'apps/platform-shell',
+    type: 'application',
+    tags: ['scope:platform', 'layer:app', 'type:app'],
+    ownership: {
+      contacts: ['@platform-team'],
+      source: 'codeowners',
+    },
+    metadata: {},
+  },
+] satisfies GovernanceProjectInput[];
+
+export const coreTestAdapterDependencies = [
+  {
+    sourceProjectId: 'booking-ui',
+    targetProjectId: 'booking-domain',
+    type: 'static',
+  },
+  {
+    sourceProjectId: 'platform-shell',
+    targetProjectId: 'booking-ui',
+    type: 'static',
+    sourceFile: 'apps/platform-shell/src/main.ts',
+  },
+] satisfies GovernanceDependencyInput[];
+
+export const coreTestAdapterResult = {
+  workspaceRoot: '/virtual/workspace',
+  projects: coreTestAdapterProjects,
+  dependencies: coreTestAdapterDependencies,
+} satisfies GovernanceWorkspaceAdapterResult;
 
 export const coreTestWorkspaceWithDanglingDependency = {
   id: 'edge-workspace',

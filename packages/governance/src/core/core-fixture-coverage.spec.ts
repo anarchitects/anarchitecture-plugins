@@ -1,4 +1,5 @@
 import type {
+  GovernanceWorkspaceAdapterResult,
   GovernanceSignal,
   GovernanceSignalCategory,
   GovernanceSignalSeverity,
@@ -6,6 +7,7 @@ import type {
   GovernanceSignalType,
 } from './index.js';
 import {
+  coreTestAdapterResult,
   coreTestWorkspace,
   coreTestWorkspaceWithDanglingDependency,
   findDanglingDependencies,
@@ -62,7 +64,30 @@ describe('Core signal contracts', () => {
 });
 
 describe('Core adapter contract coverage', () => {
-  it.todo(
-    'creates adapter result fixtures through the Core boundary once #247 lands in this branch'
-  );
+  it('supports plain adapter result data through the core boundary', () => {
+    const adapterResult: GovernanceWorkspaceAdapterResult = {
+      ...coreTestAdapterResult,
+      capabilities: [
+        {
+          id: 'capability:test-fixture',
+          version: '1',
+          data: {
+            origin: 'core-fixture',
+          },
+        },
+      ],
+      diagnostics: [
+        {
+          code: 'fixture-warning',
+          message: 'Fixture diagnostic',
+          source: 'test',
+        },
+      ],
+    };
+
+    expect(adapterResult.projects).toHaveLength(3);
+    expect(adapterResult.dependencies).toHaveLength(2);
+    expect(adapterResult.capabilities?.[0]?.id).toBe('capability:test-fixture');
+    expect(adapterResult.diagnostics?.[0]?.code).toBe('fixture-warning');
+  });
 });

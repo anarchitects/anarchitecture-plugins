@@ -1,6 +1,7 @@
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
 import type { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
+import { toGovernanceWorkspaceAdapterResult } from '../nx-adapter/to-governance-workspace-adapter-result.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import { frontendLayeredProfile } from '../presets/frontend-layered/profile.js';
 import {
@@ -149,7 +150,12 @@ describe('workspace metric baselines', () => {
   it.each(WORKSPACE_FIXTURES)(
     'matches expected weighted metric baseline for $name',
     ({ snapshot, expected }) => {
-      const inventory = buildInventory(snapshot, { projectOverrides: {} });
+      const inventory = buildInventory(
+        toGovernanceWorkspaceAdapterResult(snapshot),
+        {
+          projectOverrides: {},
+        }
+      );
       const violations = evaluatePolicies(inventory, frontendLayeredProfile);
       const signals = [
         ...buildGraphSignals(toWorkspaceGraphSnapshot(inventory)),

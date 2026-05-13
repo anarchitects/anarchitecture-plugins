@@ -195,16 +195,18 @@ export default [
     files: ['src/inventory/build-inventory.ts'],
     ignores: governanceCoreCandidateIgnores,
     rules: {
-      // Temporary exception for #248. Inventory still accepts Nx adapter
-      // snapshot types directly.
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: governanceCoreHostForbiddenImports,
+              group: [
+                ...governanceCoreHostForbiddenImports,
+                '../nx-adapter',
+                '../nx-adapter/*',
+              ],
               message:
-                'Inventory normalization must not depend on Nx host modules. See docs/governance/internal-core-boundary.md.',
+                'Inventory normalization must not depend on Nx adapter or Nx host modules. See docs/governance/internal-core-boundary.md.',
             },
           ],
         },
