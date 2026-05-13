@@ -2,6 +2,7 @@ import type {
   GovernanceRule,
   GovernanceRuleCategory,
   GovernanceRuleContext,
+  GovernanceRulePack,
   GovernanceRuleSeverity,
   GovernanceSignal,
   Measurement,
@@ -18,8 +19,14 @@ import { coreTestWorkspace } from './testing/workspace.fixtures.js';
 
 describe('Core rule engine contracts', () => {
   it('returns empty arrays for an empty rule pack', async () => {
+    const emptyRulePack: GovernanceRulePack = {
+      id: 'empty',
+      name: 'Empty',
+      rules: [],
+    };
+
     await expect(
-      evaluateRulePack(coreBuiltInRulePack, {
+      evaluateRulePack(emptyRulePack, {
         workspace: coreTestWorkspace,
       })
     ).resolves.toEqual({
@@ -171,11 +178,13 @@ describe('Core rule engine contracts', () => {
 
   it('exposes the built-in core rule pack placeholder from the core boundary', () => {
     expect(CORE_BUILT_IN_RULE_PACK_ID).toBe('core');
-    expect(coreBuiltInRulePack).toEqual({
-      id: 'core',
-      name: 'Governance Core Built-in Rules',
-      rules: [],
-    });
+    expect(coreBuiltInRulePack.id).toBe('core');
+    expect(coreBuiltInRulePack.name).toBe('Governance Core Built-in Rules');
+    expect(coreBuiltInRulePack.rules.map((rule) => rule.id)).toEqual([
+      'domain-boundary',
+      'layer-boundary',
+      'ownership-presence',
+    ]);
     expect(coreBuiltInRulePacks).toEqual([coreBuiltInRulePack]);
   });
 });
