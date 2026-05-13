@@ -1276,6 +1276,61 @@ describe('runGovernance', () => {
     }
   });
 
+  it('keeps insufficient-snapshots drift behavior compatibility-safe', async () => {
+    const loggerInfo = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+    const stdoutWrite = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    const snapshotDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-drift-empty-')
+    );
+    const expectedMessage =
+      'At least two snapshots are required. Run nx repo-snapshot multiple times first.';
+
+    try {
+      const jsonResult = await runGovernanceDrift({
+        output: 'json',
+        snapshotDir,
+      });
+      const cliResult = await runGovernanceDrift({
+        output: 'cli',
+        snapshotDir,
+      });
+
+      expect(jsonResult).toEqual({
+        comparison: null,
+        signals: [],
+        summary: {
+          overallTrend: 'stable',
+          worseningCount: 0,
+          improvingCount: 0,
+          stableCount: 0,
+          topWorsening: [],
+          topImproving: [],
+        },
+        rendered: JSON.stringify(
+          {
+            error: expectedMessage,
+          },
+          null,
+          2
+        ),
+        success: false,
+      });
+      expect(JSON.parse(jsonResult.rendered)).toEqual({
+        error: expectedMessage,
+      });
+      expect(cliResult.rendered).toBe(expectedMessage);
+      expect(cliResult.success).toBe(false);
+      expect(stdoutWrite).toHaveBeenCalledWith(`${jsonResult.rendered}\n`);
+      expect(loggerInfo).toHaveBeenCalledWith(expectedMessage);
+    } finally {
+      rmSync(snapshotDir, { recursive: true, force: true });
+    }
+  });
+
   it('builds enriched snapshot comparisons and drift summaries', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     jest.spyOn(process.stdout, 'write').mockImplementation(() => true);

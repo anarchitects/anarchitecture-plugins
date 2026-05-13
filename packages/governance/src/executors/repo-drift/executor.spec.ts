@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 jest.mock('../../plugin/run-governance.js', () => ({
   runGovernanceDrift: jest.fn(),
 }));
@@ -38,5 +41,35 @@ describe('repo-drift executor', () => {
       current: 'current.json',
     });
     expect(result).toEqual({ success: true });
+  });
+
+  it('keeps public registration and schema defaults stable', () => {
+    const config = JSON.parse(
+      readFileSync(path.join(__dirname, '..', '..', 'index.json'), 'utf8')
+    ) as {
+      executors: Record<string, { implementation: string; schema: string }>;
+    };
+    const schema = JSON.parse(
+      readFileSync(path.join(__dirname, 'schema.json'), 'utf8')
+    ) as {
+      additionalProperties: boolean;
+      properties: {
+        output: { default: string; enum: string[] };
+        snapshotDir: { default: string };
+      };
+    };
+
+    expect(config.executors['repo-drift']).toEqual({
+      implementation: './executors/repo-drift/executor',
+      schema: './executors/repo-drift/schema.json',
+    });
+    expect(schema.properties.output).toMatchObject({
+      default: 'cli',
+      enum: ['cli', 'json'],
+    });
+    expect(schema.properties.snapshotDir.default).toBe(
+      '.governance-metrics/snapshots'
+    );
+    expect(schema.additionalProperties).toBe(false);
   });
 });
