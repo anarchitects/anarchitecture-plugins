@@ -50,4 +50,6 @@ test-output
 .claude/settings.local.json
 vite.config.*.timestamp*
 
+.yarn/install-state.gz
+
 /.governance-metrics
