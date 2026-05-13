@@ -10,7 +10,7 @@ import {
   GovernanceExtensionHostContext,
   GovernanceMetricProvider,
   GovernanceMetricProviderInput,
-  GovernanceRulePack,
+  GovernanceExtensionRulePack,
   GovernanceRulePackInput,
   GovernanceSignalProvider,
   GovernanceSignalProviderInput,
@@ -26,7 +26,7 @@ interface RegisteredGovernanceContribution<T> {
 export interface GovernanceExtensionRegistry {
   metricProviders: RegisteredGovernanceContribution<GovernanceMetricProvider>[];
   signalProviders: RegisteredGovernanceContribution<GovernanceSignalProvider>[];
-  rulePacks: RegisteredGovernanceContribution<GovernanceRulePack>[];
+  rulePacks: RegisteredGovernanceContribution<GovernanceExtensionRulePack>[];
   enrichers: RegisteredGovernanceContribution<GovernanceWorkspaceEnricher>[];
 }
 
@@ -93,7 +93,7 @@ export class GovernanceExtensionHost
     });
   }
 
-  registerRulePack(rulePack: GovernanceRulePack): void {
+  registerRulePack(rulePack: GovernanceExtensionRulePack): void {
     this.registry.rulePacks.push({
       pluginId: this.pluginId,
       contribution: rulePack,
