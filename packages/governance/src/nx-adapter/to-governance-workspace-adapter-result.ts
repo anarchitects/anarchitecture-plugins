@@ -25,6 +25,17 @@ export function toGovernanceWorkspaceAdapterResult(
       type: dependency.type,
       sourceFile: dependency.sourceFile,
     })),
+    capabilities: [
+      {
+        id: 'capability:nx',
+        data: {
+          projectGraphAvailable: true,
+          tagsAvailable: true,
+          metadataAvailable: true,
+          source: 'nx-project-graph',
+        },
+      },
+    ],
   };
 }
 
