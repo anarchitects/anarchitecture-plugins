@@ -31,13 +31,15 @@
     "jiti": "2.4.2",
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "22.6.0",
-    "pg": "^8.11.0",
+    "pg": "^8.20.0",
     "prettier": "^2.6.2",
     "ts-jest": "^29.4.0",
     "ts-morph": "^22.0.0",
-    "ts-node": "10.9.1",
+    "ts-node": "^10.9.2",
     "tslib": "^2.3.0",
     "typeorm": "^0.3.28",
+    "typeorm-ts-node-commonjs": "^0.3.20",
+    "typeorm-ts-node-esm": "^0.3.20",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0",
     "verdaccio": "^6.0.5",
@@ -49,8 +51,10 @@
   ],
   "packageManager": "yarn@4.13.0",
   "dependencies": {
+    "@nestjs/typeorm": "^11.0.0",
     "@nx/devkit": "22.6.0",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "sqlite3": "^6.0.1"
   },
   "nx": {
     "includedScripts": [],
