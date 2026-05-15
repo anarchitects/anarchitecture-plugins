@@ -1,0 +1,7 @@
+{
+  "name": "typeorm-e2e-temp-nest-api",
+  "root": "packages/typeorm-e2e-temp-nest-api",
+  "sourceRoot": "packages/typeorm-e2e-temp-nest-api/src",
+  "projectType": "application",
+  "targets": {}
+}

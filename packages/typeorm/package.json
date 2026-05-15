@@ -62,11 +62,11 @@
     }
   },
   "peerDependencies": {
-    "@nx/devkit": ">= 19 < 23",
     "ts-node": "^10.9.1",
     "typeorm": "^0.3.28"
   },
   "dependencies": {
+    "@nx/devkit": ">= 19 < 23",
     "ts-morph": "^22.0.0",
     "tslib": "^2.8.1"
   }
