@@ -132,6 +132,13 @@
         "^production"
       ]
     },
+    "@nx/eslint:lint": {
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/tools/eslint-rules/**/*"
+      ]
+    },
     "test": {
       "dependsOn": [
         "^build"
