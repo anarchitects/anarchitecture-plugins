@@ -71,9 +71,6 @@
         "buildDepsTargetName": "build-deps",
         "watchDepsTargetName": "watch-deps"
       }
-    },
-    {
-      "plugin": "@anarchitects/nx-typeorm"
     }
   ],
   "release": {
