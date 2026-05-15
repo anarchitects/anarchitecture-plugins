@@ -49,7 +49,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "packageManager": "yarn@4.13.0",
+  "packageManager": "yarn@4.14.1",
   "dependencies": {
     "@nestjs/typeorm": "^11.0.0",
     "@nx/devkit": "22.7.2",
