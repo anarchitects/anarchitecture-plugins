@@ -5,21 +5,6 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@anarchitects/nest@workspace:packages/nest":
-  version: 0.0.0-use.local
-  resolution: "@anarchitects/nest@workspace:packages/nest"
-  dependencies:
-    "@angular-devkit/core": "npm:21.2.1"
-    "@angular-devkit/schematics": "npm:21.2.1"
-    jiti: "npm:2.4.2"
-    rxjs: "npm:7.8.2"
-    tslib: "npm:^2.6.2"
-  peerDependencies:
-    "@nx/devkit": ">=19 <23"
-    nx: ">=19 <23"
-  languageName: unknown
-  linkType: soft
-
 "@anarchitects/nx-governance@workspace:packages/governance":
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
@@ -10312,12 +10297,6 @@ __metadata:
 "nx-js-e2e@workspace:packages/js-e2e":
   version: 0.0.0-use.local
   resolution: "nx-js-e2e@workspace:packages/js-e2e"
-  languageName: unknown
-  linkType: soft
-
-"nx-nest-e2e@workspace:packages/nest-e2e":
-  version: 0.0.0-use.local
-  resolution: "nx-nest-e2e@workspace:packages/nest-e2e"
   languageName: unknown
   linkType: soft
 
