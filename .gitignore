@@ -46,6 +46,7 @@ Thumbs.db
 test-output
 
 .nx/polygraph
+.nx/self-healing
 .claude/worktrees
 .claude/settings.local.json
 vite.config.*.timestamp*
