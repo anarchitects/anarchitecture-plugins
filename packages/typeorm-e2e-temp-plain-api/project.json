@@ -1,7 +1,0 @@
-{
-  "name": "typeorm-e2e-temp-plain-api",
-  "root": "packages/typeorm-e2e-temp-plain-api",
-  "sourceRoot": "packages/typeorm-e2e-temp-plain-api/src",
-  "projectType": "application",
-  "targets": {}
-}
