@@ -86,7 +86,6 @@
       }
     },
     "conventionalCommits": {
-      "useCommitScope": false,
       "types": {
         "feat": {
           "semverBump": "minor"
