@@ -15,11 +15,16 @@ This document explains:
 - which parts are Nx host behavior
 - which future responsibilities belong to adapters and extensions
 
+This document focuses on the technical and product model. For service
+messaging, website source copy, and go-to-market language, see
+[`service-positioning.md`](./service-positioning.md).
+
 See also:
 
 - [Governance target package architecture](./governance-target-package-architecture.md)
 - [Governance implementation epic alignment](./governance-implementation-epic-alignment.md)
 - [Nx Governance compatibility contract](./nx-governance-compatibility-contract.md)
+- [Governance service positioning](./service-positioning.md)
 
 ## Audience Model
 
