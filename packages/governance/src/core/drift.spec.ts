@@ -144,6 +144,103 @@ describe('core drift comparison', () => {
     ]);
   });
 
+  it('compares matching delivery-impact indices when both snapshots include them', () => {
+    const baseline = makeSnapshot({
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'cost-of-change',
+            score: 68,
+            risk: 'medium',
+          },
+          {
+            id: 'time-to-market-risk',
+            score: 72,
+            risk: 'high',
+          },
+        ],
+        topDrivers: [],
+      },
+    });
+    const current = makeSnapshot({
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'cost-of-change',
+            score: 61,
+            risk: 'medium',
+          },
+          {
+            id: 'time-to-market-risk',
+            score: 64,
+            risk: 'medium',
+          },
+        ],
+        topDrivers: [],
+      },
+    });
+
+    const comparison = compareSnapshots(baseline, current);
+
+    expect(comparison.deliveryImpactIndexDeltas).toEqual([
+      {
+        id: 'cost-of-change',
+        baselineScore: 68,
+        currentScore: 61,
+        scoreDelta: -7,
+        baselineRisk: 'medium',
+        currentRisk: 'medium',
+      },
+      {
+        id: 'time-to-market-risk',
+        baselineScore: 72,
+        currentScore: 64,
+        scoreDelta: -8,
+        baselineRisk: 'high',
+        currentRisk: 'medium',
+      },
+    ]);
+  });
+
+  it('ignores delivery-impact indices missing from one side and keeps older snapshots comparable', () => {
+    const baseline = makeSnapshot({
+      metricSchemaVersion: '1.0',
+    });
+    const current = makeSnapshot({
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'time-to-market-risk',
+            score: 64,
+            risk: 'medium',
+          },
+        ],
+        topDrivers: [],
+      },
+    });
+
+    const comparison = compareSnapshots(baseline, current);
+
+    expect(comparison.metricDeltas).toEqual([
+      {
+        id: 'architectural-entropy',
+        baseline: 0.2,
+        current: 0.2,
+        delta: 0,
+      },
+    ]);
+    expect(comparison.deliveryImpactIndexDeltas).toBeUndefined();
+    expect(comparison.healthDelta).toEqual({
+      baselineScore: 80,
+      currentScore: 80,
+      scoreDelta: 0,
+      baselineStatus: 'warning',
+      currentStatus: 'warning',
+      baselineGrade: 'B',
+      currentGrade: 'B',
+    });
+  });
+
   it('captures new and resolved violations with current semantics', () => {
     const baseline = makeSnapshot({
       violations: [
@@ -197,6 +294,25 @@ describe('core drift comparison', () => {
           message: 'Cross-domain dependency.',
         },
       ],
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'cost-of-change',
+            score: 68,
+            risk: 'medium',
+          },
+        ],
+        topDrivers: [
+          {
+            id: 'change-impact-radius-pressure',
+            label: 'Change impact radius pressure',
+            score: 88,
+            value: 12,
+            unit: 'count',
+            trend: 'worsening',
+          },
+        ],
+      },
     });
 
     expect(JSON.parse(JSON.stringify(snapshot)) as MetricSnapshot).toEqual(

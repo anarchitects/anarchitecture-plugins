@@ -43,6 +43,7 @@ import {
   DriftSignal,
   GovernanceDependency,
   GovernanceWorkspace,
+  SnapshotDeliveryImpactSummary,
   SnapshotComparison,
   SnapshotViolation,
 } from '../core/index.js';
@@ -321,11 +322,15 @@ export async function runGovernanceSnapshot(
     ...options,
     reportType: 'health',
   });
+  const deliveryImpact = buildDeliveryImpactAssessment({
+    assessment,
+  });
 
   const persisted = await saveMetricSnapshot({
     assessment,
     snapshotDir: options.snapshotDir,
     metricSchemaVersion: options.metricSchemaVersion,
+    deliveryImpact: toSnapshotDeliveryImpactSummary(deliveryImpact),
   });
 
   const rendered =
@@ -1802,6 +1807,28 @@ async function resolveOptionalSnapshotComparison(options: {
   const current = await readMetricSnapshot(currentPath);
 
   return compareSnapshots(baseline, current);
+}
+
+function toSnapshotDeliveryImpactSummary(
+  deliveryImpact: DeliveryImpactAssessment
+): SnapshotDeliveryImpactSummary {
+  return {
+    indices: deliveryImpact.indices
+      .map((index) => ({
+        id: index.id,
+        score: index.score,
+        risk: index.risk,
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    topDrivers: deliveryImpact.drivers.slice(0, 5).map((driver) => ({
+      id: driver.id,
+      label: driver.label,
+      value: driver.value,
+      score: driver.score,
+      unit: driver.unit,
+      trend: driver.trend,
+    })),
+  };
 }
 
 function toErrorMessage(error: unknown): string {

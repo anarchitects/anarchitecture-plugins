@@ -73,6 +73,9 @@ integrate with GitHub directly.
 Delivery Impact Assessment composes deterministic governance drivers and
 indices into a management-facing assessment. It does not call external systems
 or AI services.
+Governance snapshots may optionally include delivery-impact summaries for
+trend comparison. Those snapshot and drift contracts remain Core-facing, while
+snapshot storage, artifact paths, and executor behavior remain host-owned.
 `buildDeliveryImpactAssessment(...)` and the delivery-impact calculations stay
 Core-facing, while `renderManagementReport(...)` remains a pure,
 platform-independent renderer. The `repo-management-insights` executor and

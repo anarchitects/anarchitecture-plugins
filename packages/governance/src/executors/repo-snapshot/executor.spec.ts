@@ -28,7 +28,7 @@ describe('repo-snapshot executor', () => {
       output: 'json',
       failOnViolation: true,
       snapshotDir: '.governance-metrics/snapshots',
-      metricSchemaVersion: '1.1',
+      metricSchemaVersion: '1.2',
     });
 
     expect(runGovernanceSnapshot).toHaveBeenCalledWith({
@@ -36,7 +36,7 @@ describe('repo-snapshot executor', () => {
       output: 'json',
       failOnViolation: true,
       snapshotDir: '.governance-metrics/snapshots',
-      metricSchemaVersion: '1.1',
+      metricSchemaVersion: '1.2',
     });
     expect(result).toEqual({ success: false });
   });
@@ -73,7 +73,7 @@ describe('repo-snapshot executor', () => {
     expect(schema.properties.snapshotDir.default).toBe(
       '.governance-metrics/snapshots'
     );
-    expect(schema.properties.metricSchemaVersion.default).toBe('1.1');
+    expect(schema.properties.metricSchemaVersion.default).toBe('1.2');
     expect(schema.additionalProperties).toBe(false);
   });
 });

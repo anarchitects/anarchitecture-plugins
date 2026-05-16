@@ -250,6 +250,26 @@ export interface SnapshotHealth {
   grade: HealthScore['grade'];
 }
 
+export interface SnapshotDeliveryImpactIndex {
+  id: string;
+  score: number;
+  risk: 'low' | 'medium' | 'high';
+}
+
+export interface SnapshotDeliveryImpactDriver {
+  id: string;
+  label: string;
+  value?: number | string;
+  score?: number;
+  unit?: 'ratio' | 'count' | 'score';
+  trend?: 'improving' | 'stable' | 'worsening';
+}
+
+export interface SnapshotDeliveryImpactSummary {
+  indices: SnapshotDeliveryImpactIndex[];
+  topDrivers: SnapshotDeliveryImpactDriver[];
+}
+
 export interface MetricSnapshot {
   timestamp: string;
   repo: string;
@@ -264,6 +284,7 @@ export interface MetricSnapshot {
   signalBreakdown?: SignalBreakdown;
   metricBreakdown?: MetricBreakdown;
   topIssues?: GovernanceTopIssue[];
+  deliveryImpact?: SnapshotDeliveryImpactSummary;
 }
 
 export interface SnapshotMetricDelta {
@@ -329,6 +350,15 @@ export interface SnapshotTopIssueDelta {
   projects: string[];
 }
 
+export interface SnapshotDeliveryImpactIndexDelta {
+  id: string;
+  baselineScore: number;
+  currentScore: number;
+  scoreDelta: number;
+  baselineRisk: SnapshotDeliveryImpactIndex['risk'];
+  currentRisk: SnapshotDeliveryImpactIndex['risk'];
+}
+
 export interface SnapshotComparison {
   baseline: MetricSnapshot;
   current: MetricSnapshot;
@@ -340,6 +370,7 @@ export interface SnapshotComparison {
   signalDeltas?: SnapshotSignalDeltas;
   metricFamilyDeltas?: SnapshotMetricFamilyDelta[];
   topIssueDeltas?: SnapshotTopIssueDelta[];
+  deliveryImpactIndexDeltas?: SnapshotDeliveryImpactIndexDelta[];
 }
 
 export type DriftSignalKind =

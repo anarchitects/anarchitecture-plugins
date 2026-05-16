@@ -4,6 +4,8 @@ import type {
   GovernanceMetricFamily,
   MetricSnapshot,
   SnapshotComparison,
+  SnapshotDeliveryImpactIndex,
+  SnapshotDeliveryImpactIndexDelta,
   SnapshotHealthDelta,
   SnapshotMetricDelta,
   SnapshotMetricFamilyDelta,
@@ -61,6 +63,7 @@ export function compareSnapshots(
     signalDeltas: diffSignalBreakdown(baseline, current),
     metricFamilyDeltas: diffMetricBreakdown(baseline, current),
     topIssueDeltas: diffTopIssues(baseline, current),
+    deliveryImpactIndexDeltas: diffDeliveryImpactIndices(baseline, current),
   };
 }
 
@@ -386,6 +389,39 @@ function diffTopIssues(
         projects,
       };
     });
+}
+
+function diffDeliveryImpactIndices(
+  baseline: MetricSnapshot,
+  current: MetricSnapshot
+): SnapshotDeliveryImpactIndexDelta[] | undefined {
+  const baselineIndices = new Map(
+    (baseline.deliveryImpact?.indices ?? []).map((index) => [index.id, index])
+  );
+  const currentIndices = new Map(
+    (current.deliveryImpact?.indices ?? []).map((index) => [index.id, index])
+  );
+  const sharedIds = [...baselineIndices.keys()]
+    .filter((id) => currentIndices.has(id))
+    .sort((left, right) => left.localeCompare(right));
+
+  if (sharedIds.length === 0) {
+    return undefined;
+  }
+
+  return sharedIds.map((id) => {
+    const before = baselineIndices.get(id) as SnapshotDeliveryImpactIndex;
+    const after = currentIndices.get(id) as SnapshotDeliveryImpactIndex;
+
+    return {
+      id,
+      baselineScore: before.score,
+      currentScore: after.score,
+      scoreDelta: round(after.score - before.score),
+      baselineRisk: before.risk,
+      currentRisk: after.risk,
+    };
+  });
 }
 
 function createScoreLikeSignal(

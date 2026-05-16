@@ -753,7 +753,7 @@ nx repo-snapshot --snapshotDir=.governance-metrics/snapshots
 **Additional options:**
 
 - `snapshotDir` (default: `.governance-metrics/snapshots`)
-- `metricSchemaVersion` (default: `1.1`)
+- `metricSchemaVersion` (default: `1.2`)
 
 Snapshot files persist the historical metric and score maps plus deterministic governance summaries used by later drift analysis:
 
@@ -761,8 +761,9 @@ Snapshot files persist the historical metric and score maps plus deterministic g
 - `signalBreakdown`
 - `metricBreakdown`
 - `topIssues`
+- optional `deliveryImpact` summaries with index snapshots and top drivers for management trend comparison
 
-Older `1.0` snapshots remain readable; the enriched summary fields are optional for backward compatibility.
+Older `1.0` and `1.1` snapshots remain readable; the enriched summary fields are optional for backward compatibility.
 
 **Use when:** you want historical governance baselines for CI trend monitoring and AI analysis.
 
@@ -790,7 +791,7 @@ nx repo-drift --baseline=.governance-metrics/snapshots/<older>.json --current=.g
 - `worseningCount`, `improvingCount`, `stableCount`
 - `topWorsening` and `topImproving`
 
-When both snapshots include schema `1.1` summary fields, the comparison also includes `healthDelta`, `signalDeltas`, `metricFamilyDeltas`, and `topIssueDeltas`.
+When both snapshots include enriched summary fields, the comparison also includes `healthDelta`, `signalDeltas`, `metricFamilyDeltas`, `topIssueDeltas`, and optional `deliveryImpactIndexDeltas` when delivery-impact summaries are present on both sides.
 
 **Use when:** you need deterministic drift trend signals from recent governance runs.
 

@@ -113,6 +113,25 @@ describe('buildMetricSnapshot', () => {
       commitSha: 'abc123',
       pluginVersion: '0.1.0',
       metricSchemaVersion: '1.1',
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'cost-of-change',
+            score: 68,
+            risk: 'medium',
+          },
+        ],
+        topDrivers: [
+          {
+            id: 'change-impact-radius-pressure',
+            label: 'Change impact radius pressure',
+            score: 88,
+            value: 12,
+            unit: 'count',
+            trend: 'worsening',
+          },
+        ],
+      },
     });
 
     expect(snapshot).toEqual({
@@ -147,6 +166,25 @@ describe('buildMetricSnapshot', () => {
       signalBreakdown: assessment.signalBreakdown,
       metricBreakdown: assessment.metricBreakdown,
       topIssues: assessment.topIssues,
+      deliveryImpact: {
+        indices: [
+          {
+            id: 'cost-of-change',
+            score: 68,
+            risk: 'medium',
+          },
+        ],
+        topDrivers: [
+          {
+            id: 'change-impact-radius-pressure',
+            label: 'Change impact radius pressure',
+            score: 88,
+            value: 12,
+            unit: 'count',
+            trend: 'worsening',
+          },
+        ],
+      },
     });
   });
 });

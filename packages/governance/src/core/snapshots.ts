@@ -1,6 +1,7 @@
 import type {
   GovernanceAssessment,
   MetricSnapshot,
+  SnapshotDeliveryImpactSummary,
   SnapshotViolation,
 } from './models.js';
 
@@ -11,6 +12,7 @@ export interface GovernanceSnapshotMetadata {
   commitSha: string;
   pluginVersion: string;
   metricSchemaVersion: string;
+  deliveryImpact?: SnapshotDeliveryImpactSummary;
 }
 
 export function buildMetricSnapshot(
@@ -57,6 +59,7 @@ export function buildMetricSnapshot(
     signalBreakdown: assessment.signalBreakdown,
     metricBreakdown: assessment.metricBreakdown,
     topIssues: assessment.topIssues,
+    deliveryImpact: metadata.deliveryImpact,
   };
 }
 
