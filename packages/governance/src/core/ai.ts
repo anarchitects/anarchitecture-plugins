@@ -2,7 +2,7 @@ import type { AiAnalysisRequest, AiAnalysisResult } from './models.js';
 
 export type AiHandoffUseCase = Extract<
   AiAnalysisRequest['kind'],
-  'root-cause' | 'drift' | 'pr-impact' | 'scorecard'
+  'root-cause' | 'drift' | 'pr-impact' | 'scorecard' | 'management-insights'
 >;
 
 export interface GovernanceAiHandoffPayload<
@@ -56,4 +56,10 @@ export function buildAiScorecardHandoffPayload<TRequest>(
   params: Parameters<typeof buildAiHandoffPayload<TRequest>>[1]
 ): GovernanceAiHandoffPayload<TRequest> {
   return buildAiHandoffPayload('scorecard', params);
+}
+
+export function buildAiManagementInsightsHandoffPayload<TRequest>(
+  params: Parameters<typeof buildAiHandoffPayload<TRequest>>[1]
+): GovernanceAiHandoffPayload<TRequest> {
+  return buildAiHandoffPayload('management-insights', params);
 }

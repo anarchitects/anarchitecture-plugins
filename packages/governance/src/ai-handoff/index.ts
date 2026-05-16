@@ -17,8 +17,9 @@ export interface AiHandoffArtifacts {
 export interface ExportAiHandoffArtifactsParams {
   workspaceRoot: string;
   useCase: AiHandoffUseCase;
-  payload: GovernanceAiHandoffPayload;
+  payload: GovernanceAiHandoffPayload<unknown>;
   outputDir?: string;
+  prompt?: string;
 }
 
 export function exportAiHandoffArtifacts(
@@ -43,7 +44,7 @@ export function exportAiHandoffArtifacts(
     'utf8'
   );
 
-  const prompt = buildPromptTemplate(params.useCase);
+  const prompt = params.prompt ?? buildPromptTemplate(params.useCase);
   writeFileSync(promptAbsolutePath, `${prompt}\n`, 'utf8');
 
   const payloadRelativePath = path.relative(
@@ -77,6 +78,8 @@ export function buildPromptTemplate(useCase: AiHandoffUseCase): string {
       'Interpret architectural impact risk for this change set using only the supplied diff and dependency payload.',
     scorecard:
       'Summarize current architectural health and trend direction in a concise, management-friendly way using only the supplied score payload.',
+    'management-insights':
+      'Interpret delivery-impact indices, management insights, and architecture investment priorities using only the supplied governance payload.',
   };
 
   return [

@@ -40,6 +40,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
   - [repo-drift](#repo-drift)
   - [repo-management-insights](#repo-management-insights)
   - [governance-graph](#governance-graph)
+  - [repo-ai-management-insights](#repo-ai-management-insights)
   - [repo-ai-root-cause](#repo-ai-root-cause)
   - [repo-ai-drift](#repo-ai-drift)
   - [repo-ai-pr-impact](#repo-ai-pr-impact)
@@ -813,6 +814,26 @@ CLI output renders the management report surface built from the current governan
 This command does not call external AI services and does not estimate exact financial cost or delivery dates.
 
 **Use when:** you want management and technical-lead delivery-impact insights from the same deterministic governance pipeline used by the other repository commands.
+
+---
+
+### `repo-ai-management-insights`
+
+**Intent:** Build deterministic AI-ready management-insights payloads and prompts from delivery-impact assessments plus optional snapshot trend context.
+
+```bash
+nx repo-ai-management-insights
+nx repo-ai-management-insights --output=json
+```
+
+**Additional options:** `snapshotDir`, `baseline`, `current`.
+
+**Model 1 handoff artifacts:**
+
+- `.governance-metrics/ai/management-insights.payload.json`
+- `.governance-metrics/ai/management-insights.prompt.md`
+
+This handoff is deterministic and grounded in governance and delivery-impact evidence. It does not call external AI services, does not estimate exact financial cost, and does not predict delivery dates.
 
 ---
 

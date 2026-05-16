@@ -72,7 +72,12 @@ describe('ai-handoff', () => {
   });
 
   it('renders drift, pr-impact, and scorecard prompts with required sections', () => {
-    const useCases = ['drift', 'pr-impact', 'scorecard'] as const;
+    const useCases = [
+      'drift',
+      'pr-impact',
+      'scorecard',
+      'management-insights',
+    ] as const;
 
     for (const useCase of useCases) {
       const prompt = buildPromptTemplate(useCase);
@@ -82,5 +87,33 @@ describe('ai-handoff', () => {
       expect(prompt).toContain('## Output Structure');
       expect(prompt).toContain('## Safety and Discipline Constraints');
     }
+  });
+
+  it('writes a caller-supplied prompt without changing existing artifact paths', () => {
+    const payload = {
+      useCase: 'management-insights' as const,
+      request: {
+        kind: 'management-insights',
+      },
+    };
+    const artifacts = exportAiHandoffArtifacts({
+      workspaceRoot,
+      useCase: 'management-insights',
+      payload,
+      prompt: '# Custom Prompt\n',
+    });
+
+    expect(artifacts.payloadRelativePath).toBe(
+      '.governance-metrics/ai/management-insights.payload.json'
+    );
+    expect(artifacts.promptRelativePath).toBe(
+      '.governance-metrics/ai/management-insights.prompt.md'
+    );
+    expect(
+      readFileSync(
+        path.join(workspaceRoot, artifacts.promptRelativePath),
+        'utf8'
+      )
+    ).toContain('# Custom Prompt');
   });
 });

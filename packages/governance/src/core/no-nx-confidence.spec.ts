@@ -163,6 +163,7 @@ describe('Core no-Nx confidence', () => {
       path.resolve(__dirname, '../metric-engine'),
       path.resolve(__dirname, '../health-engine'),
       path.resolve(__dirname, '../inventory'),
+      path.resolve(__dirname, '../ai-analysis'),
       path.resolve(__dirname, '../delivery-impact'),
     ];
     const hostForbiddenPatterns = [

@@ -28,6 +28,10 @@
       "implementation": "./executors/repo-management-insights/executor",
       "schema": "./executors/repo-management-insights/schema.json"
     },
+    "repo-ai-management-insights": {
+      "implementation": "./executors/repo-ai-management-insights/executor",
+      "schema": "./executors/repo-ai-management-insights/schema.json"
+    },
     "repo-ai-root-cause": {
       "implementation": "./executors/repo-ai-root-cause/executor",
       "schema": "./executors/repo-ai-root-cause/schema.json"

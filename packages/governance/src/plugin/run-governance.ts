@@ -2,6 +2,7 @@ import { logger, workspaceRoot } from '@nx/devkit';
 
 import {
   buildGovernanceAssessment,
+  buildAiManagementInsightsHandoffPayload,
   buildAiDriftHandoffPayload,
   buildAiPrImpactHandoffPayload,
   buildAiRootCauseHandoffPayload,
@@ -49,10 +50,13 @@ import {
 } from '../core/index.js';
 import path from 'node:path';
 import {
+  buildManagementInsightsAiRequest,
+  buildManagementInsightsPrompt,
   buildArchitectureRecommendationsRequest,
   buildCognitiveLoadRequest,
   buildOnboardingRequest,
   buildScorecardRequest,
+  summarizeManagementInsights,
   buildRefactoringSuggestionsRequest,
   buildSmellClustersRequest,
   buildRootCauseRequest,
@@ -142,6 +146,21 @@ export interface GovernanceManagementInsightsRunResult {
   assessment: GovernanceAssessment;
   deliveryImpact: DeliveryImpactAssessment;
   comparison?: SnapshotComparison;
+  rendered: string;
+  success: boolean;
+}
+
+export type GovernanceAiManagementInsightsRunOptions =
+  GovernanceManagementInsightsRunOptions;
+
+export interface GovernanceAiManagementInsightsRunResult {
+  assessment: GovernanceAssessment;
+  deliveryImpact: DeliveryImpactAssessment;
+  comparison?: SnapshotComparison;
+  request: AiAnalysisRequest;
+  analysis: AiAnalysisResult;
+  handoffPayloadPath: string;
+  handoffPromptPath: string;
   rendered: string;
   success: boolean;
 }
@@ -464,6 +483,72 @@ export async function runGovernanceManagementInsights(
     assessment,
     deliveryImpact,
     comparison,
+    rendered,
+    success,
+  };
+}
+
+export async function runGovernanceAiManagementInsights(
+  options: GovernanceAiManagementInsightsRunOptions = {}
+): Promise<GovernanceAiManagementInsightsRunResult> {
+  const assessment = await buildAssessment({
+    profile: options.profile,
+    output: options.output,
+    failOnViolation: options.failOnViolation,
+    reportType: 'health',
+  });
+  const comparison = await resolveOptionalSnapshotComparison(options);
+  const deliveryImpact = buildDeliveryImpactAssessment({
+    assessment,
+    comparison,
+  });
+  const request = buildManagementInsightsAiRequest({
+    deliveryImpact,
+    assessment,
+    comparison,
+    profile: options.profile ?? assessment.profile,
+    metadata: {
+      comparisonAvailable: Boolean(comparison),
+    },
+  });
+  const analysis = summarizeManagementInsights(request);
+  const handoffArtifacts = exportAiHandoffArtifacts({
+    workspaceRoot,
+    useCase: 'management-insights',
+    payload: buildAiManagementInsightsHandoffPayload({
+      request,
+      analysis,
+      metadata: {
+        profile: request.profile,
+      },
+    }),
+    prompt: buildManagementInsightsPrompt({ request }),
+  });
+
+  const rendered =
+    options.output === 'json'
+      ? JSON.stringify({ request, analysis, deliveryImpact }, null, 2)
+      : renderManagementReport(deliveryImpact);
+
+  if (options.output === 'json') {
+    process.stdout.write(`${rendered}\n`);
+  } else {
+    logger.info(rendered);
+  }
+
+  process.stderr.write(`${handoffArtifacts.instructions}\n`);
+
+  const success =
+    !options.failOnViolation || (assessment.violations?.length ?? 0) === 0;
+
+  return {
+    assessment,
+    deliveryImpact,
+    comparison,
+    request,
+    analysis,
+    handoffPayloadPath: handoffArtifacts.payloadRelativePath,
+    handoffPromptPath: handoffArtifacts.promptRelativePath,
     rendered,
     success,
   };

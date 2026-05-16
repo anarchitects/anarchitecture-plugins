@@ -84,6 +84,9 @@ snapshot file resolution plus stdout/logger integration.
 Management reports render those deterministic delivery-impact assessments for
 managers and technical leads. They do not perform calculations, call external
 systems, or make financial forecasts.
+Management-insights AI payload and prompt generation are platform-independent.
+Writing `.governance-metrics/ai/*` artifacts and wiring
+`repo-ai-management-insights` remain Nx host concerns.
 
 Extensions own:
 

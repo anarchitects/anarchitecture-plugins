@@ -185,6 +185,14 @@ function createGovernanceTargets(
         output: 'cli',
       }
     ),
+    'repo-ai-management-insights': createGovernanceProfileTarget(
+      'repo-ai-management-insights',
+      profileName,
+      'Prepare deterministic AI management-insights payloads from delivery-impact assessments and governance trend context.',
+      {
+        output: 'json',
+      }
+    ),
     ...STATIC_GOVERNANCE_TARGETS,
     'repo-ai-root-cause': createGovernanceProfileTarget(
       'repo-ai-root-cause',
