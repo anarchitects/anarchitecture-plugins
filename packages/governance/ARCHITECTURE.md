@@ -73,6 +73,11 @@ integrate with GitHub directly.
 Delivery Impact Assessment composes deterministic governance drivers and
 indices into a management-facing assessment. It does not call external systems
 or AI services.
+`buildDeliveryImpactAssessment(...)` and the delivery-impact calculations stay
+Core-facing, while `renderManagementReport(...)` remains a pure,
+platform-independent renderer. The `repo-management-insights` executor and
+`runGovernanceManagementInsights(...)` remain Nx host orchestration, including
+snapshot file resolution plus stdout/logger integration.
 Management reports render those deterministic delivery-impact assessments for
 managers and technical leads. They do not perform calculations, call external
 systems, or make financial forecasts.
