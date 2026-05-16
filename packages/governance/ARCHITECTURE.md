@@ -65,6 +65,8 @@ management-facing explanation inputs without adding external data or
 non-deterministic interpretation.
 The Cost of Change Index is a relative 0..100 risk index derived from those
 deterministic governance measurements. It is not a financial cost estimate.
+The Time-to-Market Risk Index is a relative 0..100 risk index derived from
+deterministic governance measurements. It is not a delivery-date forecast.
 
 Extensions own:
 
