@@ -70,6 +70,9 @@ deterministic governance measurements. It is not a delivery-date forecast.
 Feature Impact Assessment estimates the deterministic delivery impact of a
 proposed change from workspace metadata. It does not fetch PR data or
 integrate with GitHub directly.
+Delivery Impact Assessment composes deterministic governance drivers and
+indices into a management-facing assessment. It does not call external systems
+or AI services.
 
 Extensions own:
 
