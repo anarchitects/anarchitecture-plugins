@@ -92,6 +92,15 @@ assessment. GitHub, Jira, Linear, CI, or CLI adapters should map their external
 metadata into that contract; Core does not fetch PR data or perform
 platform-specific file-to-project mapping.
 
+### Delivery-Impact Boundary
+
+Delivery-impact contracts and calculations are Core-facing and deterministic.
+Management report rendering is pure and platform-independent. The
+`repo-management-insights` executor is part of the Nx host surface, so target
+registration, stdout/logging, and artifact behavior remain host concerns.
+External system context such as GitHub, Jira, Linear, CI, or framework-specific
+intelligence belongs in adapters or extensions, not in the delivery-impact core.
+
 Extensions own:
 
 - workspace enrichers

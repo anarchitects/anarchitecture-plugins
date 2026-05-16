@@ -95,6 +95,7 @@ Goal:
 - [ ] PR Impact Analysis
 - [ ] Cognitive Load Estimation
 - [ ] Architecture Scorecard
+- [ ] Management Insights handoff validation outside the Nx host surface
 
 ## Prompt Templates
 
@@ -145,6 +146,14 @@ Goal:
 - [ ] Maven extension plugin
 - [ ] Gradle extension plugin
 - [ ] .NET extension plugin
+
+## Future Delivery-Impact Adapters
+
+- [ ] GitHub adapter-fed PR and change-set mapping into `ChangeSetInput`
+- [ ] Jira and Linear adapter-fed delivery context
+- [ ] CI adapter-fed trend and delivery-risk enrichment
+- [ ] richer snapshot-backed delivery-impact trends
+- [ ] future adapter-fed feature impact analysis beyond manual/project-id input
 
 ---
 
