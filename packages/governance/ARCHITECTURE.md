@@ -63,6 +63,8 @@ integrations or rendering layers.
 Delivery-impact drivers translate those deterministic governance outputs into
 management-facing explanation inputs without adding external data or
 non-deterministic interpretation.
+The Cost of Change Index is a relative 0..100 risk index derived from those
+deterministic governance measurements. It is not a financial cost estimate.
 
 Extensions own:
 
