@@ -38,6 +38,7 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
   - [repo-architecture](#repo-architecture)
   - [repo-snapshot](#repo-snapshot)
   - [repo-drift](#repo-drift)
+  - [repo-management-insights](#repo-management-insights)
   - [governance-graph](#governance-graph)
   - [repo-ai-root-cause](#repo-ai-root-cause)
   - [repo-ai-drift](#repo-ai-drift)
@@ -208,7 +209,7 @@ intentional for compatibility:
 
 - minimal init still writes `repo-health` and `governance-graph`
 - `targetPreset: "full"` still restores the broader explicit governance target
-  surface
+  surface, including `repo-management-insights`
 - existing generated targets remain valid even when inference is also active
 
 Cleanup of redundant explicit root targets is separate work; this plugin does
@@ -457,7 +458,7 @@ nx g @anarchitects/nx-governance:init
   - `governance-graph`
 - Writes the previous broad governance target surface only when `targetPreset: "full"` is selected.
 - `governance-graph` remains part of both `minimal` and `full` because it is a core reporting artifact after the MVP.
-- `targetPreset: "full"` adds drilldowns, snapshot/drift workflows, diagnostics, and AI helper targets on top of the minimal surface.
+- `targetPreset: "full"` adds management insights, drilldowns, snapshot/drift workflows, diagnostics, and AI helper targets on top of the minimal surface.
 - Seeds one or more selected starter profile files when they are missing:
   - default preset/profile selection: `frontend-layered`
   - supported starter presets: `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`
@@ -487,7 +488,7 @@ other executor options beyond the inferred defaults.
 | `preset`               | `string[]` | `["frontend-layered"]`                                 | Built-in starter presets used when init seeds missing governance profile files. Supported values are `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. When `profile` is omitted, the first selected preset becomes the default runtime profile. The two backend presets are mutually exclusive. |
 | `profile`              | `string`   | first selected preset name                             | Governance profile name wired into generated root targets and used as the default seeded runtime profile. Built-in options include `frontend-layered`, `backend-layered-3tier`, and `backend-layered-ddd`. `layered-workspace` remains accepted as a compatibility alias.                                              |
 | `profilePath`          | `string`   | none                                                   | Governance profile path used directly when migrating inline ESLint depConstraints.                                                                                                                                                                                                                                     |
-| `targetPreset`         | `string`   | `"minimal"`                                            | Controls which root governance targets init writes. Use `"minimal"` for the default `repo-health` plus `governance-graph` surface, or `"full"` to restore the broader governance, diagnostic, snapshot/drift, and AI target set.                                                                                       |
+| `targetPreset`         | `string`   | `"minimal"`                                            | Controls which root governance targets init writes. Use `"minimal"` for the default `repo-health` plus `governance-graph` surface, or `"full"` to restore the broader governance, management-insights, diagnostic, snapshot/drift, and AI target set.                                                                  |
 | `skipFormat`           | `boolean`  | `false`                                                | Skip Prettier formatting of generated files.                                                                                                                                                                                                                                                                           |
 
 ---
@@ -792,6 +793,25 @@ nx repo-drift --baseline=.governance-metrics/snapshots/<older>.json --current=.g
 When both snapshots include schema `1.1` summary fields, the comparison also includes `healthDelta`, `signalDeltas`, `metricFamilyDeltas`, and `topIssueDeltas`.
 
 **Use when:** you need deterministic drift trend signals from recent governance runs.
+
+---
+
+### `repo-management-insights`
+
+**Intent:** Render a management-facing delivery-impact report derived from deterministic governance signals, health metrics, and optional snapshot trend data.
+
+```bash
+nx repo-management-insights
+nx repo-management-insights --output=json
+```
+
+**Additional options:** `snapshotDir`, `baseline`, `current`.
+
+CLI output renders the management report surface built from the current governance assessment. JSON output emits the machine-readable `DeliveryImpactAssessment`.
+
+This command does not call external AI services and does not estimate exact financial cost or delivery dates.
+
+**Use when:** you want management and technical-lead delivery-impact insights from the same deterministic governance pipeline used by the other repository commands.
 
 ---
 

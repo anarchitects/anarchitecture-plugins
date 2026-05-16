@@ -19,6 +19,7 @@ const FULL_ONLY_TARGET_NAMES = [
   'repo-architecture',
   'repo-snapshot',
   'repo-drift',
+  'repo-management-insights',
   'workspace-graph',
   'workspace-conformance',
   'repo-ai-root-cause',
@@ -232,6 +233,17 @@ describe('governance initGenerator', () => {
     expect(targets['repo-ai-onboarding']).toBeDefined();
     expect(targets['repo-snapshot']).toBeDefined();
     expect(targets['repo-drift']).toBeDefined();
+    expect(targets['repo-management-insights']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-management-insights',
+      options: {
+        profile: 'frontend-layered',
+        output: 'cli',
+      },
+      metadata: {
+        description:
+          'Render management-facing delivery-impact insights derived from governance signals.',
+      },
+    });
     expect(targets['workspace-graph']).toBeDefined();
     expect(targets['workspace-conformance']).toBeDefined();
   });

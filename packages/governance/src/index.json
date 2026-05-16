@@ -24,6 +24,10 @@
       "implementation": "./executors/repo-drift/executor",
       "schema": "./executors/repo-drift/schema.json"
     },
+    "repo-management-insights": {
+      "implementation": "./executors/repo-management-insights/executor",
+      "schema": "./executors/repo-management-insights/schema.json"
+    },
     "repo-ai-root-cause": {
       "implementation": "./executors/repo-ai-root-cause/executor",
       "schema": "./executors/repo-ai-root-cause/schema.json"

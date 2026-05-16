@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance Repo Management Insights",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile to execute.",
+      "default": "frontend-layered"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "cli"
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "baseline": {
+      "type": "string",
+      "description": "Optional baseline snapshot path. Defaults to the previous snapshot when available."
+    },
+    "current": {
+      "type": "string",
+      "description": "Optional current snapshot path. Defaults to the latest snapshot when available."
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if violations are found."
+    }
+  },
+  "additionalProperties": false
+}
