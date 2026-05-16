@@ -80,4 +80,24 @@ describe('repo-management-insights executor', () => {
     expect(schema.properties.failOnViolation.default).toBe(false);
     expect(schema.additionalProperties).toBe(false);
   });
+
+  it('keeps management insights orchestration in the Nx host layer', () => {
+    const runGovernanceSource = readFileSync(
+      path.join(__dirname, '..', '..', 'plugin', 'run-governance.ts'),
+      'utf8'
+    );
+
+    expect(runGovernanceSource).toContain(
+      'export async function runGovernanceManagementInsights'
+    );
+    expect(runGovernanceSource).toContain('buildDeliveryImpactAssessment({');
+    expect(runGovernanceSource).toContain(
+      'renderManagementReport(deliveryImpact)'
+    );
+    expect(runGovernanceSource).toContain('process.stdout.write');
+    expect(runGovernanceSource).toContain('logger.info');
+    expect(runGovernanceSource).toContain(
+      'resolveOptionalSnapshotComparison(options)'
+    );
+  });
 });

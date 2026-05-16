@@ -163,6 +163,7 @@ describe('Core no-Nx confidence', () => {
       path.resolve(__dirname, '../metric-engine'),
       path.resolve(__dirname, '../health-engine'),
       path.resolve(__dirname, '../inventory'),
+      path.resolve(__dirname, '../delivery-impact'),
     ];
     const hostForbiddenPatterns = [
       /from ['"]nx['"]/,
@@ -196,6 +197,30 @@ describe('Core no-Nx confidence', () => {
       } else {
         expect(source).not.toMatch(/from ['"]\.\.\/nx-adapter(?:\/|['"])/);
       }
+    }
+  });
+
+  it('keeps the management report renderer platform-independent', () => {
+    const rendererPath = path.resolve(
+      __dirname,
+      '../reporting/render-management-report.ts'
+    );
+    const source = readFileSync(rendererPath, 'utf8');
+    const forbiddenPatterns = [
+      /from ['"]nx['"]/,
+      /from ['"]@nx\//,
+      /from ['"]\.\.\/plugin(?:\/|['"])/,
+      /from ['"]\.\.\/executors(?:\/|['"])/,
+      /from ['"]\.\.\/generators(?:\/|['"])/,
+      /workspaceRoot/,
+      /process\./,
+      /logger\./,
+      /readFile/,
+      /writeFile/,
+    ];
+
+    for (const pattern of forbiddenPatterns) {
+      expect(source).not.toMatch(pattern);
     }
   });
 });
