@@ -25,6 +25,7 @@ import {
 import { GOVERNANCE_DEFAULT_PROFILE_NAME } from '../profile/runtime-profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
+import { renderManagementReport } from '../reporting/render-management-report.js';
 import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
@@ -87,6 +88,8 @@ import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import { buildExceptionReport } from './build-exception-report.js';
+import { buildDeliveryImpactAssessment } from '../delivery-impact/build-delivery-impact-assessment.js';
+import type { DeliveryImpactAssessment } from '../delivery-impact/models.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -123,6 +126,21 @@ export interface GovernanceDriftRunResult {
   comparison: SnapshotComparison | null;
   signals: DriftSignal[];
   summary: DriftSummary;
+  rendered: string;
+  success: boolean;
+}
+
+export interface GovernanceManagementInsightsRunOptions
+  extends Pick<GovernanceRunOptions, 'profile' | 'output' | 'failOnViolation'> {
+  snapshotDir?: string;
+  baseline?: string;
+  current?: string;
+}
+
+export interface GovernanceManagementInsightsRunResult {
+  assessment: GovernanceAssessment;
+  deliveryImpact: DeliveryImpactAssessment;
+  comparison?: SnapshotComparison;
   rendered: string;
   success: boolean;
 }
@@ -405,6 +423,44 @@ export async function runGovernanceDrift(
     summary,
     rendered,
     success: true,
+  };
+}
+
+export async function runGovernanceManagementInsights(
+  options: GovernanceManagementInsightsRunOptions = {}
+): Promise<GovernanceManagementInsightsRunResult> {
+  const assessment = await buildAssessment({
+    profile: options.profile,
+    output: options.output,
+    failOnViolation: options.failOnViolation,
+    reportType: 'health',
+  });
+  const comparison = await resolveOptionalSnapshotComparison(options);
+  const deliveryImpact = buildDeliveryImpactAssessment({
+    assessment,
+    comparison,
+  });
+
+  const rendered =
+    options.output === 'json'
+      ? JSON.stringify(deliveryImpact, null, 2)
+      : renderManagementReport(deliveryImpact);
+
+  if (options.output === 'json') {
+    process.stdout.write(`${rendered}\n`);
+  } else {
+    logger.info(rendered);
+  }
+
+  const success =
+    !options.failOnViolation || (assessment.violations?.length ?? 0) === 0;
+
+  return {
+    assessment,
+    deliveryImpact,
+    comparison,
+    rendered,
+    success,
   };
 }
 
@@ -1721,6 +1777,31 @@ function resolveSnapshotPath(
   return path.isAbsolute(explicitPath)
     ? explicitPath
     : path.resolve(workspaceRoot, explicitPath);
+}
+
+async function resolveOptionalSnapshotComparison(options: {
+  snapshotDir?: string;
+  baseline?: string;
+  current?: string;
+}): Promise<SnapshotComparison | undefined> {
+  const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
+  const baselinePath = resolveSnapshotPath(
+    options.baseline,
+    snapshotPaths.at(-2)
+  );
+  const currentPath = resolveSnapshotPath(
+    options.current,
+    snapshotPaths.at(-1)
+  );
+
+  if (!baselinePath || !currentPath) {
+    return undefined;
+  }
+
+  const baseline = await readMetricSnapshot(baselinePath);
+  const current = await readMetricSnapshot(currentPath);
+
+  return compareSnapshots(baseline, current);
 }
 
 function toErrorMessage(error: unknown): string {

@@ -19,6 +19,16 @@ export interface GovernanceDriftExecutorOptions
   minTrendLength?: number;
 }
 
+export interface GovernanceManagementInsightsExecutorOptions
+  extends Pick<
+    GovernanceExecutorOptions,
+    'profile' | 'output' | 'failOnViolation'
+  > {
+  snapshotDir?: string;
+  baseline?: string;
+  current?: string;
+}
+
 export interface GovernanceAiExecutorOptions extends GovernanceExecutorOptions {
   snapshotDir?: string;
   snapshotPath?: string;

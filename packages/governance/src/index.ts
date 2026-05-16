@@ -4,6 +4,7 @@ export { default as repoOwnershipExecutor } from './executors/repo-ownership/exe
 export { default as repoArchitectureExecutor } from './executors/repo-architecture/executor.js';
 export { default as repoSnapshotExecutor } from './executors/repo-snapshot/executor.js';
 export { default as repoDriftExecutor } from './executors/repo-drift/executor.js';
+export { default as repoManagementInsightsExecutor } from './executors/repo-management-insights/executor.js';
 export { default as repoAiRootCauseExecutor } from './executors/repo-ai-root-cause/executor.js';
 export { default as repoAiDriftExecutor } from './executors/repo-ai-drift/executor.js';
 export { default as repoAiPrImpactExecutor } from './executors/repo-ai-pr-impact/executor.js';

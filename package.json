@@ -132,6 +132,16 @@
           "description": "Compare recent governance snapshots and report drift signals."
         }
       },
+      "repo-management-insights": {
+        "executor": "@anarchitects/nx-governance:repo-management-insights",
+        "options": {
+          "profile": "frontend-layered",
+          "output": "cli"
+        },
+        "metadata": {
+          "description": "Render management-facing delivery-impact insights derived from governance signals."
+        }
+      },
       "workspace-graph": {
         "executor": "@anarchitects/nx-governance:workspace-graph",
         "metadata": {

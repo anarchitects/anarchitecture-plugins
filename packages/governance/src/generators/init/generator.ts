@@ -177,6 +177,14 @@ function createGovernanceTargets(
           'Compare recent governance snapshots and report drift signals.',
       },
     },
+    'repo-management-insights': createGovernanceProfileTarget(
+      'repo-management-insights',
+      profileName,
+      'Render management-facing delivery-impact insights derived from governance signals.',
+      {
+        output: 'cli',
+      }
+    ),
     ...STATIC_GOVERNANCE_TARGETS,
     'repo-ai-root-cause': createGovernanceProfileTarget(
       'repo-ai-root-cause',

@@ -24,6 +24,7 @@ import {
 } from '../presets/frontend-layered/profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
+import { renderManagementReport } from '../reporting/render-management-report.js';
 import type {
   GovernanceExtensionHost,
   GovernanceMetricProviderInput,
@@ -35,6 +36,7 @@ import {
   runGovernance,
   runGovernanceAiDrift,
   runGovernanceDrift,
+  runGovernanceManagementInsights,
   runGovernanceSnapshot,
 } from './run-governance.js';
 
@@ -957,6 +959,77 @@ describe('runGovernance', () => {
       ).toEqual({ source: 'conformance', count: 1 });
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('renders management insights to CLI by default and handles the real assessment pipeline', async () => {
+    const infoSpy = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+
+    const result = await runGovernanceManagementInsights({
+      profile: 'frontend-layered',
+    });
+
+    expect(result.deliveryImpact.profile).toBe(result.assessment.profile);
+    expect(result.rendered).toBe(renderManagementReport(result.deliveryImpact));
+    expect(infoSpy).toHaveBeenCalledWith(result.rendered);
+    expect(result.success).toBe(true);
+  });
+
+  it('writes deterministic delivery-impact json output', async () => {
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    const loggerSpy = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+
+    const result = await runGovernanceManagementInsights({
+      profile: 'frontend-layered',
+      output: 'json',
+    });
+
+    expect(JSON.parse(result.rendered)).toEqual(result.deliveryImpact);
+    expect(stdoutSpy).toHaveBeenCalledWith(`${result.rendered}\n`);
+    expect(loggerSpy).not.toHaveBeenCalledWith(result.rendered);
+  });
+
+  it('enriches management insights with snapshot comparison trends when snapshots are available', async () => {
+    const infoSpy = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+    const snapshotDir = mkdtempSync(
+      path.join(tmpdir(), 'nx-governance-management-insights-')
+    );
+
+    try {
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-15T10:00:00.000Z'));
+      const baseline = await runGovernanceSnapshot({
+        profile: 'frontend-layered',
+        snapshotDir,
+      });
+
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-16T10:00:00.000Z'));
+      const current = await runGovernanceSnapshot({
+        profile: 'frontend-layered',
+        snapshotDir,
+      });
+
+      const result = await runGovernanceManagementInsights({
+        profile: 'frontend-layered',
+        snapshotDir,
+        baseline: baseline.snapshotPath,
+        current: current.snapshotPath,
+      });
+
+      expect(result.comparison).toBeDefined();
+      expect(
+        result.deliveryImpact.indices.some((index) => index.trend !== undefined)
+      ).toBe(true);
+      expect(infoSpy).toHaveBeenCalledWith(result.rendered);
+    } finally {
+      rmSync(snapshotDir, { recursive: true, force: true });
     }
   });
 
