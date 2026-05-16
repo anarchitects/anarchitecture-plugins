@@ -73,6 +73,9 @@ integrate with GitHub directly.
 Delivery Impact Assessment composes deterministic governance drivers and
 indices into a management-facing assessment. It does not call external systems
 or AI services.
+Management reports render those deterministic delivery-impact assessments for
+managers and technical leads. They do not perform calculations, call external
+systems, or make financial forecasts.
 
 Extensions own:
 
