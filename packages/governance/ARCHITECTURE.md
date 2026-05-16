@@ -60,6 +60,9 @@ Delivery-impact and management-insight contracts also belong here. They are
 deterministic, platform-independent TypeScript contracts derived from shared
 governance signals, measurements, and findings rather than from tool-specific
 integrations or rendering layers.
+Delivery-impact drivers translate those deterministic governance outputs into
+management-facing explanation inputs without adding external data or
+non-deterministic interpretation.
 
 Extensions own:
 
