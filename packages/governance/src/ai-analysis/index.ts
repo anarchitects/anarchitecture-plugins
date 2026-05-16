@@ -1490,3 +1490,5 @@ function statusForScore(score: number): HealthStatus {
 function formatHealthStatus(status: HealthStatus): string {
   return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
 }
+
+export * from './management-insights.js';

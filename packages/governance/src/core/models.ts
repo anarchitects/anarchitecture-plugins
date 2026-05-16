@@ -427,6 +427,7 @@ export interface AiAnalysisRequest {
     | 'drift'
     | 'pr-impact'
     | 'scorecard'
+    | 'management-insights'
     | 'cognitive-load'
     | 'onboarding'
     | 'recommendations'

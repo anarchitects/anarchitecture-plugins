@@ -142,6 +142,16 @@
           "description": "Render management-facing delivery-impact insights derived from governance signals."
         }
       },
+      "repo-ai-management-insights": {
+        "executor": "@anarchitects/nx-governance:repo-ai-management-insights",
+        "options": {
+          "profile": "frontend-layered",
+          "output": "json"
+        },
+        "metadata": {
+          "description": "Prepare deterministic AI management-insights payloads from delivery-impact assessments and governance trend context."
+        }
+      },
       "workspace-graph": {
         "executor": "@anarchitects/nx-governance:workspace-graph",
         "metadata": {

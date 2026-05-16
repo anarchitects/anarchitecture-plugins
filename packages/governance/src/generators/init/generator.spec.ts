@@ -20,6 +20,7 @@ const FULL_ONLY_TARGET_NAMES = [
   'repo-snapshot',
   'repo-drift',
   'repo-management-insights',
+  'repo-ai-management-insights',
   'workspace-graph',
   'workspace-conformance',
   'repo-ai-root-cause',
@@ -37,6 +38,7 @@ const FULL_TARGET_NAMES = [
   ...FULL_ONLY_TARGET_NAMES,
 ] as const;
 const AI_TARGET_NAMES = [
+  'repo-ai-management-insights',
   'repo-ai-root-cause',
   'repo-ai-drift',
   'repo-ai-pr-impact',
@@ -242,6 +244,17 @@ describe('governance initGenerator', () => {
       metadata: {
         description:
           'Render management-facing delivery-impact insights derived from governance signals.',
+      },
+    });
+    expect(targets['repo-ai-management-insights']).toEqual({
+      executor: '@anarchitects/nx-governance:repo-ai-management-insights',
+      options: {
+        profile: 'frontend-layered',
+        output: 'json',
+      },
+      metadata: {
+        description:
+          'Prepare deterministic AI management-insights payloads from delivery-impact assessments and governance trend context.',
       },
     });
     expect(targets['workspace-graph']).toBeDefined();

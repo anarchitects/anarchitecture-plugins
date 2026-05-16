@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "title": "Nx Governance AI Management Insights",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Governance profile used to build deterministic management-insights handoff payloads.",
+      "default": "frontend-layered"
+    },
+    "output": {
+      "type": "string",
+      "enum": ["cli", "json"],
+      "default": "json"
+    },
+    "failOnViolation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exit with failure if deterministic assessment indicates violations."
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory where snapshots are stored.",
+      "default": ".governance-metrics/snapshots"
+    },
+    "baseline": {
+      "type": "string",
+      "description": "Optional baseline snapshot path used for delivery-impact trend context."
+    },
+    "current": {
+      "type": "string",
+      "description": "Optional current snapshot path used for delivery-impact trend context."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,4 +1,5 @@
 import {
+  buildAiManagementInsightsHandoffPayload,
   buildAiDriftHandoffPayload,
   buildAiPrImpactHandoffPayload,
   buildAiRootCauseHandoffPayload,
@@ -269,5 +270,43 @@ describe('core ai handoff payload builders', () => {
 
     expect(second).toEqual(first);
     expect(JSON.parse(JSON.stringify(first))).toEqual(first);
+  });
+
+  it('supports management-insights as a deterministic AI handoff use case', () => {
+    const request: AiAnalysisRequest = {
+      kind: 'management-insights',
+      generatedAt: '2026-05-16T10:00:00.000Z',
+      profile: 'frontend-layered',
+      inputs: {
+        metadata: {
+          deliveryImpact: {
+            indices: [{ id: 'cost-of-change', score: 61, risk: 'medium' }],
+          },
+        },
+      },
+    };
+    const analysis: AiAnalysisResult = {
+      kind: 'management-insights',
+      summary: 'Prepared management-insights handoff.',
+      findings: [],
+      recommendations: [],
+    };
+
+    const payload = buildAiManagementInsightsHandoffPayload({
+      request,
+      analysis,
+      metadata: {
+        profile: 'frontend-layered',
+      },
+    });
+
+    expect(payload).toEqual({
+      useCase: 'management-insights',
+      request,
+      analysis,
+      metadata: {
+        profile: 'frontend-layered',
+      },
+    });
   });
 });

@@ -35,6 +35,16 @@ export interface GovernanceAiExecutorOptions extends GovernanceExecutorOptions {
   topViolations?: number;
 }
 
+export interface GovernanceAiManagementInsightsExecutorOptions
+  extends Pick<
+    GovernanceExecutorOptions,
+    'profile' | 'output' | 'failOnViolation'
+  > {
+  snapshotDir?: string;
+  baseline?: string;
+  current?: string;
+}
+
 export interface GovernanceAiPrImpactExecutorOptions
   extends GovernanceAiExecutorOptions {
   baseRef?: string;

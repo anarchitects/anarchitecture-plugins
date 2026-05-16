@@ -34,6 +34,7 @@ import type {
 } from '../extensions/contracts.js';
 import {
   runGovernance,
+  runGovernanceAiManagementInsights,
   runGovernanceAiDrift,
   runGovernanceDrift,
   runGovernanceManagementInsights,
@@ -1031,6 +1032,42 @@ describe('runGovernance', () => {
     } finally {
       rmSync(snapshotDir, { recursive: true, force: true });
     }
+  });
+
+  it('writes deterministic management-insights AI handoff artifacts without calling external AI services', async () => {
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    const loggerSpy = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+
+    const result = await runGovernanceAiManagementInsights({
+      profile: 'frontend-layered',
+      output: 'json',
+    });
+
+    expect(result.handoffPayloadPath).toBe(
+      '.governance-metrics/ai/management-insights.payload.json'
+    );
+    expect(result.handoffPromptPath).toBe(
+      '.governance-metrics/ai/management-insights.prompt.md'
+    );
+    expect(result.request.kind).toBe('management-insights');
+    expect(result.analysis.kind).toBe('management-insights');
+    expect(JSON.parse(result.rendered)).toEqual({
+      request: result.request,
+      analysis: result.analysis,
+      deliveryImpact: result.deliveryImpact,
+    });
+    expect(stdoutSpy).toHaveBeenCalledWith(`${result.rendered}\n`);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining('management-insights.payload.json')
+    );
+    expect(loggerSpy).not.toHaveBeenCalledWith(result.rendered);
   });
 
   it('fails clearly when nx.json config points to a missing conformance file', async () => {
