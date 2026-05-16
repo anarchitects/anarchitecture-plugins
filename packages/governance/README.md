@@ -813,6 +813,9 @@ CLI output renders the management report surface built from the current governan
 
 This command does not call external AI services and does not estimate exact financial cost or delivery dates.
 
+Architecture and audience guidance for this layer live in
+[`../../docs/governance/management-insights.md`](../../docs/governance/management-insights.md).
+
 **Use when:** you want management and technical-lead delivery-impact insights from the same deterministic governance pipeline used by the other repository commands.
 
 ---
