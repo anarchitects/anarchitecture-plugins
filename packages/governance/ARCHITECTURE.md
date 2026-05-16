@@ -87,6 +87,10 @@ systems, or make financial forecasts.
 Management-insights AI payload and prompt generation are platform-independent.
 Writing `.governance-metrics/ai/*` artifacts and wiring
 `repo-ai-management-insights` remain Nx host concerns.
+`ChangeSetInput` is the generic Core-facing input for feature and PR impact
+assessment. GitHub, Jira, Linear, CI, or CLI adapters should map their external
+metadata into that contract; Core does not fetch PR data or perform
+platform-specific file-to-project mapping.
 
 Extensions own:
 
