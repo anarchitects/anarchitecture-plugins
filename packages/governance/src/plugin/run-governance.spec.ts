@@ -1329,7 +1329,7 @@ describe('runGovernance', () => {
       };
       const snapshot = rendered.snapshot as Record<string, unknown>;
 
-      expect(result.snapshot.metricSchemaVersion).toBe('1.1');
+      expect(result.snapshot.metricSchemaVersion).toBe('1.2');
       expect(snapshot['health']).toEqual(
         expect.objectContaining({
           score: result.assessment.health.score,
@@ -1344,6 +1344,12 @@ describe('runGovernance', () => {
         result.assessment.metricBreakdown
       );
       expect(snapshot['topIssues']).toEqual(result.assessment.topIssues);
+      expect(snapshot['deliveryImpact']).toEqual(
+        expect.objectContaining({
+          indices: expect.any(Array),
+          topDrivers: expect.any(Array),
+        })
+      );
     } finally {
       rmSync(snapshotDir, { recursive: true, force: true });
     }

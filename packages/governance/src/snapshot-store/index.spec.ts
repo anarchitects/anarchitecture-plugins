@@ -125,6 +125,7 @@ describe('snapshot-store', () => {
 
     expect(result.relativePath.endsWith('2026-03-13T10-15-00.json')).toBe(true);
     expect(result.snapshot.scores.workspaceHealth).toBe(80);
+    expect(result.snapshot.metricSchemaVersion).toBe('1.2');
     expect(result.snapshot.health).toEqual({
       score: 80,
       status: 'warning',
@@ -176,5 +177,6 @@ describe('snapshot-store', () => {
     expect(snapshot.signalBreakdown).toBeUndefined();
     expect(snapshot.metricBreakdown).toBeUndefined();
     expect(snapshot.topIssues).toBeUndefined();
+    expect(snapshot.deliveryImpact).toBeUndefined();
   });
 });

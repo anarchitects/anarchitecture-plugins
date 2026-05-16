@@ -8,6 +8,7 @@ import {
   buildMetricSnapshot,
   GovernanceAssessment,
   MetricSnapshot,
+  SnapshotDeliveryImpactSummary,
 } from '../core/index.js';
 
 const DEFAULT_SNAPSHOT_DIR = '.governance-metrics/snapshots';
@@ -20,6 +21,7 @@ interface SaveMetricSnapshotOptions {
   commitSha?: string;
   pluginVersion?: string;
   metricSchemaVersion?: string;
+  deliveryImpact?: SnapshotDeliveryImpactSummary;
   now?: Date;
 }
 
@@ -45,7 +47,8 @@ export async function saveMetricSnapshot(
     branch: options.branch ?? inferGitRef('branch'),
     commitSha: options.commitSha ?? inferGitRef('sha'),
     pluginVersion: options.pluginVersion ?? '0.1.0',
-    metricSchemaVersion: options.metricSchemaVersion ?? '1.1',
+    metricSchemaVersion: options.metricSchemaVersion ?? '1.2',
+    deliveryImpact: options.deliveryImpact,
   });
 
   await fs.mkdir(snapshotDirectory, { recursive: true });
