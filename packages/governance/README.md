@@ -815,6 +815,8 @@ This command does not call external AI services and does not estimate exact fina
 
 Architecture and audience guidance for this layer live in
 [`../../docs/governance/management-insights.md`](../../docs/governance/management-insights.md).
+Service-positioning source material for product and website messaging lives in
+[`../../docs/governance/service-positioning.md`](../../docs/governance/service-positioning.md).
 
 **Use when:** you want management and technical-lead delivery-impact insights from the same deterministic governance pipeline used by the other repository commands.
 
