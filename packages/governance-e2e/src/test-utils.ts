@@ -16,7 +16,7 @@ export function createInitializedGovernanceWorkspace(
     {
       cwd: projectDirectory,
       stdio: 'inherit',
-      env: process.env,
+      env: createChildWorkspaceEnv(),
     }
   );
 
@@ -25,10 +25,7 @@ export function createInitializedGovernanceWorkspace(
     {
       cwd: projectDirectory,
       stdio: 'inherit',
-      env: {
-        ...process.env,
-        NX_DAEMON: 'false',
-      },
+      env: createChildWorkspaceEnv(),
     }
   );
 
@@ -65,10 +62,7 @@ export function runGovernanceCommand(
     {
       cwd: projectDirectory,
       stdio: 'inherit',
-      env: {
-        ...process.env,
-        NX_DAEMON: 'false',
-      },
+      env: createChildWorkspaceEnv(),
     }
   );
 
@@ -134,9 +128,18 @@ function createTestProject(projectName: string): string {
     {
       cwd: dirname(projectDirectory),
       stdio: 'inherit',
-      env: process.env,
+      env: createChildWorkspaceEnv(),
     }
   );
 
   return projectDirectory;
+}
+
+function createChildWorkspaceEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    NX_DAEMON: 'false',
+    // Temp e2e workspaces need to generate their own lockfile during setup.
+    YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
+  };
 }

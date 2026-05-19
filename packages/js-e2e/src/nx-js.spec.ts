@@ -158,6 +158,8 @@ function runCommand(command: string, cwd: string) {
     env: {
       ...process.env,
       NX_DAEMON: 'false',
+      // Temp e2e workspaces need to write a fresh lockfile during setup.
+      YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
     },
   });
 }

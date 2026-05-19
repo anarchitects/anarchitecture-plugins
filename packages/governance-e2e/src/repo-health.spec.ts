@@ -30,6 +30,7 @@ describe('nx-governance repo-health', () => {
       env: {
         ...process.env,
         NX_DAEMON: 'false',
+        YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
       },
     });
 
@@ -48,6 +49,7 @@ describe('nx-governance repo-health', () => {
         env: {
           ...process.env,
           NX_DAEMON: 'false',
+          YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
         },
       }
     );
