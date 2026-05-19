@@ -258,8 +258,11 @@ Current implementation status:
 - Issue #310 defines an explicit governance extension config shape under `nx.json.governance.extensions`.
 - Issue #311 adds an `add-extension` generator that writes explicit governance extension registrations into that config.
 - The generator only writes configuration; package installation remains the user's package-manager responsibility.
-- Runtime extension loading still uses legacy `nx.json.plugins` probing.
-- Explicit extension loading is future work under #312.
+- Issue #312 adds explicit governance extension loading from `nx.json.governance.extensions`.
+- Explicitly configured governance extensions are loaded by importing the configured package directly.
+- Legacy `nx.json.plugins` probing remains as compatibility behavior.
+- Deprecating or removing legacy probing is future work under #313.
+- Diagnostics improvements for extension loading remain future work under #314.
 
 ## Discovery and Loading Boundary
 
