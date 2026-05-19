@@ -25,8 +25,6 @@ __metadata:
     "@nx/js": "npm:>=21.6.4 <23"
     tslib: "npm:^2.3.0"
     typescript: "npm:~5.9.2"
-  peerDependencies:
-    nx: ">=21.6.4 <23"
   languageName: unknown
   linkType: soft
 
