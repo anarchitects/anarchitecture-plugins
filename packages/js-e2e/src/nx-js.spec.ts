@@ -33,9 +33,9 @@ describe('nx-js', () => {
     runCommand('yarn info --name-only @anarchitects/nx-js', projectDirectory);
   });
 
-  it.each(['tsc', 'esbuild'])(
+  it.each(['tsc', 'esbuild'] as const)(
     'should add secondary entry points to js libraries using %s bundler',
-    (bundler) => {
+    (bundler: 'tsc' | 'esbuild') => {
       runSecondaryEntryPointScenario(projectDirectory, bundler);
     }
   );
@@ -75,7 +75,10 @@ function runSecondaryEntryPointScenario(
   );
 
   const projectJson = JSON.parse(
-    readFileSync(join(projectDirectory, libraryProject.root, 'project.json'), 'utf-8')
+    readFileSync(
+      join(projectDirectory, libraryProject.root, 'project.json'),
+      'utf-8'
+    )
   );
   expect(projectJson.targets.build.options.additionalEntryPoints).toContain(
     libraryEntryPath
@@ -106,10 +109,14 @@ function runSecondaryEntryPointScenario(
 
   expect(featureExport).toMatchObject({});
   if (featureExport.import) {
-    expect(normalizeWorkspacePath(featureExport.import)).toMatch(jsEntryPattern);
+    expect(normalizeWorkspacePath(featureExport.import)).toMatch(
+      jsEntryPattern
+    );
   }
   if (featureExport.default) {
-    expect(normalizeWorkspacePath(featureExport.default)).toMatch(jsEntryPattern);
+    expect(normalizeWorkspacePath(featureExport.default)).toMatch(
+      jsEntryPattern
+    );
   }
   if (featureExport.types) {
     expect(normalizeWorkspacePath(featureExport.types)).toMatch(
@@ -151,6 +158,8 @@ function runCommand(command: string, cwd: string) {
     env: {
       ...process.env,
       NX_DAEMON: 'false',
+      // Temp e2e workspaces need to write a fresh lockfile during setup.
+      YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
     },
   });
 }

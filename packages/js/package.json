@@ -38,9 +38,6 @@
     "access": "public",
     "provenance": false
   },
-  "peerDependencies": {
-    "nx": ">=21.6.4 <23"
-  },
   "nx": {
     "name": "nx-js",
     "targets": {

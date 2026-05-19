@@ -6,6 +6,7 @@
   },
   "include": [
     "jest.config.cts",
+    "src/**/*.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.d.ts"

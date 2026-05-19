@@ -167,7 +167,17 @@ export class AppModule {}
 function mergeProjects(
   results: readonly (readonly [string, CreateNodesResult])[]
 ) {
-  const projects: Record<string, { targets?: Record<string, unknown> }> = {};
+  const projects: Record<
+    string,
+    {
+      targets?: Record<
+        string,
+        {
+          options?: Record<string, unknown>;
+        }
+      >;
+    }
+  > = {};
   for (const [, result] of results) {
     Object.assign(projects, result.projects ?? {});
   }

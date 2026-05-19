@@ -155,7 +155,10 @@ export async function bootstrap() {
       skipInstall: true,
     });
 
-    const nestedModuleSource = tree.read('apps/api/src/app/app.module.ts', 'utf-8');
+    const nestedModuleSource = tree.read(
+      'apps/api/src/app/app.module.ts',
+      'utf-8'
+    );
     expect(nestedModuleSource).toBeDefined();
     expect(nestedModuleSource).toContain(
       'import { TypeOrmModule } from "@nestjs/typeorm"'
@@ -443,9 +446,26 @@ export class AppModule {}
       helperSnippet: 'trustServerCertificate',
       envSnippet: 'TYPEORM_TRUST_SERVER_CERTIFICATE=true',
     },
-  ])(
+  ] as const)(
     'generates database-specific connection templates for %s',
-    async ({ db, expectedType, helperSnippet, envSnippet }) => {
+    async ({
+      db,
+      expectedType,
+      helperSnippet,
+      envSnippet,
+    }: {
+      db:
+        | 'postgres'
+        | 'postgresql'
+        | 'mysql'
+        | 'mariadb'
+        | 'sqlite'
+        | 'better-sqlite3'
+        | 'mssql';
+      expectedType: string;
+      helperSnippet: string;
+      envSnippet: string;
+    }) => {
       addProjectConfiguration(tree, 'api', {
         root: 'apps/api',
         sourceRoot: 'apps/api/src',

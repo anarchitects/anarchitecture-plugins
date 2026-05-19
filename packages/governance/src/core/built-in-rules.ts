@@ -16,7 +16,12 @@ import type {
   GovernanceRuleResult,
 } from './rules.js';
 
-export const domainBoundaryRule: GovernanceRule = {
+type SynchronousGovernanceRule<TOptions = unknown> =
+  GovernanceRule<TOptions> & {
+    evaluate(context: GovernanceRuleContext<TOptions>): GovernanceRuleResult;
+  };
+
+export const domainBoundaryRule: SynchronousGovernanceRule = {
   id: 'domain-boundary',
   name: 'Domain Boundary',
   description:
@@ -57,7 +62,7 @@ export const domainBoundaryRule: GovernanceRule = {
   },
 };
 
-export const layerBoundaryRule: GovernanceRule = {
+export const layerBoundaryRule: SynchronousGovernanceRule = {
   id: 'layer-boundary',
   name: 'Layer Boundary',
   description:
@@ -106,7 +111,7 @@ export const layerBoundaryRule: GovernanceRule = {
   },
 };
 
-export const ownershipPresenceRule: GovernanceRule = {
+export const ownershipPresenceRule: SynchronousGovernanceRule = {
   id: 'ownership-presence',
   name: 'Ownership Presence',
   description:
@@ -145,7 +150,7 @@ export const ownershipPresenceRule: GovernanceRule = {
   },
 };
 
-export const projectNameConventionRule: GovernanceRule = {
+export const projectNameConventionRule: SynchronousGovernanceRule = {
   id: 'project-name-convention',
   name: 'Project Name Convention',
   description:
@@ -179,7 +184,7 @@ export const projectNameConventionRule: GovernanceRule = {
   },
 };
 
-export const tagConventionRule: GovernanceRule = {
+export const tagConventionRule: SynchronousGovernanceRule = {
   id: 'tag-convention',
   name: 'Tag Convention',
   description:
@@ -216,7 +221,7 @@ export const tagConventionRule: GovernanceRule = {
   },
 };
 
-export const missingDomainRule: GovernanceRule = {
+export const missingDomainRule: SynchronousGovernanceRule = {
   id: 'missing-domain',
   name: 'Missing Domain',
   description: 'Requires a domain on projects when explicitly configured.',
@@ -245,7 +250,7 @@ export const missingDomainRule: GovernanceRule = {
   },
 };
 
-export const missingLayerRule: GovernanceRule = {
+export const missingLayerRule: SynchronousGovernanceRule = {
   id: 'missing-layer',
   name: 'Missing Layer',
   description: 'Requires a layer on projects when explicitly configured.',

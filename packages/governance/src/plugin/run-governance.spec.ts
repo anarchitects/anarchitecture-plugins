@@ -3,6 +3,17 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+jest.mock('../nx-adapter/read-workspace.js', () => {
+  const actual = jest.requireActual(
+    '../nx-adapter/read-workspace.js'
+  ) as typeof import('../nx-adapter/read-workspace.js');
+
+  return {
+    ...actual,
+    loadNxGovernanceWorkspaceContext: jest.fn(),
+  };
+});
+
 jest.mock('../presets/frontend-layered/profile.js', () => {
   const actual = jest.requireActual(
     '../presets/frontend-layered/profile.js'
@@ -17,6 +28,7 @@ jest.mock('../presets/frontend-layered/profile.js', () => {
 import { logger, workspaceRoot } from '@nx/devkit';
 
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
+import * as readWorkspaceModule from '../nx-adapter/read-workspace.js';
 import * as profileModule from '../presets/frontend-layered/profile.js';
 import {
   frontendLayeredProfile,
@@ -47,8 +59,41 @@ const actualProfileModule = jest.requireActual(
 const mockedLoadProfileOverrides = jest.mocked(
   profileModule.loadProfileOverrides
 );
+const mockedLoadNxGovernanceWorkspaceContext = jest.mocked(
+  readWorkspaceModule.loadNxGovernanceWorkspaceContext
+);
 
 describe('runGovernance', () => {
+  const originalNxDaemon = process.env.NX_DAEMON;
+  const originalNxCacheProjectGraph = process.env.NX_CACHE_PROJECT_GRAPH;
+  const cachedWorkspaceContext = buildMockWorkspaceContext();
+
+  beforeAll(() => {
+    jest.setTimeout(120000);
+    process.env.NX_DAEMON = 'false';
+    process.env.NX_CACHE_PROJECT_GRAPH = 'false';
+  });
+
+  beforeEach(() => {
+    mockedLoadNxGovernanceWorkspaceContext.mockImplementation(async () =>
+      structuredClone(cachedWorkspaceContext)
+    );
+  });
+
+  afterAll(() => {
+    if (originalNxDaemon === undefined) {
+      delete process.env.NX_DAEMON;
+    } else {
+      process.env.NX_DAEMON = originalNxDaemon;
+    }
+
+    if (originalNxCacheProjectGraph === undefined) {
+      delete process.env.NX_CACHE_PROJECT_GRAPH;
+    } else {
+      process.env.NX_CACHE_PROJECT_GRAPH = originalNxCacheProjectGraph;
+    }
+  });
+
   function writeSnapshotFile(
     directory: string,
     fileName: string,
@@ -63,6 +108,9 @@ describe('runGovernance', () => {
     jest.restoreAllMocks();
     mockedLoadProfileOverrides.mockImplementation(
       actualProfileModule.loadProfileOverrides
+    );
+    mockedLoadNxGovernanceWorkspaceContext.mockImplementation(async () =>
+      structuredClone(cachedWorkspaceContext)
     );
     jest.useRealTimers();
   });
@@ -1196,11 +1244,11 @@ describe('runGovernance', () => {
                   {
                     id: 'extension-coverage',
                     name: 'Extension Coverage',
-                    family: 'architecture',
+                    family: 'architecture' as const,
                     value: workspace.projects.length > 0 ? 1 : 0,
                     score: 80,
                     maxScore: 100,
-                    unit: 'ratio',
+                    unit: 'ratio' as const,
                   },
                 ].filter(() => measurements.length > 0);
               },
@@ -1815,3 +1863,129 @@ describe('runGovernance', () => {
     }
   });
 });
+
+function buildMockWorkspaceContext() {
+  return {
+    snapshot: {
+      root: workspaceRoot,
+      projects: [
+        {
+          name: 'packages/governance',
+          root: 'packages/governance',
+          type: 'library',
+          tags: ['domain:governance', 'layer:core'],
+          metadata: {
+            ownership: {
+              team: '@anarchitects/governance',
+            },
+            documentation: true,
+          },
+        },
+        {
+          name: 'packages/governance-e2e',
+          root: 'packages/governance-e2e',
+          type: 'application',
+          tags: ['domain:governance', 'layer:e2e'],
+          metadata: {},
+        },
+        {
+          name: 'packages/js',
+          root: 'packages/js',
+          type: 'library',
+          tags: ['domain:platform', 'layer:feature'],
+          metadata: {},
+        },
+      ],
+      dependencies: [
+        {
+          source: 'packages/governance-e2e',
+          target: 'packages/governance',
+          type: 'static',
+          sourceFile: 'packages/governance-e2e/src/repo-health.spec.ts',
+        },
+        {
+          source: 'packages/governance',
+          target: 'packages/js',
+          type: 'static',
+          sourceFile: 'packages/governance/src/plugin/run-governance.ts',
+        },
+      ],
+      codeownersByProject: {
+        'packages/governance': ['@anarchitects/governance'],
+        'packages/governance-e2e': ['@anarchitects/qa'],
+        'packages/js': ['@anarchitects/platform'],
+      },
+    },
+    adapterResult: {
+      workspaceRoot,
+      projects: [
+        {
+          id: 'packages/governance',
+          name: 'packages/governance',
+          root: 'packages/governance',
+          type: 'library',
+          tags: ['domain:governance', 'layer:core'],
+          metadata: {
+            ownership: {
+              team: '@anarchitects/governance',
+            },
+            documentation: true,
+          },
+          ownership: {
+            contacts: ['@anarchitects/governance'],
+            source: 'codeowners',
+          },
+        },
+        {
+          id: 'packages/governance-e2e',
+          name: 'packages/governance-e2e',
+          root: 'packages/governance-e2e',
+          type: 'application',
+          tags: ['domain:governance', 'layer:e2e'],
+          metadata: {},
+          ownership: {
+            contacts: ['@anarchitects/qa'],
+            source: 'codeowners',
+          },
+        },
+        {
+          id: 'packages/js',
+          name: 'packages/js',
+          root: 'packages/js',
+          type: 'library',
+          tags: ['domain:platform', 'layer:feature'],
+          metadata: {},
+          ownership: {
+            contacts: ['@anarchitects/platform'],
+            source: 'codeowners',
+          },
+        },
+      ],
+      dependencies: [
+        {
+          sourceProjectId: 'packages/governance-e2e',
+          targetProjectId: 'packages/governance',
+          type: 'static',
+          sourceFile: 'packages/governance-e2e/src/repo-health.spec.ts',
+        },
+        {
+          sourceProjectId: 'packages/governance',
+          targetProjectId: 'packages/js',
+          type: 'static',
+          sourceFile: 'packages/governance/src/plugin/run-governance.ts',
+        },
+      ],
+      capabilities: [
+        {
+          id: 'capability:nx',
+          data: {
+            projectGraphAvailable: true,
+            tagsAvailable: true,
+            metadataAvailable: true,
+            source: 'nx-project-graph',
+          },
+        },
+      ],
+    },
+  };
+}

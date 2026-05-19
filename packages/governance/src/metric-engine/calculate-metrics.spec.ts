@@ -40,6 +40,7 @@ describe('calculateMetrics', () => {
       ruleId: 'ownership-presence',
       project: 'b',
       severity: 'warning',
+      category: 'ownership',
       message: 'missing ownership',
     },
   ];

@@ -20,6 +20,12 @@ describe('ai-handoff', () => {
       request: {
         kind: 'root-cause',
       },
+      analysis: {
+        kind: 'root-cause' as const,
+        summary: 'Root cause summary.',
+        findings: [],
+        recommendations: [],
+      },
     };
     const artifacts = exportAiHandoffArtifacts({
       workspaceRoot,
@@ -94,6 +100,12 @@ describe('ai-handoff', () => {
       useCase: 'management-insights' as const,
       request: {
         kind: 'management-insights',
+      },
+      analysis: {
+        kind: 'management-insights' as const,
+        summary: 'Management insights summary.',
+        findings: [],
+        recommendations: [],
       },
     };
     const artifacts = exportAiHandoffArtifacts({

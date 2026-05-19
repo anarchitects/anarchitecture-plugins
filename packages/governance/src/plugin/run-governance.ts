@@ -1652,13 +1652,12 @@ async function buildAssessmentArtifacts(
     },
   };
 
-  const { snapshot, adapterResult } = await loadNxGovernanceWorkspaceContext();
+  const { adapterResult } = await loadNxGovernanceWorkspaceContext();
   const inventory = buildInventory(adapterResult, overrides);
   const extensionRegistry = await registerGovernanceExtensions({
     workspaceRoot,
     profileName,
     options: { ...options },
-    snapshot,
     inventory,
   });
   const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
@@ -1668,7 +1667,6 @@ async function buildAssessmentArtifacts(
       workspaceRoot,
       profileName,
       options: { ...options },
-      snapshot,
       inventory,
     },
   });
@@ -1692,7 +1690,6 @@ async function buildAssessmentArtifacts(
         workspaceRoot,
         profileName,
         options: { ...options },
-        snapshot,
         inventory,
       },
     }
@@ -1725,7 +1722,6 @@ async function buildAssessmentArtifacts(
       workspaceRoot,
       profileName,
       options: { ...options },
-      snapshot,
       inventory,
     },
   });
@@ -1746,7 +1742,6 @@ async function buildAssessmentArtifacts(
         workspaceRoot,
         profileName,
         options: { ...options },
-        snapshot,
         inventory,
       },
     }

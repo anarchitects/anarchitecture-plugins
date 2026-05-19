@@ -9,7 +9,7 @@ import { createFrontendLayeredStarterProfile } from '../../presets/frontend-laye
 import initGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
-  | typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace']
+  | typeof import('nx/src/devkit-testing-exports')['createTreeWithEmptyWorkspace']
   | undefined;
 
 const MINIMAL_TARGET_NAMES = ['repo-health', 'governance-graph'] as const;
@@ -690,5 +690,7 @@ function readTargets(tree: Tree): Record<string, RootTargetConfig> {
 }
 
 beforeAll(async () => {
-  ({ createTreeWithEmptyWorkspace } = await import('@nx/devkit/testing'));
+  ({ createTreeWithEmptyWorkspace } = await import(
+    'nx/src/devkit-testing-exports'
+  ));
 });

@@ -1,7 +1,5 @@
-import {
-  GovernanceExtensionHostContext,
-  registerGovernanceExtensions,
-} from './host.js';
+import { GovernanceExtensionHostContext } from './contracts.js';
+import { registerGovernanceExtensions } from './host.js';
 
 describe('registerGovernanceExtensions', () => {
   const baseContext: GovernanceExtensionHostContext = {
@@ -10,12 +8,6 @@ describe('registerGovernanceExtensions', () => {
     options: {
       output: 'cli',
       reportType: 'health',
-    },
-    snapshot: {
-      root: '/repo',
-      projects: [],
-      dependencies: [],
-      codeownersByProject: {},
     },
     inventory: {
       id: 'workspace',

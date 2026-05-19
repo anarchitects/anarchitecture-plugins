@@ -57,8 +57,7 @@ In `runGovernance(...)`, the extension pipeline is:
 
 - The extension host imports `@nx/devkit` for the default workspace root.
 - Discovery is based on `nx.json.plugins`, which is an Nx plugin registration surface rather than a governance-specific configuration surface.
-- Extension contracts expose `AdapterWorkspaceSnapshot` through `GovernanceExtensionHostContext.snapshot`.
-- Runtime extension context includes the Nx adapter snapshot and the current governance inventory.
+- Runtime extension context still includes `workspaceRoot`, `profileName`, options, and the current governance inventory from the Nx-hosted run.
 - The current model probes Nx and Nx-adjacent plugin packages for an Anarchitects-specific subpath: `<plugin>/governance-extension`.
 
 ## Notes on Current Runtime Shape
@@ -67,6 +66,7 @@ In `runGovernance(...)`, the extension pipeline is:
 - Registration order follows normalized `nx.json.plugins` order.
 - Contribution attribution is carried forward through `pluginId` / `sourcePluginId` defaults when rule packs, signal providers, and metric providers emit results.
 - In the current workspace, `nx.json.plugins` is populated with standard Nx plugins. Those entries are still probed for governance entrypoints and silently skipped when the governance subpath is absent.
+- Issue #308 removed Nx adapter snapshot exposure from `GovernanceExtensionHostContext`. Capability-based Nx awareness remains future work under #309 and #315.
 
 ## Implications for #219
 

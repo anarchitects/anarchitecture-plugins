@@ -327,38 +327,34 @@ async function mergeTargets(
   inferredTargets: Record<string, Record<string, unknown>>,
   explicitTargets: Record<string, Record<string, unknown>>
 ): Promise<Record<string, Record<string, unknown>>> {
-  const { mergeProjectConfigurationIntoRootMap } = await import(
-    'nx/src/project-graph/utils/project-configuration-utils'
-  );
-  const projectRootMap: Record<
-    string,
-    {
-      name?: string;
-      root: string;
-      targets?: Record<string, Record<string, unknown>>;
-    }
-  > = {};
+  const mergedTargets = { ...inferredTargets };
 
-  mergeProjectConfigurationIntoRootMap(
-    projectRootMap,
-    {
-      root: '.',
-      name: '@anarchitecture-plugins/source',
-      targets: inferredTargets,
-    },
-    undefined,
-    ['tools/governance/profiles/frontend-layered.json', 'governance-inference']
-  );
-  mergeProjectConfigurationIntoRootMap(
-    projectRootMap,
-    {
-      root: '.',
-      name: '@anarchitecture-plugins/source',
-      targets: explicitTargets,
-    },
-    undefined,
-    ['package.json', 'package-json']
-  );
+  for (const [targetName, explicitTarget] of Object.entries(explicitTargets)) {
+    const inferredTarget = mergedTargets[targetName];
 
-  return projectRootMap['.']?.targets ?? {};
+    mergedTargets[targetName] = inferredTarget
+      ? {
+          ...inferredTarget,
+          ...explicitTarget,
+          options: {
+            ...(inferredTarget['options'] as
+              | Record<string, unknown>
+              | undefined),
+            ...(explicitTarget['options'] as
+              | Record<string, unknown>
+              | undefined),
+          },
+          metadata: {
+            ...(inferredTarget['metadata'] as
+              | Record<string, unknown>
+              | undefined),
+            ...(explicitTarget['metadata'] as
+              | Record<string, unknown>
+              | undefined),
+          },
+        }
+      : explicitTarget;
+  }
+
+  return mergedTargets;
 }

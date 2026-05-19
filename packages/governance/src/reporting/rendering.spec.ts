@@ -412,6 +412,7 @@ function makeAssessment(): GovernanceAssessment {
       {
         id: 'architectural-entropy',
         name: 'Architectural Entropy',
+        family: 'architecture',
         value: 0.2,
         score: 80,
         maxScore: 100,
@@ -420,6 +421,7 @@ function makeAssessment(): GovernanceAssessment {
       {
         id: 'documentation-completeness',
         name: 'Documentation Completeness',
+        family: 'documentation',
         value: 0.33,
         score: 33,
         maxScore: 100,
