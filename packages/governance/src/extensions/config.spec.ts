@@ -14,6 +14,7 @@ describe('governance extension config', () => {
     expect(
       parseGovernanceExtensionConfig({
         governance: {
+          legacyPluginProbing: true,
           extensions: [
             {
               package: '@anarchitects/governance-extension-angular',
@@ -29,6 +30,7 @@ describe('governance extension config', () => {
         },
       })
     ).toEqual({
+      legacyPluginProbing: true,
       extensions: [
         {
           package: '@anarchitects/governance-extension-angular',
@@ -101,6 +103,20 @@ describe('governance extension config', () => {
       'plugin-a',
       'plugin-b',
     ]);
+  });
+
+  it('fails on invalid legacyPluginProbing values', () => {
+    expect(() =>
+      parseGovernanceExtensionConfig({
+        governance: {
+          legacyPluginProbing: 'yes',
+        } as unknown as {
+          legacyPluginProbing: boolean;
+        },
+      })
+    ).toThrow(
+      'Invalid governance extension config: nx.json governance.legacyPluginProbing must be a boolean when provided.'
+    );
   });
 
   it('ignores unrelated nx.json fields', () => {

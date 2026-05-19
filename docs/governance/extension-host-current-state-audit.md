@@ -75,6 +75,14 @@ In `runGovernance(...)`, the extension pipeline is:
 - Rich capability payloads remain future work; the runtime still does not expose raw Nx graph objects or adapter snapshots through extension contracts.
 - Adapters and hosts still conceptually own capability production, with richer Nx-aware capability data deferred to later work under #315.
 
+## Legacy Probing Status
+
+- Issue #313 marks arbitrary `nx.json.plugins` probing as deprecated compatibility behavior.
+- Explicit `nx.json.governance.extensions` is now the preferred registration model.
+- If explicit governance extensions are configured, legacy probing is disabled by default unless `nx.json.governance.legacyPluginProbing` is set to `true`.
+- If no explicit governance extensions are configured, legacy probing remains enabled for backward compatibility.
+- When legacy probing is used, the runtime emits a deprecation warning once per governance run.
+
 ## Implications for #219
 
 - The current behavior is acceptable as a legacy compatibility model.

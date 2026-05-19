@@ -1,4 +1,4 @@
-import { workspaceRoot as defaultWorkspaceRoot } from '@nx/devkit';
+import { logger, workspaceRoot as defaultWorkspaceRoot } from '@nx/devkit';
 import * as fs from 'node:fs';
 import path from 'node:path';
 
@@ -17,7 +17,10 @@ import {
   GovernanceWorkspaceEnricher,
   GovernanceWorkspaceEnricherInput,
 } from './contracts.js';
-import { parseGovernanceExtensionConfig } from './config.js';
+import {
+  GovernanceExtensionConfig,
+  parseGovernanceExtensionConfig,
+} from './config.js';
 
 interface RegisteredGovernanceContribution<T> {
   pluginId: string;
@@ -40,6 +43,7 @@ interface NxJsonShape {
   plugins?: Array<string | NxJsonPluginConfig>;
   governance?: {
     extensions?: unknown;
+    legacyPluginProbing?: unknown;
   };
 }
 
@@ -135,8 +139,15 @@ export async function discoverGovernanceExtensions(
   const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
   const moduleLoader = options.moduleLoader ?? defaultGovernanceModuleLoader;
   const extensions: DiscoveredGovernanceExtension[] = [];
+  const loadRequests = buildGovernanceExtensionLoadRequests(nxJson);
 
-  for (const loadRequest of buildGovernanceExtensionLoadRequests(nxJson)) {
+  if (loadRequests.some((request) => request.source === 'legacy')) {
+    logger.warn(
+      'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.'
+    );
+  }
+
+  for (const loadRequest of loadRequests) {
     try {
       const loadedModule = await moduleLoader(loadRequest.moduleSpecifier);
       const governanceExtension =
@@ -322,6 +333,10 @@ function buildGovernanceExtensionLoadRequests(
     });
   }
 
+  if (!shouldProbeLegacyPlugins(governanceExtensionConfig)) {
+    return requests;
+  }
+
   for (const pluginSpecifier of normalizePluginSpecifiers(nxJson.plugins)) {
     appendLoadRequest(requests, seenModuleSpecifiers, {
       sourceSpecifier: pluginSpecifier,
@@ -331,6 +346,14 @@ function buildGovernanceExtensionLoadRequests(
   }
 
   return requests;
+}
+
+function shouldProbeLegacyPlugins(config: GovernanceExtensionConfig): boolean {
+  if (config.legacyPluginProbing !== undefined) {
+    return config.legacyPluginProbing;
+  }
+
+  return config.extensions.length === 0;
 }
 
 function appendLoadRequest(
