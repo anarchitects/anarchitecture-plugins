@@ -18,6 +18,31 @@ describe('GraphAdapter', () => {
   });
 
   it('loads and normalizes graph via Nx API', async () => {
+    jest.spyOn(nxDevkit, 'createProjectGraphAsync').mockResolvedValue({
+      nodes: {
+        app: {
+          name: 'app',
+          data: {
+            root: 'apps/app',
+            projectType: 'application',
+            tags: ['domain:checkout', 'layer:feature'],
+          },
+        },
+        shared: {
+          name: 'shared',
+          data: {
+            root: 'libs/shared',
+            projectType: 'library',
+            tags: ['domain:shared', 'layer:data-access'],
+          },
+        },
+      },
+      dependencies: {
+        app: [{ target: 'shared', type: 'static' }],
+        shared: [],
+      },
+    } as Awaited<ReturnType<typeof nxDevkit.createProjectGraphAsync>>);
+
     const snapshot = await adapter.readSnapshot();
 
     expect(snapshot.source).toBe('nx-graph');
@@ -27,7 +52,33 @@ describe('GraphAdapter', () => {
     );
     expect(Array.isArray(snapshot.projects)).toBe(true);
     expect(Array.isArray(snapshot.dependencies)).toBe(true);
-    expect(snapshot.projects.length).toBeGreaterThan(0);
+    expect(snapshot.projects).toEqual([
+      {
+        id: 'app',
+        name: 'app',
+        root: 'apps/app',
+        type: 'application',
+        tags: ['domain:checkout', 'layer:feature'],
+        domain: 'checkout',
+        layer: 'feature',
+      },
+      {
+        id: 'shared',
+        name: 'shared',
+        root: 'libs/shared',
+        type: 'library',
+        tags: ['domain:shared', 'layer:data-access'],
+        domain: 'shared',
+        layer: 'data-access',
+      },
+    ]);
+    expect(snapshot.dependencies).toEqual([
+      {
+        sourceProjectId: 'app',
+        targetProjectId: 'shared',
+        type: 'static',
+      },
+    ]);
   });
 
   it('falls back to JSON input when Nx API is unavailable', async () => {
