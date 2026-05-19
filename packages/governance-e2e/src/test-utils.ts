@@ -58,7 +58,9 @@ export function runGovernanceCommand(
   args = ''
 ): any {
   execSync(
-    `yarn nx ${command} --profile=${defaultProfileName} --output=json --skip-nx-cache${args} > ${outputPath}`,
+    `yarn nx ${command} --profile=${defaultProfileName} --output=json --skip-nx-cache${
+      args ? ' ' + args : ''
+    } > ${outputPath}`,
     {
       cwd: projectDirectory,
       stdio: 'inherit',

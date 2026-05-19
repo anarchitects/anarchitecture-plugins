@@ -141,6 +141,9 @@
     },
     "e2e": {
       "dependsOn": ["^build"]
+    },
+    "e2e-ci": {
+      "dependsOn": ["^build"]
     }
   },
   "analytics": true
