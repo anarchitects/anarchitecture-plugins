@@ -224,6 +224,7 @@ function createArtifacts(): GovernanceAssessmentArtifacts {
       suppressedConformanceFindings: [],
       reactivatedConformanceFindings: [],
     },
+    extensionDiagnostics: [],
   };
 }
 

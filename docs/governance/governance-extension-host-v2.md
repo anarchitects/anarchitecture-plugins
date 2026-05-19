@@ -264,7 +264,10 @@ Current implementation status:
 - Arbitrary legacy probing of `nx.json.plugins` is deprecated.
 - Legacy `nx.json.plugins` probing remains as compatibility behavior and can be forced with `nx.json.governance.legacyPluginProbing`.
 - When explicit governance extensions are configured, legacy probing is disabled by default unless `legacyPluginProbing: true` is set.
-- Diagnostics improvements for extension loading remain future work under #314.
+- Extension loading diagnostics now exist for host-local observability.
+- Those diagnostics cover explicit loading, optional/required missing extensions, invalid definitions, duplicate ids, registration failures, legacy probing use, and skipped legacy entrypoints.
+- Diagnostics are local to extension loading for now, not a global diagnostics framework.
+- Richer capability and diagnostics expansion remains future work under #315 and #316.
 
 ## Discovery and Loading Boundary
 

@@ -21,6 +21,7 @@ import {
   GovernanceExtensionConfig,
   parseGovernanceExtensionConfig,
 } from './config.js';
+import type { GovernanceExtensionDiagnostic } from './diagnostics.js';
 
 interface RegisteredGovernanceContribution<T> {
   pluginId: string;
@@ -50,6 +51,8 @@ interface NxJsonShape {
 interface DiscoveredGovernanceExtension {
   sourceSpecifier: string;
   moduleSpecifier: string;
+  source: 'explicit' | 'legacy';
+  optional?: boolean;
   definition: GovernanceExtensionDefinition;
 }
 
@@ -72,6 +75,21 @@ export type RegisterGovernanceExtensionsOptions =
 export type GovernanceExtensionModuleLoader = (
   specifier: string
 ) => Promise<unknown>;
+
+export interface GovernanceExtensionRegistrationResult {
+  registry: GovernanceExtensionRegistry;
+  diagnostics: GovernanceExtensionDiagnostic[];
+}
+
+export class GovernanceExtensionRegistrationError extends Error {
+  readonly diagnostics: GovernanceExtensionDiagnostic[];
+
+  constructor(message: string, diagnostics: GovernanceExtensionDiagnostic[]) {
+    super(message);
+    this.name = 'GovernanceExtensionRegistrationError';
+    this.diagnostics = diagnostics;
+  }
+}
 
 export class GovernanceExtensionHost
   implements GovernanceExtensionHostContract
@@ -136,12 +154,30 @@ export class GovernanceExtensionHost
 export async function discoverGovernanceExtensions(
   options: DiscoverGovernanceExtensionsOptions = {}
 ): Promise<DiscoveredGovernanceExtension[]> {
+  const result = await discoverGovernanceExtensionsWithDiagnostics(options);
+  return result.extensions;
+}
+
+async function discoverGovernanceExtensionsWithDiagnostics(
+  options: DiscoverGovernanceExtensionsOptions = {}
+): Promise<{
+  extensions: DiscoveredGovernanceExtension[];
+  diagnostics: GovernanceExtensionDiagnostic[];
+}> {
   const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
   const moduleLoader = options.moduleLoader ?? defaultGovernanceModuleLoader;
   const extensions: DiscoveredGovernanceExtension[] = [];
+  const diagnostics: GovernanceExtensionDiagnostic[] = [];
   const loadRequests = buildGovernanceExtensionLoadRequests(nxJson);
 
   if (loadRequests.some((request) => request.source === 'legacy')) {
+    diagnostics.push({
+      code: 'governance.extension.legacy_probing_used',
+      severity: 'warning',
+      message:
+        'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.',
+      legacy: true,
+    });
     logger.warn(
       'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.'
     );
@@ -156,7 +192,18 @@ export async function discoverGovernanceExtensions(
       extensions.push({
         sourceSpecifier: loadRequest.sourceSpecifier,
         moduleSpecifier: loadRequest.moduleSpecifier,
+        source: loadRequest.source,
+        optional: loadRequest.optional,
         definition: governanceExtension,
+      });
+      diagnostics.push({
+        code: 'governance.extension.loaded',
+        severity: 'notice',
+        message: `Loaded governance extension from "${loadRequest.moduleSpecifier}".`,
+        packageName: loadRequest.sourceSpecifier,
+        moduleSpecifier: loadRequest.moduleSpecifier,
+        extensionId: governanceExtension.id,
+        legacy: loadRequest.source === 'legacy',
       });
     } catch (error) {
       if (
@@ -166,37 +213,117 @@ export async function discoverGovernanceExtensions(
           loadRequest
         )
       ) {
+        diagnostics.push(
+          createMissingExtensionDiagnostic(
+            loadRequest,
+            loadRequest.source === 'legacy'
+              ? 'governance.extension.legacy_entrypoint_missing'
+              : 'governance.extension.skipped_optional_missing'
+          )
+        );
         continue;
+      }
+
+      if (
+        loadRequest.source === 'explicit' &&
+        isMissingDirectModuleLookup(error, loadRequest.moduleSpecifier)
+      ) {
+        diagnostics.push(
+          createMissingExtensionDiagnostic(
+            loadRequest,
+            'governance.extension.missing_required'
+          )
+        );
+        throw new GovernanceExtensionRegistrationError(
+          toErrorMessage(error),
+          diagnostics
+        );
+      }
+
+      if (isInvalidGovernanceExtensionDefinitionError(error)) {
+        diagnostics.push({
+          code: 'governance.extension.invalid_definition',
+          severity: 'error',
+          message: toErrorMessage(error),
+          packageName: loadRequest.sourceSpecifier,
+          moduleSpecifier: loadRequest.moduleSpecifier,
+          legacy: loadRequest.source === 'legacy',
+        });
+        throw new GovernanceExtensionRegistrationError(
+          toErrorMessage(error),
+          diagnostics
+        );
       }
 
       throw error;
     }
   }
 
-  return extensions;
+  return {
+    extensions,
+    diagnostics,
+  };
 }
 
 export async function registerGovernanceExtensions(
   context: GovernanceExtensionHostContext,
   options: RegisterGovernanceExtensionsOptions = {}
 ): Promise<GovernanceExtensionRegistry> {
+  const result = await registerGovernanceExtensionsWithDiagnostics(
+    context,
+    options
+  );
+  return result.registry;
+}
+
+export async function registerGovernanceExtensionsWithDiagnostics(
+  context: GovernanceExtensionHostContext,
+  options: RegisterGovernanceExtensionsOptions = {}
+): Promise<GovernanceExtensionRegistrationResult> {
   const registry: GovernanceExtensionRegistry = {
     metricProviders: [],
     signalProviders: [],
     rulePacks: [],
     enrichers: [],
   };
-  const discoveredExtensions = await discoverGovernanceExtensions(options);
+  const discoveryResult = await discoverGovernanceExtensionsWithDiagnostics(
+    options
+  );
+  const diagnostics = [...discoveryResult.diagnostics];
+  const discoveredExtensions = discoveryResult.extensions;
   const seenExtensionIds = new Map<string, string>();
 
   for (const extension of discoveredExtensions) {
-    validateGovernanceExtensionId(extension);
+    try {
+      validateGovernanceExtensionId(extension);
+    } catch (error) {
+      diagnostics.push({
+        code: 'governance.extension.invalid_definition',
+        severity: 'error',
+        message: toErrorMessage(error),
+        packageName: extension.sourceSpecifier,
+        moduleSpecifier: extension.moduleSpecifier,
+        legacy: extension.source === 'legacy',
+      });
+      throw new GovernanceExtensionRegistrationError(
+        toErrorMessage(error),
+        diagnostics
+      );
+    }
 
     const previousModule = seenExtensionIds.get(extension.definition.id);
     if (previousModule) {
-      throw new Error(
-        `Duplicate governance extension id "${extension.definition.id}" was found in "${previousModule}" and "${extension.moduleSpecifier}".`
-      );
+      const message = `Duplicate governance extension id "${extension.definition.id}" was found in "${previousModule}" and "${extension.moduleSpecifier}".`;
+      diagnostics.push({
+        code: 'governance.extension.duplicate_id',
+        severity: 'error',
+        message,
+        packageName: extension.sourceSpecifier,
+        moduleSpecifier: extension.moduleSpecifier,
+        extensionId: extension.definition.id,
+        legacy: extension.source === 'legacy',
+      });
+      throw new GovernanceExtensionRegistrationError(message, diagnostics);
     }
 
     seenExtensionIds.set(extension.definition.id, extension.moduleSpecifier);
@@ -209,15 +336,28 @@ export async function registerGovernanceExtensions(
       await extension.definition.register(host);
       mergeRegistry(registry, host.toRegistry());
     } catch (error) {
-      throw new Error(
-        `Governance extension "${extension.definition.id}" from "${
-          extension.moduleSpecifier
-        }" failed during registration: ${toErrorMessage(error)}`
-      );
+      const message = `Governance extension "${
+        extension.definition.id
+      }" from "${
+        extension.moduleSpecifier
+      }" failed during registration: ${toErrorMessage(error)}`;
+      diagnostics.push({
+        code: 'governance.extension.registration_failed',
+        severity: 'error',
+        message,
+        packageName: extension.sourceSpecifier,
+        moduleSpecifier: extension.moduleSpecifier,
+        extensionId: extension.definition.id,
+        legacy: extension.source === 'legacy',
+      });
+      throw new GovernanceExtensionRegistrationError(message, diagnostics);
     }
   }
 
-  return registry;
+  return {
+    registry,
+    diagnostics,
+  };
 }
 
 export async function applyGovernanceEnrichers(
@@ -369,6 +509,31 @@ function appendLoadRequest(
   target.push(request);
 }
 
+function createMissingExtensionDiagnostic(
+  loadRequest: GovernanceExtensionLoadRequest,
+  code:
+    | 'governance.extension.skipped_optional_missing'
+    | 'governance.extension.missing_required'
+    | 'governance.extension.legacy_entrypoint_missing'
+): GovernanceExtensionDiagnostic {
+  const message =
+    code === 'governance.extension.skipped_optional_missing'
+      ? `Skipped optional governance extension "${loadRequest.moduleSpecifier}" because the package could not be resolved.`
+      : code === 'governance.extension.missing_required'
+      ? `Required governance extension "${loadRequest.moduleSpecifier}" could not be resolved.`
+      : `Skipped legacy governance extension probe for "${loadRequest.moduleSpecifier}" because the governance entrypoint is missing.`;
+
+  return {
+    code,
+    severity:
+      code === 'governance.extension.missing_required' ? 'error' : 'notice',
+    message,
+    packageName: loadRequest.sourceSpecifier,
+    moduleSpecifier: loadRequest.moduleSpecifier,
+    legacy: loadRequest.source === 'legacy',
+  };
+}
+
 function normalizePluginSpecifiers(
   plugins: NxJsonShape['plugins'] = []
 ): string[] {
@@ -513,6 +678,14 @@ function isMissingDirectModuleLookup(
   return (
     message.startsWith('Cannot find module') &&
     matchesGovernanceEntrypointLookup(message, moduleSpecifier)
+  );
+}
+
+function isInvalidGovernanceExtensionDefinitionError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message ===
+      'Governance extension module must export a named "governanceExtension" definition.'
   );
 }
 
