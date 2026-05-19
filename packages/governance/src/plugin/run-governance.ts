@@ -89,6 +89,7 @@ import {
   evaluateGovernanceRulePacks,
   registerGovernanceExtensions,
 } from '../extensions/host.js';
+import { DefaultGovernanceCapabilityRegistry } from '../extensions/capabilities.js';
 import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
@@ -1654,21 +1655,25 @@ async function buildAssessmentArtifacts(
 
   const { adapterResult } = await loadNxGovernanceWorkspaceContext();
   const inventory = buildInventory(adapterResult, overrides);
-  const extensionRegistry = await registerGovernanceExtensions({
+  const capabilities = new DefaultGovernanceCapabilityRegistry([
+    {
+      id: 'capability:nx',
+    },
+  ]);
+  const extensionContext = {
     workspaceRoot,
     profileName,
     options: { ...options },
     inventory,
+    capabilities,
+  };
+  const extensionRegistry = await registerGovernanceExtensions({
+    ...extensionContext,
   });
   const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
     workspace: inventory,
     profile: effectiveProfile,
-    context: {
-      workspaceRoot,
-      profileName,
-      options: { ...options },
-      inventory,
-    },
+    context: extensionContext,
   });
   const coreViolations = evaluatePolicies(enrichedInventory, effectiveProfile);
   const resolvedConformanceInput = resolveConformanceInput(
@@ -1686,12 +1691,7 @@ async function buildAssessmentArtifacts(
     {
       workspace: enrichedInventory,
       profile: effectiveProfile,
-      context: {
-        workspaceRoot,
-        profileName,
-        options: { ...options },
-        inventory,
-      },
+      context: extensionContext,
     }
   );
   const allViolations = [
@@ -1718,12 +1718,7 @@ async function buildAssessmentArtifacts(
     profile: effectiveProfile,
     violations: allViolations,
     signals: coreSignals,
-    context: {
-      workspaceRoot,
-      profileName,
-      options: { ...options },
-      inventory,
-    },
+    context: extensionContext,
   });
   const allSignals = mergeGovernanceSignals(coreSignals, extensionSignals);
   const coreMeasurements = calculateMetrics({
@@ -1738,12 +1733,7 @@ async function buildAssessmentArtifacts(
       signals: allSignals,
       measurements: coreMeasurements,
       violations: allViolations,
-      context: {
-        workspaceRoot,
-        profileName,
-        options: { ...options },
-        inventory,
-      },
+      context: extensionContext,
     }
   );
   const allMeasurements = [...coreMeasurements, ...extensionMeasurements];

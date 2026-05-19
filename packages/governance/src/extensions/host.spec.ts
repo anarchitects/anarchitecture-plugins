@@ -1,4 +1,5 @@
 import { GovernanceExtensionHostContext } from './contracts.js';
+import { DefaultGovernanceCapabilityRegistry } from './capabilities.js';
 import { registerGovernanceExtensions } from './host.js';
 
 describe('registerGovernanceExtensions', () => {
@@ -16,6 +17,11 @@ describe('registerGovernanceExtensions', () => {
       projects: [],
       dependencies: [],
     },
+    capabilities: new DefaultGovernanceCapabilityRegistry([
+      {
+        id: 'capability:nx',
+      },
+    ]),
   };
 
   function createErrorWithCode(message: string, code: string): Error {
@@ -117,6 +123,12 @@ describe('registerGovernanceExtensions', () => {
     expect(receivedContext).toEqual(baseContext);
     expect(Object.isFrozen(receivedContext)).toBe(true);
     expect(Object.isFrozen(receivedContext?.options)).toBe(true);
+    expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
+    expect(receivedContext?.capabilities.list()).toEqual([
+      {
+        id: 'capability:nx',
+      },
+    ]);
   });
 
   it('ignores plugins without a governance extension entrypoint', async () => {
