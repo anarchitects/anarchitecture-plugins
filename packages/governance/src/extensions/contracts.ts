@@ -5,12 +5,14 @@ import {
   Violation,
 } from '../core/index.js';
 import { GovernanceSignal } from '../signal-engine/index.js';
+import { GovernanceCapabilityRegistry } from './capabilities.js';
 
 export interface GovernanceExtensionHostContext {
   workspaceRoot: string;
   profileName: string;
   options: Readonly<Record<string, unknown>>;
   inventory: GovernanceWorkspace;
+  capabilities: GovernanceCapabilityRegistry;
 }
 
 export interface GovernanceExtensionDefinition {

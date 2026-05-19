@@ -68,6 +68,13 @@ In `runGovernance(...)`, the extension pipeline is:
 - In the current workspace, `nx.json.plugins` is populated with standard Nx plugins. Those entries are still probed for governance entrypoints and silently skipped when the governance subpath is absent.
 - Issue #308 removed Nx adapter snapshot exposure from `GovernanceExtensionHostContext`. Capability-based Nx awareness remains future work under #309 and #315.
 
+## Capability Registry Baseline
+
+- Issue #309 introduces a Core-owned capability registry into extension execution context.
+- The current runtime only exposes a minimal `capability:nx` entry.
+- Rich capability payloads remain future work; the runtime still does not expose raw Nx graph objects or adapter snapshots through extension contracts.
+- Adapters and hosts still conceptually own capability production, with richer Nx-aware capability data deferred to later work under #315.
+
 ## Implications for #219
 
 - The current behavior is acceptable as a legacy compatibility model.
