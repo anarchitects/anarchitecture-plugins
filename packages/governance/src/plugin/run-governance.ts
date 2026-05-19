@@ -90,6 +90,7 @@ import {
   registerGovernanceExtensions,
 } from '../extensions/host.js';
 import { DefaultGovernanceCapabilityRegistry } from '../extensions/capabilities.js';
+import { loadGovernanceExtensionConfig } from '../extensions/config.js';
 import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
@@ -1655,6 +1656,7 @@ async function buildAssessmentArtifacts(
 
   const { adapterResult } = await loadNxGovernanceWorkspaceContext();
   const inventory = buildInventory(adapterResult, overrides);
+  loadGovernanceExtensionConfig({ workspaceRoot });
   const capabilities = new DefaultGovernanceCapabilityRegistry([
     {
       id: 'capability:nx',
