@@ -43,6 +43,7 @@ interface NxJsonShape {
   plugins?: Array<string | NxJsonPluginConfig>;
   governance?: {
     extensions?: unknown;
+    legacyPluginProbing?: unknown;
   };
 }
 
