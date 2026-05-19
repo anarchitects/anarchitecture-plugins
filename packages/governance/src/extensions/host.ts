@@ -17,6 +17,7 @@ import {
   GovernanceWorkspaceEnricher,
   GovernanceWorkspaceEnricherInput,
 } from './contracts.js';
+import { parseGovernanceExtensionConfig } from './config.js';
 
 interface RegisteredGovernanceContribution<T> {
   pluginId: string;
@@ -37,12 +38,22 @@ interface NxJsonPluginConfig {
 
 interface NxJsonShape {
   plugins?: Array<string | NxJsonPluginConfig>;
+  governance?: {
+    extensions?: unknown;
+  };
 }
 
 interface DiscoveredGovernanceExtension {
-  pluginSpecifier: string;
+  sourceSpecifier: string;
   moduleSpecifier: string;
   definition: GovernanceExtensionDefinition;
+}
+
+interface GovernanceExtensionLoadRequest {
+  sourceSpecifier: string;
+  moduleSpecifier: string;
+  source: 'explicit' | 'legacy';
+  optional?: boolean;
 }
 
 export interface DiscoverGovernanceExtensionsOptions {
@@ -125,22 +136,25 @@ export async function discoverGovernanceExtensions(
   const moduleLoader = options.moduleLoader ?? defaultGovernanceModuleLoader;
   const extensions: DiscoveredGovernanceExtension[] = [];
 
-  for (const pluginSpecifier of normalizePluginSpecifiers(nxJson.plugins)) {
-    const moduleSpecifier =
-      toGovernanceExtensionModuleSpecifier(pluginSpecifier);
-
+  for (const loadRequest of buildGovernanceExtensionLoadRequests(nxJson)) {
     try {
-      const loadedModule = await moduleLoader(moduleSpecifier);
+      const loadedModule = await moduleLoader(loadRequest.moduleSpecifier);
       const governanceExtension =
         readGovernanceExtensionDefinition(loadedModule);
 
       extensions.push({
-        pluginSpecifier,
-        moduleSpecifier,
+        sourceSpecifier: loadRequest.sourceSpecifier,
+        moduleSpecifier: loadRequest.moduleSpecifier,
         definition: governanceExtension,
       });
     } catch (error) {
-      if (isMissingGovernanceEntrypoint(error, moduleSpecifier)) {
+      if (
+        shouldSkipMissingGovernanceExtension(
+          error,
+          loadRequest.moduleSpecifier,
+          loadRequest
+        )
+      ) {
         continue;
       }
 
@@ -292,6 +306,46 @@ function mergeRegistry(
   target.enrichers.push(...source.enrichers);
 }
 
+function buildGovernanceExtensionLoadRequests(
+  nxJson: NxJsonShape
+): GovernanceExtensionLoadRequest[] {
+  const seenModuleSpecifiers = new Set<string>();
+  const requests: GovernanceExtensionLoadRequest[] = [];
+  const governanceExtensionConfig = parseGovernanceExtensionConfig(nxJson);
+
+  for (const registration of governanceExtensionConfig.extensions) {
+    appendLoadRequest(requests, seenModuleSpecifiers, {
+      sourceSpecifier: registration.package,
+      moduleSpecifier: registration.package,
+      source: 'explicit',
+      optional: registration.optional ?? false,
+    });
+  }
+
+  for (const pluginSpecifier of normalizePluginSpecifiers(nxJson.plugins)) {
+    appendLoadRequest(requests, seenModuleSpecifiers, {
+      sourceSpecifier: pluginSpecifier,
+      moduleSpecifier: toGovernanceExtensionModuleSpecifier(pluginSpecifier),
+      source: 'legacy',
+    });
+  }
+
+  return requests;
+}
+
+function appendLoadRequest(
+  target: GovernanceExtensionLoadRequest[],
+  seenModuleSpecifiers: Set<string>,
+  request: GovernanceExtensionLoadRequest
+): void {
+  if (seenModuleSpecifiers.has(request.moduleSpecifier)) {
+    return;
+  }
+
+  seenModuleSpecifiers.add(request.moduleSpecifier);
+  target.push(request);
+}
+
 function normalizePluginSpecifiers(
   plugins: NxJsonShape['plugins'] = []
 ): string[] {
@@ -383,6 +437,49 @@ function isMissingGovernanceEntrypoint(
     return matchesGovernanceEntrypointSubpath(message, moduleSpecifier);
   }
 
+  if (
+    errorCode === 'ERR_MODULE_NOT_FOUND' ||
+    errorCode === 'MODULE_NOT_FOUND'
+  ) {
+    return matchesGovernanceEntrypointLookup(message, moduleSpecifier);
+  }
+
+  return (
+    message.startsWith('Cannot find module') &&
+    matchesGovernanceEntrypointLookup(message, moduleSpecifier)
+  );
+}
+
+function shouldSkipMissingGovernanceExtension(
+  error: unknown,
+  moduleSpecifier: string,
+  loadRequest: GovernanceExtensionLoadRequest
+): boolean {
+  if (loadRequest.source === 'legacy') {
+    return isMissingGovernanceEntrypoint(error, moduleSpecifier);
+  }
+
+  return (
+    loadRequest.optional === true &&
+    isMissingDirectModuleLookup(error, moduleSpecifier)
+  );
+}
+
+function isMissingDirectModuleLookup(
+  error: unknown,
+  moduleSpecifier: string
+): boolean {
+  const errorRecord =
+    error && typeof error === 'object'
+      ? (error as { code?: string; message?: string })
+      : undefined;
+
+  const message = errorRecord?.message;
+  if (typeof message !== 'string') {
+    return false;
+  }
+
+  const errorCode = errorRecord?.code;
   if (
     errorCode === 'ERR_MODULE_NOT_FOUND' ||
     errorCode === 'MODULE_NOT_FOUND'

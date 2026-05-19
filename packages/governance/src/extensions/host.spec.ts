@@ -37,6 +37,90 @@ describe('registerGovernanceExtensions', () => {
     );
   }
 
+  function createGovernanceExtension(
+    id: string,
+    register: (host: {
+      registerMetricProvider(value: unknown): void;
+      registerSignalProvider(value: unknown): void;
+      registerRulePack(value: unknown): void;
+      registerEnricher(value: unknown): void;
+      context: GovernanceExtensionHostContext;
+    }) => void = () => undefined
+  ) {
+    return {
+      governanceExtension: {
+        id,
+        register,
+      },
+    };
+  }
+
+  it('loads explicitly configured extension packages directly', async () => {
+    const registry = await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-angular',
+            },
+          ],
+        },
+      },
+      moduleLoader: async (specifier) => {
+        if (specifier === '@anarchitects/governance-extension-angular') {
+          return createGovernanceExtension('angular', (host) => {
+            host.registerMetricProvider('metric-angular');
+          });
+        }
+
+        throw new Error(`Unexpected specifier ${specifier}`);
+      },
+    });
+
+    expect(registry).toEqual({
+      metricProviders: [
+        { pluginId: 'angular', contribution: 'metric-angular' },
+      ],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+    });
+  });
+
+  it('loads explicitly configured extensions before legacy plugin-discovered extensions', async () => {
+    const registrationOrder: string[] = [];
+
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-angular',
+            },
+          ],
+        },
+        plugins: ['plugin-b'],
+      },
+      moduleLoader: async (specifier) => {
+        if (specifier === '@anarchitects/governance-extension-angular') {
+          return createGovernanceExtension('angular', () => {
+            registrationOrder.push('explicit');
+          });
+        }
+
+        if (specifier === 'plugin-b/governance-extension') {
+          return createGovernanceExtension('plugin-b', () => {
+            registrationOrder.push('legacy');
+          });
+        }
+
+        throw new Error(`Unexpected specifier ${specifier}`);
+      },
+    });
+
+    expect(registrationOrder).toEqual(['explicit', 'legacy']);
+  });
+
   it('discovers extensions from string and object plugin entries and registers them in nx.json order', async () => {
     const registrationOrder: string[] = [];
 
@@ -131,6 +215,52 @@ describe('registerGovernanceExtensions', () => {
     ]);
   });
 
+  it('skips optional explicitly configured extensions when the package is missing', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+                optional: true,
+              },
+            ],
+          },
+        },
+        moduleLoader: async (specifier) => {
+          throw createMissingModuleError(specifier);
+        },
+      })
+    ).resolves.toEqual({
+      metricProviders: [],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+    });
+  });
+
+  it('fails when a required explicitly configured extension package is missing', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+            ],
+          },
+        },
+        moduleLoader: async (specifier) => {
+          throw createMissingModuleError(specifier);
+        },
+      })
+    ).rejects.toThrow(
+      "Cannot find module '@anarchitects/governance-extension-angular'"
+    );
+  });
+
   it('ignores plugins without a governance extension entrypoint', async () => {
     await expect(
       registerGovernanceExtensions(baseContext, {
@@ -147,6 +277,29 @@ describe('registerGovernanceExtensions', () => {
       rulePacks: [],
       enrichers: [],
     });
+  });
+
+  it('does not load the same module specifier twice across explicit and legacy discovery', async () => {
+    const loadedSpecifiers: string[] = [];
+
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [
+            {
+              package: 'plugin-a/governance-extension',
+            },
+          ],
+        },
+        plugins: ['plugin-a'],
+      },
+      moduleLoader: async (specifier) => {
+        loadedSpecifiers.push(specifier);
+        return createGovernanceExtension('plugin-a');
+      },
+    });
+
+    expect(loadedSpecifiers).toEqual(['plugin-a/governance-extension']);
   });
 
   it('ignores plugins whose governance entrypoint subpath is not exported', async () => {
@@ -228,18 +381,46 @@ describe('registerGovernanceExtensions', () => {
     await expect(
       registerGovernanceExtensions(baseContext, {
         nxJson: {
-          plugins: ['plugin-a', 'plugin-b'],
-        },
-        moduleLoader: async () => ({
-          governanceExtension: {
-            id: 'shared-extension',
-            register() {
-              return undefined;
-            },
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+            ],
           },
-        }),
+          plugins: ['plugin-b'],
+        },
+        moduleLoader: async (specifier) =>
+          specifier === '@anarchitects/governance-extension-angular'
+            ? createGovernanceExtension('shared-extension')
+            : createGovernanceExtension('shared-extension'),
       })
     ).rejects.toThrow('Duplicate governance extension id "shared-extension"');
+  });
+
+  it('fails optional explicit extensions when an installed package is missing a transitive dependency', async () => {
+    await expect(
+      registerGovernanceExtensions(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+                optional: true,
+              },
+            ],
+          },
+        },
+        moduleLoader: async () => {
+          throw createErrorWithCode(
+            "Cannot find module '@anarchitects/governance-extension-angular/runtime-dependency'",
+            'MODULE_NOT_FOUND'
+          );
+        },
+      })
+    ).rejects.toThrow(
+      "Cannot find module '@anarchitects/governance-extension-angular/runtime-dependency'"
+    );
   });
 
   it('wraps registration failures with extension context', async () => {
