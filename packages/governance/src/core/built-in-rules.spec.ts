@@ -16,6 +16,7 @@ import {
   bookingTeamOwnership,
   coreTestWorkspace,
 } from './testing/workspace.fixtures.js';
+import type { GovernanceRule, GovernanceRuleContext } from './rules.js';
 
 describe('Core built-in policy rules', () => {
   const baseProfile: GovernanceProfile = {
@@ -96,7 +97,7 @@ describe('Core built-in policy rules', () => {
   };
 
   it('does not report a domain violation for allowed domain dependencies', () => {
-    const result = domainBoundaryRule.evaluate({
+    const result = evaluateSync(domainBoundaryRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -110,7 +111,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('reports a domain violation for disallowed domain dependencies', () => {
-    const result = domainBoundaryRule.evaluate({
+    const result = evaluateSync(domainBoundaryRule, {
       workspace: baseWorkspace,
       profile: baseProfile,
     });
@@ -132,7 +133,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('does not report a domain violation when the migrated rule is explicitly disabled', () => {
-    const result = domainBoundaryRule.evaluate({
+    const result = evaluateSync(domainBoundaryRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -148,7 +149,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('keeps missing domain behavior compatibility-safe for migrated boundary checks', () => {
-    const result = domainBoundaryRule.evaluate({
+    const result = evaluateSync(domainBoundaryRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -166,7 +167,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('does not report a layer violation for allowed layer dependencies', () => {
-    const result = layerBoundaryRule.evaluate({
+    const result = evaluateSync(layerBoundaryRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -180,7 +181,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('reports a layer violation for disallowed layer dependencies', () => {
-    const result = layerBoundaryRule.evaluate({
+    const result = evaluateSync(layerBoundaryRule, {
       workspace: {
         ...baseWorkspace,
         dependencies: [
@@ -216,7 +217,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('does not report a layer violation when the migrated rule is explicitly disabled', () => {
-    const result = layerBoundaryRule.evaluate({
+    const result = evaluateSync(layerBoundaryRule, {
       workspace: {
         ...baseWorkspace,
         dependencies: [
@@ -244,7 +245,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('keeps missing layer behavior compatibility-safe for migrated boundary checks', () => {
-    const result = layerBoundaryRule.evaluate({
+    const result = evaluateSync(layerBoundaryRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -267,7 +268,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('reports an ownership violation when ownership is missing', () => {
-    const result = ownershipPresenceRule.evaluate({
+    const result = evaluateSync(ownershipPresenceRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -294,7 +295,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('does not report an ownership violation when ownership is present', () => {
-    const result = ownershipPresenceRule.evaluate({
+    const result = evaluateSync(ownershipPresenceRule, {
       workspace: {
         ...baseWorkspace,
         dependencies: [],
@@ -306,7 +307,7 @@ describe('Core built-in policy rules', () => {
   });
 
   it('does not report an ownership violation when the migrated rule is explicitly disabled', () => {
-    const result = ownershipPresenceRule.evaluate({
+    const result = evaluateSync(ownershipPresenceRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -347,7 +348,7 @@ describe('Core built-in policy rules', () => {
       dependencies: [],
     };
 
-    const result = ownershipPresenceRule.evaluate({
+    const result = evaluateSync(ownershipPresenceRule, {
       workspace,
       profile: baseProfile,
     });
@@ -481,7 +482,7 @@ describe('Generic core convention and metadata rules', () => {
   };
 
   it('keeps project-name-convention inert without explicit configuration', () => {
-    const result = projectNameConventionRule.evaluate({
+    const result = evaluateSync(projectNameConventionRule, {
       workspace: baseWorkspace,
       profile: baseProfile,
     });
@@ -490,7 +491,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('accepts project-name-convention matches when configured', () => {
-    const result = projectNameConventionRule.evaluate({
+    const result = evaluateSync(projectNameConventionRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -509,7 +510,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports project-name-convention mismatches when configured', () => {
-    const result = projectNameConventionRule.evaluate({
+    const result = evaluateSync(projectNameConventionRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -542,7 +543,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('keeps tag-convention inert without explicit options', () => {
-    const result = tagConventionRule.evaluate({
+    const result = evaluateSync(tagConventionRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -559,7 +560,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports missing required tag prefixes', () => {
-    const result = tagConventionRule.evaluate({
+    const result = evaluateSync(tagConventionRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -584,7 +585,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports disallowed tag prefixes', () => {
-    const result = tagConventionRule.evaluate({
+    const result = evaluateSync(tagConventionRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -620,7 +621,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports tag value pattern mismatches', () => {
-    const result = tagConventionRule.evaluate({
+    const result = evaluateSync(tagConventionRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -656,7 +657,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('keeps missing-domain inert when not required', () => {
-    const result = missingDomainRule.evaluate({
+    const result = evaluateSync(missingDomainRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -673,7 +674,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports missing-domain when required and missing', () => {
-    const result = missingDomainRule.evaluate({
+    const result = evaluateSync(missingDomainRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -705,7 +706,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('does not report missing-domain when required and present', () => {
-    const result = missingDomainRule.evaluate({
+    const result = evaluateSync(missingDomainRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -724,7 +725,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('keeps missing-layer inert when not required', () => {
-    const result = missingLayerRule.evaluate({
+    const result = evaluateSync(missingLayerRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -741,7 +742,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('reports missing-layer when required and missing', () => {
-    const result = missingLayerRule.evaluate({
+    const result = evaluateSync(missingLayerRule, {
       workspace: {
         ...baseWorkspace,
         projects: [
@@ -773,7 +774,7 @@ describe('Generic core convention and metadata rules', () => {
   });
 
   it('does not report missing-layer when required and present', () => {
-    const result = missingLayerRule.evaluate({
+    const result = evaluateSync(missingLayerRule, {
       workspace: baseWorkspace,
       profile: {
         ...baseProfile,
@@ -791,3 +792,16 @@ describe('Generic core convention and metadata rules', () => {
     expect(result.violations ?? []).toEqual([]);
   });
 });
+
+function evaluateSync<TOptions>(
+  rule: GovernanceRule<TOptions>,
+  context: GovernanceRuleContext<TOptions>
+) {
+  const result = rule.evaluate(context);
+
+  if (result instanceof Promise) {
+    throw new Error(`Expected rule "${rule.id}" to evaluate synchronously.`);
+  }
+
+  return result;
+}

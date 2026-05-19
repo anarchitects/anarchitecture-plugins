@@ -290,6 +290,7 @@ describe('signal-engine', () => {
         ruleId: 'domain-boundary',
         project: 'checkout-app',
         severity: 'error',
+        category: 'boundary',
         message: 'Checkout crosses into billing.',
         details: {
           sourceDomain: 'checkout',
@@ -302,6 +303,7 @@ describe('signal-engine', () => {
         ruleId: 'domain-boundary',
         project: 'checkout-app',
         severity: 'error',
+        category: 'boundary',
         message: 'Reworded message should keep the same signal identity.',
         details: {
           sourceDomain: 'checkout',
@@ -343,6 +345,7 @@ describe('signal-engine', () => {
           ruleId: 'ownership-presence',
           project: 'z-project',
           severity: 'warning',
+          category: 'ownership',
           message: 'Missing ownership.',
         },
         {
@@ -350,6 +353,7 @@ describe('signal-engine', () => {
           ruleId: 'layer-boundary',
           project: 'b-project',
           severity: 'warning',
+          category: 'boundary',
           message: 'Layer violation.',
           details: {
             sourceLayer: 'feature',
@@ -362,6 +366,7 @@ describe('signal-engine', () => {
           ruleId: 'domain-boundary',
           project: 'a-project',
           severity: 'error',
+          category: 'boundary',
           message: 'Domain violation.',
           details: {
             sourceDomain: 'orders',

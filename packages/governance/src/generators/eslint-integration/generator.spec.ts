@@ -4,7 +4,7 @@ import { GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH } from '../../profile/runtime-pro
 import eslintIntegrationGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace:
-  | typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace']
+  | typeof import('nx/src/devkit-testing-exports')['createTreeWithEmptyWorkspace']
   | undefined;
 
 describe('eslintIntegrationGenerator', () => {
@@ -399,5 +399,7 @@ export default [
 }
 
 beforeAll(async () => {
-  ({ createTreeWithEmptyWorkspace } = await import('@nx/devkit/testing'));
+  ({ createTreeWithEmptyWorkspace } = await import(
+    'nx/src/devkit-testing-exports'
+  ));
 });

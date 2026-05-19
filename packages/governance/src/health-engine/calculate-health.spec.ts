@@ -7,7 +7,7 @@ import {
 
 describe('calculateHealthScore', () => {
   it('grades score buckets correctly', () => {
-    const measurements: Measurement[] = [
+    const measurements = makeMeasurements([
       {
         id: 'm1',
         name: 'Metric 1',
@@ -24,7 +24,7 @@ describe('calculateHealthScore', () => {
         maxScore: 100,
         unit: 'ratio',
       },
-    ];
+    ]);
 
     const health = calculateHealthScore(measurements);
 
@@ -59,7 +59,7 @@ describe('calculateHealthScore', () => {
         message: 'Ownership gap',
       },
     ];
-    const measurements: Measurement[] = [
+    const measurements = makeMeasurements([
       {
         id: 'm2',
         name: 'Metric 2',
@@ -84,7 +84,7 @@ describe('calculateHealthScore', () => {
         maxScore: 100,
         unit: 'ratio',
       },
-    ];
+    ]);
 
     const health = calculateHealthScore(measurements, {}, undefined, {
       topIssues,
@@ -113,7 +113,7 @@ describe('calculateHealthScore', () => {
   });
 
   it('uses metric weights when provided', () => {
-    const measurements: Measurement[] = [
+    const measurements = makeMeasurements([
       {
         id: 'architectural-entropy',
         name: 'Architectural Entropy',
@@ -130,7 +130,7 @@ describe('calculateHealthScore', () => {
         maxScore: 100,
         unit: 'ratio',
       },
-    ];
+    ]);
 
     const health = calculateHealthScore(measurements, {
       'architectural-entropy': 0.9,
@@ -143,7 +143,7 @@ describe('calculateHealthScore', () => {
   });
 
   it('uses the configured layer-integrity weight instead of fallback weighting', () => {
-    const measurements: Measurement[] = [
+    const measurements = makeMeasurements([
       {
         id: 'architectural-entropy',
         name: 'Architectural Entropy',
@@ -192,7 +192,7 @@ describe('calculateHealthScore', () => {
         maxScore: 100,
         unit: 'ratio',
       },
-    ];
+    ]);
 
     const health = calculateHealthScore(measurements, {
       'architectural-entropy': 0.2,
@@ -210,26 +210,30 @@ describe('calculateHealthScore', () => {
   });
 
   it('uses default 85/70 status thresholds at boundary scores', () => {
-    const warningHealth = calculateHealthScore([
-      {
-        id: 'm1',
-        name: 'Metric 1',
-        value: 0.7,
-        score: 70,
-        maxScore: 100,
-        unit: 'ratio',
-      },
-    ]);
-    const goodHealth = calculateHealthScore([
-      {
-        id: 'm1',
-        name: 'Metric 1',
-        value: 0.85,
-        score: 85,
-        maxScore: 100,
-        unit: 'ratio',
-      },
-    ]);
+    const warningHealth = calculateHealthScore(
+      makeMeasurements([
+        {
+          id: 'm1',
+          name: 'Metric 1',
+          value: 0.7,
+          score: 70,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+      ])
+    );
+    const goodHealth = calculateHealthScore(
+      makeMeasurements([
+        {
+          id: 'm1',
+          name: 'Metric 1',
+          value: 0.85,
+          score: 85,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+      ])
+    );
 
     expect(warningHealth.status).toBe('warning');
     expect(warningHealth.grade).toBe('C');
@@ -239,7 +243,7 @@ describe('calculateHealthScore', () => {
 
   it('uses custom status thresholds when provided', () => {
     const health = calculateHealthScore(
-      [
+      makeMeasurements([
         {
           id: 'm1',
           name: 'Metric 1',
@@ -248,7 +252,7 @@ describe('calculateHealthScore', () => {
           maxScore: 100,
           unit: 'ratio',
         },
-      ],
+      ]),
       {},
       {
         goodMinScore: 90,
@@ -261,32 +265,34 @@ describe('calculateHealthScore', () => {
   });
 
   it('emits explainability even when no metric is below hotspot threshold', () => {
-    const health = calculateHealthScore([
-      {
-        id: 'ownership-coverage',
-        name: 'Ownership Coverage',
-        value: 0.8,
-        score: 80,
-        maxScore: 100,
-        unit: 'ratio',
-      },
-      {
-        id: 'domain-integrity',
-        name: 'Domain Integrity',
-        value: 0.18,
-        score: 82,
-        maxScore: 100,
-        unit: 'ratio',
-      },
-      {
-        id: 'dependency-complexity',
-        name: 'Dependency Complexity',
-        value: 0.15,
-        score: 85,
-        maxScore: 100,
-        unit: 'ratio',
-      },
-    ]);
+    const health = calculateHealthScore(
+      makeMeasurements([
+        {
+          id: 'ownership-coverage',
+          name: 'Ownership Coverage',
+          value: 0.8,
+          score: 80,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+        {
+          id: 'domain-integrity',
+          name: 'Domain Integrity',
+          value: 0.18,
+          score: 82,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+        {
+          id: 'dependency-complexity',
+          name: 'Dependency Complexity',
+          value: 0.15,
+          score: 85,
+          maxScore: 100,
+          unit: 'ratio',
+        },
+      ])
+    );
 
     expect(health.metricHotspots).toEqual([]);
     expect(health.explainability.summary).toContain(
@@ -309,7 +315,7 @@ describe('calculateHealthScore', () => {
 
 describe('buildRecommendations', () => {
   it('emits recommendations for key violation and metric signals', () => {
-    const violations: Violation[] = [
+    const violations = makeViolations([
       {
         id: 'v1',
         ruleId: 'domain-boundary',
@@ -324,9 +330,9 @@ describe('buildRecommendations', () => {
         severity: 'warning',
         message: 'missing ownership',
       },
-    ];
+    ]);
 
-    const measurements: Measurement[] = [
+    const measurements = makeMeasurements([
       {
         id: 'dependency-complexity',
         name: 'Dependency Complexity',
@@ -335,7 +341,7 @@ describe('buildRecommendations', () => {
         maxScore: 100,
         unit: 'ratio',
       },
-    ];
+    ]);
 
     const recommendations = buildRecommendations(violations, measurements);
 
@@ -349,7 +355,7 @@ describe('buildRecommendations', () => {
   it('does not emit reduce-dependency-complexity when score is >= 60', () => {
     const recommendations = buildRecommendations(
       [],
-      [
+      makeMeasurements([
         {
           id: 'dependency-complexity',
           name: 'Dependency Complexity',
@@ -358,7 +364,7 @@ describe('buildRecommendations', () => {
           maxScore: 100,
           unit: 'ratio',
         },
-      ]
+      ])
     );
 
     expect(
@@ -366,3 +372,25 @@ describe('buildRecommendations', () => {
     ).toBe(false);
   });
 });
+
+function makeMeasurements(
+  input: Array<
+    Omit<Measurement, 'family'> & Partial<Pick<Measurement, 'family'>>
+  >
+): Measurement[] {
+  return input.map((measurement) => ({
+    family: 'architecture',
+    ...measurement,
+  }));
+}
+
+function makeViolations(
+  input: Array<
+    Omit<Violation, 'category'> & Partial<Pick<Violation, 'category'>>
+  >
+): Violation[] {
+  return input.map((violation) => ({
+    category: 'architecture',
+    ...violation,
+  }));
+}

@@ -1196,11 +1196,11 @@ describe('runGovernance', () => {
                   {
                     id: 'extension-coverage',
                     name: 'Extension Coverage',
-                    family: 'architecture',
+                    family: 'architecture' as const,
                     value: workspace.projects.length > 0 ? 1 : 0,
                     score: 80,
                     maxScore: 100,
-                    unit: 'ratio',
+                    unit: 'ratio' as const,
                   },
                 ].filter(() => measurements.length > 0);
               },
