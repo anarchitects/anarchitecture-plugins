@@ -31,7 +31,12 @@ describe('nx-governance AI core payload commands', () => {
       expectProfileExists(projectDirectory);
 
       const outputPath = join(projectDirectory, `${target}.json`);
-      const json = runGovernanceCommand(projectDirectory, target, outputPath, args);
+      const json = runGovernanceCommand(
+        projectDirectory,
+        target,
+        outputPath,
+        args
+      );
 
       expect(json.request?.kind).toBe(kind);
       expect(json.analysis?.kind).toBe(kind);
