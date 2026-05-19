@@ -21,6 +21,7 @@ describe('GraphAdapter', () => {
     jest.spyOn(nxDevkit, 'createProjectGraphAsync').mockResolvedValue({
       nodes: {
         app: {
+          type: 'app',
           name: 'app',
           data: {
             root: 'apps/app',
@@ -29,6 +30,7 @@ describe('GraphAdapter', () => {
           },
         },
         shared: {
+          type: 'lib',
           name: 'shared',
           data: {
             root: 'libs/shared',
@@ -38,7 +40,7 @@ describe('GraphAdapter', () => {
         },
       },
       dependencies: {
-        app: [{ target: 'shared', type: 'static' }],
+        app: [{ source: 'app', target: 'shared', type: 'static' }],
         shared: [],
       },
     } as Awaited<ReturnType<typeof nxDevkit.createProjectGraphAsync>>);
