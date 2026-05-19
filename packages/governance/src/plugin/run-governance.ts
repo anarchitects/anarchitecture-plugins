@@ -87,7 +87,7 @@ import {
   collectGovernanceMeasurements,
   collectGovernanceSignals,
   evaluateGovernanceRulePacks,
-  registerGovernanceExtensions,
+  registerGovernanceExtensionsWithDiagnostics,
 } from '../extensions/host.js';
 import { DefaultGovernanceCapabilityRegistry } from '../extensions/capabilities.js';
 import { loadGovernanceExtensionConfig } from '../extensions/config.js';
@@ -1669,9 +1669,11 @@ async function buildAssessmentArtifacts(
     inventory,
     capabilities,
   };
-  const extensionRegistry = await registerGovernanceExtensions({
-    ...extensionContext,
-  });
+  const extensionRegistration =
+    await registerGovernanceExtensionsWithDiagnostics({
+      ...extensionContext,
+    });
+  const extensionRegistry = extensionRegistration.registry;
   const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
     workspace: inventory,
     profile: effectiveProfile,
@@ -1765,6 +1767,7 @@ async function buildAssessmentArtifacts(
     }),
     signals: allSignals,
     exceptionApplication,
+    extensionDiagnostics: extensionRegistration.diagnostics,
   };
 }
 

@@ -1,7 +1,10 @@
 import { logger } from '@nx/devkit';
 import { GovernanceExtensionHostContext } from './contracts.js';
 import { DefaultGovernanceCapabilityRegistry } from './capabilities.js';
-import { registerGovernanceExtensions } from './host.js';
+import {
+  registerGovernanceExtensions,
+  registerGovernanceExtensionsWithDiagnostics,
+} from './host.js';
 
 describe('registerGovernanceExtensions', () => {
   const baseContext: GovernanceExtensionHostContext = {
@@ -572,5 +575,385 @@ describe('registerGovernanceExtensions', () => {
     ).rejects.toThrow(
       'Governance extension "plugin-a" from "plugin-a/governance-extension" failed during registration: boom'
     );
+  });
+});
+
+describe('registerGovernanceExtensionsWithDiagnostics', () => {
+  const baseContext: GovernanceExtensionHostContext = {
+    workspaceRoot: '/repo',
+    profileName: 'frontend-layered',
+    options: {
+      output: 'cli',
+      reportType: 'health',
+    },
+    inventory: {
+      id: 'workspace',
+      name: 'workspace',
+      root: '/repo',
+      projects: [],
+      dependencies: [],
+    },
+    capabilities: new DefaultGovernanceCapabilityRegistry([
+      {
+        id: 'capability:nx',
+      },
+    ]),
+  };
+
+  function createErrorWithCode(message: string, code: string): Error {
+    const error = new Error(message);
+    (error as Error & { code: string }).code = code;
+    return error;
+  }
+
+  function createMissingModuleError(specifier: string): Error {
+    return createErrorWithCode(
+      `Cannot find module '${specifier}'`,
+      'MODULE_NOT_FOUND'
+    );
+  }
+
+  function createGovernanceExtension(
+    id: string,
+    register: (host: {
+      registerMetricProvider(value: unknown): void;
+      registerSignalProvider(value: unknown): void;
+      registerRulePack(value: unknown): void;
+      registerEnricher(value: unknown): void;
+      context: GovernanceExtensionHostContext;
+    }) => void = () => undefined
+  ) {
+    return {
+      governanceExtension: {
+        id,
+        register,
+      },
+    };
+  }
+
+  beforeEach(() => {
+    jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('emits a loaded diagnostic for explicitly configured extensions', async () => {
+    const result = await registerGovernanceExtensionsWithDiagnostics(
+      baseContext,
+      {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+            ],
+          },
+        },
+        moduleLoader: async () => createGovernanceExtension('angular'),
+      }
+    );
+
+    expect(result.diagnostics).toEqual([
+      {
+        code: 'governance.extension.loaded',
+        severity: 'notice',
+        message:
+          'Loaded governance extension from "@anarchitects/governance-extension-angular".',
+        packageName: '@anarchitects/governance-extension-angular',
+        moduleSpecifier: '@anarchitects/governance-extension-angular',
+        extensionId: 'angular',
+        legacy: false,
+      },
+    ]);
+  });
+
+  it('emits a skipped diagnostic for optional missing explicit extensions and continues', async () => {
+    const result = await registerGovernanceExtensionsWithDiagnostics(
+      baseContext,
+      {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+                optional: true,
+              },
+            ],
+          },
+        },
+        moduleLoader: async (specifier) => {
+          throw createMissingModuleError(specifier);
+        },
+      }
+    );
+
+    expect(result.registry).toEqual({
+      metricProviders: [],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+    });
+    expect(result.diagnostics).toEqual([
+      {
+        code: 'governance.extension.skipped_optional_missing',
+        severity: 'notice',
+        message:
+          'Skipped optional governance extension "@anarchitects/governance-extension-angular" because the package could not be resolved.',
+        packageName: '@anarchitects/governance-extension-angular',
+        moduleSpecifier: '@anarchitects/governance-extension-angular',
+        legacy: false,
+      },
+    ]);
+  });
+
+  it('emits a missing-required diagnostic and throws for required missing explicit extensions', async () => {
+    await expect(
+      registerGovernanceExtensionsWithDiagnostics(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+            ],
+          },
+        },
+        moduleLoader: async (specifier) => {
+          throw createMissingModuleError(specifier);
+        },
+      })
+    ).rejects.toMatchObject({
+      diagnostics: [
+        {
+          code: 'governance.extension.missing_required',
+          severity: 'error',
+          packageName: '@anarchitects/governance-extension-angular',
+          moduleSpecifier: '@anarchitects/governance-extension-angular',
+          legacy: false,
+        },
+      ],
+    });
+  });
+
+  it('emits a legacy probing diagnostic once when compatibility probing is used', async () => {
+    const result = await registerGovernanceExtensionsWithDiagnostics(
+      baseContext,
+      {
+        nxJson: {
+          governance: {
+            legacyPluginProbing: true,
+          },
+          plugins: ['plugin-a', 'plugin-b'],
+        },
+        moduleLoader: async (specifier) => {
+          if (specifier === 'plugin-a/governance-extension') {
+            throw createMissingModuleError(specifier);
+          }
+
+          if (specifier === 'plugin-b/governance-extension') {
+            return createGovernanceExtension('plugin-b');
+          }
+
+          throw new Error(`Unexpected specifier ${specifier}`);
+        },
+      }
+    );
+
+    expect(
+      result.diagnostics.filter(
+        (diagnostic) =>
+          diagnostic.code === 'governance.extension.legacy_probing_used'
+      )
+    ).toEqual([
+      {
+        code: 'governance.extension.legacy_probing_used',
+        severity: 'warning',
+        message:
+          'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.',
+        legacy: true,
+      },
+    ]);
+  });
+
+  it('emits a missing legacy entrypoint diagnostic and continues', async () => {
+    const result = await registerGovernanceExtensionsWithDiagnostics(
+      baseContext,
+      {
+        nxJson: {
+          plugins: ['plugin-a'],
+        },
+        moduleLoader: async (specifier) => {
+          throw createMissingModuleError(specifier);
+        },
+      }
+    );
+
+    expect(result.diagnostics).toEqual([
+      {
+        code: 'governance.extension.legacy_probing_used',
+        severity: 'warning',
+        message:
+          'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.',
+        legacy: true,
+      },
+      {
+        code: 'governance.extension.legacy_entrypoint_missing',
+        severity: 'notice',
+        message:
+          'Skipped legacy governance extension probe for "plugin-a/governance-extension" because the governance entrypoint is missing.',
+        packageName: 'plugin-a',
+        moduleSpecifier: 'plugin-a/governance-extension',
+        legacy: true,
+      },
+    ]);
+  });
+
+  it('emits an invalid-definition diagnostic before throwing', async () => {
+    await expect(
+      registerGovernanceExtensionsWithDiagnostics(baseContext, {
+        nxJson: {
+          plugins: ['plugin-a'],
+        },
+        moduleLoader: async () => ({
+          default: {
+            id: 'plugin-a',
+          },
+        }),
+      })
+    ).rejects.toMatchObject({
+      diagnostics: [
+        {
+          code: 'governance.extension.legacy_probing_used',
+        },
+        {
+          code: 'governance.extension.invalid_definition',
+          severity: 'error',
+          moduleSpecifier: 'plugin-a/governance-extension',
+          packageName: 'plugin-a',
+          legacy: true,
+        },
+      ],
+    });
+  });
+
+  it('emits a duplicate-id diagnostic before throwing', async () => {
+    await expect(
+      registerGovernanceExtensionsWithDiagnostics(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+              {
+                package: '@anarchitects/governance-extension-typescript',
+              },
+            ],
+          },
+        },
+        moduleLoader: async (specifier) =>
+          specifier === '@anarchitects/governance-extension-angular'
+            ? createGovernanceExtension('shared-extension')
+            : createGovernanceExtension('shared-extension'),
+      })
+    ).rejects.toMatchObject({
+      diagnostics: [
+        {
+          code: 'governance.extension.loaded',
+          moduleSpecifier: '@anarchitects/governance-extension-angular',
+        },
+        {
+          code: 'governance.extension.loaded',
+          moduleSpecifier: '@anarchitects/governance-extension-typescript',
+        },
+        {
+          code: 'governance.extension.duplicate_id',
+          severity: 'error',
+          extensionId: 'shared-extension',
+          moduleSpecifier: '@anarchitects/governance-extension-typescript',
+        },
+      ],
+    });
+  });
+
+  it('emits a registration-failed diagnostic before throwing', async () => {
+    await expect(
+      registerGovernanceExtensionsWithDiagnostics(baseContext, {
+        nxJson: {
+          governance: {
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+            ],
+          },
+        },
+        moduleLoader: async () =>
+          createGovernanceExtension('angular', () => {
+            throw new Error('boom');
+          }),
+      })
+    ).rejects.toMatchObject({
+      diagnostics: [
+        {
+          code: 'governance.extension.loaded',
+          moduleSpecifier: '@anarchitects/governance-extension-angular',
+        },
+        {
+          code: 'governance.extension.registration_failed',
+          severity: 'error',
+          extensionId: 'angular',
+          moduleSpecifier: '@anarchitects/governance-extension-angular',
+        },
+      ],
+    });
+  });
+
+  it('preserves deterministic diagnostic order', async () => {
+    const result = await registerGovernanceExtensionsWithDiagnostics(
+      baseContext,
+      {
+        nxJson: {
+          governance: {
+            legacyPluginProbing: true,
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-angular',
+              },
+              {
+                package: '@anarchitects/governance-extension-typescript',
+                optional: true,
+              },
+            ],
+          },
+          plugins: ['plugin-a'],
+        },
+        moduleLoader: async (specifier) => {
+          if (specifier === '@anarchitects/governance-extension-angular') {
+            return createGovernanceExtension('angular');
+          }
+
+          if (specifier === '@anarchitects/governance-extension-typescript') {
+            throw createMissingModuleError(specifier);
+          }
+
+          if (specifier === 'plugin-a/governance-extension') {
+            throw createMissingModuleError(specifier);
+          }
+
+          throw new Error(`Unexpected specifier ${specifier}`);
+        },
+      }
+    );
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      'governance.extension.legacy_probing_used',
+      'governance.extension.loaded',
+      'governance.extension.skipped_optional_missing',
+      'governance.extension.legacy_entrypoint_missing',
+    ]);
   });
 });

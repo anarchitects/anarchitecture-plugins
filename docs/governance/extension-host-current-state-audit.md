@@ -83,6 +83,13 @@ In `runGovernance(...)`, the extension pipeline is:
 - If no explicit governance extensions are configured, legacy probing remains enabled for backward compatibility.
 - When legacy probing is used, the runtime emits a deprecation warning once per governance run.
 
+## Diagnostic Visibility
+
+- Issue #314 adds a host-local structured diagnostics model for extension loading and registration.
+- Successful explicit loads, optional missing packages, required missing packages, invalid definitions, duplicate ids, registration failures, legacy probing usage, and skipped legacy entrypoints are now represented as deterministic diagnostics.
+- The runtime still preserves existing fatal vs non-fatal behavior; diagnostics make that behavior observable rather than changing it.
+- Governance runs expose these diagnostics through extension-host/artifact metadata rather than a new global diagnostics framework.
+
 ## Implications for #219
 
 - The current behavior is acceptable as a legacy compatibility model.
