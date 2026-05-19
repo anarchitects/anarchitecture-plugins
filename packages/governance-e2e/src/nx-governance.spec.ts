@@ -5,6 +5,7 @@ import { dirname, join } from 'path';
 describe('nx-governance', () => {
   let projectDirectory: string;
   const workspaceRoot = join(__dirname, '../../..');
+  const defaultProfileName = 'frontend-layered';
 
   beforeAll(() => {
     projectDirectory = createTestProject();
@@ -19,6 +20,18 @@ describe('nx-governance', () => {
         env: process.env,
       }
     );
+
+    execSync(
+      `yarn nx g @anarchitects/nx-governance:init --no-interactive --targetPreset=full --profile=${defaultProfileName}`,
+      {
+        cwd: projectDirectory,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          NX_DAEMON: 'false',
+        },
+      }
+    );
   });
 
   afterAll(() => {
@@ -31,18 +44,9 @@ describe('nx-governance', () => {
   });
 
   it('initializes governance and runs repo-health', () => {
-    execSync('yarn nx g @anarchitects/nx-governance:init --no-interactive', {
-      cwd: projectDirectory,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        NX_DAEMON: 'false',
-      },
-    });
-
     const profilePath = join(
       projectDirectory,
-      'tools/governance/profiles/angular-cleanup.json'
+      `tools/governance/profiles/${defaultProfileName}.json`
     );
     expect(existsSync(profilePath)).toBe(true);
 
@@ -62,7 +66,7 @@ describe('nx-governance', () => {
     expect(workspaceGraph).toMatch(/Dependencies:\s+\d+/);
 
     execSync(
-      'yarn nx repo-health --profile=angular-cleanup --output=json > governance-report.json',
+      `yarn nx repo-health --profile=${defaultProfileName} --output=json > governance-report.json`,
       {
         cwd: projectDirectory,
         stdio: 'inherit',
@@ -78,7 +82,7 @@ describe('nx-governance', () => {
 
     const json = readJsonFromCommandOutput(reportPath);
 
-    expect(json.profile).toBe('angular-cleanup');
+    expect(json.profile).toBe(defaultProfileName);
     expect(json.workspace).toBeDefined();
     expect(Array.isArray(json.measurements)).toBe(true);
     expect(json.health).toBeDefined();
@@ -126,7 +130,7 @@ describe('nx-governance', () => {
       const args = command.args ? ` ${command.args}` : '';
 
       execSync(
-        `yarn nx ${command.target} --profile=angular-cleanup --output=json --skip-nx-cache${args} > ${outputPath}`,
+        `yarn nx ${command.target} --profile=${defaultProfileName} --output=json --skip-nx-cache${args} > ${outputPath}`,
         {
           cwd: projectDirectory,
           stdio: 'inherit',
