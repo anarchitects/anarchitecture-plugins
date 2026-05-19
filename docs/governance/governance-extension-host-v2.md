@@ -40,13 +40,13 @@ Extension Host v2 should keep the useful contribution model while replacing Nx-c
 
 ## Target Responsibility Split
 
-| Area | Responsibility |
-|---|---|
+| Area            | Responsibility                                                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Governance Core | Owns extension contracts, contribution interfaces, capability model, diagnostics contracts, and rule/signal/metric contracts. |
-| Nx plugin host | Reads Nx-specific configuration and registers configured governance extensions for Nx runs. |
-| CLI host | Reads CLI/governance configuration and registers configured governance extensions for CLI runs. |
-| Adapters | Provide capabilities such as `capability:nx`, `capability:typescript`, and `capability:package-manager`. |
-| Extensions | Contribute rule packs, enrichers, signal providers, metric providers, presets, and diagnostics. |
+| Nx plugin host  | Reads Nx-specific configuration and registers configured governance extensions for Nx runs.                                   |
+| CLI host        | Reads CLI/governance configuration and registers configured governance extensions for CLI runs.                               |
+| Adapters        | Provide capabilities such as `capability:nx`, `capability:typescript`, and `capability:package-manager`.                      |
+| Extensions      | Contribute rule packs, enrichers, signal providers, metric providers, presets, and diagnostics.                               |
 
 Core owns the contracts. Hosts own discovery and loading. Adapters own facts/capabilities. Extensions own domain-specific intelligence.
 
@@ -165,14 +165,14 @@ Capability ids should be stable and namespaced.
 
 Initial examples:
 
-| Capability | Producer | Consumers |
-|---|---|---|
-| `capability:nx` | Nx adapter | Angular extension, Nx-specific extension, reporting enrichers. |
-| `capability:typescript` | TypeScript adapter or Nx+TS enrichment | Angular, React, NestJS, TypeScript extensions. |
-| `capability:package-manager` | TypeScript/package adapter | TypeScript, Playwright, Node ecosystem extensions. |
-| `capability:manual-workspace` | CLI manual adapter | Generic rules and diagnostics. |
-| `capability:ownership` | ownership adapter/enricher | ownership rules and reports. |
-| `capability:angular` | Angular extension or adapter enrichment | Angular-specific rule packs and metrics. |
+| Capability                    | Producer                                | Consumers                                                      |
+| ----------------------------- | --------------------------------------- | -------------------------------------------------------------- |
+| `capability:nx`               | Nx adapter                              | Angular extension, Nx-specific extension, reporting enrichers. |
+| `capability:typescript`       | TypeScript adapter or Nx+TS enrichment  | Angular, React, NestJS, TypeScript extensions.                 |
+| `capability:package-manager`  | TypeScript/package adapter              | TypeScript, Playwright, Node ecosystem extensions.             |
+| `capability:manual-workspace` | CLI manual adapter                      | Generic rules and diagnostics.                                 |
+| `capability:ownership`        | ownership adapter/enricher              | ownership rules and reports.                                   |
+| `capability:angular`          | Angular extension or adapter enrichment | Angular-specific rule packs and metrics.                       |
 
 ## Capability Requirements
 
@@ -253,6 +253,13 @@ Or profile-level extension configuration:
 
 The final location of extension registration is a host/config decision. The contract requirement is that extension registration is explicit and governance-specific.
 
+Current implementation status:
+
+- Issue #310 defines an explicit governance extension config shape under `nx.json.governance.extensions`.
+- Runtime extension loading still uses legacy `nx.json.plugins` probing.
+- Explicit extension loading is future work under #312.
+- Generator/setup UX for writing explicit registration config is future work under #311.
+
 ## Discovery and Loading Boundary
 
 Core should not discover packages from disk.
@@ -271,14 +278,14 @@ Host-owned discovery may use Node/module resolution, but Core must not.
 
 Extension Host v2 should distinguish between extension states.
 
-| State | Meaning | Behavior |
-|---|---|---|
-| Not configured | Extension is not part of the run. | No action. |
-| Configured optional and missing | Extension was requested but marked optional or discovered as optional. | Diagnostic warning or notice; continue. |
-| Configured required and missing | Extension was explicitly required. | Fail with clear diagnostic. |
-| Installed but registration fails | Extension exists but throws or returns invalid definition. | Fail clearly unless host explicitly marks it optional and non-critical. |
-| Installed and incompatible | Version/capability mismatch. | Fail or skip depending on required/optional status. |
-| Installed and unsupported capability missing | Extension runs partially or skips specific contributions. |
+| State                                        | Meaning                                                                | Behavior                                                                |
+| -------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Not configured                               | Extension is not part of the run.                                      | No action.                                                              |
+| Configured optional and missing              | Extension was requested but marked optional or discovered as optional. | Diagnostic warning or notice; continue.                                 |
+| Configured required and missing              | Extension was explicitly required.                                     | Fail with clear diagnostic.                                             |
+| Installed but registration fails             | Extension exists but throws or returns invalid definition.             | Fail clearly unless host explicitly marks it optional and non-critical. |
+| Installed and incompatible                   | Version/capability mismatch.                                           | Fail or skip depending on required/optional status.                     |
+| Installed and unsupported capability missing | Extension runs partially or skips specific contributions.              |
 
 This avoids surprising failures for optional ecosystem intelligence while keeping explicitly required governance controls enforceable.
 
@@ -418,12 +425,12 @@ Adapters provide facts and capabilities. Extensions provide interpretation.
 
 Examples:
 
-| Adapter output | Extension usage |
-|---|---|
-| Nx adapter emits `capability:nx` with project targets | Angular extension can evaluate Nx-aware Angular conventions if configured. |
-| TypeScript adapter emits `capability:typescript` with import graph metadata | TypeScript extension can enforce file/import conventions. |
-| Maven adapter emits JVM/package metadata capability | Maven/Java extension can enforce groupId/package/class conventions. |
-| Ownership enricher emits ownership capability | Ownership extension/reporting can enrich diagnostics. |
+| Adapter output                                                              | Extension usage                                                            |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Nx adapter emits `capability:nx` with project targets                       | Angular extension can evaluate Nx-aware Angular conventions if configured. |
+| TypeScript adapter emits `capability:typescript` with import graph metadata | TypeScript extension can enforce file/import conventions.                  |
+| Maven adapter emits JVM/package metadata capability                         | Maven/Java extension can enforce groupId/package/class conventions.        |
+| Ownership enricher emits ownership capability                               | Ownership extension/reporting can enrich diagnostics.                      |
 
 Extensions should not need to know which adapter implementation produced the capability.
 
