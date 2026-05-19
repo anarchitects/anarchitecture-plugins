@@ -86,6 +86,10 @@
       "implementation": "./generators/init/generator",
       "schema": "./generators/init/schema.json"
     },
+    "add-extension": {
+      "implementation": "./generators/add-extension/generator",
+      "schema": "./generators/add-extension/schema.json"
+    },
     "eslint-integration": {
       "implementation": "./generators/eslint-integration/generator",
       "schema": "./generators/eslint-integration/schema.json"

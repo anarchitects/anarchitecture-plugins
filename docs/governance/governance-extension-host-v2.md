@@ -256,9 +256,10 @@ The final location of extension registration is a host/config decision. The cont
 Current implementation status:
 
 - Issue #310 defines an explicit governance extension config shape under `nx.json.governance.extensions`.
+- Issue #311 adds an `add-extension` generator that writes explicit governance extension registrations into that config.
+- The generator only writes configuration; package installation remains the user's package-manager responsibility.
 - Runtime extension loading still uses legacy `nx.json.plugins` probing.
 - Explicit extension loading is future work under #312.
-- Generator/setup UX for writing explicit registration config is future work under #311.
 
 ## Discovery and Loading Boundary
 
