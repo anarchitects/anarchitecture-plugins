@@ -33,9 +33,9 @@ describe('nx-js', () => {
     runCommand('yarn info --name-only @anarchitects/nx-js', projectDirectory);
   });
 
-  it.each(['tsc', 'esbuild'])(
+  it.each(['tsc', 'esbuild'] as const)(
     'should add secondary entry points to js libraries using %s bundler',
-    (bundler) => {
+    (bundler: 'tsc' | 'esbuild') => {
       runSecondaryEntryPointScenario(projectDirectory, bundler);
     }
   );
