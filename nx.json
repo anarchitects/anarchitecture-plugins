@@ -38,13 +38,22 @@
     },
     {
       "plugin": "@nx/jest/plugin",
+      "exclude": [
+        "packages/typeorm-e2e/**/*",
+        "packages/governance-e2e/**/*",
+        "packages/js-e2e/**/*"
+      ],
       "options": {
         "targetName": "test"
       }
     },
     {
       "plugin": "@nx/jest/plugin",
-      "include": ["packages/typeorm-e2e/jest.config.cts"],
+      "include": [
+        "packages/typeorm-e2e/**/*",
+        "packages/governance-e2e/**/*",
+        "packages/js-e2e/**/*"
+      ],
       "options": {
         "targetName": "e2e",
         "ciTargetName": "e2e-ci",
