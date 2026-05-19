@@ -260,8 +260,10 @@ Current implementation status:
 - The generator only writes configuration; package installation remains the user's package-manager responsibility.
 - Issue #312 adds explicit governance extension loading from `nx.json.governance.extensions`.
 - Explicitly configured governance extensions are loaded by importing the configured package directly.
-- Legacy `nx.json.plugins` probing remains as compatibility behavior.
-- Deprecating or removing legacy probing is future work under #313.
+- Explicit governance extension config is now the preferred registration model.
+- Arbitrary legacy probing of `nx.json.plugins` is deprecated.
+- Legacy `nx.json.plugins` probing remains as compatibility behavior and can be forced with `nx.json.governance.legacyPluginProbing`.
+- When explicit governance extensions are configured, legacy probing is disabled by default unless `legacyPluginProbing: true` is set.
 - Diagnostics improvements for extension loading remain future work under #314.
 
 ## Discovery and Loading Boundary

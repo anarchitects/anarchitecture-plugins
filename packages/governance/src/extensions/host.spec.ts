@@ -1,3 +1,4 @@
+import { logger } from '@nx/devkit';
 import { GovernanceExtensionHostContext } from './contracts.js';
 import { DefaultGovernanceCapabilityRegistry } from './capabilities.js';
 import { registerGovernanceExtensions } from './host.js';
@@ -55,6 +56,14 @@ describe('registerGovernanceExtensions', () => {
     };
   }
 
+  beforeEach(() => {
+    jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('loads explicitly configured extension packages directly', async () => {
     const registry = await registerGovernanceExtensions(baseContext, {
       nxJson: {
@@ -93,6 +102,7 @@ describe('registerGovernanceExtensions', () => {
     await registerGovernanceExtensions(baseContext, {
       nxJson: {
         governance: {
+          legacyPluginProbing: true,
           extensions: [
             {
               package: '@anarchitects/governance-extension-angular',
@@ -119,6 +129,37 @@ describe('registerGovernanceExtensions', () => {
     });
 
     expect(registrationOrder).toEqual(['explicit', 'legacy']);
+  });
+
+  it('does not probe legacy plugins by default when explicit extensions are configured', async () => {
+    const loadedSpecifiers: string[] = [];
+
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-angular',
+            },
+          ],
+        },
+        plugins: ['plugin-b'],
+      },
+      moduleLoader: async (specifier) => {
+        loadedSpecifiers.push(specifier);
+
+        if (specifier === '@anarchitects/governance-extension-angular') {
+          return createGovernanceExtension('angular');
+        }
+
+        throw new Error(`Unexpected specifier ${specifier}`);
+      },
+    });
+
+    expect(loadedSpecifiers).toEqual([
+      '@anarchitects/governance-extension-angular',
+    ]);
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it('discovers extensions from string and object plugin entries and registers them in nx.json order', async () => {
@@ -176,6 +217,9 @@ describe('registerGovernanceExtensions', () => {
     });
 
     expect(registrationOrder).toEqual(['plugin-a', 'plugin-b']);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.'
+    );
     expect(registry).toEqual({
       metricProviders: [{ pluginId: 'plugin-a', contribution: 'metric-a' }],
       signalProviders: [{ pluginId: 'plugin-b', contribution: 'signal-b' }],
@@ -279,6 +323,64 @@ describe('registerGovernanceExtensions', () => {
     });
   });
 
+  it('enables legacy probing alongside explicit extensions when legacyPluginProbing is true', async () => {
+    const loadedSpecifiers: string[] = [];
+
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-angular',
+            },
+          ],
+          legacyPluginProbing: true,
+        },
+        plugins: ['plugin-b'],
+      },
+      moduleLoader: async (specifier) => {
+        loadedSpecifiers.push(specifier);
+
+        if (specifier === '@anarchitects/governance-extension-angular') {
+          return createGovernanceExtension('angular');
+        }
+
+        if (specifier === 'plugin-b/governance-extension') {
+          return createGovernanceExtension('plugin-b');
+        }
+
+        throw new Error(`Unexpected specifier ${specifier}`);
+      },
+    });
+
+    expect(loadedSpecifiers).toEqual([
+      '@anarchitects/governance-extension-angular',
+      'plugin-b/governance-extension',
+    ]);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables legacy probing when legacyPluginProbing is false', async () => {
+    const loadedSpecifiers: string[] = [];
+
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          extensions: [],
+          legacyPluginProbing: false,
+        },
+        plugins: ['plugin-b'],
+      },
+      moduleLoader: async (specifier) => {
+        loadedSpecifiers.push(specifier);
+        return createGovernanceExtension('plugin-b');
+      },
+    });
+
+    expect(loadedSpecifiers).toEqual([]);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
   it('does not load the same module specifier twice across explicit and legacy discovery', async () => {
     const loadedSpecifiers: string[] = [];
 
@@ -300,6 +402,33 @@ describe('registerGovernanceExtensions', () => {
     });
 
     expect(loadedSpecifiers).toEqual(['plugin-a/governance-extension']);
+  });
+
+  it('emits the legacy probing deprecation warning only once per discovery run', async () => {
+    await registerGovernanceExtensions(baseContext, {
+      nxJson: {
+        governance: {
+          legacyPluginProbing: true,
+        },
+        plugins: ['plugin-a', 'plugin-b'],
+      },
+      moduleLoader: async (specifier) => {
+        if (specifier === 'plugin-a/governance-extension') {
+          return createGovernanceExtension('plugin-a');
+        }
+
+        if (specifier === 'plugin-b/governance-extension') {
+          return createGovernanceExtension('plugin-b');
+        }
+
+        throw new Error(`Unexpected specifier ${specifier}`);
+      },
+    });
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.'
+    );
   });
 
   it('ignores plugins whose governance entrypoint subpath is not exported', async () => {
@@ -386,9 +515,11 @@ describe('registerGovernanceExtensions', () => {
               {
                 package: '@anarchitects/governance-extension-angular',
               },
+              {
+                package: '@anarchitects/governance-extension-typescript',
+              },
             ],
           },
-          plugins: ['plugin-b'],
         },
         moduleLoader: async (specifier) =>
           specifier === '@anarchitects/governance-extension-angular'

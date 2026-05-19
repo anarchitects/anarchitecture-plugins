@@ -10,10 +10,12 @@ export interface GovernanceExtensionRegistration {
 
 export interface GovernanceExtensionConfig {
   extensions: GovernanceExtensionRegistration[];
+  legacyPluginProbing?: boolean;
 }
 
 interface NxJsonGovernanceShape {
   extensions?: unknown;
+  legacyPluginProbing?: unknown;
 }
 
 interface NxJsonShape {
@@ -36,10 +38,21 @@ export function parseGovernanceExtensionConfig(
   nxJson: NxJsonShape = {}
 ): GovernanceExtensionConfig {
   const extensions = nxJson.governance?.extensions;
+  const legacyPluginProbing = nxJson.governance?.legacyPluginProbing;
+
+  if (
+    legacyPluginProbing !== undefined &&
+    typeof legacyPluginProbing !== 'boolean'
+  ) {
+    throw new Error(
+      'Invalid governance extension config: nx.json governance.legacyPluginProbing must be a boolean when provided.'
+    );
+  }
 
   if (extensions === undefined) {
     return {
       extensions: [],
+      ...(legacyPluginProbing !== undefined ? { legacyPluginProbing } : {}),
     };
   }
 
@@ -66,6 +79,7 @@ export function parseGovernanceExtensionConfig(
 
   return {
     extensions: registrations,
+    ...(legacyPluginProbing !== undefined ? { legacyPluginProbing } : {}),
   };
 }
 
