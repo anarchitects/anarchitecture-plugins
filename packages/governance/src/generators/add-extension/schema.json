@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "AddExtensionGeneratorSchema",
+  "title": "Add Governance Extension",
+  "type": "object",
+  "properties": {
+    "package": {
+      "type": "string",
+      "description": "Package name to record under nx.json governance.extensions.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-priority": "important"
+    },
+    "optional": {
+      "type": "boolean",
+      "description": "Whether the governance extension is optional. New registrations default to true when this flag is omitted."
+    },
+    "skipFormat": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip formatting files after generation."
+    }
+  },
+  "required": ["package"],
+  "additionalProperties": false
+}

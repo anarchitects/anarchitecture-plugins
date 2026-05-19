@@ -20,6 +20,7 @@ export { default as workspaceConformanceExecutor } from './executors/workspace-c
 export { default as governanceGraphExecutor } from './executors/governance-graph/executor.js';
 
 export { default as initGenerator } from './generators/init/generator.js';
+export { default as addExtensionGenerator } from './generators/add-extension/generator.js';
 
 export { default } from './plugin/index.js';
 
