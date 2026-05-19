@@ -32,6 +32,7 @@ export interface GovernanceExtensionRegistry {
 
 interface NxJsonPluginConfig {
   plugin?: string;
+  options?: unknown;
 }
 
 interface NxJsonShape {

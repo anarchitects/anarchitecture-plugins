@@ -4,14 +4,12 @@ import {
   Measurement,
   Violation,
 } from '../core/index.js';
-import { AdapterWorkspaceSnapshot } from '../nx-adapter/types.js';
 import { GovernanceSignal } from '../signal-engine/index.js';
 
 export interface GovernanceExtensionHostContext {
   workspaceRoot: string;
   profileName: string;
   options: Readonly<Record<string, unknown>>;
-  snapshot: AdapterWorkspaceSnapshot;
   inventory: GovernanceWorkspace;
 }
 
