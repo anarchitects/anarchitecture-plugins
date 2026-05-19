@@ -75,7 +75,10 @@ function runSecondaryEntryPointScenario(
   );
 
   const projectJson = JSON.parse(
-    readFileSync(join(projectDirectory, libraryProject.root, 'project.json'), 'utf-8')
+    readFileSync(
+      join(projectDirectory, libraryProject.root, 'project.json'),
+      'utf-8'
+    )
   );
   expect(projectJson.targets.build.options.additionalEntryPoints).toContain(
     libraryEntryPath
@@ -106,10 +109,14 @@ function runSecondaryEntryPointScenario(
 
   expect(featureExport).toMatchObject({});
   if (featureExport.import) {
-    expect(normalizeWorkspacePath(featureExport.import)).toMatch(jsEntryPattern);
+    expect(normalizeWorkspacePath(featureExport.import)).toMatch(
+      jsEntryPattern
+    );
   }
   if (featureExport.default) {
-    expect(normalizeWorkspacePath(featureExport.default)).toMatch(jsEntryPattern);
+    expect(normalizeWorkspacePath(featureExport.default)).toMatch(
+      jsEntryPattern
+    );
   }
   if (featureExport.types) {
     expect(normalizeWorkspacePath(featureExport.types)).toMatch(
