@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import type { Violation } from '../core/index.js';
 import {
   GenericWorkspaceLoadError,
   GenericWorkspaceValidationError,
@@ -10,7 +11,8 @@ import {
   StandaloneGovernanceProfileValidationError,
 } from '../profile/load-standalone-profile.js';
 
-import { runAgovCheck } from './check.js';
+import type { AgovCheckResult } from './check.js';
+import * as checkModule from './check.js';
 import {
   type AgovOutputFormat,
   renderAgovCheckReport,
@@ -26,8 +28,27 @@ export interface ParsedAgovCheckOptions {
   workspacePath: string;
   profilePath: string;
   format: AgovOutputFormat;
+  failOn: AgovFailOn;
   outputPath?: string;
 }
+
+export type AgovFailOn = 'none' | 'warning' | 'error';
+
+export interface AgovCliRuntime {
+  runAgovCheck(options: {
+    workspacePath: string;
+    profilePath: string;
+  }): AgovCheckResult;
+}
+
+export const AGOV_EXIT_SUCCESS = 0;
+export const AGOV_EXIT_GOVERNANCE_FAILURE = 1;
+export const AGOV_EXIT_CONFIGURATION_FAILURE = 2;
+export const AGOV_EXIT_RUNTIME_FAILURE = 3;
+
+const DEFAULT_AGOV_CLI_RUNTIME: AgovCliRuntime = {
+  runAgovCheck: checkModule.runAgovCheck,
+};
 
 export class AgovCliUsageError extends Error {
   constructor(
@@ -38,6 +59,7 @@ export class AgovCliUsageError extends Error {
       | 'agov.cli.missing_profile'
       | 'agov.cli.missing_output'
       | 'agov.cli.unsupported_format'
+      | 'agov.cli.unsupported_fail_on'
       | 'agov.cli.unknown_option'
   ) {
     super(message);
@@ -58,14 +80,18 @@ export class AgovCliOutputError extends Error {
 
 export function runAgovCli(
   argv: string[],
-  io: AgovCliIo = defaultIo()
+  io: AgovCliIo = defaultIo(),
+  runtime: AgovCliRuntime = DEFAULT_AGOV_CLI_RUNTIME
 ): number {
   try {
     const parsed = parseAgovCliArgs(argv);
-    const result = runAgovCheck({
-      workspacePath: parsed.workspacePath,
-      profilePath: parsed.profilePath,
-    });
+    const result = applyAgovFailOn(
+      runtime.runAgovCheck({
+        workspacePath: parsed.workspacePath,
+        profilePath: parsed.profilePath,
+      }),
+      parsed.failOn
+    );
     const rendered = renderAgovCheckReport(result, parsed.format);
 
     if (parsed.outputPath) {
@@ -74,7 +100,7 @@ export function runAgovCli(
       io.stdout(rendered);
     }
 
-    return result.success ? 0 : 1;
+    return result.success ? AGOV_EXIT_SUCCESS : AGOV_EXIT_GOVERNANCE_FAILURE;
   } catch (error) {
     if (error instanceof AgovCliUsageError) {
       io.stderr(
@@ -83,7 +109,7 @@ export function runAgovCli(
           message: error.message,
         })
       );
-      return 1;
+      return AGOV_EXIT_CONFIGURATION_FAILURE;
     }
 
     if (error instanceof AgovCliOutputError) {
@@ -96,7 +122,7 @@ export function runAgovCli(
           },
         })
       );
-      return 1;
+      return AGOV_EXIT_CONFIGURATION_FAILURE;
     }
 
     if (
@@ -106,7 +132,7 @@ export function runAgovCli(
       error instanceof StandaloneGovernanceProfileValidationError
     ) {
       io.stderr(renderStructuredError(error));
-      return 1;
+      return AGOV_EXIT_CONFIGURATION_FAILURE;
     }
 
     io.stderr(
@@ -116,7 +142,7 @@ export function runAgovCli(
           error instanceof Error ? error.message : 'Unknown agov CLI error.',
       })
     );
-    return 1;
+    return AGOV_EXIT_RUNTIME_FAILURE;
   }
 }
 
@@ -136,6 +162,7 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
   let profilePath: string | undefined;
   let outputPath: string | undefined;
   let format: AgovOutputFormat = 'json';
+  let failOn: AgovFailOn = 'error';
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -164,6 +191,21 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
       }
 
       format = value;
+      continue;
+    }
+
+    if (arg === '--fail-on') {
+      const value = args[index + 1];
+      index += 1;
+
+      if (value !== 'none' && value !== 'warning' && value !== 'error') {
+        throw new AgovCliUsageError(
+          'Unsupported agov check fail-on threshold. Supported values are "none", "warning", and "error".',
+          'agov.cli.unsupported_fail_on'
+        );
+      }
+
+      failOn = value;
       continue;
     }
 
@@ -207,8 +249,49 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
     workspacePath,
     profilePath,
     format,
+    failOn,
     ...(outputPath ? { outputPath } : {}),
   };
+}
+
+function applyAgovFailOn(
+  result: AgovCheckResult,
+  failOn: AgovFailOn
+): AgovCheckResult {
+  return {
+    ...result,
+    success: !hasViolationsAtOrAboveThreshold(
+      result.assessment.violations,
+      failOn
+    ),
+  };
+}
+
+function hasViolationsAtOrAboveThreshold(
+  violations: readonly Violation[],
+  failOn: AgovFailOn
+): boolean {
+  if (failOn === 'none') {
+    return false;
+  }
+
+  const thresholdRank = severityRank(failOn);
+
+  return violations.some(
+    (violation) => severityRank(violation.severity) >= thresholdRank
+  );
+}
+
+function severityRank(severity: Violation['severity']): number {
+  if (severity === 'info') {
+    return 0;
+  }
+
+  if (severity === 'warning') {
+    return 1;
+  }
+
+  return 2;
 }
 
 function renderStructuredError(

@@ -54,7 +54,7 @@ agov <command> --workspace <path> --profile <path> [options]
 
 | Option                             | Type | Default                  | Purpose                                      |
 | ---------------------------------- | ---- | ------------------------ | -------------------------------------------- |
-| `--format <text\|json>`            | enum | command-specific default | Output format.                               |
+| `--format <json\|markdown\|table>` | enum | command-specific default | Output format.                               |
 | `--output <path>`                  | path | stdout                   | Write result to a file instead of stdout.    |
 | `--fail-on <none\|error\|warning>` | enum | command-specific default | Exit-code threshold for governance findings. |
 | `--help`                           | flag | false                    | Show help for the command.                   |
@@ -100,12 +100,12 @@ Run governance evaluation and return a pass/fail result suitable for local check
 ### Syntax
 
 ```bash
-agov check --workspace <path> --profile <path> [--format text|json] [--fail-on none|error|warning] [--output <path>]
+agov check --workspace <path> --profile <path> [--format json|markdown|table] [--fail-on none|error|warning] [--output <path>]
 ```
 
 ### Default behavior
 
-- default format: `text`
+- default format: `json`
 - default `fail-on`: `error`
 - default output: stdout
 
@@ -124,7 +124,7 @@ agov check --workspace ./workspace.json --profile ./profiles/frontend-layered.js
 ### JSON example
 
 ```bash
-agov check --workspace ./workspace.json --profile ./profiles/frontend-layered.json --format json
+agov check --workspace ./workspace.json --profile ./profiles/frontend-layered.json --format markdown
 ```
 
 ## `agov report`
@@ -204,6 +204,15 @@ The CLI host should keep exit-code behavior simple:
 | `warning`         | Exit non-zero when warning- or error-severity governance findings are present. |
 
 Host/input/runtime failures are distinct from governance findings and should still fail regardless of `--fail-on`.
+
+Exact process exit codes for the implemented `agov check` host are:
+
+| Exit code | Meaning                                                         |
+| --------- | --------------------------------------------------------------- |
+| `0`       | Evaluation completed and findings stayed below threshold        |
+| `1`       | Evaluation completed and findings met the `--fail-on` threshold |
+| `2`       | CLI usage, input, validation, load, or output-path failure      |
+| `3`       | Unhandled runtime failure inside CLI execution                  |
 
 Examples of host/input/runtime failure:
 
