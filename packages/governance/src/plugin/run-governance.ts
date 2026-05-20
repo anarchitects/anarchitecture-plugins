@@ -18,6 +18,7 @@ import {
 import { buildInventory } from '../inventory/build-inventory.js';
 import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
 import { loadNxGovernanceWorkspaceContext } from '../nx-adapter/read-workspace.js';
+import { createNxCapability } from '../nx-adapter/capability.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
   loadProfileOverrides,
@@ -1654,13 +1655,14 @@ async function buildAssessmentArtifacts(
     },
   };
 
-  const { adapterResult } = await loadNxGovernanceWorkspaceContext();
+  const { snapshot, adapterResult } = await loadNxGovernanceWorkspaceContext();
   const inventory = buildInventory(adapterResult, overrides);
   loadGovernanceExtensionConfig({ workspaceRoot });
   const capabilities = new DefaultGovernanceCapabilityRegistry([
-    {
-      id: 'capability:nx',
-    },
+    createNxCapability({
+      workspaceRoot,
+      snapshot,
+    }),
   ]);
   const extensionContext = {
     workspaceRoot,
