@@ -43,3 +43,4 @@ export * from './core/exceptions.js';
 export * from './graph-document/index.js';
 export * from './manual-workspace/index.js';
 export * from './profile/load-standalone-profile.js';
+export * from './standalone-cli/index.js';

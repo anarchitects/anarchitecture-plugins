@@ -4,6 +4,9 @@
   "description": "Nx governance plugin for workspace health, boundaries, ownership, and architecture reporting.",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "agov": "dist/standalone-cli/bin/agov.js"
+  },
   "license": "Apache-2.0",
   "executors": "dist/index.json",
   "generators": "dist/index.json",
