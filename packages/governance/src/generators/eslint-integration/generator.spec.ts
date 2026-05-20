@@ -379,7 +379,9 @@ describe('eslintIntegrationGenerator', () => {
   });
 });
 
-function buildFlatConfigWithInlineConstraints(_: string) {
+function buildFlatConfigWithInlineConstraints(propertyName: string) {
+  void propertyName;
+
   return `import nx from '@nx/eslint-plugin';
 
 export default [

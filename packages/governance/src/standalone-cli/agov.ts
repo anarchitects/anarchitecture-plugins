@@ -96,7 +96,7 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
 
   let workspacePath: string | undefined;
   let profilePath: string | undefined;
-  let format: 'json' = 'json';
+  let format = 'json' as const;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];

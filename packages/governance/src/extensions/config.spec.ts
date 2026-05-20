@@ -163,10 +163,16 @@ describe('governance extension config', () => {
 
     const original = structuredClone(nxJson);
     const parsed = parseGovernanceExtensionConfig(nxJson);
+    const firstExtension = parsed.extensions[0];
 
     expect(nxJson).toEqual(original);
+    expect(firstExtension).toBeDefined();
 
-    parsed.extensions[0]!.options = {
+    if (!firstExtension) {
+      throw new Error('Expected a parsed governance extension entry.');
+    }
+
+    firstExtension.options = {
       selectorPrefix: 'bb',
     };
 

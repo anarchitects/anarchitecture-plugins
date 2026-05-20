@@ -104,13 +104,6 @@ describe('agov check', () => {
   });
 
   it('returns a deterministic JSON error for an invalid workspace file', () => {
-    const workspacePath = path.join(
-      __dirname,
-      '..',
-      'manual-workspace',
-      'fixtures',
-      'demo-workspace.yaml'
-    );
     const profilePath = path.join(
       __dirname,
       'fixtures',
@@ -160,13 +153,6 @@ describe('agov check', () => {
       'manual-workspace',
       'fixtures',
       'demo-workspace.yaml'
-    );
-    const profilePath = path.join(
-      __dirname,
-      '..',
-      'profile',
-      'fixtures',
-      'standalone-profile.json'
     );
     const io = createMemoryIo();
     const tempDir = mkdtempSync(path.join(tmpdir(), 'agov-invalid-profile-'));
