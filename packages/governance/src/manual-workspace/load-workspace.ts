@@ -193,10 +193,8 @@ export function validateGenericWorkspaceSchema(
   return {
     schemaVersion,
     workspace,
-    projects: projects.map(({ index: _index, ...project }) => project),
-    dependencies: dependencies.map(
-      ({ index: _index, ...dependency }) => dependency
-    ),
+    projects: projects.map(stripValidatedProjectIndex),
+    dependencies: dependencies.map(stripValidatedDependencyIndex),
   };
 }
 
@@ -909,6 +907,28 @@ function classificationTagPrefix(
   return CLASSIFICATION_TAG_PREFIXES.find((prefix) =>
     tag.startsWith(`${prefix}:`)
   );
+}
+
+function stripValidatedProjectIndex(
+  project: ValidatedGenericWorkspaceProject
+): GenericWorkspaceProject {
+  return {
+    name: project.name,
+    root: project.root,
+    tags: project.tags,
+    type: project.type,
+    metadata: project.metadata,
+  };
+}
+
+function stripValidatedDependencyIndex(
+  dependency: ValidatedGenericWorkspaceDependency
+): GenericWorkspaceDependency {
+  return {
+    source: dependency.source,
+    target: dependency.target,
+    type: dependency.type,
+  };
 }
 
 function isNormalizedWorkspacePath(value: string): boolean {

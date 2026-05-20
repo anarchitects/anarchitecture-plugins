@@ -1,6 +1,5 @@
 import {
   createNodesFromFiles,
-  type CreateNodesContextV2,
   type CreateNodesResult,
   type CreateNodesV2,
 } from '@nx/devkit';
@@ -37,13 +36,8 @@ export const createNodesV2: CreateNodesV2<GovernancePluginOptions> = [
     const selectedProfileFile = resolveDefaultProfileFile(filteredProfileFiles);
 
     return createNodesFromFiles(
-      (profileFilePath, pluginOptions, pluginContext) =>
-        createGovernanceNodesFromProfile(
-          profileFilePath,
-          selectedProfileFile,
-          pluginOptions,
-          pluginContext
-        ),
+      (profileFilePath) =>
+        createGovernanceNodesFromProfile(profileFilePath, selectedProfileFile),
       filteredProfileFiles,
       options,
       context
@@ -58,9 +52,7 @@ export default {
 
 function createGovernanceNodesFromProfile(
   profileFilePath: string,
-  selectedProfileFile: string,
-  _options: GovernancePluginOptions | undefined,
-  _context: CreateNodesContextV2 & { configFiles: readonly string[] }
+  selectedProfileFile: string
 ): CreateNodesResult {
   if (normalizeRelativePath(profileFilePath) !== selectedProfileFile) {
     return {};
