@@ -33,6 +33,7 @@ export * from './ai-handoff/index.js';
 export * from './delivery-impact/index.js';
 export * from './reporting/render-management-report.js';
 export * from './nx-adapter/graph-adapter.js';
+export * from './nx-adapter/capability.js';
 export * from './conformance-adapter/conformance-adapter.js';
 export * from './signal-engine/index.js';
 export * from './metric-engine/calculate-metrics.js';

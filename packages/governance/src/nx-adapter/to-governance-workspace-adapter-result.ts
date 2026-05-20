@@ -3,6 +3,7 @@ import type {
   GovernanceWorkspaceAdapterResult,
 } from '../core/index.js';
 
+import { createNxCapability } from './capability.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
 export function toGovernanceWorkspaceAdapterResult(
@@ -15,7 +16,7 @@ export function toGovernanceWorkspaceAdapterResult(
       name: project.name,
       root: project.root,
       type: project.type,
-      tags: project.tags,
+      tags: project.tags ?? [],
       metadata: project.metadata,
       ownership: projectOwnershipFromSnapshot(project, snapshot),
     })),
@@ -26,15 +27,10 @@ export function toGovernanceWorkspaceAdapterResult(
       sourceFile: dependency.sourceFile,
     })),
     capabilities: [
-      {
-        id: 'capability:nx',
-        data: {
-          projectGraphAvailable: true,
-          tagsAvailable: true,
-          metadataAvailable: true,
-          source: 'nx-project-graph',
-        },
-      },
+      createNxCapability({
+        workspaceRoot: snapshot.root,
+        snapshot,
+      }),
     ],
   };
 }

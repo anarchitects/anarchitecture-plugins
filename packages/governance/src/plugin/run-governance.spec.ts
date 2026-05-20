@@ -1874,6 +1874,7 @@ function buildMockWorkspaceContext() {
           root: 'packages/governance',
           type: 'library',
           tags: ['domain:governance', 'layer:core'],
+          targets: ['build', 'lint', 'test'],
           metadata: {
             ownership: {
               team: '@anarchitects/governance',
@@ -1886,6 +1887,7 @@ function buildMockWorkspaceContext() {
           root: 'packages/governance-e2e',
           type: 'application',
           tags: ['domain:governance', 'layer:e2e'],
+          targets: ['e2e', 'lint'],
           metadata: {},
         },
         {
@@ -1893,6 +1895,7 @@ function buildMockWorkspaceContext() {
           root: 'packages/js',
           type: 'library',
           tags: ['domain:platform', 'layer:feature'],
+          targets: ['build', 'lint', 'test'],
           metadata: {},
         },
       ],
@@ -1979,10 +1982,30 @@ function buildMockWorkspaceContext() {
         {
           id: 'capability:nx',
           data: {
-            projectGraphAvailable: true,
-            tagsAvailable: true,
-            metadataAvailable: true,
-            source: 'nx-project-graph',
+            workspaceRoot,
+            projects: [
+              {
+                name: 'packages/governance',
+                root: 'packages/governance',
+                type: 'library',
+                tags: ['domain:governance', 'layer:core'],
+                targets: ['build', 'lint', 'test'],
+              },
+              {
+                name: 'packages/governance-e2e',
+                root: 'packages/governance-e2e',
+                type: 'application',
+                tags: ['domain:governance', 'layer:e2e'],
+                targets: ['e2e', 'lint'],
+              },
+              {
+                name: 'packages/js',
+                root: 'packages/js',
+                type: 'library',
+                tags: ['domain:platform', 'layer:feature'],
+                targets: ['build', 'lint', 'test'],
+              },
+            ],
           },
         },
       ],

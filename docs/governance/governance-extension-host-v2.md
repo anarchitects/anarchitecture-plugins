@@ -267,7 +267,10 @@ Current implementation status:
 - Extension loading diagnostics now exist for host-local observability.
 - Those diagnostics cover explicit loading, optional/required missing extensions, invalid definitions, duplicate ids, registration failures, legacy probing use, and skipped legacy entrypoints.
 - Diagnostics are local to extension loading for now, not a global diagnostics framework.
-- Richer capability and diagnostics expansion remains future work under #315 and #316.
+- Issue #315 makes `capability:nx` adapter-owned and meaningful instead of a marker-only capability.
+- `capability:nx` now exposes a stable payload with workspace root plus project names, roots, types, tags, and target names.
+- Raw Nx project graph internals, devkit types, and target configuration objects remain hidden from extension contracts.
+- Richer framework/language capabilities and broader diagnostics expansion remain future work under #316.
 
 ## Discovery and Loading Boundary
 

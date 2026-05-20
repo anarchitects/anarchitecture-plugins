@@ -19,6 +19,10 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
 
   const projects = Object.values(graph.nodes).map((node) => {
     const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+    const targets =
+      node.data.targets && typeof node.data.targets === 'object'
+        ? Object.keys(node.data.targets)
+        : [];
     const graphMetadata =
       node.data.metadata && typeof node.data.metadata === 'object'
         ? (node.data.metadata as Record<string, unknown>)
@@ -35,6 +39,7 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
       root: node.data.root,
       type: node.data.projectType ?? 'unknown',
       tags,
+      targets,
       metadata,
     };
   });

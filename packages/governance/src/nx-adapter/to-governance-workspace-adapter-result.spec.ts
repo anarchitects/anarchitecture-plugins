@@ -11,6 +11,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           root: 'libs/booking/ui',
           type: 'library',
           tags: ['scope:booking', 'layer:ui', 'type:ui'],
+          targets: ['test', 'build'],
           metadata: {
             documentation: true,
           },
@@ -20,6 +21,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           root: 'libs/booking/domain',
           type: 'library',
           tags: ['scope:booking', 'layer:domain', 'type:domain'],
+          targets: ['lint'],
           metadata: {
             ownership: {
               team: 'booking-team',
@@ -82,10 +84,23 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
         {
           id: 'capability:nx',
           data: {
-            projectGraphAvailable: true,
-            tagsAvailable: true,
-            metadataAvailable: true,
-            source: 'nx-project-graph',
+            workspaceRoot: '/workspace',
+            projects: [
+              {
+                name: 'booking-domain',
+                root: 'libs/booking/domain',
+                type: 'library',
+                tags: ['scope:booking', 'layer:domain', 'type:domain'],
+                targets: ['lint'],
+              },
+              {
+                name: 'booking-ui',
+                root: 'libs/booking/ui',
+                type: 'library',
+                tags: ['scope:booking', 'layer:ui', 'type:ui'],
+                targets: ['build', 'test'],
+              },
+            ],
           },
         },
       ],

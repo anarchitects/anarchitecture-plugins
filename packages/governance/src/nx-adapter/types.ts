@@ -2,7 +2,8 @@ export interface AdapterProject {
   name: string;
   root: string;
   type: string;
-  tags: string[];
+  tags?: string[];
+  targets?: string[];
   metadata: Record<string, unknown>;
 }
 
