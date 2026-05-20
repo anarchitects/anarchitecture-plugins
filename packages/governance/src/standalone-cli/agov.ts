@@ -1,3 +1,6 @@
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+
 import {
   GenericWorkspaceLoadError,
   GenericWorkspaceValidationError,
@@ -7,7 +10,11 @@ import {
   StandaloneGovernanceProfileValidationError,
 } from '../profile/load-standalone-profile.js';
 
-import { renderAgovCheckJson, runAgovCheck } from './check.js';
+import { runAgovCheck } from './check.js';
+import {
+  type AgovOutputFormat,
+  renderAgovCheckReport,
+} from './render-report.js';
 
 export interface AgovCliIo {
   stdout(message: string): void;
@@ -18,7 +25,8 @@ export interface ParsedAgovCheckOptions {
   command: 'check';
   workspacePath: string;
   profilePath: string;
-  format: 'json';
+  format: AgovOutputFormat;
+  outputPath?: string;
 }
 
 export class AgovCliUsageError extends Error {
@@ -28,11 +36,23 @@ export class AgovCliUsageError extends Error {
       | 'agov.cli.unknown_command'
       | 'agov.cli.missing_workspace'
       | 'agov.cli.missing_profile'
+      | 'agov.cli.missing_output'
       | 'agov.cli.unsupported_format'
       | 'agov.cli.unknown_option'
   ) {
     super(message);
     this.name = 'AgovCliUsageError';
+  }
+}
+
+export class AgovCliOutputError extends Error {
+  constructor(
+    message: string,
+    public readonly code: 'agov.cli.output_write_failed',
+    public readonly filePath: string
+  ) {
+    super(message);
+    this.name = 'AgovCliOutputError';
   }
 }
 
@@ -45,10 +65,15 @@ export function runAgovCli(
     const result = runAgovCheck({
       workspacePath: parsed.workspacePath,
       profilePath: parsed.profilePath,
-      format: parsed.format,
     });
+    const rendered = renderAgovCheckReport(result, parsed.format);
 
-    io.stdout(renderAgovCheckJson(result));
+    if (parsed.outputPath) {
+      writeAgovOutput(parsed.outputPath, rendered);
+    } else {
+      io.stdout(rendered);
+    }
+
     return result.success ? 0 : 1;
   } catch (error) {
     if (error instanceof AgovCliUsageError) {
@@ -56,6 +81,19 @@ export function runAgovCli(
         renderErrorPayload({
           code: error.code,
           message: error.message,
+        })
+      );
+      return 1;
+    }
+
+    if (error instanceof AgovCliOutputError) {
+      io.stderr(
+        renderErrorPayload({
+          code: error.code,
+          message: error.message,
+          details: {
+            filePath: error.filePath,
+          },
         })
       );
       return 1;
@@ -96,7 +134,8 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
 
   let workspacePath: string | undefined;
   let profilePath: string | undefined;
-  let format = 'json' as const;
+  let outputPath: string | undefined;
+  let format: AgovOutputFormat = 'json';
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -117,14 +156,29 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
       const value = args[index + 1];
       index += 1;
 
-      if (value !== 'json') {
+      if (value !== 'json' && value !== 'markdown' && value !== 'table') {
         throw new AgovCliUsageError(
-          'Unsupported agov check format. This MVP supports only "--format json".',
+          'Unsupported agov check format. Supported formats are "json", "markdown", and "table".',
           'agov.cli.unsupported_format'
         );
       }
 
-      format = 'json';
+      format = value;
+      continue;
+    }
+
+    if (arg === '--output') {
+      const value = args[index + 1];
+      index += 1;
+
+      if (!value) {
+        throw new AgovCliUsageError(
+          'Missing required agov check option value for "--output".',
+          'agov.cli.missing_output'
+        );
+      }
+
+      outputPath = value;
       continue;
     }
 
@@ -153,6 +207,7 @@ export function parseAgovCliArgs(argv: string[]): ParsedAgovCheckOptions {
     workspacePath,
     profilePath,
     format,
+    ...(outputPath ? { outputPath } : {}),
   };
 }
 
@@ -220,4 +275,18 @@ function defaultIo(): AgovCliIo {
       process.stderr.write(`${message}\n`);
     },
   };
+}
+
+function writeAgovOutput(outputPath: string, content: string): void {
+  const filePath = path.resolve(outputPath);
+
+  try {
+    writeFileSync(filePath, content, 'utf8');
+  } catch {
+    throw new AgovCliOutputError(
+      `Failed to write agov report output to "${filePath}".`,
+      'agov.cli.output_write_failed',
+      filePath
+    );
+  }
 }

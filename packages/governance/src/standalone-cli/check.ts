@@ -13,16 +13,14 @@ import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
 import { loadGenericWorkspace } from '../manual-workspace/index.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import { loadStandaloneGovernanceProfile } from '../profile/load-standalone-profile.js';
-import { renderJsonReport } from '../reporting/render-json.js';
 import { buildPolicySignals } from '../signal-engine/index.js';
 
 export interface AgovCheckOptions {
   workspacePath: string;
   profilePath: string;
-  format: 'json';
 }
 
-export interface AgovCheckJsonResult {
+export interface AgovCheckResult {
   command: 'check';
   success: boolean;
   assessment: GovernanceAssessment;
@@ -47,7 +45,7 @@ const EMPTY_EXCEPTION_REPORT: GovernanceExceptionReport = {
   reactivatedFindings: [],
 };
 
-export function runAgovCheck(options: AgovCheckOptions): AgovCheckJsonResult {
+export function runAgovCheck(options: AgovCheckOptions): AgovCheckResult {
   const workspace = loadGenericWorkspace(options.workspacePath).workspace;
   const profile = loadStandaloneGovernanceProfile(options.profilePath).profile;
   const assessment = buildStandaloneGovernanceAssessment({
@@ -62,18 +60,6 @@ export function runAgovCheck(options: AgovCheckOptions): AgovCheckJsonResult {
     ),
     assessment,
   };
-}
-
-export function renderAgovCheckJson(result: AgovCheckJsonResult): string {
-  return JSON.stringify(
-    {
-      command: result.command,
-      success: result.success,
-      assessment: JSON.parse(renderJsonReport(result.assessment)) as object,
-    },
-    null,
-    2
-  );
 }
 
 function buildStandaloneGovernanceAssessment(input: {

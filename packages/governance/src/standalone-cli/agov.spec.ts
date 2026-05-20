@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -79,6 +79,76 @@ describe('agov check', () => {
     expect(io.err).toBe('');
   });
 
+  it('renders markdown output to stdout', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const io = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'markdown',
+        ],
+        io
+      )
+    ).toBe(0);
+    expect(io.out).toContain('# agov check');
+    expect(io.out).toContain('## Signal Sources');
+    expect(io.out).toContain('| Source | Count |');
+    expect(io.err).toBe('');
+  });
+
+  it('renders table output to stdout', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const io = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'table',
+        ],
+        io
+      )
+    ).toBe(0);
+    expect(io.out).toContain('agov check');
+    expect(io.out).toContain('Governance Check - check-pass');
+    expect(io.out).toContain('Field      Value');
+    expect(io.err).toBe('');
+  });
+
   it('returns a deterministic usage error when the workspace path is missing', () => {
     const io = createMemoryIo();
 
@@ -99,6 +169,32 @@ describe('agov check', () => {
       error: {
         code: 'agov.cli.missing_profile',
         message: 'Missing required agov check option "--profile".',
+      },
+    });
+  });
+
+  it('returns a deterministic usage error for an unsupported format', () => {
+    const io = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          'workspace.yaml',
+          '--profile',
+          'profile.json',
+          '--format',
+          'html',
+        ],
+        io
+      )
+    ).toBe(1);
+    expect(JSON.parse(io.err)).toEqual({
+      error: {
+        code: 'agov.cli.unsupported_format',
+        message:
+          'Unsupported agov check format. Supported formats are "json", "markdown", and "table".',
       },
     });
   });
@@ -187,6 +283,92 @@ describe('agov check', () => {
     });
   });
 
+  it('writes report output to an explicit file path instead of stdout', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const io = createMemoryIo();
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'agov-output-'));
+    const outputPath = path.join(tempDir, 'report.md');
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'markdown',
+          '--output',
+          outputPath,
+        ],
+        io
+      )
+    ).toBe(0);
+    expect(io.out).toBe('');
+    expect(io.err).toBe('');
+    expect(readFileSync(outputPath, 'utf8')).toContain('# agov check');
+    expect(statSync(outputPath).isFile()).toBe(true);
+  });
+
+  it('returns a deterministic output write error for an invalid output path', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const io = createMemoryIo();
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'agov-output-failure-'));
+    const outputPath = path.join(tempDir, 'missing', 'report.md');
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'table',
+          '--output',
+          outputPath,
+        ],
+        io
+      )
+    ).toBe(1);
+    expect(JSON.parse(io.err)).toEqual({
+      error: {
+        code: 'agov.cli.output_write_failed',
+        message: `Failed to write agov report output to "${path.resolve(
+          outputPath
+        )}".`,
+        details: {
+          filePath: path.resolve(outputPath),
+        },
+      },
+    });
+    expect(io.out).toBe('');
+  });
+
   it('produces deterministic JSON output for the same inputs', () => {
     const workspacePath = path.join(
       __dirname,
@@ -235,10 +417,105 @@ describe('agov check', () => {
     expect(first.out).toBe(second.out);
   });
 
+  it('produces deterministic markdown output for the same inputs', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const first = createMemoryIo();
+    const second = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'markdown',
+        ],
+        first
+      )
+    ).toBe(0);
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'markdown',
+        ],
+        second
+      )
+    ).toBe(0);
+    expect(first.out).toBe(second.out);
+  });
+
+  it('produces deterministic table output for the same inputs', () => {
+    const workspacePath = path.join(
+      __dirname,
+      '..',
+      'manual-workspace',
+      'fixtures',
+      'demo-workspace.yaml'
+    );
+    const profilePath = path.join(
+      __dirname,
+      'fixtures',
+      'passing-profile.json'
+    );
+    const first = createMemoryIo();
+    const second = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'table',
+        ],
+        first
+      )
+    ).toBe(0);
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspacePath,
+          '--profile',
+          profilePath,
+          '--format',
+          'table',
+        ],
+        second
+      )
+    ).toBe(0);
+    expect(first.out).toBe(second.out);
+  });
+
   it('keeps standalone CLI files free of Nx imports', () => {
     for (const filePath of [
       path.resolve(__dirname, 'agov.ts'),
       path.resolve(__dirname, 'check.ts'),
+      path.resolve(__dirname, 'render-report.ts'),
       path.resolve(__dirname, 'bin/agov.ts'),
     ]) {
       const source = readFileSync(filePath, 'utf8');
