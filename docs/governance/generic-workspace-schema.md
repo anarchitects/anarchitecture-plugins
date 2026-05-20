@@ -88,12 +88,12 @@ dependencies:
 
 ### Required top-level fields
 
-| Field | Type | Rules |
-|---|---|---|
-| `schemaVersion` | integer | Must equal `1`. |
-| `workspace` | object | See [workspace](#workspace). |
-| `projects` | array | Must contain at least one project. |
-| `dependencies` | array | May be empty. |
+| Field           | Type    | Rules                              |
+| --------------- | ------- | ---------------------------------- |
+| `schemaVersion` | integer | Must equal `1`.                    |
+| `workspace`     | object  | See [workspace](#workspace).       |
+| `projects`      | array   | Must contain at least one project. |
+| `dependencies`  | array   | May be empty.                      |
 
 ### Optional top-level fields
 
@@ -106,10 +106,10 @@ Unknown top-level fields are validation errors.
 
 The `workspace` object describes workspace identity only.
 
-| Field | Required | Type | Rules |
-|---|---|---|---|
-| `name` | yes | string | Non-empty. Stable workspace name. |
-| `root` | no | string | Normalized relative path. Defaults to `.`. |
+| Field  | Required | Type   | Rules                                      |
+| ------ | -------- | ------ | ------------------------------------------ |
+| `name` | yes      | string | Non-empty. Stable workspace name.          |
+| `root` | no       | string | Normalized relative path. Defaults to `.`. |
 
 Rules:
 
@@ -124,13 +124,13 @@ Rules:
 
 Each project is an explicit logical unit in the workspace.
 
-| Field | Required | Type | Rules |
-|---|---|---|---|
-| `name` | yes | string | Non-empty. Unique across all projects. |
-| `root` | yes | string | Normalized relative path. Unique across all projects. |
-| `tags` | yes | array of strings | May be empty. Tags must be unique within the project. |
-| `type` | no | string | One of `application`, `library`, `tool`, `unknown`. Defaults to `unknown`. |
-| `metadata` | no | object | Optional extension space. See [metadata conventions](#metadata-conventions). |
+| Field      | Required | Type             | Rules                                                                        |
+| ---------- | -------- | ---------------- | ---------------------------------------------------------------------------- |
+| `name`     | yes      | string           | Non-empty. Unique across all projects.                                       |
+| `root`     | yes      | string           | Normalized relative path. Unique across all projects.                        |
+| `tags`     | yes      | array of strings | May be empty. Tags must be unique within the project.                        |
+| `type`     | no       | string           | One of `application`, `library`, `tool`, `unknown`. Defaults to `unknown`.   |
+| `metadata` | no       | object           | Optional extension space. See [metadata conventions](#metadata-conventions). |
 
 Rules:
 
@@ -145,11 +145,11 @@ Rules:
 
 Dependencies are explicit project-to-project edges.
 
-| Field | Required | Type | Rules |
-|---|---|---|---|
-| `source` | yes | string | Must match an existing `projects[].name`. |
-| `target` | yes | string | Must match an existing `projects[].name`. |
-| `type` | yes | string | One of `static`, `dynamic`, `implicit`, `unknown`. |
+| Field    | Required | Type   | Rules                                              |
+| -------- | -------- | ------ | -------------------------------------------------- |
+| `source` | yes      | string | Must match an existing `projects[].name`.          |
+| `target` | yes      | string | Must match an existing `projects[].name`.          |
+| `type`   | yes      | string | One of `static`, `dynamic`, `implicit`, `unknown`. |
 
 Rules:
 
@@ -224,23 +224,23 @@ All validation failures are fatal for schema version `1`.
 
 Supported validation codes:
 
-| Code | Meaning |
-|---|---|
-| `governance.workspace_schema.invalid_root` | The document root is not an object. |
-| `governance.workspace_schema.missing_required_field` | A required field is missing. |
-| `governance.workspace_schema.unknown_field` | An unknown field is present. |
-| `governance.workspace_schema.invalid_field_type` | A field has the wrong JSON/YAML type. |
-| `governance.workspace_schema.invalid_value` | A field value violates a non-enum schema constraint. |
-| `governance.workspace_schema.unsupported_schema_version` | `schemaVersion` is not supported. |
-| `governance.workspace_schema.invalid_path` | A path is empty, absolute, or not normalized. |
-| `governance.workspace_schema.invalid_enum_value` | A field value is outside the allowed enum. |
-| `governance.workspace_schema.invalid_tag` | A tag is empty, duplicated, or ambiguous for classification mapping. |
-| `governance.workspace_schema.duplicate_project_name` | Two projects use the same `name`. |
-| `governance.workspace_schema.duplicate_project_root` | Two projects use the same `root`. |
-| `governance.workspace_schema.unknown_dependency_source` | A dependency source does not match a project name. |
-| `governance.workspace_schema.unknown_dependency_target` | A dependency target does not match a project name. |
-| `governance.workspace_schema.self_dependency` | A dependency points to the same source and target. |
-| `governance.workspace_schema.duplicate_dependency` | The same dependency tuple appears more than once. |
+| Code                                                     | Meaning                                                              |
+| -------------------------------------------------------- | -------------------------------------------------------------------- |
+| `governance.workspace_schema.invalid_root`               | The document root is not an object.                                  |
+| `governance.workspace_schema.missing_required_field`     | A required field is missing.                                         |
+| `governance.workspace_schema.unknown_field`              | An unknown field is present.                                         |
+| `governance.workspace_schema.invalid_field_type`         | A field has the wrong JSON/YAML type.                                |
+| `governance.workspace_schema.invalid_value`              | A field value violates a non-enum schema constraint.                 |
+| `governance.workspace_schema.unsupported_schema_version` | `schemaVersion` is not supported.                                    |
+| `governance.workspace_schema.invalid_path`               | A path is empty, absolute, or not normalized.                        |
+| `governance.workspace_schema.invalid_enum_value`         | A field value is outside the allowed enum.                           |
+| `governance.workspace_schema.invalid_tag`                | A tag is empty, duplicated, or ambiguous for classification mapping. |
+| `governance.workspace_schema.duplicate_project_name`     | Two projects use the same `name`.                                    |
+| `governance.workspace_schema.duplicate_project_root`     | Two projects use the same `root`.                                    |
+| `governance.workspace_schema.unknown_dependency_source`  | A dependency source does not match a project name.                   |
+| `governance.workspace_schema.unknown_dependency_target`  | A dependency target does not match a project name.                   |
+| `governance.workspace_schema.self_dependency`            | A dependency points to the same source and target.                   |
+| `governance.workspace_schema.duplicate_dependency`       | The same dependency tuple appears more than once.                    |
 
 Additional deterministic rules:
 
@@ -274,21 +274,21 @@ Implementations should not:
 
 The manual schema maps to Governance Core as follows.
 
-| Schema field | Governance Core mapping |
-|---|---|
-| `workspace.name` | `GovernanceWorkspace.id` and `GovernanceWorkspace.name` |
-| `workspace.root` | `GovernanceWorkspace.root` |
-| `projects[].name` | `GovernanceProject.id` and `GovernanceProject.name` |
-| `projects[].root` | `GovernanceProject.root` |
-| `projects[].type` | `GovernanceProject.type` |
-| `projects[].tags` | `GovernanceProject.tags` |
-| `projects[].metadata` | `GovernanceProject.metadata` |
-| first `domain:<value>` tag | `GovernanceProject.domain` |
-| first `scope:<value>` tag when no `domain:` tag exists | `GovernanceProject.domain` compatibility fallback |
-| first `layer:<value>` tag | `GovernanceProject.layer` |
-| `dependencies[].source` | `GovernanceDependency.source` |
-| `dependencies[].target` | `GovernanceDependency.target` |
-| `dependencies[].type` | `GovernanceDependency.type` |
+| Schema field                                           | Governance Core mapping                                 |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `workspace.name`                                       | `GovernanceWorkspace.id` and `GovernanceWorkspace.name` |
+| `workspace.root`                                       | `GovernanceWorkspace.root`                              |
+| `projects[].name`                                      | `GovernanceProject.id` and `GovernanceProject.name`     |
+| `projects[].root`                                      | `GovernanceProject.root`                                |
+| `projects[].type`                                      | `GovernanceProject.type`                                |
+| `projects[].tags`                                      | `GovernanceProject.tags`                                |
+| `projects[].metadata`                                  | `GovernanceProject.metadata`                            |
+| first `domain:<value>` tag                             | `GovernanceProject.domain`                              |
+| first `scope:<value>` tag when no `domain:` tag exists | `GovernanceProject.domain` compatibility fallback       |
+| first `layer:<value>` tag                              | `GovernanceProject.layer`                               |
+| `dependencies[].source`                                | `GovernanceDependency.source`                           |
+| `dependencies[].target`                                | `GovernanceDependency.target`                           |
+| `dependencies[].type`                                  | `GovernanceDependency.type`                             |
 
 Default mapping behavior:
 
@@ -413,7 +413,7 @@ projects:
   - name: customer-domain
     root: /src/customer/domain
     tags:
-      - ""
+      - ''
 dependencies:
   - source: customer-domain
     target: customer-domain
