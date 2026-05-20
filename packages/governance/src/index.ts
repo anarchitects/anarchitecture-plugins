@@ -41,3 +41,4 @@ export * from './extensions/contracts.js';
 export * from './extensions/diagnostics.js';
 export * from './core/exceptions.js';
 export * from './graph-document/index.js';
+export * from './manual-workspace/index.js';
