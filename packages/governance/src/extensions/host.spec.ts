@@ -1,7 +1,14 @@
 import { logger } from '@nx/devkit';
+import { GovernanceProfile, GovernanceWorkspace } from '../core/index.js';
+import { GovernanceSignal } from '../signal-engine/index.js';
 import { GovernanceExtensionHostContext } from './contracts.js';
 import { DefaultGovernanceCapabilityRegistry } from './capabilities.js';
 import {
+  applyGovernanceEnrichers,
+  collectGovernanceMeasurements,
+  collectGovernanceSignals,
+  evaluateGovernanceRulePacks,
+  GovernanceExtensionRegistry,
   registerGovernanceExtensions,
   registerGovernanceExtensionsWithDiagnostics,
 } from './host.js';
@@ -254,6 +261,13 @@ describe('registerGovernanceExtensions', () => {
     expect(receivedContext).toEqual(baseContext);
     expect(Object.isFrozen(receivedContext)).toBe(true);
     expect(Object.isFrozen(receivedContext?.options)).toBe(true);
+    expect(Object.keys(receivedContext ?? {}).sort()).toEqual([
+      'capabilities',
+      'inventory',
+      'options',
+      'profileName',
+      'workspaceRoot',
+    ]);
     expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
     expect(receivedContext?.capabilities.list()).toEqual([
       {
@@ -575,6 +589,287 @@ describe('registerGovernanceExtensions', () => {
     ).rejects.toThrow(
       'Governance extension "plugin-a" from "plugin-a/governance-extension" failed during registration: boom'
     );
+  });
+});
+
+describe('governance extension contribution ordering', () => {
+  const baseContext: GovernanceExtensionHostContext = {
+    workspaceRoot: '/repo',
+    profileName: 'frontend-layered',
+    options: {
+      output: 'cli',
+      reportType: 'health',
+    },
+    inventory: {
+      id: 'workspace',
+      name: 'workspace',
+      root: '/repo',
+      projects: [],
+      dependencies: [],
+    },
+    capabilities: new DefaultGovernanceCapabilityRegistry([
+      {
+        id: 'capability:nx',
+      },
+    ]),
+  };
+
+  const testProfile = {
+    name: 'frontend-layered',
+  } as unknown as GovernanceProfile;
+
+  async function wait(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  it('applies enrichers sequentially in registry order', async () => {
+    const executionOrder: string[] = [];
+    const registry: GovernanceExtensionRegistry = {
+      metricProviders: [],
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [
+        {
+          pluginId: 'plugin-a',
+          contribution: {
+            async enrichWorkspace({
+              workspace,
+            }: {
+              workspace: GovernanceWorkspace;
+            }) {
+              executionOrder.push('plugin-a');
+              await wait(5);
+              return {
+                ...workspace,
+                metadata: { order: ['plugin-a'] },
+              };
+            },
+          },
+        },
+        {
+          pluginId: 'plugin-b',
+          contribution: {
+            enrichWorkspace({ workspace }: { workspace: GovernanceWorkspace }) {
+              executionOrder.push('plugin-b');
+              return {
+                ...workspace,
+                metadata: {
+                  order: [
+                    ...(((workspace as { metadata?: { order?: string[] } })
+                      .metadata?.order as string[] | undefined) ?? []),
+                    'plugin-b',
+                  ],
+                },
+              };
+            },
+          },
+        },
+      ],
+    };
+
+    const enriched = await applyGovernanceEnrichers(registry, {
+      workspace: baseContext.inventory,
+      profile: testProfile,
+      context: baseContext,
+    });
+
+    expect(executionOrder).toEqual(['plugin-a', 'plugin-b']);
+    expect(
+      (enriched as { metadata?: { order?: string[] } }).metadata?.order
+    ).toEqual(['plugin-a', 'plugin-b']);
+  });
+
+  it('preserves deterministic rule-pack ordering regardless of async completion timing', async () => {
+    const registry: GovernanceExtensionRegistry = {
+      metricProviders: [],
+      signalProviders: [],
+      enrichers: [],
+      rulePacks: [
+        {
+          pluginId: 'plugin-a',
+          contribution: {
+            async evaluate() {
+              await wait(10);
+              return [
+                {
+                  id: 'violation-a',
+                  ruleId: 'rule-a',
+                  project: 'a',
+                  severity: 'warning' as const,
+                  category: 'architecture' as const,
+                  message: 'A',
+                },
+              ];
+            },
+          },
+        },
+        {
+          pluginId: 'plugin-b',
+          contribution: {
+            async evaluate() {
+              await wait(1);
+              return [
+                {
+                  id: 'violation-b',
+                  ruleId: 'rule-b',
+                  project: 'b',
+                  severity: 'warning' as const,
+                  category: 'architecture' as const,
+                  message: 'B',
+                },
+              ];
+            },
+          },
+        },
+      ],
+    };
+
+    const violations = await evaluateGovernanceRulePacks(registry, {
+      workspace: baseContext.inventory,
+      profile: testProfile,
+      context: baseContext,
+    });
+
+    expect(violations.map((violation) => violation.id)).toEqual([
+      'violation-a',
+      'violation-b',
+    ]);
+    expect(violations.map((violation) => violation.sourcePluginId)).toEqual([
+      'plugin-a',
+      'plugin-b',
+    ]);
+  });
+
+  it('preserves deterministic signal-provider ordering regardless of async completion timing', async () => {
+    const registry: GovernanceExtensionRegistry = {
+      metricProviders: [],
+      rulePacks: [],
+      enrichers: [],
+      signalProviders: [
+        {
+          pluginId: 'plugin-a',
+          contribution: {
+            async provideSignals() {
+              await wait(10);
+              return [
+                {
+                  id: 'signal-a',
+                  type: 'signal-a',
+                  severity: 'warning' as const,
+                  category: 'boundary' as const,
+                  message: 'A',
+                  source: 'extension' as const,
+                  createdAt: '2026-01-01T00:00:00.000Z',
+                  relatedProjectIds: [],
+                },
+              ] satisfies GovernanceSignal[];
+            },
+          },
+        },
+        {
+          pluginId: 'plugin-b',
+          contribution: {
+            async provideSignals() {
+              await wait(1);
+              return [
+                {
+                  id: 'signal-b',
+                  type: 'signal-b',
+                  severity: 'warning' as const,
+                  category: 'boundary' as const,
+                  message: 'B',
+                  source: 'extension' as const,
+                  createdAt: '2026-01-01T00:00:00.000Z',
+                  relatedProjectIds: [],
+                },
+              ] satisfies GovernanceSignal[];
+            },
+          },
+        },
+      ],
+    };
+
+    const signals = await collectGovernanceSignals(registry, {
+      workspace: baseContext.inventory,
+      profile: testProfile,
+      context: baseContext,
+      violations: [],
+      signals: [],
+    });
+
+    expect(signals.map((signal) => signal.id)).toEqual([
+      'signal-a',
+      'signal-b',
+    ]);
+    expect(signals.map((signal) => signal.sourcePluginId)).toEqual([
+      'plugin-a',
+      'plugin-b',
+    ]);
+  });
+
+  it('preserves deterministic metric-provider ordering regardless of async completion timing', async () => {
+    const registry: GovernanceExtensionRegistry = {
+      signalProviders: [],
+      rulePacks: [],
+      enrichers: [],
+      metricProviders: [
+        {
+          pluginId: 'plugin-a',
+          contribution: {
+            async provideMetrics() {
+              await wait(10);
+              return [
+                {
+                  id: 'metric-a',
+                  name: 'Metric A',
+                  family: 'architecture' as const,
+                  value: 1,
+                  score: 10,
+                  maxScore: 10,
+                  unit: 'ratio' as const,
+                },
+              ];
+            },
+          },
+        },
+        {
+          pluginId: 'plugin-b',
+          contribution: {
+            async provideMetrics() {
+              await wait(1);
+              return [
+                {
+                  id: 'metric-b',
+                  name: 'Metric B',
+                  family: 'architecture' as const,
+                  value: 1,
+                  score: 10,
+                  maxScore: 10,
+                  unit: 'ratio' as const,
+                },
+              ];
+            },
+          },
+        },
+      ],
+    };
+
+    const measurements = await collectGovernanceMeasurements(registry, {
+      workspace: baseContext.inventory,
+      profile: testProfile,
+      context: baseContext,
+      signals: [],
+      measurements: [],
+      violations: [],
+    });
+
+    expect(measurements.map((measurement) => measurement.id)).toEqual([
+      'metric-a',
+      'metric-b',
+    ]);
+    expect(
+      measurements.map((measurement) => measurement.sourcePluginId)
+    ).toEqual(['plugin-a', 'plugin-b']);
   });
 });
 

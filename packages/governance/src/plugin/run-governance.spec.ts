@@ -39,6 +39,7 @@ import { renderJsonReport } from '../reporting/render-json.js';
 import { renderManagementReport } from '../reporting/render-management-report.js';
 import type {
   GovernanceExtensionHost,
+  GovernanceExtensionHostContext,
   GovernanceMetricProviderInput,
   GovernanceRulePackInput,
   GovernanceSignalProviderInput,
@@ -1173,6 +1174,7 @@ describe('runGovernance', () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     const nxJsonPath = path.join(workspaceRoot, 'nx.json');
     const actualReadFileSync = fs.readFileSync;
+    let receivedContext: GovernanceExtensionHostContext | undefined;
 
     jest.doMock(
       'test-plugin/governance-extension',
@@ -1180,6 +1182,7 @@ describe('runGovernance', () => {
         governanceExtension: {
           id: 'test-plugin',
           register(host: GovernanceExtensionHost) {
+            receivedContext = host.context;
             host.registerEnricher({
               enrichWorkspace({ workspace }: GovernanceWorkspaceEnricherInput) {
                 return {
@@ -1310,6 +1313,47 @@ describe('runGovernance', () => {
         ]),
       })
     );
+    expect(receivedContext?.workspaceRoot).toBe(workspaceRoot);
+    expect(receivedContext?.profileName).toBe('frontend-layered');
+    expect(receivedContext?.inventory.root).toBe(workspaceRoot);
+    expect(receivedContext?.options).toEqual({ reportType: 'health' });
+    expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
+    expect(
+      receivedContext?.capabilities.get<{
+        workspaceRoot: string;
+        projects: Array<{ name: string; targets: string[] }>;
+      }>('capability:nx')
+    ).toEqual({
+      id: 'capability:nx',
+      data: {
+        workspaceRoot,
+        projects: [
+          {
+            name: 'packages/governance',
+            root: 'packages/governance',
+            type: 'library',
+            tags: ['domain:governance', 'layer:core'],
+            targets: ['build', 'lint', 'test'],
+          },
+          {
+            name: 'packages/governance-e2e',
+            root: 'packages/governance-e2e',
+            type: 'application',
+            tags: ['domain:governance', 'layer:e2e'],
+            targets: ['e2e', 'lint'],
+          },
+          {
+            name: 'packages/js',
+            root: 'packages/js',
+            type: 'library',
+            tags: ['domain:platform', 'layer:feature'],
+            targets: ['build', 'lint', 'test'],
+          },
+        ],
+      },
+    });
+    expect(Object.isFrozen(receivedContext)).toBe(true);
+    expect(Object.isFrozen(receivedContext?.options)).toBe(true);
 
     jest.dontMock('test-plugin/governance-extension');
   });

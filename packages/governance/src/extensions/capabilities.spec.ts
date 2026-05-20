@@ -54,6 +54,13 @@ describe('DefaultGovernanceCapabilityRegistry', () => {
     expect(registry.list()).toEqual(capabilities);
   });
 
+  it('returns frozen capability entries from list()', () => {
+    const registry = new DefaultGovernanceCapabilityRegistry(capabilities);
+    const [firstCapability] = registry.list();
+
+    expect(Object.isFrozen(firstCapability)).toBe(true);
+  });
+
   it('rejects duplicate capability ids', () => {
     expect(
       () =>

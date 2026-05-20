@@ -144,4 +144,32 @@ describe('governance extension config', () => {
       ],
     });
   });
+
+  it('does not mutate the source nx.json config object', () => {
+    const nxJson = {
+      governance: {
+        legacyPluginProbing: true,
+        extensions: [
+          {
+            package: 'plugin-a',
+            optional: true,
+            options: {
+              selectorPrefix: 'aa',
+            },
+          },
+        ],
+      },
+    };
+
+    const original = structuredClone(nxJson);
+    const parsed = parseGovernanceExtensionConfig(nxJson);
+
+    expect(nxJson).toEqual(original);
+
+    parsed.extensions[0]!.options = {
+      selectorPrefix: 'bb',
+    };
+
+    expect(nxJson).toEqual(original);
+  });
 });

@@ -270,7 +270,10 @@ Current implementation status:
 - Issue #315 makes `capability:nx` adapter-owned and meaningful instead of a marker-only capability.
 - `capability:nx` now exposes a stable payload with workspace root plus project names, roots, types, tags, and target names.
 - Raw Nx project graph internals, devkit types, and target configuration objects remain hidden from extension contracts.
-- Richer framework/language capabilities and broader diagnostics expansion remain future work under #316.
+- Issue #316 adds dedicated regression coverage for extension-host compatibility behavior, diagnostics ordering, and deterministic contribution execution.
+- Boundary enforcement tests now guard the Nx-free extension contract surface and keep `capability:nx` production in the adapter layer.
+- Physical boundary hardening and package split readiness continue later under #328 and #329.
+- Richer framework/language capabilities and broader package-boundary hardening remain future work.
 
 ## Discovery and Loading Boundary
 
