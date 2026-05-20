@@ -56,7 +56,9 @@ export class StandaloneGovernanceProfileValidationError extends Error {
     public readonly issues: StandaloneGovernanceProfileValidationIssue[]
   ) {
     super(
-      `Standalone governance profile validation failed for "${filePath}" with ${issues.length} issue${issues.length === 1 ? '' : 's'}.`
+      `Standalone governance profile validation failed for "${filePath}" with ${
+        issues.length
+      } issue${issues.length === 1 ? '' : 's'}.`
     );
     this.name = 'StandaloneGovernanceProfileValidationError';
   }
@@ -172,9 +174,7 @@ export function validateStandaloneGovernanceProfile(
     boundaryPolicySource,
     layers,
     ...(rules ? { rules } : {}),
-    ...(allowedLayerDependencies
-      ? { allowedLayerDependencies }
-      : {}),
+    ...(allowedLayerDependencies ? { allowedLayerDependencies } : {}),
     allowedDomainDependencies,
     ownership,
     health,
@@ -242,7 +242,9 @@ function validateLayers(
   }
 
   if (!Array.isArray(value)) {
-    issues.push(invalidFieldType(pointer, 'layers must be an array of strings.'));
+    issues.push(
+      invalidFieldType(pointer, 'layers must be an array of strings.')
+    );
     return undefined;
   }
 
@@ -319,7 +321,12 @@ function validateRules(
         return [];
       }
 
-      validateUnknownFields(ruleConfig, RULE_CONFIG_FIELDS, rulePointer, issues);
+      validateUnknownFields(
+        ruleConfig,
+        RULE_CONFIG_FIELDS,
+        rulePointer,
+        issues
+      );
 
       const normalizedConfig: GovernanceRuleConfig = {};
 
@@ -384,10 +391,7 @@ function validateAllowedLayerDependencies(
   const record = asRecord(value);
   if (!record) {
     issues.push(
-      invalidFieldType(
-        pointer,
-        'allowedLayerDependencies must be an object.'
-      )
+      invalidFieldType(pointer, 'allowedLayerDependencies must be an object.')
     );
     return undefined;
   }
@@ -479,10 +483,7 @@ function validateAllowedDomainDependencies(
 ): GovernanceProfile['allowedDomainDependencies'] | undefined {
   if (value === undefined) {
     issues.push(
-      missingRequiredField(
-        pointer,
-        'allowedDomainDependencies is required.'
-      )
+      missingRequiredField(pointer, 'allowedDomainDependencies is required.')
     );
     return undefined;
   }
@@ -490,10 +491,7 @@ function validateAllowedDomainDependencies(
   const record = asRecord(value);
   if (!record) {
     issues.push(
-      invalidFieldType(
-        pointer,
-        'allowedDomainDependencies must be an object.'
-      )
+      invalidFieldType(pointer, 'allowedDomainDependencies must be an object.')
     );
     return undefined;
   }
@@ -520,18 +518,20 @@ function validateAllowedDomainDependencies(
         return null;
       }
 
-      const normalizedTargets = [...new Set(
-        rawTargets
-          .map((target, index) =>
-            validateRequiredTrimmedString(
-              target,
-              `${domainPointer}/${index}`,
-              issues,
-              'Allowed domain dependency'
+      const normalizedTargets = [
+        ...new Set(
+          rawTargets
+            .map((target, index) =>
+              validateRequiredTrimmedString(
+                target,
+                `${domainPointer}/${index}`,
+                issues,
+                'Allowed domain dependency'
+              )
             )
-          )
-          .filter((target): target is string => !!target)
-      )].sort((left, right) => left.localeCompare(right));
+            .filter((target): target is string => !!target)
+        ),
+      ].sort((left, right) => left.localeCompare(right));
 
       if (!normalizedDomain) {
         return null;
@@ -701,9 +701,7 @@ function validateMetrics(
         ? ([normalizedMetricId, value] as const)
         : null;
     })
-    .filter(
-      (entry): entry is readonly [string, number] => entry !== null
-    );
+    .filter((entry): entry is readonly [string, number] => entry !== null);
 
   return Object.fromEntries(normalizedEntries);
 }
@@ -716,9 +714,7 @@ function validateRequiredTrimmedString(
 ): string | undefined {
   if (typeof value !== 'string') {
     if (value === undefined) {
-      issues.push(
-        missingRequiredField(pointer, `${label} is required.`)
-      );
+      issues.push(missingRequiredField(pointer, `${label} is required.`));
     } else {
       issues.push(invalidFieldType(pointer, `${label} must be a string.`));
     }
@@ -769,7 +765,9 @@ function validateFiniteNumber(
     if (value === undefined) {
       issues.push(missingRequiredField(pointer, `${label} is required.`));
     } else {
-      issues.push(invalidFieldType(pointer, `${label} must be a finite number.`));
+      issues.push(
+        invalidFieldType(pointer, `${label} must be a finite number.`)
+      );
     }
 
     return undefined;
@@ -850,9 +848,7 @@ function throwValidationIssues(
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value &&
-    typeof value === 'object' &&
-    !Array.isArray(value)
+  return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
 }

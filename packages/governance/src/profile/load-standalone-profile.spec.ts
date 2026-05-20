@@ -324,8 +324,7 @@ describe('loadStandaloneGovernanceProfile', () => {
         },
         {
           code: 'governance.profile.invalid_field_type',
-          message:
-            'Metric "architectural-entropy" must be a finite number.',
+          message: 'Metric "architectural-entropy" must be a finite number.',
           path: '/metrics/architectural-entropy',
         },
       ]);
