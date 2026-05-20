@@ -6,6 +6,12 @@ This document records the current governance extension host behavior for issue #
 
 It is intentionally descriptive. It does not implement Extension Host v2 or change the current runtime.
 
+Note:
+
+- This document is the #307 current-state audit baseline.
+- Implemented Extension Host v2 behavior is now documented in [governance-extension-host-v2.md](./governance-extension-host-v2.md).
+- Where the two documents differ, treat this audit as historical context and the v2 document as the current implementation guide.
+
 ## Current Discovery Flow
 
 1. `registerGovernanceExtensions(...)` calls `discoverGovernanceExtensions(...)` and then registers each discovered extension in `nx.json.plugins` order.

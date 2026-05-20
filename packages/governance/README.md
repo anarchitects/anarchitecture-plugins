@@ -244,6 +244,8 @@ The first reference engine is Angular, positioned as a separate plugin:
 That keeps framework-specific behavior out of the core package and establishes the model for future engines such as TypeScript, React, Maven, Gradle, and .NET.
 
 If you are building an ecosystem plugin, see [EXTENSIONS.md](./EXTENSIONS.md).
+For the implemented Extension Host v2 model and compatibility behavior, see
+[`docs/governance/governance-extension-host-v2.md`](../../docs/governance/governance-extension-host-v2.md).
 
 ---
 

@@ -2,150 +2,219 @@
 
 ## Purpose
 
-This document defines the Governance Extension Host v2 contract and capability model for #229.
+This document records the implemented Governance Extension Host v2 model in `@anarchitects/nx-governance`.
 
-It provides the architecture-level design needed by #219 and aligns with the Core contracts from #227 and the workspace adapter contract from #228.
+It supports parent epic #219 and reflects the implementation work completed across #307 through #316. It also fits into the broader Governance Ecosystem roadmap documented in [governance-ecosystem-migration-plan.md](./governance-ecosystem-migration-plan.md), [governance-core-contracts.md](./governance-core-contracts.md), and [governance-workspace-adapter-contract.md](./governance-workspace-adapter-contract.md).
 
-This is a documentation-only design. It does not implement Extension Host v2, remove current behavior, create packages, move files, or change runtime behavior.
+This document describes current behavior. It does not introduce new runtime features.
 
-## Design Goal
+## What Extension Host v2 Means Here
 
-Governance extensions should contribute framework, language, and ecosystem-specific intelligence through stable Core contracts without depending on Nx, adapter internals, or host implementation details.
+Governance Extension Host v2 is the current transitional implementation that moves governance extensions toward:
 
-Extension Host v2 should support:
-
-- explicit governance extension registration
 - Core-owned extension contracts
-- capability-based context
-- optional and required extension semantics
-- deterministic diagnostics
-- extension-contributed rule packs, enrichers, signals, metrics, and presets
-- Nx-aware behavior through capabilities rather than direct Nx coupling
-- future CLI, TypeScript, Maven, Gradle, PHP, Angular, React, NestJS, and other extensions
+- explicit governance-specific registration
+- adapter-owned capabilities instead of adapter internals in extension context
+- deterministic loading and contribution ordering
+- structured extension-loading diagnostics
+- compatibility with older `nx.json.plugins` probing during migration
 
-## Current Problem
+It does not mean the Governance package has already been physically split. Boundary hardening and package split readiness continue later in:
 
-The current extension system has useful contribution concepts, but is still Nx-coupled.
+- #328 Governance Boundary Hardening and Package Split Readiness
+- #329 Governance Ecosystem Physical Package Split
 
-Known current issues:
+## Responsibility Split
 
-- extension contracts reference Nx adapter snapshot types
-- extension host imports Nx workspace APIs
-- extension discovery reads `nx.json.plugins`
-- extension discovery probes `<plugin>/governance-extension`
-- upstream Nx plugins are not expected to export Anarchitects governance extension entrypoints
-- extension context exposes adapter internals instead of stable Core capabilities
+| Area                      | Responsibility                                                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Governance Core contracts | Own extension contracts, contribution interfaces, capability registry contracts, and diagnostic contracts.                        |
+| Nx plugin host            | Read `nx.json`, discover/load extensions, build runtime context, and run the extension pipeline during Nx-hosted governance runs. |
+| Nx adapter                | Produce adapter-owned capabilities such as `capability:nx` without exposing raw Nx internals.                                     |
+| Extensions                | Contribute enrichers, rule packs, signal providers, and metric providers.                                                         |
 
-Extension Host v2 should keep the useful contribution model while replacing Nx-coupled discovery/context with explicit registration and capability-based context.
+In short:
 
-## Target Responsibility Split
+- Core owns contracts.
+- Hosts own discovery and loading.
+- Adapters own capabilities.
+- Extensions own ecosystem-specific intelligence.
 
-| Area            | Responsibility                                                                                                                |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Governance Core | Owns extension contracts, contribution interfaces, capability model, diagnostics contracts, and rule/signal/metric contracts. |
-| Nx plugin host  | Reads Nx-specific configuration and registers configured governance extensions for Nx runs.                                   |
-| CLI host        | Reads CLI/governance configuration and registers configured governance extensions for CLI runs.                               |
-| Adapters        | Provide capabilities such as `capability:nx`, `capability:typescript`, and `capability:package-manager`.                      |
-| Extensions      | Contribute rule packs, enrichers, signal providers, metric providers, presets, and diagnostics.                               |
+## Implemented Configuration Model
 
-Core owns the contracts. Hosts own discovery and loading. Adapters own facts/capabilities. Extensions own domain-specific intelligence.
+The supported explicit registration shape is `nx.json.governance`:
 
-## Extension Definition Contract
+```json
+{
+  "governance": {
+    "extensions": [
+      {
+        "package": "@anarchitects/governance-extension-angular",
+        "optional": true,
+        "options": {}
+      }
+    ],
+    "legacyPluginProbing": false
+  }
+}
+```
 
-Extensions should expose a stable definition object.
+Current behavior:
+
+- Explicit extension packages are imported directly from the configured `package` value.
+- Legacy compatibility probing still uses `<plugin>/governance-extension`.
+- Explicit extensions load before any legacy compatibility probing.
+- If explicit extensions are configured, legacy probing is disabled by default unless `legacyPluginProbing: true` is set.
+- If no explicit extensions are configured, legacy probing remains enabled for compatibility.
+
+Validation rules for `nx.json.governance.extensions`:
+
+- each entry must be an object
+- `package` must be a non-empty string
+- duplicate package names are rejected
+- `optional`, when provided, must be a boolean
+- `options`, when provided, must be an object
+
+## Registration Generator
+
+The package includes an explicit registration generator:
+
+```bash
+nx g @anarchitects/nx-governance:add-extension @anarchitects/governance-extension-angular
+```
+
+What it does:
+
+- writes `nx.json.governance.extensions`
+- preserves existing `nx.json` fields
+- avoids duplicate config entries
+- can update the `optional` flag when explicitly provided
+
+What it does not do:
+
+- install npm packages
+- validate that the package exists
+- load the package
+- change runtime discovery semantics
+
+Package installation remains the workspace/package-manager responsibility.
+
+## Discovery and Loading Behavior
+
+Current extension loading order is deterministic:
+
+1. Parse `nx.json.governance.extensions`.
+2. Load explicit extension packages directly, in config order.
+3. Optionally probe legacy `nx.json.plugins` entries, in normalized plugin order.
+4. Register extension contributions in discovered order.
+
+Legacy probing normalization still:
+
+- supports string plugin entries and object plugin entries with a `plugin` field
+- skips blank plugin specifiers
+- skips `@anarchitects/nx-governance`
+- skips local plugin specifiers starting with `.`, `/`, or `file:`
+
+### Explicit vs legacy precedence
+
+- Explicit registration is the preferred model.
+- Legacy probing is compatibility behavior.
+- When both are enabled, explicit packages are attempted first.
+- Duplicate module specifiers are only loaded once.
+- If different module specifiers produce the same extension `id`, registration fails.
+
+## Optional vs Required Extensions
+
+Explicit extension registrations currently support optional vs required behavior through the `optional` flag.
+
+Behavior summary:
+
+- configured optional extension missing: skipped, diagnostic emitted, run continues
+- configured required extension missing: diagnostic emitted, run fails
+- invalid installed extension definition: diagnostic emitted, run fails
+- registration-time error: diagnostic emitted, run fails
+- missing legacy `<plugin>/governance-extension` entrypoint: skipped, diagnostic emitted, run continues
+- unrelated module-resolution failure inside a loaded extension: run fails
+
+This keeps optional ecosystem intelligence non-fatal while preserving strict failure behavior for explicit required extensions.
+
+## Extension Contracts
+
+The public extension-facing contract is intentionally small:
 
 ```ts
 export interface GovernanceExtensionDefinition {
   id: string;
-  name?: string;
-  version?: string;
-  description?: string;
-  capabilities?: GovernanceExtensionCapabilityRequirement[];
-  rulePacks?: GovernanceRulePack[];
-  enrichers?: GovernanceWorkspaceEnricher[];
-  signalProviders?: GovernanceSignalProvider[];
-  metricProviders?: GovernanceMetricProvider[];
-  presets?: GovernanceProfilePreset[];
-  diagnostics?: GovernanceExtensionDiagnosticProvider[];
+  register(host: GovernanceExtensionHost): void | Promise<void>;
 }
 ```
 
-Requirements:
+The extension execution context is Core-owned:
 
-- `id` is stable and unique.
-- extension rule ids should be namespaced where appropriate.
-- extensions depend on Core contracts.
-- extensions should not import Nx, CLI, or adapter internals unless explicitly scoped as adapter/host-specific extensions.
-- extensions may declare capability requirements.
+```ts
+export interface GovernanceExtensionHostContext {
+  workspaceRoot: string;
+  profileName: string;
+  options: Readonly<Record<string, unknown>>;
+  inventory: GovernanceWorkspace;
+  capabilities: GovernanceCapabilityRegistry;
+}
+```
+
+Important constraints:
+
+- extension modules must export a named `governanceExtension`
+- extension `id` must be unique and non-empty
+- extension-facing contracts must remain Nx-free
+- extension authors should depend on governance contracts, not Nx APIs
+- Nx awareness should come through capabilities
+
+## Minimal Extension Authoring Example
+
+```ts
+import type { GovernanceExtensionDefinition } from '@anarchitects/nx-governance';
+
+export const governanceExtension: GovernanceExtensionDefinition = {
+  id: 'example-extension',
+  register(host) {
+    host.registerRulePack({
+      evaluate(input) {
+        return [];
+      },
+    });
+  },
+};
+```
 
 ## Contribution Types
 
-### Rule packs
+The implemented contribution surface is:
 
-Extensions may contribute rule packs.
+- `registerEnricher(...)`
+- `registerRulePack(...)`
+- `registerSignalProvider(...)`
+- `registerMetricProvider(...)`
 
-Examples:
+These contributions flow into the existing governance pipeline:
 
-- Angular architectural rules
-- Maven package naming rules
-- Java package/class naming rules
-- TypeScript file/symbol/barrel rules
-- NestJS controller/provider/module rules
-- Playwright test organization rules
+1. register extensions
+2. apply enrichers
+3. evaluate core policies
+4. evaluate extension rule packs
+5. build core signals, then collect extension signals
+6. calculate core metrics, then collect extension metrics
 
-Rule packs use the same `GovernanceRule`, `GovernanceViolation`, and profile configuration contracts as Core rules.
+Execution remains deterministic:
 
-### Workspace enrichers
+- extension registration follows discovery order
+- enrichers run sequentially in registry order
+- rule-pack results preserve registry order
+- signal-provider results preserve registry order
+- metric-provider results preserve registry order
 
-Extensions may enrich workspace/projects with additional metadata derived from capabilities or source files.
+## Capability Registry
 
-Examples:
-
-- Angular extension detects components/services/routes from TypeScript capability data.
-- Maven extension enriches projects with groupId/artifactId metadata.
-- TypeScript extension enriches projects with tsconfig path alias metadata.
-
-Enrichers must be deterministic and should return diagnostics rather than printing directly.
-
-### Signal providers
-
-Extensions may provide governance signals that are not necessarily rule violations.
-
-Examples:
-
-- cognitive load signals
-- framework smell signals
-- coupling signals
-- missing convention signals
-- migration readiness signals
-
-### Metric providers
-
-Extensions may provide measurements derived from workspace facts, capabilities, signals, or violations.
-
-Examples:
-
-- Angular architectural consistency score
-- TypeScript import hygiene score
-- Maven modularity score
-- framework-specific test coverage signals where available
-
-### Presets
-
-Extensions may provide opinionated profile presets.
-
-Examples:
-
-- `angular-layered`
-- `typescript-package-workspace`
-- `maven-modular-monolith`
-- `nestjs-ddd`
-
-Presets should compose with Core rule configuration rather than replace the Core profile model.
-
-## Capability Model
-
-Capabilities allow extensions to inspect available context without importing adapters or hosts.
+Extension context exposes a generic capability registry:
 
 ```ts
 export interface GovernanceCapability<TData = unknown> {
@@ -161,341 +230,118 @@ export interface GovernanceCapabilityRegistry {
 }
 ```
 
-Capability ids should be stable and namespaced.
+The registry is generic and not Nx-specific by contract.
 
-Initial examples:
+### `capability:nx`
 
-| Capability                    | Producer                                | Consumers                                                      |
-| ----------------------------- | --------------------------------------- | -------------------------------------------------------------- |
-| `capability:nx`               | Nx adapter                              | Angular extension, Nx-specific extension, reporting enrichers. |
-| `capability:typescript`       | TypeScript adapter or Nx+TS enrichment  | Angular, React, NestJS, TypeScript extensions.                 |
-| `capability:package-manager`  | TypeScript/package adapter              | TypeScript, Playwright, Node ecosystem extensions.             |
-| `capability:manual-workspace` | CLI manual adapter                      | Generic rules and diagnostics.                                 |
-| `capability:ownership`        | ownership adapter/enricher              | ownership rules and reports.                                   |
-| `capability:angular`          | Angular extension or adapter enrichment | Angular-specific rule packs and metrics.                       |
-
-## Capability Requirements
-
-Extensions may declare capability requirements.
+The current runtime exposes one adapter-owned Nx capability:
 
 ```ts
-export interface GovernanceExtensionCapabilityRequirement {
-  id: string;
-  required?: boolean;
-  minVersion?: string;
-  reason?: string;
-}
+const nxCapability = host.context.capabilities.get('capability:nx');
 ```
 
-Interpretation:
-
-- required capability missing: required extension cannot run and should produce a clear diagnostic/failure
-- optional capability missing: extension should skip capability-specific behavior
-- available capability: extension may activate richer analysis
-
-Extensions should degrade gracefully where practical.
-
-## Extension Execution Context
-
-Extension context should be Core-owned and capability-based.
-
-```ts
-export interface GovernanceExtensionContext {
-  workspace: GovernanceWorkspace;
-  profile: GovernanceProfile;
-  capabilities: GovernanceCapabilityRegistry;
-  diagnostics: GovernanceDiagnostics;
-  options?: Record<string, unknown>;
-}
-```
-
-The context must not expose:
-
-- Nx adapter snapshot types
-- Nx project graph objects directly
-- host-specific logger/process APIs
-- CLI parser state
-- filesystem access by default
-
-If file access is needed, it should be provided through an explicit capability or controlled host utility, not assumed by every extension.
-
-## Explicit Extension Registration
-
-Extension Host v2 should use explicit governance extension registration as the primary model.
-
-Potential host configuration examples:
-
-```json
-{
-  "governance": {
-    "extensions": [
-      "@anarchitects/governance-extension-angular",
-      "@anarchitects/governance-extension-typescript"
-    ]
-  }
-}
-```
-
-Or profile-level extension configuration:
-
-```json
-{
-  "extensions": {
-    "@anarchitects/governance-extension-angular": {
-      "enabled": true,
-      "options": {
-        "selectorPrefix": "aa"
-      }
-    }
-  }
-}
-```
-
-The final location of extension registration is a host/config decision. The contract requirement is that extension registration is explicit and governance-specific.
-
-Current implementation status:
-
-- Issue #310 defines an explicit governance extension config shape under `nx.json.governance.extensions`.
-- Issue #311 adds an `add-extension` generator that writes explicit governance extension registrations into that config.
-- The generator only writes configuration; package installation remains the user's package-manager responsibility.
-- Issue #312 adds explicit governance extension loading from `nx.json.governance.extensions`.
-- Explicitly configured governance extensions are loaded by importing the configured package directly.
-- Explicit governance extension config is now the preferred registration model.
-- Arbitrary legacy probing of `nx.json.plugins` is deprecated.
-- Legacy `nx.json.plugins` probing remains as compatibility behavior and can be forced with `nx.json.governance.legacyPluginProbing`.
-- When explicit governance extensions are configured, legacy probing is disabled by default unless `legacyPluginProbing: true` is set.
-- Extension loading diagnostics now exist for host-local observability.
-- Those diagnostics cover explicit loading, optional/required missing extensions, invalid definitions, duplicate ids, registration failures, legacy probing use, and skipped legacy entrypoints.
-- Diagnostics are local to extension loading for now, not a global diagnostics framework.
-- Issue #315 makes `capability:nx` adapter-owned and meaningful instead of a marker-only capability.
-- `capability:nx` now exposes a stable payload with workspace root plus project names, roots, types, tags, and target names.
-- Raw Nx project graph internals, devkit types, and target configuration objects remain hidden from extension contracts.
-- Issue #316 adds dedicated regression coverage for extension-host compatibility behavior, diagnostics ordering, and deterministic contribution execution.
-- Boundary enforcement tests now guard the Nx-free extension contract surface and keep `capability:nx` production in the adapter layer.
-- Physical boundary hardening and package split readiness continue later under #328 and #329.
-- Richer framework/language capabilities and broader package-boundary hardening remain future work.
-
-## Discovery and Loading Boundary
-
-Core should not discover packages from disk.
-
-Hosts may discover/load extensions from:
-
-- explicit governance config
-- profile extension configuration
-- CLI flags
-- Nx plugin host configuration
-- package manifests in a future controlled mechanism
-
-Host-owned discovery may use Node/module resolution, but Core must not.
-
-## Required vs Optional Extensions
-
-Extension Host v2 should distinguish between extension states.
-
-| State                                        | Meaning                                                                | Behavior                                                                |
-| -------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Not configured                               | Extension is not part of the run.                                      | No action.                                                              |
-| Configured optional and missing              | Extension was requested but marked optional or discovered as optional. | Diagnostic warning or notice; continue.                                 |
-| Configured required and missing              | Extension was explicitly required.                                     | Fail with clear diagnostic.                                             |
-| Installed but registration fails             | Extension exists but throws or returns invalid definition.             | Fail clearly unless host explicitly marks it optional and non-critical. |
-| Installed and incompatible                   | Version/capability mismatch.                                           | Fail or skip depending on required/optional status.                     |
-| Installed and unsupported capability missing | Extension runs partially or skips specific contributions.              |
-
-This avoids surprising failures for optional ecosystem intelligence while keeping explicitly required governance controls enforceable.
-
-## Failure Semantics
-
-Recommended failure model:
-
-- missing optional extension: non-fatal diagnostic
-- missing required extension: fatal diagnostic
-- invalid extension definition: fatal diagnostic
-- extension registration throws: fatal diagnostic unless optional and host chooses to continue
-- rule evaluation throws: fatal diagnostic for that extension/rule pack
-- capability-specific contribution cannot run: warning/notice if optional
-
-Exact fatal diagnostic representation should align with the Core diagnostics contract from #227.
-
-## Profile Configuration for Extension Rules
-
-Extension rules should use the same profile rule configuration model as Core rules.
-
-```json
-{
-  "rules": {
-    "angular:component-name-convention": {
-      "enabled": true,
-      "severity": "warning",
-      "options": {
-        "suffix": "Component"
-      }
-    },
-    "maven:group-id-convention": {
-      "enabled": true,
-      "severity": "error",
-      "options": {
-        "pattern": "^be\\.anarchitects(\\.[a-z][a-z0-9]*)+$"
-      }
-    }
-  }
-}
-```
-
-Extension-specific operational configuration may live under `profile.extensions`.
-
-```json
-{
-  "extensions": {
-    "@anarchitects/governance-extension-angular": {
-      "enabled": true,
-      "options": {
-        "selectorPrefix": "aa"
-      }
-    }
-  }
-}
-```
-
-Rule behavior belongs in `profile.rules`; extension runtime/configuration behavior belongs in `profile.extensions`.
-
-## Rule Id Namespacing
-
-Core rule ids may be unprefixed:
-
-- `domain-boundary`
-- `layer-boundary`
-- `project-name-convention`
-- `tag-convention`
-
-Extension rule ids should generally be namespaced:
-
-- `angular:component-name-convention`
-- `typescript:file-name-convention`
-- `maven:group-id-convention`
-- `java:package-name-convention`
-- `nestjs:controller-name-convention`
-
-This reduces collisions and keeps report output clear.
-
-## Extension Ordering
-
-Extension Host v2 should define deterministic ordering.
-
-Recommended order:
-
-1. load extension definitions
-2. validate extension definitions
-3. check capability requirements
-4. run workspace enrichers
-5. run Core and extension rule packs
-6. run signal providers
-7. run metric providers
-8. aggregate diagnostics
-9. produce final assessment/report model
-
-Ordering should be deterministic across runs.
-
-If extensions need ordering constraints later, introduce explicit dependency metadata rather than relying on package load order.
-
-## Nx Awareness Through Capabilities
-
-Nx awareness must come from `capability:nx`, not direct Nx imports in generic extensions.
-
-Example:
-
-- Angular extension may inspect `capability:nx` to understand Nx project targets when available.
-- The same Angular extension should still run with `capability:typescript` in a non-Nx TypeScript workspace.
-- Nx-specific rules, if ever needed, should live in an Nx-specific extension or the Nx adapter/host boundary, not in generic Angular logic.
-
-## Migration from Current Extension Host
-
-Recommended migration path for #219:
-
-1. Introduce Core-owned extension contracts.
-2. Remove Nx adapter snapshot types from extension context.
-3. Introduce `GovernanceCapabilityRegistry`.
-4. Make Nx adapter contribute `capability:nx`.
-5. Introduce explicit governance extension registration.
-6. Keep current discovery behavior only as a transitional compatibility layer if required.
-7. Deprecate probing arbitrary Nx plugin packages for `/governance-extension`.
-8. Add diagnostics for missing optional vs required extensions.
-9. Preserve current successful extension contribution behavior where possible.
-
-## Transitional Compatibility
-
-The current extension host behavior may remain temporarily during migration, but it should not be the long-term primary model.
-
-Transitional rules:
-
-- do not break current local/self-provided extensions unexpectedly
-- do not require upstream Nx plugins to expose governance extension entrypoints
-- prefer explicit governance extension config for new behavior
-- warn when legacy probing is used, if implemented
-- document deprecation before removal
-
-## Interaction with Adapters
-
-Adapters provide facts and capabilities. Extensions provide interpretation.
-
-Examples:
-
-| Adapter output                                                              | Extension usage                                                            |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Nx adapter emits `capability:nx` with project targets                       | Angular extension can evaluate Nx-aware Angular conventions if configured. |
-| TypeScript adapter emits `capability:typescript` with import graph metadata | TypeScript extension can enforce file/import conventions.                  |
-| Maven adapter emits JVM/package metadata capability                         | Maven/Java extension can enforce groupId/package/class conventions.        |
-| Ownership enricher emits ownership capability                               | Ownership extension/reporting can enrich diagnostics.                      |
-
-Extensions should not need to know which adapter implementation produced the capability.
+Its payload is intentionally small and stable:
+
+- `workspaceRoot`
+- `projects[].name`
+- `projects[].root`
+- `projects[].type`
+- `projects[].tags`
+- `projects[].targets`
+
+This allows extensions to inspect Nx-aware structure without seeing:
+
+- raw Nx project graph objects
+- raw `@nx/devkit` types
+- full target configuration objects
+- file maps
+- adapter snapshots as-is
+
+Richer framework/language capabilities remain future work.
 
 ## Diagnostics
 
-Extension Host v2 should return diagnostics that are machine-readable and host-rendered.
+Extension loading and registration now produce structured host-local diagnostics.
 
-Diagnostic examples:
+Supported diagnostic codes:
 
-- `governance.extension.missing_optional`
+- `governance.extension.loaded`
+- `governance.extension.skipped_optional_missing`
 - `governance.extension.missing_required`
 - `governance.extension.invalid_definition`
-- `governance.extension.capability_missing`
+- `governance.extension.duplicate_id`
 - `governance.extension.registration_failed`
-- `governance.extension.rule_failed`
+- `governance.extension.legacy_probing_used`
+- `governance.extension.legacy_entrypoint_missing`
 
-Hosts decide whether diagnostics are printed, serialized, or converted into exit codes.
+Current diagnostic behavior:
 
-## Non-Goals
+- diagnostics are deterministic and ordered by discovery/registration flow
+- fatal cases still throw
+- optional and legacy skip behavior is observable through diagnostics
+- diagnostics are currently local to extension loading, not a global diagnostics/reporting framework
 
-This design does not:
+Future reporting and observability expansion is outside this issue.
 
-- implement Extension Host v2
-- remove the current extension host
-- define concrete Angular/React/NestJS/Maven/Gradle/PHP rules
-- define package export maps
-- define exact config file locations
-- implement capability providers
-- implement extension package loading
-- change existing Nx Governance behavior
+## Compatibility Behavior
 
-## Open Decisions for #219
+Legacy probing remains available because the implementation is still in transition.
 
-Implementation-time decisions:
+Current rules:
 
-- exact TypeScript interface names and file layout
-- final extension registration config location
-- whether registration supports package names, local paths, or imported objects
-- whether optional/required status lives in host config, profile config, or both
-- whether legacy Nx plugin probing remains temporarily
-- how extension diagnostics become process exit behavior
-- how extension ordering constraints are represented if needed
-- whether extension presets are auto-loaded or explicitly selected
-- how extension version compatibility is validated
+- no explicit extensions configured: legacy probing is enabled by default
+- explicit extensions configured: legacy probing is disabled by default
+- `legacyPluginProbing: true`: enables compatibility probing alongside explicit registration
+- `legacyPluginProbing: false`: disables compatibility probing even if `nx.json.plugins` is populated
 
-## Acceptance Check for #229
+When legacy probing is used:
 
-- [x] Extension contracts are independent from Nx.
-- [x] Extension context no longer depends on Nx adapter snapshot types.
-- [x] Capability-based Nx awareness is defined.
-- [x] Explicit extension registration is the primary model.
-- [x] Missing optional extensions and failing installed extensions have clear semantics.
-- [x] The design directly scopes #219 implementation.
+- a deprecation warning is emitted once per governance run
+- missing legacy governance entrypoints are skipped safely
+- `ERR_PACKAGE_PATH_NOT_EXPORTED` is skipped only when it matches the expected governance-entrypoint lookup
+- direct missing module lookups for the governance entrypoint are skipped only when they match the expected legacy lookup
+- unrelated module errors are rethrown
+
+## Test Protection
+
+The implementation is now backed by dedicated regression coverage for:
+
+- explicit extension loading and precedence
+- legacy probing compatibility behavior
+- deduplication behavior
+- optional vs required extension semantics
+- diagnostics ordering and fatal/non-fatal behavior
+- deterministic contribution execution ordering
+- capability-registry behavior
+- Nx-free extension contract boundaries
+- adapter-only production of `capability:nx`
+
+This protection is intentionally in place before:
+
+- #220 Standalone CLI MVP
+- #221 Generic TypeScript Adapter
+- #328 Boundary Hardening
+- #329 Physical Package Split
+
+## Non-goals
+
+The current Extension Host v2 work does not complete:
+
+- physical package split
+- standalone CLI completion
+- framework-specific extension package implementation
+- full diagnostics/reporting redesign
+- capability negotiation or version requirements
+- removal of Nx Governance compatibility
+- removal of legacy probing
+
+## Future Work
+
+Remaining follow-up areas include:
+
+- #220 Standalone CLI MVP
+- #221 Generic TypeScript Adapter
+- #328 Governance Boundary Hardening and Package Split Readiness
+- #329 Governance Ecosystem Physical Package Split
+
+Those issues continue the migration. This document should not be read as claiming that transitional internal coupling has been fully eliminated.
