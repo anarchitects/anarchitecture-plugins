@@ -44,3 +44,4 @@ export * from './graph-document/index.js';
 export * from './manual-workspace/index.js';
 export * from './profile/load-standalone-profile.js';
 export * from './standalone-cli/index.js';
+export * from './typescript-adapter/index.js';
