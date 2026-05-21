@@ -1,6 +1,4 @@
-import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import type { Violation } from '../core/index.js';
-import type { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
 import {
   buildConformanceSignals,
   buildGovernanceSignals,
@@ -395,16 +393,12 @@ describe('signal-engine', () => {
 
 function makeGraphSnapshot(input: {
   projects: Array<{ id: string; domain?: string }>;
-  dependencies: WorkspaceGraphSnapshot['dependencies'];
-}): WorkspaceGraphSnapshot {
+  dependencies: Parameters<typeof buildGraphSignals>[0]['dependencies'];
+}): Parameters<typeof buildGraphSignals>[0] {
   return {
-    source: 'nx-graph',
     extractedAt: '2026-03-17T00:00:00.000Z',
     projects: input.projects.map((project) => ({
       id: project.id,
-      name: project.id,
-      type: 'library',
-      tags: project.domain ? [`domain:${project.domain}`] : [],
       domain: project.domain,
     })),
     dependencies: input.dependencies,
@@ -412,10 +406,9 @@ function makeGraphSnapshot(input: {
 }
 
 function makeConformanceSnapshot(input: {
-  findings: ConformanceSnapshot['findings'];
-}): ConformanceSnapshot {
+  findings: Parameters<typeof buildConformanceSignals>[0]['findings'];
+}): Parameters<typeof buildConformanceSignals>[0] {
   return {
-    source: 'nx-conformance',
     extractedAt: '2026-03-18T00:00:00.000Z',
     findings: input.findings,
   };

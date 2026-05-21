@@ -64,7 +64,7 @@ describe('governance extension config parser', () => {
           code: 'invalid-legacy-plugin-probing',
           path: 'governance.legacyPluginProbing',
           message:
-            'Invalid governance extension config: nx.json governance.legacyPluginProbing must be a boolean when provided.',
+            'Invalid governance extension config: governance.legacyPluginProbing must be a boolean when provided.',
         },
         {
           code: 'invalid-extension-package',
