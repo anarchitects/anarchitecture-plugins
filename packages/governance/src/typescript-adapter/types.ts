@@ -1,4 +1,7 @@
-import type { GovernanceDiagnostic } from '../core/index.js';
+import type {
+  GovernanceDiagnostic,
+  GovernanceProjectInput,
+} from '../core/index.js';
 
 export type TypeScriptWorkspaceDetectionStatus =
   | 'supported'
@@ -41,5 +44,21 @@ export interface TsConfigResolutionModel {
   configFiles: string[];
   baseUrl?: string;
   pathAliases: Record<string, string[]>;
+  diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
+}
+
+export interface TypeScriptProjectDiscoveryRule {
+  pattern: string;
+  name?: string;
+  tags?: string[];
+}
+
+export interface TypeScriptProjectDiscoveryConfig {
+  projects: TypeScriptProjectDiscoveryRule[];
+}
+
+export interface TypeScriptProjectDiscoveryResult {
+  workspaceRoot: string;
+  projects: GovernanceProjectInput[];
   diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
 }
