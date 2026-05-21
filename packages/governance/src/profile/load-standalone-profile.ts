@@ -21,6 +21,19 @@ const PROFILE_TOP_LEVEL_FIELDS = new Set([
   'health',
   'metrics',
 ]);
+const NX_RUNTIME_PROFILE_ONLY_FIELDS = new Set([
+  'projectOverrides',
+  'exceptions',
+  'eslint',
+]);
+const NX_RUNTIME_PROFILE_LEGACY_METRIC_FIELDS = new Set([
+  'architecturalEntropyWeight',
+  'dependencyComplexityWeight',
+  'domainIntegrityWeight',
+  'ownershipCoverageWeight',
+  'documentationCompletenessWeight',
+  'layerIntegrityWeight',
+]);
 const OWNERSHIP_FIELDS = new Set(['required', 'metadataField']);
 const HEALTH_FIELDS = new Set(['statusThresholds']);
 const HEALTH_STATUS_THRESHOLD_FIELDS = new Set([
@@ -119,6 +132,11 @@ export function validateStandaloneGovernanceProfile(
     ]);
   }
 
+  const nxCompatibilityIssue = detectUnsupportedNxRuntimeProfile(root);
+  if (nxCompatibilityIssue) {
+    issues.push(nxCompatibilityIssue);
+  }
+
   validateUnknownFields(root, PROFILE_TOP_LEVEL_FIELDS, '/', issues);
 
   const name = validateRequiredTrimmedString(
@@ -179,6 +197,29 @@ export function validateStandaloneGovernanceProfile(
     ownership,
     health,
     metrics,
+  };
+}
+
+function detectUnsupportedNxRuntimeProfile(
+  root: Record<string, unknown>
+): StandaloneGovernanceProfileValidationIssue | undefined {
+  const hasNxRuntimeOnlyField = Object.keys(root).some((key) =>
+    NX_RUNTIME_PROFILE_ONLY_FIELDS.has(key)
+  );
+  const metrics = asRecord(root.metrics);
+  const hasLegacyMetricField = Object.keys(metrics ?? {}).some((key) =>
+    NX_RUNTIME_PROFILE_LEGACY_METRIC_FIELDS.has(key)
+  );
+
+  if (!hasNxRuntimeOnlyField && !hasLegacyMetricField) {
+    return undefined;
+  }
+
+  return {
+    code: 'governance.profile.unsupported_nx_runtime_profile',
+    message:
+      'Nx Governance runtime profile files are not supported by the standalone CLI. Use a standalone profile with an explicit "name" field and without Nx-only override fields such as "projectOverrides", "exceptions", or legacy metric weight keys.',
+    path: '/',
   };
 }
 

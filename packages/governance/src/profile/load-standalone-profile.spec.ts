@@ -151,6 +151,50 @@ describe('loadStandaloneGovernanceProfile', () => {
     });
   });
 
+  it('rejects an Nx Governance runtime profile file intentionally', () => {
+    const fixturePath = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'tools',
+      'governance',
+      'profiles',
+      'frontend-layered.json'
+    );
+
+    expect(() => loadStandaloneGovernanceProfile(fixturePath)).toThrow(
+      StandaloneGovernanceProfileValidationError
+    );
+
+    try {
+      loadStandaloneGovernanceProfile(fixturePath);
+    } catch (error) {
+      expect(error).toBeInstanceOf(StandaloneGovernanceProfileValidationError);
+      expect(
+        (error as StandaloneGovernanceProfileValidationError).issues
+      ).toEqual([
+        {
+          code: 'governance.profile.unsupported_nx_runtime_profile',
+          message:
+            'Nx Governance runtime profile files are not supported by the standalone CLI. Use a standalone profile with an explicit "name" field and without Nx-only override fields such as "projectOverrides", "exceptions", or legacy metric weight keys.',
+          path: '/',
+        },
+        {
+          code: 'governance.profile.unknown_field',
+          message: 'Unknown field "projectOverrides" is not allowed.',
+          path: '/projectOverrides',
+        },
+        {
+          code: 'governance.profile.missing_required_field',
+          message: 'Profile name is required.',
+          path: '/name',
+        },
+      ]);
+    }
+  });
+
   it('throws a deterministic error for invalid JSON', () => {
     const dirPath = mkdtempSync(path.join(tmpdir(), 'standalone-profile-'));
     const filePath = path.join(dirPath, 'broken-profile.json');

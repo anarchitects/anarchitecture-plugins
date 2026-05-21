@@ -393,6 +393,55 @@ describe('agov check', () => {
     });
   });
 
+  it('rejects an existing Nx Governance runtime profile file intentionally', () => {
+    const io = createMemoryIo();
+
+    expect(
+      runAgovCli(
+        [
+          'check',
+          '--workspace',
+          workspaceFixturePath(),
+          '--profile',
+          nxRuntimeProfilePath(),
+          '--format',
+          'json',
+        ],
+        io
+      )
+    ).toBe(AGOV_EXIT_CONFIGURATION_FAILURE);
+
+    expect(JSON.parse(io.err)).toEqual({
+      error: {
+        code: 'agov.cli.invalid_profile',
+        message: `Standalone governance profile validation failed for "${path.resolve(
+          nxRuntimeProfilePath()
+        )}" with 3 issues.`,
+        details: {
+          filePath: path.resolve(nxRuntimeProfilePath()),
+          issues: [
+            {
+              code: 'governance.profile.unsupported_nx_runtime_profile',
+              message:
+                'Nx Governance runtime profile files are not supported by the standalone CLI. Use a standalone profile with an explicit "name" field and without Nx-only override fields such as "projectOverrides", "exceptions", or legacy metric weight keys.',
+              path: '/',
+            },
+            {
+              code: 'governance.profile.unknown_field',
+              message: 'Unknown field "projectOverrides" is not allowed.',
+              path: '/projectOverrides',
+            },
+            {
+              code: 'governance.profile.missing_required_field',
+              message: 'Profile name is required.',
+              path: '/name',
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it('writes report output to an explicit file path instead of stdout', () => {
     const io = createMemoryIo();
     const tempDir = mkdtempSync(path.join(tmpdir(), 'agov-output-'));
@@ -659,6 +708,20 @@ function workspaceFixturePath(): string {
 
 function standaloneCliFixturePath(fileName: string): string {
   return path.join(__dirname, 'fixtures', fileName);
+}
+
+function nxRuntimeProfilePath(): string {
+  return path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    'tools',
+    'governance',
+    'profiles',
+    'frontend-layered.json'
+  );
 }
 
 function createMemoryIo(): {
