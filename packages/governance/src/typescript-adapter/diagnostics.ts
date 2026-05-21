@@ -127,6 +127,78 @@ export function invalidPathAliasDiagnostic(
   };
 }
 
+export function invalidDiscoveryPatternDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_discovery_pattern',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function discoveryPatternNoMatchesDiagnostic(
+  pattern: string,
+  path: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.discovery_pattern_no_matches',
+    message: `Discovery pattern "${pattern}" did not match any package roots.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function duplicateProjectRootDiagnostic(
+  root: string,
+  path: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.duplicate_project_root',
+    message: `Duplicate discovered project root "${root}" is not allowed.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function duplicateProjectNameDiagnostic(
+  name: string,
+  path: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.duplicate_project_name',
+    message: `Duplicate discovered project name "${name}" is not allowed.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function invalidTagTemplateDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_tag_template',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function invalidProjectNameTemplateDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_project_name_template',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
 function detectedIndicators(
   indicators: TypeScriptWorkspaceIndicators
 ): string[] {
