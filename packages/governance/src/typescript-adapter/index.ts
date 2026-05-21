@@ -1,6 +1,7 @@
 export * from './detect-typescript-workspace.js';
 export * from './diagnostics.js';
 export * from './import-graph.js';
+export * from './map-imports-to-projects.js';
 export * from './normalize-workspace-patterns.js';
 export * from './normalize-path-aliases.js';
 export * from './parse-package-manager-workspace.js';
