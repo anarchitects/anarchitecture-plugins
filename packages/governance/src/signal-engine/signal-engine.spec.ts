@@ -1,6 +1,4 @@
-import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import type { Violation } from '../core/index.js';
-import type { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
 import {
   buildConformanceSignals,
   buildGovernanceSignals,
@@ -119,7 +117,6 @@ describe('signal-engine', () => {
       makeConformanceSnapshot({
         findings: [
           {
-            id: 'finding-a',
             category: 'boundary',
             severity: 'error',
             projectId: 'project-a',
@@ -127,7 +124,6 @@ describe('signal-engine', () => {
             message: 'Boundary rule violated',
           },
           {
-            id: 'finding-b',
             category: 'compliance',
             severity: 'warning',
             projectId: 'project-a',
@@ -174,7 +170,6 @@ describe('signal-engine', () => {
       makeConformanceSnapshot({
         findings: [
           {
-            id: 'finding-1',
             category: 'dependency',
             severity: 'warning',
             projectId: 'project-a',
@@ -182,7 +177,6 @@ describe('signal-engine', () => {
             message: 'Dependency warning',
           },
           {
-            id: 'finding-2',
             category: 'dependency',
             severity: 'warning',
             projectId: 'project-a',
@@ -215,7 +209,6 @@ describe('signal-engine', () => {
       conformanceSnapshot: makeConformanceSnapshot({
         findings: [
           {
-            id: 'dup-1',
             category: 'boundary',
             severity: 'info',
             projectId: 'b',
@@ -223,7 +216,6 @@ describe('signal-engine', () => {
             message: 'same issue',
           },
           {
-            id: 'dup-2',
             category: 'boundary',
             severity: 'info',
             projectId: 'b',
@@ -231,7 +223,6 @@ describe('signal-engine', () => {
             message: 'same issue',
           },
           {
-            id: 'warn-1',
             category: 'boundary',
             severity: 'warning',
             projectId: 'z',
@@ -239,7 +230,6 @@ describe('signal-engine', () => {
             message: 'warn issue',
           },
           {
-            id: 'error-1',
             category: 'boundary',
             severity: 'error',
             projectId: 'a',
@@ -247,7 +237,6 @@ describe('signal-engine', () => {
             message: 'error issue',
           },
           {
-            id: 'info-1',
             category: 'boundary',
             severity: 'info',
             projectId: 'a',
@@ -395,16 +384,12 @@ describe('signal-engine', () => {
 
 function makeGraphSnapshot(input: {
   projects: Array<{ id: string; domain?: string }>;
-  dependencies: WorkspaceGraphSnapshot['dependencies'];
-}): WorkspaceGraphSnapshot {
+  dependencies: Parameters<typeof buildGraphSignals>[0]['dependencies'];
+}): Parameters<typeof buildGraphSignals>[0] {
   return {
-    source: 'nx-graph',
     extractedAt: '2026-03-17T00:00:00.000Z',
     projects: input.projects.map((project) => ({
       id: project.id,
-      name: project.id,
-      type: 'library',
-      tags: project.domain ? [`domain:${project.domain}`] : [],
       domain: project.domain,
     })),
     dependencies: input.dependencies,
@@ -412,10 +397,9 @@ function makeGraphSnapshot(input: {
 }
 
 function makeConformanceSnapshot(input: {
-  findings: ConformanceSnapshot['findings'];
-}): ConformanceSnapshot {
+  findings: Parameters<typeof buildConformanceSignals>[0]['findings'];
+}): Parameters<typeof buildConformanceSignals>[0] {
   return {
-    source: 'nx-conformance',
     extractedAt: '2026-03-18T00:00:00.000Z',
     findings: input.findings,
   };

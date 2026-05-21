@@ -53,7 +53,7 @@ export function validateGovernanceExtensionConfig(
       code: 'invalid-legacy-plugin-probing',
       path: 'governance.legacyPluginProbing',
       message:
-        'Invalid governance extension config: nx.json governance.legacyPluginProbing must be a boolean when provided.',
+        'Invalid governance extension config: governance.legacyPluginProbing must be a boolean when provided.',
     });
   }
 
@@ -76,7 +76,7 @@ export function validateGovernanceExtensionConfig(
       code: 'invalid-extensions',
       path: 'governance.extensions',
       message:
-        'Invalid governance extension config: nx.json governance.extensions must be an array.',
+        'Invalid governance extension config: governance.extensions must be an array.',
     });
 
     return {

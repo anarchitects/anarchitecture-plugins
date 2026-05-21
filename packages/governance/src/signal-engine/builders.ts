@@ -2,11 +2,6 @@ import { createHash } from 'node:crypto';
 
 import type { Violation } from '../core/index.js';
 import type {
-  ConformanceFinding,
-  ConformanceSnapshot,
-} from '../conformance-adapter/conformance-adapter.js';
-import type { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
-import type {
   GovernanceSignal,
   GovernanceSignalCategory,
   GovernanceSignalSeverity,
@@ -14,9 +9,40 @@ import type {
   GovernanceSignalType,
 } from './types.js';
 
+export interface GovernanceGraphSnapshotProject {
+  id: string;
+  domain?: string;
+}
+
+export interface GovernanceGraphSnapshotDependency {
+  sourceProjectId: string;
+  targetProjectId: string;
+  type?: string;
+}
+
+export interface GovernanceGraphSnapshot {
+  extractedAt: string;
+  projects: GovernanceGraphSnapshotProject[];
+  dependencies: GovernanceGraphSnapshotDependency[];
+}
+
+export interface GovernanceConformanceFinding {
+  projectId?: string;
+  relatedProjectIds: string[];
+  category: GovernanceSignalCategory;
+  severity: GovernanceSignalSeverity;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GovernanceConformanceSnapshot {
+  extractedAt: string;
+  findings: GovernanceConformanceFinding[];
+}
+
 export interface BuildGovernanceSignalsOptions {
-  graphSnapshot: WorkspaceGraphSnapshot;
-  conformanceSnapshot: ConformanceSnapshot;
+  graphSnapshot: GovernanceGraphSnapshot;
+  conformanceSnapshot: GovernanceConformanceSnapshot;
 }
 
 interface SignalDraft {
@@ -48,7 +74,7 @@ const SEVERITY_SORT_ORDER: Record<GovernanceSignalSeverity, number> = {
 };
 
 export function buildGraphSignals(
-  snapshot: WorkspaceGraphSnapshot
+  snapshot: GovernanceGraphSnapshot
 ): GovernanceSignal[] {
   const projectsById = new Map(
     snapshot.projects.map((project) => [project.id, project] as const)
@@ -130,7 +156,7 @@ export function buildGraphSignals(
 }
 
 export function buildConformanceSignals(
-  snapshot: ConformanceSnapshot
+  snapshot: GovernanceConformanceSnapshot
 ): GovernanceSignal[] {
   return snapshot.findings
     .map((finding) =>
@@ -178,7 +204,7 @@ export function mergeGovernanceSignals(
 }
 
 function mapConformanceFindingToSignal(
-  finding: ConformanceFinding,
+  finding: GovernanceConformanceFinding,
   extractedAt: string
 ): GovernanceSignal {
   const relatedProjectIds = normalizeRelatedProjectIds(
