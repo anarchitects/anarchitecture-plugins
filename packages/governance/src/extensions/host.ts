@@ -1,7 +1,3 @@
-import { logger, workspaceRoot as defaultWorkspaceRoot } from '@nx/devkit';
-import * as fs from 'node:fs';
-import path from 'node:path';
-
 import { GovernanceWorkspace, Measurement, Violation } from '../core/index.js';
 import { GovernanceSignal } from '../signal-engine/index.js';
 import {
@@ -17,10 +13,6 @@ import {
   GovernanceWorkspaceEnricher,
   GovernanceWorkspaceEnricherInput,
 } from './contracts.js';
-import {
-  GovernanceExtensionConfig,
-  parseGovernanceExtensionConfig,
-} from './config.js';
 import type { GovernanceExtensionDiagnostic } from './diagnostics.js';
 
 interface RegisteredGovernanceContribution<T> {
@@ -35,19 +27,6 @@ export interface GovernanceExtensionRegistry {
   enrichers: RegisteredGovernanceContribution<GovernanceWorkspaceEnricher>[];
 }
 
-interface NxJsonPluginConfig {
-  plugin?: string;
-  options?: unknown;
-}
-
-interface NxJsonShape {
-  plugins?: Array<string | NxJsonPluginConfig>;
-  governance?: {
-    extensions?: unknown;
-    legacyPluginProbing?: unknown;
-  };
-}
-
 interface DiscoveredGovernanceExtension {
   sourceSpecifier: string;
   moduleSpecifier: string;
@@ -56,7 +35,7 @@ interface DiscoveredGovernanceExtension {
   definition: GovernanceExtensionDefinition;
 }
 
-interface GovernanceExtensionLoadRequest {
+export interface GovernanceExtensionLoadRequest {
   sourceSpecifier: string;
   moduleSpecifier: string;
   source: 'explicit' | 'legacy';
@@ -64,8 +43,7 @@ interface GovernanceExtensionLoadRequest {
 }
 
 export interface DiscoverGovernanceExtensionsOptions {
-  workspaceRoot?: string;
-  nxJson?: NxJsonShape;
+  loadRequests?: readonly GovernanceExtensionLoadRequest[];
   moduleLoader?: GovernanceExtensionModuleLoader;
 }
 
@@ -164,11 +142,10 @@ async function discoverGovernanceExtensionsWithDiagnostics(
   extensions: DiscoveredGovernanceExtension[];
   diagnostics: GovernanceExtensionDiagnostic[];
 }> {
-  const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
   const moduleLoader = options.moduleLoader ?? defaultGovernanceModuleLoader;
   const extensions: DiscoveredGovernanceExtension[] = [];
   const diagnostics: GovernanceExtensionDiagnostic[] = [];
-  const loadRequests = buildGovernanceExtensionLoadRequests(nxJson);
+  const loadRequests = [...(options.loadRequests ?? [])];
 
   if (loadRequests.some((request) => request.source === 'legacy')) {
     diagnostics.push({
@@ -178,9 +155,6 @@ async function discoverGovernanceExtensionsWithDiagnostics(
         'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.',
       legacy: true,
     });
-    logger.warn(
-      'Legacy governance extension probing from nx.json.plugins is deprecated. Register governance extensions explicitly under nx.json.governance.extensions instead.'
-    );
   }
 
   for (const loadRequest of loadRequests) {
@@ -432,21 +406,6 @@ export async function collectGovernanceMeasurements(
   return measurements.flat();
 }
 
-function readNxJson(workspaceRoot = defaultWorkspaceRoot): NxJsonShape {
-  const nxJsonPath = path.join(workspaceRoot, 'nx.json');
-
-  try {
-    const raw = fs.readFileSync(nxJsonPath, 'utf8');
-    return JSON.parse(raw) as NxJsonShape;
-  } catch (error) {
-    throw new Error(
-      `Unable to read Nx plugin configuration from ${nxJsonPath}: ${toErrorMessage(
-        error
-      )}`
-    );
-  }
-}
-
 function mergeRegistry(
   target: GovernanceExtensionRegistry,
   source: GovernanceExtensionRegistry
@@ -455,58 +414,6 @@ function mergeRegistry(
   target.signalProviders.push(...source.signalProviders);
   target.rulePacks.push(...source.rulePacks);
   target.enrichers.push(...source.enrichers);
-}
-
-function buildGovernanceExtensionLoadRequests(
-  nxJson: NxJsonShape
-): GovernanceExtensionLoadRequest[] {
-  const seenModuleSpecifiers = new Set<string>();
-  const requests: GovernanceExtensionLoadRequest[] = [];
-  const governanceExtensionConfig = parseGovernanceExtensionConfig(nxJson);
-
-  for (const registration of governanceExtensionConfig.extensions) {
-    appendLoadRequest(requests, seenModuleSpecifiers, {
-      sourceSpecifier: registration.package,
-      moduleSpecifier: registration.package,
-      source: 'explicit',
-      optional: registration.optional ?? false,
-    });
-  }
-
-  if (!shouldProbeLegacyPlugins(governanceExtensionConfig)) {
-    return requests;
-  }
-
-  for (const pluginSpecifier of normalizePluginSpecifiers(nxJson.plugins)) {
-    appendLoadRequest(requests, seenModuleSpecifiers, {
-      sourceSpecifier: pluginSpecifier,
-      moduleSpecifier: toGovernanceExtensionModuleSpecifier(pluginSpecifier),
-      source: 'legacy',
-    });
-  }
-
-  return requests;
-}
-
-function shouldProbeLegacyPlugins(config: GovernanceExtensionConfig): boolean {
-  if (config.legacyPluginProbing !== undefined) {
-    return config.legacyPluginProbing;
-  }
-
-  return config.extensions.length === 0;
-}
-
-function appendLoadRequest(
-  target: GovernanceExtensionLoadRequest[],
-  seenModuleSpecifiers: Set<string>,
-  request: GovernanceExtensionLoadRequest
-): void {
-  if (seenModuleSpecifiers.has(request.moduleSpecifier)) {
-    return;
-  }
-
-  seenModuleSpecifiers.add(request.moduleSpecifier);
-  target.push(request);
 }
 
 function createMissingExtensionDiagnostic(
@@ -532,38 +439,6 @@ function createMissingExtensionDiagnostic(
     moduleSpecifier: loadRequest.moduleSpecifier,
     legacy: loadRequest.source === 'legacy',
   };
-}
-
-function normalizePluginSpecifiers(
-  plugins: NxJsonShape['plugins'] = []
-): string[] {
-  return plugins.flatMap((pluginEntry) => {
-    const pluginSpecifier =
-      typeof pluginEntry === 'string' ? pluginEntry : pluginEntry?.plugin;
-
-    if (
-      typeof pluginSpecifier !== 'string' ||
-      pluginSpecifier.trim().length === 0 ||
-      pluginSpecifier === '@anarchitects/nx-governance' ||
-      isLocalPluginSpecifier(pluginSpecifier)
-    ) {
-      return [];
-    }
-
-    return [pluginSpecifier];
-  });
-}
-
-function isLocalPluginSpecifier(pluginSpecifier: string): boolean {
-  return (
-    pluginSpecifier.startsWith('.') ||
-    pluginSpecifier.startsWith('/') ||
-    pluginSpecifier.startsWith('file:')
-  );
-}
-
-function toGovernanceExtensionModuleSpecifier(pluginSpecifier: string): string {
-  return `${pluginSpecifier}/governance-extension`;
 }
 
 function readGovernanceExtensionDefinition(

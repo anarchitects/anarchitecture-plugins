@@ -1,3 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import {
   loadGovernanceExtensionConfig,
   parseGovernanceExtensionConfig,
@@ -7,6 +11,42 @@ describe('governance extension config', () => {
   it('normalizes missing config to an empty extension list', () => {
     expect(loadGovernanceExtensionConfig({ nxJson: {} })).toEqual({
       extensions: [],
+    });
+  });
+
+  it('loads governance extension config from nx.json at an explicit workspace root', () => {
+    const workspaceRoot = mkdtempSync(
+      path.join(tmpdir(), 'governance-extension-config-')
+    );
+
+    writeFileSync(
+      path.join(workspaceRoot, 'nx.json'),
+      JSON.stringify(
+        {
+          governance: {
+            legacyPluginProbing: false,
+            extensions: [
+              {
+                package: 'plugin-a',
+                optional: true,
+              },
+            ],
+          },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    expect(loadGovernanceExtensionConfig({ workspaceRoot })).toEqual({
+      legacyPluginProbing: false,
+      extensions: [
+        {
+          package: 'plugin-a',
+          optional: true,
+        },
+      ],
     });
   });
 

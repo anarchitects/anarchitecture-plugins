@@ -3,7 +3,7 @@ import { formatFiles, Tree, updateJson } from '@nx/devkit';
 import {
   parseGovernanceExtensionConfig,
   type GovernanceExtensionRegistration,
-} from '../../extensions/config.js';
+} from '../../nx-host/extensions/config.js';
 import type { AddExtensionGeneratorSchema } from './schema.js';
 
 export default async function addExtensionGenerator(

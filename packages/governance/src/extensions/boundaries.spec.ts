@@ -49,6 +49,15 @@ describe('governance extension architecture boundaries', () => {
     expect(diagnosticsSource).not.toMatch(/\.\.\/nx-adapter\//);
   });
 
+  it('keeps extension runtime registration free of Nx imports and nx.json loading', () => {
+    const hostSource = readGovernanceSource('extensions/host.ts');
+
+    expect(hostSource).not.toMatch(/@nx\/devkit/);
+    expect(hostSource).not.toContain('readFileSync(');
+    expect(hostSource).not.toContain('workspaceRoot as defaultWorkspaceRoot');
+    expect(hostSource).not.toMatch(/\.\.\/nx-adapter\//);
+  });
+
   it('produces capability:nx from the adapter layer only', () => {
     const runtimeFilesWithNxCapabilityLiteral = listGovernanceSourceFiles(
       governanceSourceRoot
@@ -83,5 +92,19 @@ describe('governance extension architecture boundaries', () => {
     expect(assessmentArtifactsSource).toContain(
       'extensionDiagnostics: GovernanceExtensionDiagnostic[];'
     );
+  });
+
+  it('keeps Nx-specific extension discovery isolated under nx-host', () => {
+    const nxHostExtensionConfigSource = readGovernanceSource(
+      'nx-host/extensions/config.ts'
+    );
+    const nxHostExtensionHostSource = readGovernanceSource(
+      'nx-host/extensions/host.ts'
+    );
+
+    expect(nxHostExtensionConfigSource).toMatch(/@nx\/devkit/);
+    expect(nxHostExtensionHostSource).toMatch(/@nx\/devkit/);
+    expect(nxHostExtensionConfigSource).toContain('nx.json');
+    expect(nxHostExtensionHostSource).toContain('nx.json');
   });
 });
