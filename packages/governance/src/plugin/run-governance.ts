@@ -88,10 +88,10 @@ import {
   collectGovernanceMeasurements,
   collectGovernanceSignals,
   evaluateGovernanceRulePacks,
-  registerGovernanceExtensionsWithDiagnostics,
 } from '../extensions/host.js';
 import { DefaultGovernanceCapabilityRegistry } from '../extensions/capabilities.js';
-import { loadGovernanceExtensionConfig } from '../extensions/config.js';
+import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
+import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
 import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';

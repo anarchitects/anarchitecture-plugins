@@ -130,9 +130,10 @@ Factual current status:
   - `packages/governance/src/extensions/contracts.ts` still imports
     `GovernanceSignal` from `../signal-engine/index.js` instead of the Core
     barrel.
-  - `packages/governance/src/extensions/host.ts` still imports `@nx/devkit`,
-    reads `nx.json`, and probes installed Nx plugins for
-    `governance-extension`.
+  - Nx-specific governance extension discovery and `nx.json` loading now live
+    under `packages/governance/src/nx-host/extensions/*`, while
+    `packages/governance/src/extensions/host.ts` is limited to generic
+    extension registration and execution flow.
 - Extension contracts were not fully decoupled from Nx adapter types in these
   slices. That work is still left for #219.
 - `packages/governance/src/plugin/run-governance.ts` still contains host

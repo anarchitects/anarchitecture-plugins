@@ -15,7 +15,7 @@ Note:
 ## Current Discovery Flow
 
 1. `registerGovernanceExtensions(...)` calls `discoverGovernanceExtensions(...)` and then registers each discovered extension in `nx.json.plugins` order.
-2. `discoverGovernanceExtensions(...)` reads `nx.json.plugins`. If `nxJson` is not injected, it reads `nx.json` from the workspace root using the host helper in `packages/governance/src/extensions/host.ts`.
+2. Nx-specific extension discovery reads `nx.json.plugins`. If `nxJson` is not injected, it reads `nx.json` from the workspace root using the Nx-host helper in `packages/governance/src/nx-host/extensions/host.ts`.
 3. Plugin entries are normalized from either:
    - a string plugin entry such as `@nx/jest/plugin`
    - an object entry using its `plugin` field

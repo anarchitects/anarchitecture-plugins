@@ -1,16 +1,18 @@
 import { logger } from '@nx/devkit';
-import { GovernanceProfile, GovernanceWorkspace } from '../core/index.js';
-import { GovernanceSignal } from '../signal-engine/index.js';
-import { GovernanceExtensionHostContext } from './contracts.js';
-import { DefaultGovernanceCapabilityRegistry } from './capabilities.js';
+import { GovernanceProfile, GovernanceWorkspace } from '../../core/index.js';
+import { GovernanceSignal } from '../../signal-engine/index.js';
+import { GovernanceExtensionHostContext } from '../../extensions/contracts.js';
+import { DefaultGovernanceCapabilityRegistry } from '../../extensions/capabilities.js';
 import {
   applyGovernanceEnrichers,
   collectGovernanceMeasurements,
   collectGovernanceSignals,
   evaluateGovernanceRulePacks,
   GovernanceExtensionRegistry,
-  registerGovernanceExtensions,
-  registerGovernanceExtensionsWithDiagnostics,
+} from '../../extensions/host.js';
+import {
+  registerNxGovernanceExtensions as registerGovernanceExtensions,
+  registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics,
 } from './host.js';
 
 describe('registerGovernanceExtensions', () => {
