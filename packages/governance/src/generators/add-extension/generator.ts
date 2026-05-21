@@ -3,7 +3,7 @@ import { formatFiles, Tree, updateJson } from '@nx/devkit';
 import {
   parseGovernanceExtensionConfig,
   type GovernanceExtensionRegistration,
-} from '../../nx-host/extensions/config.js';
+} from '../../extensions/config.js';
 import type { AddExtensionGeneratorSchema } from './schema.js';
 
 export default async function addExtensionGenerator(
@@ -15,11 +15,7 @@ export default async function addExtensionGenerator(
 
   updateJson(tree, 'nx.json', (nxJson) => {
     const config = parseGovernanceExtensionConfig(
-      asRecord(nxJson) as {
-        governance?: {
-          extensions?: unknown;
-        };
-      }
+      asRecord(asRecord(nxJson)?.governance)
     );
     const extensions = [...config.extensions];
     const existingIndex = extensions.findIndex(

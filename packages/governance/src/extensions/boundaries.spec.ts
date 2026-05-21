@@ -49,6 +49,19 @@ describe('governance extension architecture boundaries', () => {
     expect(diagnosticsSource).not.toMatch(/\.\.\/nx-adapter\//);
   });
 
+  it('keeps pure extension config parsing free of Nx, filesystem, and host imports', () => {
+    const configSource = readGovernanceSource('extensions/config.ts');
+
+    expect(configSource).not.toMatch(/@nx\/devkit/);
+    expect(configSource).not.toMatch(/node:fs/);
+    expect(configSource).not.toMatch(/node:path/);
+    expect(configSource).not.toContain('workspaceRoot');
+    expect(configSource).not.toMatch(/\.\.\/nx-host\//);
+    expect(configSource).not.toMatch(/\.\.\/plugin\//);
+    expect(configSource).not.toMatch(/\.\.\/executors\//);
+    expect(configSource).not.toMatch(/\.\.\/generators\//);
+  });
+
   it('keeps extension runtime registration free of Nx imports and nx.json loading', () => {
     const hostSource = readGovernanceSource('extensions/host.ts');
 
