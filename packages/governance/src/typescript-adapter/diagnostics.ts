@@ -199,6 +199,54 @@ export function invalidProjectNameTemplateDiagnostic(
   };
 }
 
+export function sourceFileParseErrorDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.source_file_parse_error',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function unresolvedImportDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.unresolved_import',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function nonLiteralDynamicImportDiagnostic(
+  path: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.non_literal_dynamic_import',
+    message:
+      'Dynamic import specifier must be a string literal for deterministic analysis.',
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function unsupportedImportSyntaxDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.unsupported_import_syntax',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
 function detectedIndicators(
   indicators: TypeScriptWorkspaceIndicators
 ): string[] {
