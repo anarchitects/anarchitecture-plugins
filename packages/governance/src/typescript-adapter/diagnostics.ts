@@ -247,6 +247,59 @@ export function unsupportedImportSyntaxDiagnostic(
   };
 }
 
+export function sourceFileOutsideProjectDiagnostic(
+  path: string,
+  filePath: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.source_file_outside_project',
+    message: `Source file "${filePath}" does not belong to a discovered project.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function resolvedImportOutsideProjectDiagnostic(
+  path: string,
+  filePath: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.resolved_import_outside_project',
+    message: `Resolved import file "${filePath}" does not belong to a discovered project.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function unresolvedInternalImportDiagnostic(
+  path: string,
+  sourceFile: string,
+  specifier: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.unresolved_internal_import',
+    message: `Internal import specifier "${specifier}" from "${sourceFile}" could not be mapped to a discovered project.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function ambiguousProjectMatchDiagnostic(
+  path: string,
+  filePath: string,
+  projectIds: readonly string[]
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.ambiguous_project_match',
+    message: `File "${filePath}" matched multiple discovered projects.`,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+    details: {
+      projectIds: [...projectIds],
+    },
+  };
+}
+
 function detectedIndicators(
   indicators: TypeScriptWorkspaceIndicators
 ): string[] {

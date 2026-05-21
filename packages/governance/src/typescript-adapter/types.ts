@@ -1,5 +1,6 @@
 import type {
   GovernanceDiagnostic,
+  GovernanceDependencyInput,
   GovernanceProjectInput,
 } from '../core/index.js';
 
@@ -85,5 +86,10 @@ export interface TypeScriptImportGraph {
   workspaceRoot: string;
   files: TypeScriptSourceFileNode[];
   imports: TypeScriptImportEdge[];
+  diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
+}
+
+export interface TypeScriptProjectDependencyMappingResult {
+  dependencies: GovernanceDependencyInput[];
   diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
 }
