@@ -117,7 +117,6 @@ describe('signal-engine', () => {
       makeConformanceSnapshot({
         findings: [
           {
-            id: 'finding-a',
             category: 'boundary',
             severity: 'error',
             projectId: 'project-a',
@@ -125,7 +124,6 @@ describe('signal-engine', () => {
             message: 'Boundary rule violated',
           },
           {
-            id: 'finding-b',
             category: 'compliance',
             severity: 'warning',
             projectId: 'project-a',
@@ -172,7 +170,6 @@ describe('signal-engine', () => {
       makeConformanceSnapshot({
         findings: [
           {
-            id: 'finding-1',
             category: 'dependency',
             severity: 'warning',
             projectId: 'project-a',
@@ -180,7 +177,6 @@ describe('signal-engine', () => {
             message: 'Dependency warning',
           },
           {
-            id: 'finding-2',
             category: 'dependency',
             severity: 'warning',
             projectId: 'project-a',
@@ -213,7 +209,6 @@ describe('signal-engine', () => {
       conformanceSnapshot: makeConformanceSnapshot({
         findings: [
           {
-            id: 'dup-1',
             category: 'boundary',
             severity: 'info',
             projectId: 'b',
@@ -221,7 +216,6 @@ describe('signal-engine', () => {
             message: 'same issue',
           },
           {
-            id: 'dup-2',
             category: 'boundary',
             severity: 'info',
             projectId: 'b',
@@ -229,7 +223,6 @@ describe('signal-engine', () => {
             message: 'same issue',
           },
           {
-            id: 'warn-1',
             category: 'boundary',
             severity: 'warning',
             projectId: 'z',
@@ -237,7 +230,6 @@ describe('signal-engine', () => {
             message: 'warn issue',
           },
           {
-            id: 'error-1',
             category: 'boundary',
             severity: 'error',
             projectId: 'a',
@@ -245,7 +237,6 @@ describe('signal-engine', () => {
             message: 'error issue',
           },
           {
-            id: 'info-1',
             category: 'boundary',
             severity: 'info',
             projectId: 'a',
