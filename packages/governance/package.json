@@ -52,6 +52,10 @@
             {
               "input": "./packages/governance/src",
               "glob": "**/!(*.ts)",
+              "ignore": [
+                "**/fixtures/**",
+                "**/__fixtures__/**"
+              ],
               "output": "."
             }
           ]
