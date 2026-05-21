@@ -21,6 +21,8 @@ For the MVP command and exit-code contract, see
 [`standalone-cli-command-surface.md`](./standalone-cli-command-surface.md).
 For the manual workspace input schema, see
 [`generic-workspace-schema.md`](./generic-workspace-schema.md).
+For the standalone vs Nx profile compatibility contract, see
+[`standalone-profile-compatibility.md`](./standalone-profile-compatibility.md).
 For the broader implementation context, see
 [`governance-implementation-epic-alignment.md`](./governance-implementation-epic-alignment.md#220--standalone-governance-cli-mvp).
 
@@ -73,6 +75,7 @@ The standalone CLI MVP requires two explicit files:
 
 There is no workspace discovery in the MVP. The CLI does not scan source code,
 inspect package-manager workspaces, or load an Nx project graph.
+The CLI also does not accept Nx Governance runtime profile override files.
 
 ## Minimal Workspace Examples
 
@@ -139,6 +142,20 @@ into the canonical Governance Core workspace model.
 Profiles are JSON governance configuration inputs. The standalone CLI loads a
 profile from the explicit path passed through `--profile` and normalizes it
 into the existing Governance Core profile contract.
+
+Supported by the standalone CLI:
+
+- standalone full-profile JSON documents with an explicit `name`
+
+Not supported by the standalone CLI:
+
+- existing Nx Governance runtime profile override files such as
+  `tools/governance/profiles/frontend-layered.json`
+
+Those Nx runtime profile files remain part of the Nx integration contract and
+are rejected intentionally by the standalone CLI. See
+[`standalone-profile-compatibility.md`](./standalone-profile-compatibility.md)
+for the exact contract.
 
 Example:
 
@@ -321,6 +338,14 @@ The profile loader fails deterministically when the file:
 - is missing required profile fields
 - contains invalid field types or unsupported enum values
 
+If you see errors such as:
+
+- `Profile name is required.`
+- `Unknown field "projectOverrides" is not allowed.`
+
+you are likely passing an Nx Governance runtime profile override file to the
+standalone CLI. Use a standalone full-profile JSON document instead.
+
 ### Unsupported CLI options
 
 The standalone CLI MVP currently supports only:
@@ -338,6 +363,7 @@ This document describes the current standalone CLI MVP. It does not include:
 - automatic source-code scanning
 - package-manager workspace discovery
 - Nx graph loading in the standalone CLI
+- Nx runtime profile override compatibility
 - Angular, React, or NestJS enrichment
 - Maven, Gradle, PHP, .NET, or Python adapters
 - AI integrations
