@@ -121,6 +121,19 @@ function resolveImportSpecifier({
         };
   }
 
+  const resolvedBaseUrl = resolveBaseUrlSpecifier(
+    workspaceRoot,
+    specifier,
+    tsconfig
+  );
+  if (resolvedBaseUrl) {
+    return {
+      resolvedFile: resolvedBaseUrl,
+      external: false,
+      diagnostics: [],
+    };
+  }
+
   return {
     external: true,
     diagnostics: [],
@@ -191,6 +204,21 @@ function resolveAliasSpecifier(
   }
 
   return { matched: false };
+}
+
+function resolveBaseUrlSpecifier(
+  workspaceRoot: string,
+  specifier: string,
+  tsconfig?: TsConfigResolutionModel
+): string | undefined {
+  if (!tsconfig?.baseUrl) {
+    return undefined;
+  }
+
+  return resolveFilePath(
+    workspaceRoot,
+    path.resolve(workspaceRoot, tsconfig.baseUrl, specifier)
+  );
 }
 
 function matchAlias(alias: string, specifier: string): string | undefined {
