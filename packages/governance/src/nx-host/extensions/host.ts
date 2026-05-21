@@ -10,11 +10,9 @@ import {
   type GovernanceExtensionLoadRequest,
   registerGovernanceExtensionsWithDiagnostics,
 } from '../../extensions/host.js';
+import type { GovernanceExtensionConfig } from '../../extensions/config.js';
 
-import {
-  loadGovernanceExtensionConfig,
-  type GovernanceExtensionConfig,
-} from './config.js';
+import { loadGovernanceExtensionConfig } from './config.js';
 
 interface NxJsonPluginConfig {
   plugin?: string;
