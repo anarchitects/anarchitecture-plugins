@@ -2,5 +2,8 @@ export * from './detect-typescript-workspace.js';
 export * from './diagnostics.js';
 export * from './normalize-workspace-patterns.js';
 export * from './parse-package-manager-workspace.js';
+export * from './parse-tsconfig.js';
 export * from './resolve-workspace-packages.js';
+export * from './resolve-tsconfig-extends.js';
+export * from './normalize-path-aliases.js';
 export * from './types.js';

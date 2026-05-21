@@ -35,3 +35,11 @@ export interface WorkspacePackageResolution {
   packageRoots: string[];
   diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
 }
+
+export interface TsConfigResolutionModel {
+  workspaceRoot: string;
+  configFiles: string[];
+  baseUrl?: string;
+  pathAliases: Record<string, string[]>;
+  diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
+}
