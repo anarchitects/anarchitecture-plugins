@@ -76,6 +76,57 @@ export function noWorkspacePackagesFoundDiagnostic(
   };
 }
 
+export function invalidTsConfigDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_tsconfig',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function invalidTsConfigExtendsDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_tsconfig_extends',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function circularTsConfigExtendsDiagnostic(
+  path: string,
+  chain: readonly string[]
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.circular_tsconfig_extends',
+    message: 'Circular tsconfig extends chain detected.',
+    source: DIAGNOSTIC_SOURCE,
+    path,
+    details: {
+      chain: [...chain],
+    },
+  };
+}
+
+export function invalidPathAliasDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_path_alias',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
 function detectedIndicators(
   indicators: TypeScriptWorkspaceIndicators
 ): string[] {
