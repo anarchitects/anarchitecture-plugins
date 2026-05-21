@@ -77,7 +77,7 @@ describe('governance extension config loader', () => {
         },
       })
     ).toThrow(
-      'Invalid governance extension config: nx.json governance.extensions must be an array.'
+      'Invalid governance extension config: governance.extensions must be an array.'
     );
   });
 });
