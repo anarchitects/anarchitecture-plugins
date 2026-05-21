@@ -4,13 +4,16 @@ import path from 'node:path';
 
 import type { GovernanceExtensionHostContext } from '../../extensions/contracts.js';
 import {
-  type GovernanceExtensionModuleLoader,
-  type GovernanceExtensionRegistrationResult,
   type GovernanceExtensionRegistry,
-  type GovernanceExtensionLoadRequest,
-  registerGovernanceExtensionsWithDiagnostics,
-} from '../../extensions/host.js';
+  type GovernanceExtensionRegistrationResult,
+  registerLoadedGovernanceExtensionsWithDiagnostics,
+} from '../../extensions/runtime.js';
 import type { GovernanceExtensionConfig } from '../../extensions/config.js';
+import {
+  type GovernanceExtensionLoadRequest,
+  type GovernanceExtensionModuleLoader,
+  loadGovernanceExtensionsWithDiagnostics,
+} from './loader.js';
 
 import { loadGovernanceExtensionConfig } from './config.js';
 
@@ -65,10 +68,18 @@ export async function registerNxGovernanceExtensionsWithDiagnostics(
     );
   }
 
-  return registerGovernanceExtensionsWithDiagnostics(context, {
+  const discoveryResult = await loadGovernanceExtensionsWithDiagnostics({
     loadRequests,
     moduleLoader: options.moduleLoader,
   });
+
+  return registerLoadedGovernanceExtensionsWithDiagnostics(
+    context,
+    discoveryResult.extensions,
+    {
+      diagnostics: discoveryResult.diagnostics,
+    }
+  );
 }
 
 export async function discoverNxGovernanceExtensionLoadRequests(

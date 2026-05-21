@@ -62,13 +62,18 @@ describe('governance extension architecture boundaries', () => {
     expect(configSource).not.toMatch(/\.\.\/generators\//);
   });
 
-  it('keeps extension runtime registration free of Nx imports and nx.json loading', () => {
-    const hostSource = readGovernanceSource('extensions/host.ts');
+  it('keeps extension runtime registration free of Nx imports, filesystem access, and module loading', () => {
+    const runtimeSource = readGovernanceSource('extensions/runtime.ts');
 
-    expect(hostSource).not.toMatch(/@nx\/devkit/);
-    expect(hostSource).not.toContain('readFileSync(');
-    expect(hostSource).not.toContain('workspaceRoot as defaultWorkspaceRoot');
-    expect(hostSource).not.toMatch(/\.\.\/nx-adapter\//);
+    expect(runtimeSource).not.toMatch(/@nx\/devkit/);
+    expect(runtimeSource).not.toMatch(/node:fs/);
+    expect(runtimeSource).not.toMatch(/node:path/);
+    expect(runtimeSource).not.toContain('readFileSync(');
+    expect(runtimeSource).not.toContain('import(specifier)');
+    expect(runtimeSource).not.toMatch(/\.\.\/nx-host\//);
+    expect(runtimeSource).not.toMatch(/\.\.\/plugin\//);
+    expect(runtimeSource).not.toMatch(/\.\.\/executors\//);
+    expect(runtimeSource).not.toMatch(/\.\.\/generators\//);
   });
 
   it('produces capability:nx from the adapter layer only', () => {
@@ -111,6 +116,9 @@ describe('governance extension architecture boundaries', () => {
     const nxHostExtensionConfigSource = readGovernanceSource(
       'nx-host/extensions/config.ts'
     );
+    const nxHostExtensionLoaderSource = readGovernanceSource(
+      'nx-host/extensions/loader.ts'
+    );
     const nxHostExtensionHostSource = readGovernanceSource(
       'nx-host/extensions/host.ts'
     );
@@ -119,5 +127,6 @@ describe('governance extension architecture boundaries', () => {
     expect(nxHostExtensionHostSource).toMatch(/@nx\/devkit/);
     expect(nxHostExtensionConfigSource).toContain('nx.json');
     expect(nxHostExtensionHostSource).toContain('nx.json');
+    expect(nxHostExtensionLoaderSource).toContain('import(specifier)');
   });
 });
