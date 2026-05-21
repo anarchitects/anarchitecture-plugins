@@ -25,3 +25,13 @@ export interface TypeScriptWorkspaceDetectionResult {
   indicators: TypeScriptWorkspaceIndicators;
   diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
 }
+
+export type TypeScriptWorkspacePackageManager = 'pnpm' | 'npm' | 'yarn';
+
+export interface WorkspacePackageResolution {
+  packageManager?: TypeScriptWorkspacePackageManager;
+  workspaceRoot: string;
+  patterns: string[];
+  packageRoots: string[];
+  diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
+}

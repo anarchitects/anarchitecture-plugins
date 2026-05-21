@@ -39,6 +39,43 @@ export function noWorkspaceIndicatorsDiagnostic(): TypeScriptWorkspaceDetectionD
   };
 }
 
+export function invalidWorkspaceConfigDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.invalid_workspace_config',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function unsupportedWorkspaceFormatDiagnostic(
+  path: string,
+  message: string
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.unsupported_workspace_format',
+    message,
+    source: DIAGNOSTIC_SOURCE,
+    path,
+  };
+}
+
+export function noWorkspacePackagesFoundDiagnostic(
+  patterns: readonly string[]
+): TypeScriptWorkspaceDetectionDiagnostic {
+  return {
+    code: 'governance.typescript_adapter.no_workspace_packages_found',
+    message: 'Workspace patterns did not resolve to any package roots.',
+    source: DIAGNOSTIC_SOURCE,
+    details: {
+      patterns: [...patterns],
+    },
+  };
+}
+
 function detectedIndicators(
   indicators: TypeScriptWorkspaceIndicators
 ): string[] {
