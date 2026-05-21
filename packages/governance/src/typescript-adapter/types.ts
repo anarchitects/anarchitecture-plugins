@@ -62,3 +62,28 @@ export interface TypeScriptProjectDiscoveryResult {
   projects: GovernanceProjectInput[];
   diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
 }
+
+export interface TypeScriptSourceFileNode {
+  filePath: string;
+  projectName?: string;
+}
+
+export type TypeScriptImportKind =
+  | 'static-import'
+  | 're-export'
+  | 'dynamic-import';
+
+export interface TypeScriptImportEdge {
+  sourceFile: string;
+  specifier: string;
+  kind: TypeScriptImportKind;
+  resolvedFile?: string;
+  external: boolean;
+}
+
+export interface TypeScriptImportGraph {
+  workspaceRoot: string;
+  files: TypeScriptSourceFileNode[];
+  imports: TypeScriptImportEdge[];
+  diagnostics: TypeScriptWorkspaceDetectionDiagnostic[];
+}
