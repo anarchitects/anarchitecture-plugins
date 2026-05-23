@@ -4,12 +4,12 @@ import type {
   GovernancePolicyExceptionScope,
   GovernanceConformanceExceptionScope,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import {
   buildGovernanceExceptionScopeKey,
   isConformanceExceptionScope,
   isPolicyExceptionScope,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type { ConformanceFinding } from '../conformance-adapter/conformance-adapter.js';
 import { evaluateExceptionLifecycle } from './evaluate-exception-lifecycle.js';
 

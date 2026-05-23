@@ -10,6 +10,8 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 
 `@anarchitects/nx-governance` introduces a **governance profile** — a single JSON file that declares architectural intent — and evaluates the entire workspace against it on every run. The result is a graded health score with per-metric breakdown, actionable violation details, and prioritized recommendations.
 
+This package is the Nx host package in the Governance split. It owns Nx-facing runtime behavior such as plugin inference, executors, generators, extension discovery, and output orchestration. It consumes published `@anarchitects/governance-core` contracts and deterministic Core APIs, and it consumes `@anarchitects/governance-adapter-nx` for Nx workspace extraction and mapping.
+
 ---
 
 ## Table of contents
@@ -225,17 +227,23 @@ For the current configuration and executor surface, see
 
 ## Extension model
 
-`@anarchitects/nx-governance` is the shared governance core for Nx workspaces.
+`@anarchitects/nx-governance` is the Nx host for Governance inside this repository.
 
-The core package owns:
+It owns:
 
-- governance orchestration
-- shared governance models
-- scoring and health aggregation
-- CLI and JSON reporting
-- extension discovery and lifecycle
+- Nx plugin runtime and `createNodesV2` inference
+- Nx executors and generators
+- host extension discovery/config/module loading
+- workspace output writing and compatibility behavior for existing Nx users
 
-Ecosystem-specific intelligence can be added through separate Nx plugins. Those plugins contribute enrichers, rule packs, signals, and metrics into the core pipeline instead of creating their own governance model.
+It does not own:
+
+- canonical Governance Core contracts
+- platform-independent deterministic Governance logic
+- generic TypeScript adapter behavior
+- Nx workspace extraction internals now exposed by `@anarchitects/governance-adapter-nx`
+
+Ecosystem-specific intelligence can be added through separate Nx plugins. Those plugins contribute enrichers, rule packs, signals, and metrics into the host pipeline instead of creating their own governance model.
 
 The first reference engine is Angular, positioned as a separate plugin:
 

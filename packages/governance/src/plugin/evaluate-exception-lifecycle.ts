@@ -1,4 +1,4 @@
-import type { GovernanceException } from '../core/index.js';
+import type { GovernanceException } from '@anarchitects/governance-core';
 
 export type GovernanceExceptionStatus = 'active' | 'stale' | 'expired';
 

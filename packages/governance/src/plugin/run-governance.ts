@@ -1,24 +1,45 @@
 import { logger, workspaceRoot } from '@nx/devkit';
-
 import {
-  buildGovernanceAssessment,
-  buildAiManagementInsightsHandoffPayload,
+  AiAnalysisRequest,
+  AiAnalysisResult,
+  applyGovernanceEnrichers,
   buildAiDriftHandoffPayload,
+  buildAiManagementInsightsHandoffPayload,
   buildAiPrImpactHandoffPayload,
   buildAiRootCauseHandoffPayload,
   buildAiScorecardHandoffPayload,
+  buildDriftSummary,
+  buildGovernanceAssessment,
   buildTopIssues,
+  collectGovernanceMeasurements,
+  collectGovernanceSignals,
+  compareSnapshots,
+  DefaultGovernanceCapabilityRegistry,
+  DriftSignal,
+  DriftSummary,
+  evaluateGovernanceRulePacks,
   GovernanceAssessment,
+  GovernanceDependency,
   GovernanceProfile,
-} from '../core/index.js';
+  GovernanceWorkspace,
+  MetricSnapshot,
+  SnapshotComparison,
+  SnapshotDeliveryImpactSummary,
+  SnapshotViolation,
+  summarizeDrift,
+} from '@anarchitects/governance-core';
+import {
+  createNxCapability,
+  loadNxGovernanceWorkspaceContext,
+  WorkspaceGraphSnapshot,
+} from '@anarchitects/governance-adapter-nx';
+
 import {
   buildRecommendations,
   calculateHealthScore,
 } from '../health-engine/calculate-health.js';
 import { buildInventory } from '../inventory/build-inventory.js';
 import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
-import { loadNxGovernanceWorkspaceContext } from '../nx-adapter/read-workspace.js';
-import { createNxCapability } from '../nx-adapter/capability.js';
 import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
   loadProfileOverrides,
@@ -28,27 +49,12 @@ import { GOVERNANCE_DEFAULT_PROFILE_NAME } from '../profile/runtime-profile.js';
 import { renderCliReport } from '../reporting/render-cli.js';
 import { renderJsonReport } from '../reporting/render-json.js';
 import { renderManagementReport } from '../reporting/render-management-report.js';
-import { MetricSnapshot } from '../core/models.js';
 import {
   listMetricSnapshots,
   readMetricSnapshot,
   saveMetricSnapshot,
 } from '../snapshot-store/index.js';
-import {
-  buildDriftSummary,
-  compareSnapshots,
-  summarizeDrift,
-} from '../drift-analysis/index.js';
 import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
-import {
-  DriftSummary,
-  DriftSignal,
-  GovernanceDependency,
-  GovernanceWorkspace,
-  SnapshotDeliveryImpactSummary,
-  SnapshotComparison,
-  SnapshotViolation,
-} from '../core/index.js';
 import path from 'node:path';
 import {
   buildManagementInsightsAiRequest,
@@ -72,7 +78,6 @@ import {
   summarizePrImpact,
   summarizeRootCause,
 } from '../ai-analysis/index.js';
-import { AiAnalysisRequest, AiAnalysisResult } from '../core/models.js';
 import { execFileSync } from 'node:child_process';
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
 import { resolveConformanceInput } from './resolve-conformance-input.js';
@@ -82,14 +87,6 @@ import {
   buildPolicySignals,
   mergeGovernanceSignals,
 } from '../signal-engine/index.js';
-import { WorkspaceGraphSnapshot } from '../nx-adapter/graph-adapter.js';
-import {
-  applyGovernanceEnrichers,
-  collectGovernanceMeasurements,
-  collectGovernanceSignals,
-  evaluateGovernanceRulePacks,
-} from '../extensions/host.js';
-import { DefaultGovernanceCapabilityRegistry } from '../extensions/capabilities.js';
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
 import { applyGovernanceExceptions } from './apply-governance-exceptions.js';

@@ -5,7 +5,7 @@ import {
   WorkspaceGraphSnapshot,
   readWorkspaceGraphSnapshot,
   summarizeWorkspaceGraph,
-} from '../../nx-adapter/graph-adapter.js';
+} from '@anarchitects/governance-adapter-nx';
 import { WorkspaceGraphExecutorOptions } from '../types.js';
 
 export default async function workspaceGraphExecutor(

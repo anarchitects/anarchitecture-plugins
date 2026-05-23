@@ -99,7 +99,10 @@ describe('governance extension architecture boundaries', () => {
     );
 
     expect(runGovernanceSource).toContain(
-      "import { createNxCapability } from '../nx-adapter/capability.js';"
+      "from '@anarchitects/governance-adapter-nx';"
+    );
+    expect(runGovernanceSource).toContain(
+      "from '@anarchitects/governance-core';"
     );
     expect(runGovernanceSource).toContain('createNxCapability({');
     expect(runGovernanceSource).toContain(

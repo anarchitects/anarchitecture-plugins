@@ -26,6 +26,29 @@ const governanceCoreHostForbiddenImports = [
   '../generators/*',
 ];
 
+const governanceHostForbiddenImports = [
+  '@anarchitects/governance-core/*',
+  '@anarchitects/governance-adapter-nx/*',
+  '@anarchitects/governance-cli',
+  '@anarchitects/governance-adapter-typescript',
+  '../core',
+  '../core/*',
+  '../../core',
+  '../../core/*',
+  '../standalone-cli',
+  '../standalone-cli/*',
+  '../../standalone-cli',
+  '../../standalone-cli/*',
+  '../typescript-adapter',
+  '../typescript-adapter/*',
+  '../../typescript-adapter',
+  '../../typescript-adapter/*',
+  '../nx-adapter',
+  '../nx-adapter/*',
+  '../../nx-adapter',
+  '../../nx-adapter/*',
+];
+
 export default [
   ...baseConfig,
   {
@@ -207,6 +230,29 @@ export default [
               ],
               message:
                 'Inventory normalization must not depend on Nx adapter or Nx host modules. See docs/governance/internal-core-boundary.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'src/plugin/**/*.ts',
+      'src/nx-host/**/*.ts',
+      'src/executors/**/*.ts',
+      'src/generators/**/*.ts',
+    ],
+    ignores: governanceCoreCandidateIgnores,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: governanceHostForbiddenImports,
+              message:
+                'Nx host-owned runtime must consume published Governance Core and the adapter package root only; do not import monolithic Core, CLI, TypeScript adapter, or adapter internals.',
             },
           ],
         },

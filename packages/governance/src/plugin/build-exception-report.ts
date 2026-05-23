@@ -3,7 +3,7 @@ import type {
   GovernanceExceptionReport,
   GovernanceExceptionUsage,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type { ConformanceFinding } from '../conformance-adapter/conformance-adapter.js';
 import type {
   GovernanceExceptionApplicationResult,
