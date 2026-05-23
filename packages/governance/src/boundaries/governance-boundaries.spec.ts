@@ -164,6 +164,66 @@ describe('governance boundary enforcement', () => {
       'Portable extension boundary violations detected.'
     );
   });
+
+  it('keeps Nx host-owned runtime wired to published Core and adapter package roots only', () => {
+    const hostOwnedFiles = collectImplementationFiles([
+      'plugin',
+      'nx-host',
+      'executors',
+      'generators',
+    ]);
+
+    const violations = scanBoundaryViolations(hostOwnedFiles, [
+      {
+        kind: 'import',
+        rule: 'Host-owned runtime must not import monolithic local Core implementation paths.',
+        matches: (specifier) =>
+          startsWithRelativeBoundary(specifier, '../core') ||
+          startsWithRelativeBoundary(specifier, '../../core'),
+      },
+      {
+        kind: 'import',
+        rule: 'Host-owned runtime must not import local standalone CLI or TypeScript adapter paths.',
+        matches: (specifier) =>
+          startsWithRelativeBoundary(specifier, '../standalone-cli') ||
+          startsWithRelativeBoundary(specifier, '../../standalone-cli') ||
+          startsWithRelativeBoundary(specifier, '../typescript-adapter') ||
+          startsWithRelativeBoundary(specifier, '../../typescript-adapter'),
+      },
+      {
+        kind: 'import',
+        rule: 'Host-owned runtime must not deep-import or tunnel through local Nx adapter internals.',
+        matches: (specifier) =>
+          specifier.startsWith('@anarchitects/governance-adapter-nx/') ||
+          startsWithRelativeBoundary(specifier, '../nx-adapter') ||
+          startsWithRelativeBoundary(specifier, '../../nx-adapter'),
+      },
+      {
+        kind: 'import',
+        rule: 'Host-owned runtime must not deep-import Governance Core internals.',
+        matches: (specifier) =>
+          specifier.startsWith('@anarchitects/governance-core/'),
+      },
+      {
+        kind: 'import',
+        rule: 'Host-owned runtime must not import Governance CLI or TypeScript adapter packages.',
+        matches: (specifier) =>
+          specifier === '@anarchitects/governance-cli' ||
+          specifier === '@anarchitects/governance-adapter-typescript',
+      },
+      {
+        kind: 'text',
+        rule: 'Host-owned runtime must not reference Community source paths directly.',
+        pattern:
+          /\banarchitecture-community\b|@anarchitecture-community\/source/,
+      },
+    ]);
+
+    expectBoundaryViolationsToBeEmpty(
+      violations,
+      'Host/runtime boundary violations detected.'
+    );
+  });
 });
 
 function collectImplementationFiles(entries: string[]): string[] {

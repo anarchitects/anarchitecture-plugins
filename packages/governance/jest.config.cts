@@ -13,6 +13,9 @@ export default {
   transform: {
     '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(?:@anarchitects/governance-core|@anarchitects/governance-adapter-nx)/)',
+  ],
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: 'test-output/jest/coverage',
 };

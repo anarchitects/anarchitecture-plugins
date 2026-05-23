@@ -1,4 +1,4 @@
-import type { GovernanceAssessment } from '../core/index.js';
+import type { GovernanceAssessment } from '@anarchitects/governance-core';
 import type { GovernanceExtensionDiagnostic } from '../extensions/diagnostics.js';
 import type { GovernanceSignal } from '../signal-engine/index.js';
 import type { GovernanceExceptionApplicationResult } from './apply-governance-exceptions.js';

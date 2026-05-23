@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-jest.mock('../nx-adapter/read-workspace.js', () => {
+jest.mock('@anarchitects/governance-adapter-nx', () => {
   const actual = jest.requireActual(
-    '../nx-adapter/read-workspace.js'
-  ) as typeof import('../nx-adapter/read-workspace.js');
+    '@anarchitects/governance-adapter-nx'
+  ) as typeof import('@anarchitects/governance-adapter-nx');
 
   return {
     ...actual,
@@ -26,9 +26,9 @@ jest.mock('../presets/frontend-layered/profile.js', () => {
 });
 
 import { logger, workspaceRoot } from '@nx/devkit';
+import * as readWorkspaceModule from '@anarchitects/governance-adapter-nx';
 
 import { calculateHealthScore } from '../health-engine/calculate-health.js';
-import * as readWorkspaceModule from '../nx-adapter/read-workspace.js';
 import * as profileModule from '../presets/frontend-layered/profile.js';
 import {
   frontendLayeredProfile,
