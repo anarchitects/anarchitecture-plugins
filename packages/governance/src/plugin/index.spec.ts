@@ -1,5 +1,6 @@
 import type { CreateNodesContextV2, CreateNodesResultV2 } from '@nx/devkit';
 
+import { GOVERNANCE_INFERRED_TARGET_NAMES } from '../compatibility/public-workflows.js';
 import { createNodesV2 } from './index.js';
 
 describe('governance plugin createNodesV2', () => {
@@ -172,10 +173,7 @@ describe('governance plugin createNodesV2', () => {
     );
 
     expect(Object.keys(collectTargets(results))).toEqual([
-      'repo-health',
-      'repo-boundaries',
-      'repo-ownership',
-      'repo-architecture',
+      ...GOVERNANCE_INFERRED_TARGET_NAMES,
     ]);
     expect(collectTargets(results)['repo-health']?.options).toEqual({
       profile: 'custom-team',
