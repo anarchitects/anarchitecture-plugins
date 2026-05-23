@@ -2,7 +2,13 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { resolveProjectTagsAndMetadata } from './read-workspace.js';
+import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-core';
+
+import {
+  createNxWorkspaceAdapterResult,
+  resolveProjectTagsAndMetadata,
+} from './read-workspace.js';
+import type { AdapterWorkspaceSnapshot } from './types.js';
 
 describe('read-workspace adapter compatibility', () => {
   let testRoot: string;
@@ -114,5 +120,64 @@ describe('read-workspace adapter compatibility', () => {
       documentation: false,
       source: 'graph',
     });
+  });
+
+  it('creates a Governance Core-compatible adapter result from a snapshot seam', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'booking-ui',
+          root: 'libs/booking/ui',
+          type: 'library',
+          tags: ['scope:booking', 'layer:ui'],
+          targets: ['build', 'test'],
+          metadata: {
+            documentation: true,
+          },
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {
+        'booking-ui': ['@booking-team'],
+      },
+    };
+
+    const result = createNxWorkspaceAdapterResult(snapshot);
+    const typedResult: GovernanceWorkspaceAdapterResult = result;
+
+    expect(typedResult.projects).toEqual([
+      {
+        id: 'booking-ui',
+        name: 'booking-ui',
+        root: 'libs/booking/ui',
+        type: 'library',
+        tags: ['scope:booking', 'layer:ui'],
+        metadata: {
+          documentation: true,
+        },
+        ownership: {
+          contacts: ['@booking-team'],
+          source: 'codeowners',
+        },
+      },
+    ]);
+    expect(typedResult.capabilities).toEqual([
+      {
+        id: 'capability:nx',
+        data: {
+          workspaceRoot: '/workspace',
+          projects: [
+            {
+              name: 'booking-ui',
+              root: 'libs/booking/ui',
+              type: 'library',
+              tags: ['scope:booking', 'layer:ui'],
+              targets: ['build', 'test'],
+            },
+          ],
+        },
+      },
+    ]);
   });
 });

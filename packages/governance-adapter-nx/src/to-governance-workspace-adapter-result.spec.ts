@@ -1,3 +1,5 @@
+import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-core';
+
 import type { AdapterWorkspaceSnapshot } from './types.js';
 import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
 
@@ -42,7 +44,10 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
       },
     };
 
-    expect(toGovernanceWorkspaceAdapterResult(snapshot)).toEqual({
+    const result: GovernanceWorkspaceAdapterResult =
+      toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result).toEqual({
       workspaceRoot: '/workspace',
       projects: [
         {

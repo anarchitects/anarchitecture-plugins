@@ -9,6 +9,10 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
-  "references": [],
+  "references": [
+    {
+      "path": "../governance-adapter-nx/tsconfig.lib.json"
+    }
+  ],
   "exclude": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }
