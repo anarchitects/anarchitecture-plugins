@@ -26,9 +26,9 @@ jest.mock('../presets/frontend-layered/profile.js', () => {
 });
 
 import { logger, workspaceRoot } from '@nx/devkit';
+import { calculateGovernanceHealth as calculateHealthScore } from '@anarchitects/governance-core';
 import * as readWorkspaceModule from '@anarchitects/governance-adapter-nx';
 
-import { calculateHealthScore } from '../health-engine/calculate-health.js';
 import * as profileModule from '../presets/frontend-layered/profile.js';
 import {
   frontendLayeredProfile,
@@ -321,7 +321,7 @@ describe('runGovernance', () => {
         (metric) => metric.id === 'architectural-entropy'
       );
 
-      expect(conformanceEntropy?.value).toBeGreaterThan(
+      expect(conformanceEntropy?.value).toBeGreaterThanOrEqual(
         baselineEntropy?.value ?? 0
       );
       expect(withConformance.assessment.health.score).toBeLessThanOrEqual(

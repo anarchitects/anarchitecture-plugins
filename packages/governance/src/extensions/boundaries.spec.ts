@@ -104,7 +104,10 @@ describe('governance extension architecture boundaries', () => {
     expect(runGovernanceSource).toContain(
       "from '@anarchitects/governance-core';"
     );
-    expect(runGovernanceSource).toContain('createNxCapability({');
+    expect(runGovernanceSource).toContain(
+      'const adapterCapabilities = adapterResult.capabilities ?? [];'
+    );
+    expect(runGovernanceSource).toContain('capabilities: adapterCapabilities');
     expect(runGovernanceSource).toContain(
       'extensionDiagnostics: extensionRegistration.diagnostics'
     );

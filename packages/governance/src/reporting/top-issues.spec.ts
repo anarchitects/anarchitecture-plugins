@@ -1,4 +1,4 @@
-import type { GovernanceSignal } from '../signal-engine/index.js';
+import type { GovernanceSignal } from '@anarchitects/governance-core';
 
 import { buildTopIssues } from './top-issues.js';
 

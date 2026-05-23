@@ -97,7 +97,7 @@
   },
   "dependencies": {
     "@anarchitects/governance-adapter-nx": "workspace:*",
-    "@anarchitects/governance-core": "0.0.1",
+    "@anarchitects/governance-core": "0.0.2",
     "minimatch": "9.0.5",
     "tslib": "^2.6.2",
     "typescript": "~5.9.2",

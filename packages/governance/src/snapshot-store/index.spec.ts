@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { workspaceRoot } from '@nx/devkit';
 
-import { GovernanceAssessment } from '../core/index.js';
+import { GovernanceAssessment } from '@anarchitects/governance-core';
 import {
   formatTimestampForFilename,
   listMetricSnapshots,

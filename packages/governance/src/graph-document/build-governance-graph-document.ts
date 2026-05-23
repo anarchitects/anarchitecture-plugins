@@ -2,10 +2,10 @@ import type {
   GovernanceAssessment,
   GovernanceDependency,
   GovernanceProject,
+  GovernanceSignal,
+  GovernanceSignalSeverity,
   Violation,
 } from '@anarchitects/governance-core';
-import type { GovernanceSignal } from '../signal-engine/index.js';
-import type { GovernanceSignalSeverity } from '../signal-engine/types.js';
 import {
   GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION,
   type GovernanceGraphDocument,

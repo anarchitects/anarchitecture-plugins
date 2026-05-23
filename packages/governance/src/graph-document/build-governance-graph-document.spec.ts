@@ -1,5 +1,6 @@
 import type {
   GovernanceAssessment,
+  GovernanceSignal,
   GovernanceProject,
   HealthScore,
   Measurement,
@@ -8,8 +9,7 @@ import type {
   MetricBreakdown,
   GovernanceTopIssue,
   Violation,
-} from '../core/index.js';
-import type { GovernanceSignal } from '../signal-engine/index.js';
+} from '@anarchitects/governance-core';
 import {
   GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION,
   buildGovernanceGraphDocument,

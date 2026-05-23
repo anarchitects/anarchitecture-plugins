@@ -1,4 +1,4 @@
-import type { Measurement } from '../core/index.js';
+import type { Measurement } from '@anarchitects/governance-core';
 
 import { buildMetricBreakdown } from './metric-breakdown.js';
 

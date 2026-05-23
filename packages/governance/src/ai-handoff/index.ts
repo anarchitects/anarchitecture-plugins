@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type {
   AiHandoffUseCase,
+  AiAnalysisRequest,
   GovernanceAiHandoffPayload,
 } from '@anarchitects/governance-core';
 
@@ -109,6 +110,44 @@ export function buildPromptTemplate(useCase: AiHandoffUseCase): string {
     '- Do not propose blind refactors without payload evidence.',
     '- Avoid vague advice; recommendations must cite payload evidence.',
     '- Mark heuristics explicitly as heuristics.',
+  ].join('\n');
+}
+
+export function buildManagementInsightsPrompt(input: {
+  request: AiAnalysisRequest;
+}): string {
+  return [
+    '# Governance Management Insights AI Prompt',
+    '',
+    '## Role',
+    'You are a governance management insights assistant.',
+    '',
+    '## Request Context',
+    `- Request kind: ${input.request.kind}`,
+    `- Profile: ${input.request.profile}`,
+    `- Generated at: ${input.request.generatedAt}`,
+    '',
+    '## Task',
+    'Interpret the supplied governance delivery-impact payload for managers and technical leads.',
+    '',
+    '## Grounding Constraints',
+    '- Use only the information provided in the payload JSON.',
+    '- Treat Cost of Change and Time-to-Market values as relative 0..100 risk indicators, not financial estimates.',
+    '- Treat Time-to-Market Risk as coordination and delivery-speed pressure, not a delivery-date forecast.',
+    '- Do not invent business strategy, financial savings, roadmap commitments, or missing organizational context.',
+    '- If evidence is missing, state that clearly instead of assuming.',
+    '- Reference concrete index ids, driver ids, insight ids, measurements, signals, and violations from the payload.',
+    '',
+    '## Output Goals',
+    '- Management Interpretation: concise explanation of the most important delivery frictions and coordination risks.',
+    '- Technical Lead Actions: grounded architecture actions and investment priorities tied to payload evidence.',
+    '- Traceability: cite the concrete indices, drivers, insights, measurements, signals, and violations that support each point.',
+    '',
+    '## Safety and Discipline Constraints',
+    '- Do not claim exact financial cost, ROI, or budget impact.',
+    '- Do not predict delivery dates or lead time from these indices.',
+    '- Do not generalize beyond the supplied governance and delivery-impact evidence.',
+    '- Mark heuristics explicitly as heuristics when evidence is indirect.',
   ].join('\n');
 }
 

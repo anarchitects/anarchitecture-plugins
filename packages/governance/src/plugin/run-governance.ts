@@ -2,45 +2,51 @@ import { logger, workspaceRoot } from '@nx/devkit';
 import {
   AiAnalysisRequest,
   AiAnalysisResult,
-  applyGovernanceEnrichers,
   buildAiDriftHandoffPayload,
   buildAiManagementInsightsHandoffPayload,
   buildAiPrImpactHandoffPayload,
   buildAiRootCauseHandoffPayload,
   buildAiScorecardHandoffPayload,
-  buildDriftSummary,
+  buildArchitectureRecommendationsRequest,
+  buildCognitiveLoadRequest,
   buildGovernanceAssessment,
-  buildTopIssues,
-  collectGovernanceMeasurements,
-  collectGovernanceSignals,
+  buildDeliveryImpactAssessment,
+  buildDriftSummary,
+  buildGovernanceAssessmentArtifacts as buildCoreGovernanceAssessmentArtifacts,
+  buildGovernanceWorkspace,
+  buildManagementInsightsAiRequest,
+  buildOnboardingRequest,
+  buildPrImpactRequest,
+  buildRefactoringSuggestionsRequest,
+  buildRootCauseRequest,
+  buildScorecardRequest,
+  buildSmellClustersRequest,
   compareSnapshots,
   DefaultGovernanceCapabilityRegistry,
+  DeliveryImpactAssessment,
   DriftSignal,
   DriftSummary,
-  evaluateGovernanceRulePacks,
   GovernanceAssessment,
   GovernanceDependency,
   GovernanceProfile,
-  GovernanceWorkspace,
   MetricSnapshot,
+  rankTopViolations,
   SnapshotComparison,
   SnapshotDeliveryImpactSummary,
   SnapshotViolation,
+  summarizeArchitectureRecommendations,
+  summarizeCognitiveLoad,
+  summarizeManagementInsights,
+  summarizeOnboarding,
+  summarizePrImpact,
+  summarizeRefactoringSuggestions,
+  summarizeRootCause,
+  summarizeScorecard,
+  summarizeSmellClusters,
   summarizeDrift,
 } from '@anarchitects/governance-core';
-import {
-  createNxCapability,
-  loadNxGovernanceWorkspaceContext,
-  WorkspaceGraphSnapshot,
-} from '@anarchitects/governance-adapter-nx';
+import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
 
-import {
-  buildRecommendations,
-  calculateHealthScore,
-} from '../health-engine/calculate-health.js';
-import { buildInventory } from '../inventory/build-inventory.js';
-import { calculateMetrics } from '../metric-engine/calculate-metrics.js';
-import { evaluatePolicies } from '../policy-engine/evaluate-policies.js';
 import {
   loadProfileOverrides,
   resolveBuiltInGovernanceProfile,
@@ -56,45 +62,16 @@ import {
 } from '../snapshot-store/index.js';
 import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import path from 'node:path';
-import {
-  buildManagementInsightsAiRequest,
-  buildManagementInsightsPrompt,
-  buildArchitectureRecommendationsRequest,
-  buildCognitiveLoadRequest,
-  buildOnboardingRequest,
-  buildScorecardRequest,
-  summarizeManagementInsights,
-  buildRefactoringSuggestionsRequest,
-  buildSmellClustersRequest,
-  buildRootCauseRequest,
-  buildPrImpactRequest,
-  rankTopViolations,
-  summarizeArchitectureRecommendations,
-  summarizeCognitiveLoad,
-  summarizeOnboarding,
-  summarizeScorecard,
-  summarizeRefactoringSuggestions,
-  summarizeSmellClusters,
-  summarizePrImpact,
-  summarizeRootCause,
-} from '../ai-analysis/index.js';
 import { execFileSync } from 'node:child_process';
-import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
-import { resolveConformanceInput } from './resolve-conformance-input.js';
 import {
-  buildConformanceSignals,
-  buildGraphSignals,
-  buildPolicySignals,
-  mergeGovernanceSignals,
-} from '../signal-engine/index.js';
+  buildManagementInsightsPrompt,
+  exportAiHandoffArtifacts,
+} from '../ai-handoff/index.js';
+import { resolveConformanceInput } from './resolve-conformance-input.js';
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
-import { applyGovernanceExceptions } from './apply-governance-exceptions.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
-import { buildExceptionReport } from './build-exception-report.js';
-import { buildDeliveryImpactAssessment } from '../delivery-impact/build-delivery-impact-assessment.js';
-import type { DeliveryImpactAssessment } from '../delivery-impact/models.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1652,15 +1629,13 @@ async function buildAssessmentArtifacts(
     },
   };
 
-  const { snapshot, adapterResult } = await loadNxGovernanceWorkspaceContext();
-  const inventory = buildInventory(adapterResult, overrides);
+  const { adapterResult } = await loadNxGovernanceWorkspaceContext();
+  const inventory = buildGovernanceWorkspace(adapterResult, overrides);
   loadGovernanceExtensionConfig({ workspaceRoot });
-  const capabilities = new DefaultGovernanceCapabilityRegistry([
-    createNxCapability({
-      workspaceRoot,
-      snapshot,
-    }),
-  ]);
+  const adapterCapabilities = adapterResult.capabilities ?? [];
+  const capabilities = new DefaultGovernanceCapabilityRegistry(
+    adapterCapabilities
+  );
   const extensionContext = {
     workspaceRoot,
     profileName,
@@ -1672,126 +1647,38 @@ async function buildAssessmentArtifacts(
     await registerGovernanceExtensionsWithDiagnostics({
       ...extensionContext,
     });
-  const extensionRegistry = extensionRegistration.registry;
-  const enrichedInventory = await applyGovernanceEnrichers(extensionRegistry, {
-    workspace: inventory,
-    profile: effectiveProfile,
-    context: extensionContext,
-  });
-  const coreViolations = evaluatePolicies(enrichedInventory, effectiveProfile);
   const resolvedConformanceInput = resolveConformanceInput(
     options.conformanceJson
   );
   const conformanceSnapshot = loadConformanceSnapshot(resolvedConformanceInput);
-  const exceptionApplication = applyGovernanceExceptions({
-    exceptions: overrides.exceptions,
-    policyViolations: coreViolations,
-    conformanceFindings: conformanceSnapshot?.findings ?? [],
-    asOf: artifactsOptions.asOf ?? new Date(),
-  });
-  const extensionViolations = await evaluateGovernanceRulePacks(
-    extensionRegistry,
-    {
-      workspace: enrichedInventory,
-      profile: effectiveProfile,
-      context: extensionContext,
-    }
-  );
-  const allViolations = [
-    ...exceptionApplication.activePolicyViolations,
-    ...extensionViolations,
-  ];
-  const graphSignals = buildGraphSignals(
-    toWorkspaceGraphSnapshot(enrichedInventory)
-  );
-  const policySignals = buildPolicySignals(
-    exceptionApplication.activePolicyViolations
-  );
-  const conformanceSignals = buildConformanceSignalsForActiveFindings(
-    conformanceSnapshot,
-    exceptionApplication.activeConformanceFindings
-  );
-  const coreSignals = mergeGovernanceSignals(
-    graphSignals,
-    conformanceSignals,
-    policySignals
-  );
-  const extensionSignals = await collectGovernanceSignals(extensionRegistry, {
-    workspace: enrichedInventory,
+  const artifacts = await buildCoreGovernanceAssessmentArtifacts({
     profile: effectiveProfile,
-    violations: allViolations,
-    signals: coreSignals,
-    context: extensionContext,
+    workspace: inventory,
+    warnings: overrides.runtimeWarnings,
+    exceptions: overrides.exceptions,
+    conformanceFindings: conformanceSnapshot?.findings ?? [],
+    capabilities: adapterCapabilities,
+    diagnostics: adapterResult.diagnostics ?? [],
+    extensionRegistry: extensionRegistration.registry,
+    extensionContext,
+    extensionDiagnostics: extensionRegistration.diagnostics,
+    asOf: artifactsOptions.asOf,
   });
-  const allSignals = mergeGovernanceSignals(coreSignals, extensionSignals);
-  const coreMeasurements = calculateMetrics({
-    workspace: enrichedInventory,
-    signals: allSignals,
-  });
-  const extensionMeasurements = await collectGovernanceMeasurements(
-    extensionRegistry,
-    {
-      workspace: enrichedInventory,
-      profile: effectiveProfile,
-      signals: allSignals,
-      measurements: coreMeasurements,
-      violations: allViolations,
-      context: extensionContext,
-    }
-  );
-  const allMeasurements = [...coreMeasurements, ...extensionMeasurements];
-  const allTopIssues = buildTopIssues(allSignals);
-  const health = calculateHealthScore(
-    allMeasurements,
-    effectiveProfile.metrics,
-    effectiveProfile.health.statusThresholds,
-    {
-      topIssues: allTopIssues,
-    }
-  );
-  const recommendations = buildRecommendations(allViolations, allMeasurements);
 
   return {
+    ...artifacts,
     assessment: buildGovernanceAssessment({
-      workspace: enrichedInventory,
+      workspace: artifacts.workspace,
       profile: profileName,
       warnings: overrides.runtimeWarnings,
-      exceptions: buildExceptionReport(exceptionApplication),
-      violations: allViolations,
-      signals: allSignals,
-      measurements: allMeasurements,
-      health,
-      recommendations,
+      exceptions: artifacts.assessment.exceptions,
+      violations: artifacts.violations,
+      signals: artifacts.signals,
+      measurements: artifacts.measurements,
+      health: artifacts.assessment.health,
+      recommendations: artifacts.recommendations,
       reportType: options.reportType,
     }),
-    signals: allSignals,
-    exceptionApplication,
-    extensionDiagnostics: extensionRegistration.diagnostics,
-  };
-}
-
-function toWorkspaceGraphSnapshot(
-  workspace: GovernanceWorkspace
-): WorkspaceGraphSnapshot {
-  const extractedAt = new Date().toISOString();
-
-  return {
-    source: 'nx-graph',
-    extractedAt,
-    projects: workspace.projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      root: project.root,
-      type: project.type === 'tool' ? 'unknown' : project.type,
-      tags: project.tags,
-      domain: project.domain,
-      layer: project.layer,
-    })),
-    dependencies: workspace.dependencies.map((dependency) => ({
-      sourceProjectId: dependency.source,
-      targetProjectId: dependency.target,
-      type: dependency.type,
-    })),
   };
 }
 
@@ -1829,20 +1716,6 @@ function loadConformanceSnapshot(
 
     throw error;
   }
-}
-
-function buildConformanceSignalsForActiveFindings(
-  snapshot: ConformanceSnapshot | undefined,
-  findings: ConformanceSnapshot['findings']
-) {
-  if (!snapshot) {
-    return [];
-  }
-
-  return buildConformanceSignals({
-    ...snapshot,
-    findings,
-  });
 }
 
 function resolveSnapshotPath(

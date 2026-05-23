@@ -4,11 +4,23 @@ import path from 'node:path';
 const governanceRoot = path.resolve(__dirname, '..', '..');
 const sourceRoot = path.join(governanceRoot, 'src');
 const quarantinedDirectories = [
+  'health-engine',
+  'metric-engine',
+  'policy-engine',
+  'signal-engine',
+  'inventory',
+  'ai-analysis',
+  'delivery-impact',
   'core',
   'standalone-cli',
   'typescript-adapter',
   'manual-workspace',
 ] as const;
+const quarantinedFiles = new Set([
+  path.join(sourceRoot, 'plugin', 'apply-governance-exceptions.ts'),
+  path.join(sourceRoot, 'plugin', 'build-exception-report.ts'),
+  path.join(sourceRoot, 'plugin', 'evaluate-exception-lifecycle.ts'),
+]);
 
 describe('nx-governance ownership audit guards', () => {
   it('keeps the host package free of standalone CLI publishing and Community adapter dependencies', () => {
@@ -28,7 +40,7 @@ describe('nx-governance ownership audit guards', () => {
     );
   });
 
-  it('keeps leaked Core, CLI, manual-workspace, and TypeScript adapter trees out of the build surface, and CLI/manual-workspace/TypeScript adapter trees out of the test program surface', () => {
+  it('keeps leaked Core-like, CLI, manual-workspace, and TypeScript adapter trees out of the build and test program surfaces', () => {
     const tsconfigLib = JSON.parse(
       readFileSync(path.join(governanceRoot, 'tsconfig.lib.json'), 'utf8')
     ) as {
@@ -42,28 +54,68 @@ describe('nx-governance ownership audit guards', () => {
 
     expect(tsconfigLib.exclude).toEqual(
       expect.arrayContaining([
+        'src/health-engine/**',
+        'src/metric-engine/**',
+        'src/policy-engine/**',
+        'src/signal-engine/**',
+        'src/inventory/**',
+        'src/ai-analysis/**',
+        'src/delivery-impact/**',
         'src/core/**',
         'src/standalone-cli/**',
         'src/typescript-adapter/**',
         'src/manual-workspace/**',
+        'src/plugin/apply-governance-exceptions.ts',
+        'src/plugin/build-exception-report.ts',
+        'src/plugin/evaluate-exception-lifecycle.ts',
       ])
     );
     expect(tsconfigSpec.exclude).toEqual(
       expect.arrayContaining([
+        'src/health-engine/**',
+        'src/metric-engine/**',
+        'src/policy-engine/**',
+        'src/signal-engine/**',
+        'src/inventory/**',
+        'src/ai-analysis/**',
+        'src/delivery-impact/**',
+        'src/core/**',
         'src/standalone-cli/**',
         'src/typescript-adapter/**',
         'src/manual-workspace/**',
+        'src/plugin/apply-governance-exceptions.ts',
+        'src/plugin/apply-governance-exceptions.spec.ts',
+        'src/plugin/build-exception-report.ts',
+        'src/plugin/build-exception-report.spec.ts',
+        'src/plugin/evaluate-exception-lifecycle.ts',
+        'src/plugin/evaluate-exception-lifecycle.spec.ts',
       ])
     );
   });
 
-  it('keeps active nx-governance implementation files free of local Core, CLI, and TypeScript adapter imports', () => {
+  it('keeps active nx-governance implementation files free of local Core-like, CLI, and TypeScript adapter imports', () => {
     const activeImplementationFiles = collectImplementationFiles(sourceRoot);
     const disallowedPatterns = [
+      /(?:^|\/)\.\.\/health-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/health-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/metric-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/metric-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/policy-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/policy-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/signal-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/signal-engine(?:\/|$)/,
+      /(?:^|\/)\.\.\/inventory(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/inventory(?:\/|$)/,
+      /(?:^|\/)\.\.\/ai-analysis(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/ai-analysis(?:\/|$)/,
+      /(?:^|\/)\.\.\/delivery-impact(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/delivery-impact(?:\/|$)/,
       /(?:^|\/)\.\.\/core(?:\/|\.js|$)/,
       /(?:^|\/)\.\.\/\.\.\/core(?:\/|\.js|$)/,
       /(?:^|\/)\.\.\/standalone-cli(?:\/|$)/,
       /(?:^|\/)\.\.\/\.\.\/standalone-cli(?:\/|$)/,
+      /(?:^|\/)\.\.\/manual-workspace(?:\/|$)/,
+      /(?:^|\/)\.\.\/\.\.\/manual-workspace(?:\/|$)/,
       /(?:^|\/)\.\.\/typescript-adapter(?:\/|$)/,
       /(?:^|\/)\.\.\/\.\.\/typescript-adapter(?:\/|$)/,
       /^@anarchitects\/governance-cli(?:\/|$)/,
@@ -107,6 +159,7 @@ function collectImplementationFiles(directory: string): string[] {
     }
 
     if (
+      !quarantinedFiles.has(resolved) &&
       entry.isFile() &&
       resolved.endsWith('.ts') &&
       !resolved.endsWith('.spec.ts') &&
