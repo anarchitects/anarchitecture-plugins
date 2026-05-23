@@ -87,9 +87,7 @@ describe('governance extension architecture boundaries', () => {
         readGovernanceSource(filePath).includes('capability:nx')
       );
 
-    expect(runtimeFilesWithNxCapabilityLiteral).toEqual([
-      'nx-adapter/capability.ts',
-    ]);
+    expect(runtimeFilesWithNxCapabilityLiteral).toEqual([]);
   });
 
   it('keeps run-governance wiring pointed at adapter-owned Nx capability creation and assessment diagnostics flow', () => {
