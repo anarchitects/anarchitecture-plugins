@@ -1,5 +1,8 @@
 import { logger } from '@nx/devkit';
-import { GovernanceProfile, GovernanceWorkspace } from '../../core/index.js';
+import {
+  GovernanceProfile,
+  GovernanceWorkspace,
+} from '@anarchitects/governance-core';
 import { GovernanceSignal } from '../../signal-engine/index.js';
 import { GovernanceExtensionHostContext } from '../../extensions/contracts.js';
 import { DefaultGovernanceCapabilityRegistry } from '../../extensions/capabilities.js';

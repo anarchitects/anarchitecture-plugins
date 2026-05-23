@@ -29,7 +29,6 @@ describe('governance public workflow compatibility inventory', () => {
     readFileSync(path.join(governanceRoot, 'package.json'), 'utf8')
   ) as {
     main: string;
-    bin: { agov: string };
     executors: string;
     generators: string;
     nx: { plugins: Array<{ plugin: string }> };
@@ -49,9 +48,6 @@ describe('governance public workflow compatibility inventory', () => {
     expect(packageManifest.main).toBe(
       GOVERNANCE_PACKAGE_PUBLIC_ENTRYPOINTS.main
     );
-    expect(packageManifest.bin.agov).toBe(
-      GOVERNANCE_PACKAGE_PUBLIC_ENTRYPOINTS.bin
-    );
     expect(packageManifest.executors).toBe(
       GOVERNANCE_PACKAGE_PUBLIC_ENTRYPOINTS.executors
     );
@@ -61,6 +57,7 @@ describe('governance public workflow compatibility inventory', () => {
     expect(packageManifest.nx.plugins).toEqual([
       { plugin: GOVERNANCE_PACKAGE_PUBLIC_ENTRYPOINTS.plugin },
     ]);
+    expect(packageManifest).not.toHaveProperty('bin');
   });
 
   it('keeps public executor ids, implementation paths, and schemas stable', () => {

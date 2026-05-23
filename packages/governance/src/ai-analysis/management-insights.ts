@@ -8,7 +8,7 @@ import type {
   SignalBreakdown,
   SnapshotComparison,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type {
   DeliveryImpactAssessment,
   DeliveryImpactIndex,

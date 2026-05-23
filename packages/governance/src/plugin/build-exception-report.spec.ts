@@ -1,4 +1,4 @@
-import type { GovernanceException } from '../core/index.js';
+import type { GovernanceException } from '@anarchitects/governance-core';
 import { buildExceptionReport } from './build-exception-report.js';
 import type { GovernanceExceptionApplicationResult } from './apply-governance-exceptions.js';
 

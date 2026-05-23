@@ -4,12 +4,9 @@ import type {
   SnapshotComparison,
   SnapshotMetricDelta,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import { mapGovernanceDrivers } from './map-governance-drivers.js';
-import type {
-  DeliveryImpactIndex,
-  GovernanceInsightDriver,
-} from './models.js';
+import type { DeliveryImpactIndex, GovernanceInsightDriver } from './models.js';
 
 export interface CalculateTimeToMarketRiskIndexInput {
   assessment: GovernanceAssessment;
@@ -193,8 +190,9 @@ function calculateConformanceRisk(assessment: GovernanceAssessment): number {
   const topIssueCount = assessment.topIssues
     .filter(isConformanceIssue)
     .reduce((sum, issue) => sum + issue.count, 0);
-  const violationCount = assessment.violations.filter(isConformanceViolation)
-    .length;
+  const violationCount = assessment.violations.filter(
+    isConformanceViolation
+  ).length;
 
   return clampScore(topIssueCount * 20 + violationCount * 10);
 }
@@ -334,10 +332,7 @@ function deriveMeasurementDrivers(
     });
   }
 
-  if (
-    assessment.health.status !== 'good' ||
-    assessment.health.score < 100
-  ) {
+  if (assessment.health.status !== 'good' || assessment.health.score < 100) {
     derived.push({
       id: 'delivery-predictability-pressure',
       label: 'Delivery predictability pressure',
@@ -410,7 +405,10 @@ function deriveTimeToMarketTrend(
     });
   }
 
-  const conformanceDelta = getTopIssueDeltaTotal(comparison, isConformanceIssue);
+  const conformanceDelta = getTopIssueDeltaTotal(
+    comparison,
+    isConformanceIssue
+  );
   if (conformanceDelta !== undefined) {
     weightedSignals.push({
       delta: -conformanceDelta * 10,

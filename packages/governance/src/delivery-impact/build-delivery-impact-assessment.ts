@@ -4,7 +4,7 @@ import type {
   Measurement,
   SnapshotComparison,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import { calculateCostOfChangeIndex } from './cost-of-change-index.js';
 import type { FeatureImpactAssessment } from './feature-impact-assessment.js';
 import { mapGovernanceDrivers } from './map-governance-drivers.js';

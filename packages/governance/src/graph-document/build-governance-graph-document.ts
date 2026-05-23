@@ -3,7 +3,7 @@ import type {
   GovernanceDependency,
   GovernanceProject,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type { GovernanceSignal } from '../signal-engine/index.js';
 import type { GovernanceSignalSeverity } from '../signal-engine/types.js';
 import {

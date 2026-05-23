@@ -1,4 +1,4 @@
-import type { GovernanceException } from '../core/index.js';
+import type { GovernanceException } from '@anarchitects/governance-core';
 import { evaluateExceptionLifecycle } from './evaluate-exception-lifecycle.js';
 
 describe('evaluateExceptionLifecycle', () => {

@@ -11,7 +11,7 @@ import {
   Measurement,
   ProfileOverrides,
   normalizeGovernanceException,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import {
   GovernanceProfileFile,
   GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,

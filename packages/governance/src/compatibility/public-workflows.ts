@@ -102,5 +102,4 @@ export const GOVERNANCE_PACKAGE_PUBLIC_ENTRYPOINTS = {
   plugin: 'dist/plugin/index.js',
   executors: 'dist/index.json',
   generators: 'dist/index.json',
-  bin: 'dist/standalone-cli/bin/agov.js',
 } as const;

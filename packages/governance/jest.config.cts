@@ -16,6 +16,12 @@ export default {
   transformIgnorePatterns: [
     'node_modules/(?!(?:@anarchitects/governance-core|@anarchitects/governance-adapter-nx)/)',
   ],
+  testPathIgnorePatterns: [
+    '/src/core/',
+    '/src/standalone-cli/',
+    '/src/typescript-adapter/',
+    '/src/manual-workspace/',
+  ],
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: 'test-output/jest/coverage',
 };

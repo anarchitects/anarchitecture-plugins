@@ -19,7 +19,7 @@ import {
   createLayeredWorkspaceStarterProfile,
   layeredWorkspaceProfile,
 } from './layered-workspace/profile.js';
-import type { GovernanceProfile } from '../core/index.js';
+import type { GovernanceProfile } from '@anarchitects/governance-core';
 
 export { BACKEND_LAYERED_3TIER_PRESET_NAME, BACKEND_LAYERED_DDD_PRESET_NAME };
 

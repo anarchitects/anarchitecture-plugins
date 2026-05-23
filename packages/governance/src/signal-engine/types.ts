@@ -6,4 +6,4 @@ export type {
   GovernanceSignalSource,
   GovernanceSignalType,
   KnownGovernanceSignalType,
-} from '../core/signals.js';
+} from '@anarchitects/governance-core';

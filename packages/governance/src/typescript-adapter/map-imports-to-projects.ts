@@ -4,7 +4,7 @@ import path from 'node:path';
 import type {
   GovernanceDependencyInput,
   GovernanceProjectInput,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 import {
   ambiguousProjectMatchDiagnostic,

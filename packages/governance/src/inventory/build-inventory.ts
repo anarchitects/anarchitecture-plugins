@@ -7,7 +7,7 @@ import {
   GovernanceWorkspace,
   Ownership,
   ProfileOverrides,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export function buildInventory(
   adapterResult: GovernanceWorkspaceAdapterResult,

@@ -6,8 +6,8 @@ import type {
   GovernanceProfile,
   GovernanceRuleConfig,
   NormalizedGovernanceProfile,
-} from '../core/index.js';
-import { normalizeGovernanceProfile } from '../core/index.js';
+} from '@anarchitects/governance-core';
+import { normalizeGovernanceProfile } from '@anarchitects/governance-core';
 
 const PROFILE_TOP_LEVEL_FIELDS = new Set([
   'name',

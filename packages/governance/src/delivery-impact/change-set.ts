@@ -1,4 +1,4 @@
-import type { GovernanceWorkspace } from '../core/index.js';
+import type { GovernanceWorkspace } from '@anarchitects/governance-core';
 import type { GovernanceInsightDriver } from './models.js';
 import {
   buildFeatureImpactAssessment,

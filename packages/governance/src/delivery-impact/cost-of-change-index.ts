@@ -3,12 +3,9 @@ import type {
   Measurement,
   SnapshotComparison,
   SnapshotMetricDelta,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import { mapGovernanceDrivers } from './map-governance-drivers.js';
-import type {
-  DeliveryImpactIndex,
-  GovernanceInsightDriver,
-} from './models.js';
+import type { DeliveryImpactIndex, GovernanceInsightDriver } from './models.js';
 
 export interface CalculateCostOfChangeIndexInput {
   assessment: GovernanceAssessment;
@@ -117,7 +114,11 @@ export function calculateCostOfChangeIndex(
   let appliedWeightTotal = 0;
 
   for (const component of COST_OF_CHANGE_COMPONENTS) {
-    const risk = calculateComponentRisk(component.key, measurements, comparison);
+    const risk = calculateComponentRisk(
+      component.key,
+      measurements,
+      comparison
+    );
 
     if (risk === undefined) {
       continue;
@@ -229,7 +230,9 @@ function filterCostOfChangeDrivers(
   const allowed = new Set(COST_OF_CHANGE_DRIVER_ORDER);
 
   return [...drivers]
-    .filter((driver) => allowed.has(driver.id as (typeof COST_OF_CHANGE_DRIVER_ORDER)[number]))
+    .filter((driver) =>
+      allowed.has(driver.id as (typeof COST_OF_CHANGE_DRIVER_ORDER)[number])
+    )
     .sort(
       (left, right) =>
         COST_OF_CHANGE_DRIVER_ORDER.indexOf(

@@ -1,4 +1,7 @@
-import { GovernanceWorkspace, Measurement } from '../core/index.js';
+import {
+  GovernanceWorkspace,
+  Measurement,
+} from '@anarchitects/governance-core';
 import { GovernanceSignal } from '../signal-engine/index.js';
 import {
   aggregateSignals,

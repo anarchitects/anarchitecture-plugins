@@ -1,1 +1,1 @@
-export { buildMetricBreakdown } from '../core/assessment.js';
+export { buildMetricBreakdown } from '@anarchitects/governance-core';

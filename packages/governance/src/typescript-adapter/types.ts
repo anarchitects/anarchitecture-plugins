@@ -2,7 +2,7 @@ import type {
   GovernanceDiagnostic,
   GovernanceDependencyInput,
   GovernanceProjectInput,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export type TypeScriptWorkspaceDetectionStatus =
   | 'supported'

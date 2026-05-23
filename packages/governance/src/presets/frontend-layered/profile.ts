@@ -3,7 +3,7 @@ import {
   GOVERNANCE_LEGACY_PROFILE_NAME,
 } from '../../profile/runtime-profile.js';
 import type { GovernanceProfileFile } from '../../profile/runtime-profile.js';
-import type { GovernanceProfile } from '../../core/index.js';
+import type { GovernanceProfile } from '@anarchitects/governance-core';
 import type { ResolvedProfileOverrides } from '../../profile/load-profile-overrides.js';
 import {
   createBuiltInProfile,

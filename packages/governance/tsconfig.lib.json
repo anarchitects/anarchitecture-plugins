@@ -14,5 +14,13 @@
       "path": "../governance-adapter-nx/tsconfig.lib.json"
     }
   ],
-  "exclude": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": [
+    "jest.config.cts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/core/**",
+    "src/standalone-cli/**",
+    "src/typescript-adapter/**",
+    "src/manual-workspace/**"
+  ]
 }
