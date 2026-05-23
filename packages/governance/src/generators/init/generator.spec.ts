@@ -3,6 +3,12 @@ import { join } from 'node:path';
 
 import { logger, readJson, Tree, updateJson } from '@nx/devkit';
 
+import {
+  GOVERNANCE_AI_WORKFLOW_TARGET_NAMES,
+  GOVERNANCE_FULL_ONLY_TARGET_NAMES,
+  GOVERNANCE_FULL_TARGET_NAMES,
+  GOVERNANCE_MINIMAL_TARGET_NAMES,
+} from '../../compatibility/public-workflows.js';
 import { createBackendLayered3TierStarterProfile } from '../../presets/backend-layered/profile.js';
 import { createBackendLayeredDddStarterProfile } from '../../presets/backend-layered/profile.js';
 import { createFrontendLayeredStarterProfile } from '../../presets/frontend-layered/profile.js';
@@ -12,43 +18,6 @@ let createTreeWithEmptyWorkspace:
   | typeof import('nx/src/devkit-testing-exports')['createTreeWithEmptyWorkspace']
   | undefined;
 
-const MINIMAL_TARGET_NAMES = ['repo-health', 'governance-graph'] as const;
-const FULL_ONLY_TARGET_NAMES = [
-  'repo-boundaries',
-  'repo-ownership',
-  'repo-architecture',
-  'repo-snapshot',
-  'repo-drift',
-  'repo-management-insights',
-  'repo-ai-management-insights',
-  'workspace-graph',
-  'workspace-conformance',
-  'repo-ai-root-cause',
-  'repo-ai-drift',
-  'repo-ai-pr-impact',
-  'repo-ai-cognitive-load',
-  'repo-ai-recommendations',
-  'repo-ai-smell-clusters',
-  'repo-ai-refactoring-suggestions',
-  'repo-ai-scorecard',
-  'repo-ai-onboarding',
-] as const;
-const FULL_TARGET_NAMES = [
-  ...MINIMAL_TARGET_NAMES,
-  ...FULL_ONLY_TARGET_NAMES,
-] as const;
-const AI_TARGET_NAMES = [
-  'repo-ai-management-insights',
-  'repo-ai-root-cause',
-  'repo-ai-drift',
-  'repo-ai-pr-impact',
-  'repo-ai-cognitive-load',
-  'repo-ai-recommendations',
-  'repo-ai-smell-clusters',
-  'repo-ai-refactoring-suggestions',
-  'repo-ai-scorecard',
-  'repo-ai-onboarding',
-] as const;
 const SUPPORT_TARGET_NAMES = [
   'repo-snapshot',
   'repo-drift',
@@ -82,7 +51,7 @@ describe('governance initGenerator', () => {
     const targets = readTargets(tree);
 
     expect(Object.keys(targets).sort()).toEqual(
-      [...MINIMAL_TARGET_NAMES].sort()
+      [...GOVERNANCE_MINIMAL_TARGET_NAMES].sort()
     );
     expect(targets['repo-health']).toEqual({
       executor: '@anarchitects/nx-governance:repo-health',
@@ -106,11 +75,11 @@ describe('governance initGenerator', () => {
       },
     });
 
-    for (const targetName of FULL_ONLY_TARGET_NAMES) {
+    for (const targetName of GOVERNANCE_FULL_ONLY_TARGET_NAMES) {
       expect(targets[targetName]).toBeUndefined();
     }
 
-    for (const targetName of AI_TARGET_NAMES) {
+    for (const targetName of GOVERNANCE_AI_WORKFLOW_TARGET_NAMES) {
       expect(targets[targetName]).toBeUndefined();
     }
 
@@ -207,7 +176,7 @@ describe('governance initGenerator', () => {
     });
 
     expect(Object.keys(readTargets(tree)).sort()).toEqual(
-      [...MINIMAL_TARGET_NAMES].sort()
+      [...GOVERNANCE_MINIMAL_TARGET_NAMES].sort()
     );
   });
 
@@ -220,7 +189,9 @@ describe('governance initGenerator', () => {
 
     const targets = readTargets(tree);
 
-    expect(Object.keys(targets).sort()).toEqual([...FULL_TARGET_NAMES].sort());
+    expect(Object.keys(targets).sort()).toEqual(
+      [...GOVERNANCE_FULL_TARGET_NAMES].sort()
+    );
     expect(targets['governance-graph']).toEqual({
       executor: '@anarchitects/nx-governance:governance-graph',
       options: {
