@@ -1,4 +1,4 @@
-import type { GovernanceSignalSeverity } from '../signal-engine/types.js';
+import type { GovernanceSignalSeverity } from '@anarchitects/governance-core';
 
 export const GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION = '1.0';
 

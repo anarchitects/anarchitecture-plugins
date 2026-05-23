@@ -1,4 +1,4 @@
-import { MetricSnapshot } from '../core/index.js';
+import { MetricSnapshot } from '@anarchitects/governance-core';
 
 import {
   buildDriftSummary,

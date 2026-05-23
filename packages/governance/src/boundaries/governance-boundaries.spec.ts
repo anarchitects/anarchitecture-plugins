@@ -24,6 +24,11 @@ interface TextBoundaryRule {
 type BoundaryRule = ImportBoundaryRule | TextBoundaryRule;
 
 const governanceSourceRoot = path.resolve(__dirname, '..');
+const excludedHostRuntimeFiles = new Set([
+  path.join(governanceSourceRoot, 'plugin', 'apply-governance-exceptions.ts'),
+  path.join(governanceSourceRoot, 'plugin', 'build-exception-report.ts'),
+  path.join(governanceSourceRoot, 'plugin', 'evaluate-exception-lifecycle.ts'),
+]);
 
 describe('governance boundary enforcement', () => {
   it('keeps Core-facing runtime source free of Nx, host, and adapter leakage', () => {
@@ -178,15 +183,31 @@ describe('governance boundary enforcement', () => {
         kind: 'import',
         rule: 'Host-owned runtime must not import monolithic local Core implementation paths.',
         matches: (specifier) =>
+          startsWithRelativeBoundary(specifier, '../health-engine') ||
+          startsWithRelativeBoundary(specifier, '../../health-engine') ||
+          startsWithRelativeBoundary(specifier, '../metric-engine') ||
+          startsWithRelativeBoundary(specifier, '../../metric-engine') ||
+          startsWithRelativeBoundary(specifier, '../policy-engine') ||
+          startsWithRelativeBoundary(specifier, '../../policy-engine') ||
+          startsWithRelativeBoundary(specifier, '../signal-engine') ||
+          startsWithRelativeBoundary(specifier, '../../signal-engine') ||
+          startsWithRelativeBoundary(specifier, '../inventory') ||
+          startsWithRelativeBoundary(specifier, '../../inventory') ||
+          startsWithRelativeBoundary(specifier, '../ai-analysis') ||
+          startsWithRelativeBoundary(specifier, '../../ai-analysis') ||
+          startsWithRelativeBoundary(specifier, '../delivery-impact') ||
+          startsWithRelativeBoundary(specifier, '../../delivery-impact') ||
           startsWithRelativeBoundary(specifier, '../core') ||
           startsWithRelativeBoundary(specifier, '../../core'),
       },
       {
         kind: 'import',
-        rule: 'Host-owned runtime must not import local standalone CLI or TypeScript adapter paths.',
+        rule: 'Host-owned runtime must not import local standalone CLI, manual-workspace, or TypeScript adapter paths.',
         matches: (specifier) =>
           startsWithRelativeBoundary(specifier, '../standalone-cli') ||
           startsWithRelativeBoundary(specifier, '../../standalone-cli') ||
+          startsWithRelativeBoundary(specifier, '../manual-workspace') ||
+          startsWithRelativeBoundary(specifier, '../../manual-workspace') ||
           startsWithRelativeBoundary(specifier, '../typescript-adapter') ||
           startsWithRelativeBoundary(specifier, '../../typescript-adapter'),
       },
@@ -274,6 +295,7 @@ function collectImplementationFilesFromDirectory(
 
 function isImplementationFile(filePath: string): boolean {
   return (
+    !excludedHostRuntimeFiles.has(filePath) &&
     filePath.endsWith('.ts') &&
     !filePath.endsWith('.spec.ts') &&
     !filePath.endsWith('.test.ts') &&

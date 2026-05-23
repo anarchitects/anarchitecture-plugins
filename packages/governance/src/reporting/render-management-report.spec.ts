@@ -3,7 +3,7 @@ import type {
   DeliveryImpactIndex,
   GovernanceInsight,
   GovernanceInsightDriver,
-} from '../delivery-impact/index.js';
+} from '@anarchitects/governance-core';
 
 import { renderManagementReport } from './render-management-report.js';
 

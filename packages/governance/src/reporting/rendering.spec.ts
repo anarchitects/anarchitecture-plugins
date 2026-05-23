@@ -1,4 +1,4 @@
-import type { GovernanceAssessment } from '../core/index.js';
+import type { GovernanceAssessment } from '@anarchitects/governance-core';
 
 import { renderCliReport } from './render-cli.js';
 import { renderJsonReport } from './render-json.js';
