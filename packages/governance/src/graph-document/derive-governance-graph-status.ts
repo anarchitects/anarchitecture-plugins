@@ -1,4 +1,4 @@
-import type { Ownership } from '../core/index.js';
+import type { Ownership } from '@anarchitects/governance-core';
 import type {
   GovernanceGraphBadge,
   GovernanceGraphFinding,

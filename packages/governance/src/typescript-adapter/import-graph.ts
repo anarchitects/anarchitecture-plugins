@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { GovernanceProjectInput } from '../core/index.js';
+import type { GovernanceProjectInput } from '@anarchitects/governance-core';
 
 import { unresolvedImportDiagnostic } from './diagnostics.js';
 import { parseImportReferences } from './parse-imports.js';

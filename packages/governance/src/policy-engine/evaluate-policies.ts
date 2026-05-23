@@ -3,7 +3,7 @@ import {
   GovernanceProfile,
   GovernanceWorkspace,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export function evaluatePolicies(
   workspace: GovernanceWorkspace,

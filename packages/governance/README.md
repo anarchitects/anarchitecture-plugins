@@ -12,6 +12,9 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 
 This package is the Nx host package in the Governance split. It owns Nx-facing runtime behavior such as plugin inference, executors, generators, extension discovery, and output orchestration. It consumes published `@anarchitects/governance-core` contracts and deterministic Core APIs, and it consumes `@anarchitects/governance-adapter-nx` for Nx workspace extraction and mapping.
 
+It no longer owns or publishes the standalone `agov` CLI binary. Standalone CLI
+behavior belongs to `@anarchitects/governance-cli`.
+
 ## Entrypoints
 
 Use package-specific entrypoints after the split:

@@ -2,7 +2,7 @@ import {
   DEFAULT_HEALTH_STATUS_THRESHOLDS,
   GovernanceProfile,
   Measurement,
-} from '../../core/index.js';
+} from '@anarchitects/governance-core';
 import type { GovernanceProfileFile } from '../../profile/runtime-profile.js';
 
 export const FRONTEND_LAYERED_PRESET_LAYERS = [

@@ -7,7 +7,7 @@ import type {
   SnapshotMetricFamilyDelta,
   SnapshotTopIssueDelta,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type { GovernanceInsightDriver } from './models.js';
 
 export interface MapGovernanceDriversInput {
@@ -42,7 +42,11 @@ export function mapGovernanceDrivers(
   );
 
   const drivers = [
-    buildCrossDomainCoordinationDriver(assessment, comparison, measurementsById),
+    buildCrossDomainCoordinationDriver(
+      assessment,
+      comparison,
+      measurementsById
+    ),
     buildArchitecturalErosionDriver(assessment, comparison, measurementsById),
     buildOwnershipAmbiguityDriver(assessment, comparison, measurementsById),
     buildChangeImpactRadiusDriver(assessment, comparison, measurementsById),
@@ -68,7 +72,11 @@ function buildCrossDomainCoordinationDriver(
   const topIssues = assessment.topIssues.filter(isCrossDomainTopIssue);
   const violations = assessment.violations.filter(isCrossDomainViolation);
 
-  if (!hasMeasurementPressure(measurement) && topIssues.length === 0 && violations.length === 0) {
+  if (
+    !hasMeasurementPressure(measurement) &&
+    topIssues.length === 0 &&
+    violations.length === 0
+  ) {
     return undefined;
   }
 
@@ -79,16 +87,18 @@ function buildCrossDomainCoordinationDriver(
     fallbackCount: getPrimaryIssueCount(topIssues, violations),
     trend:
       deriveIssueTrend(
-        getTopIssueDeltaTotal(comparison?.topIssueDeltas, isCrossDomainTopIssueDelta)
+        getTopIssueDeltaTotal(
+          comparison?.topIssueDeltas,
+          isCrossDomainTopIssueDelta
+        )
       ) ??
-      deriveMetricFamilyTrend(
-        findMetricFamilyDelta(comparison, 'boundaries')
-      ),
+      deriveMetricFamilyTrend(findMetricFamilyDelta(comparison, 'boundaries')),
     explanation: buildMeasurementExplanation({
       measurement,
       issueCount: getPrimaryIssueCount(topIssues, violations),
       issueLabel: 'cross-domain boundary issue',
-      fallbackLabel: 'Cross-domain boundary pressure is present in current governance findings.',
+      fallbackLabel:
+        'Cross-domain boundary pressure is present in current governance findings.',
     }),
   });
 }
@@ -102,7 +112,11 @@ function buildArchitecturalErosionDriver(
   const topIssues = assessment.topIssues.filter(isLayerBoundaryTopIssue);
   const violations = assessment.violations.filter(isLayerBoundaryViolation);
 
-  if (!hasMeasurementPressure(measurement) && topIssues.length === 0 && violations.length === 0) {
+  if (
+    !hasMeasurementPressure(measurement) &&
+    topIssues.length === 0 &&
+    violations.length === 0
+  ) {
     return undefined;
   }
 
@@ -113,16 +127,18 @@ function buildArchitecturalErosionDriver(
     fallbackCount: getPrimaryIssueCount(topIssues, violations),
     trend:
       deriveIssueTrend(
-        getTopIssueDeltaTotal(comparison?.topIssueDeltas, isLayerBoundaryTopIssueDelta)
+        getTopIssueDeltaTotal(
+          comparison?.topIssueDeltas,
+          isLayerBoundaryTopIssueDelta
+        )
       ) ??
-      deriveMetricFamilyTrend(
-        findMetricFamilyDelta(comparison, 'boundaries')
-      ),
+      deriveMetricFamilyTrend(findMetricFamilyDelta(comparison, 'boundaries')),
     explanation: buildMeasurementExplanation({
       measurement,
       issueCount: getPrimaryIssueCount(topIssues, violations),
       issueLabel: 'layer boundary issue',
-      fallbackLabel: 'Layer boundary pressure is present in current governance findings.',
+      fallbackLabel:
+        'Layer boundary pressure is present in current governance findings.',
     }),
   });
 }
@@ -136,7 +152,11 @@ function buildOwnershipAmbiguityDriver(
   const topIssues = assessment.topIssues.filter(isOwnershipTopIssue);
   const violations = assessment.violations.filter(isOwnershipViolation);
 
-  if (!hasMeasurementPressure(measurement) && topIssues.length === 0 && violations.length === 0) {
+  if (
+    !hasMeasurementPressure(measurement) &&
+    topIssues.length === 0 &&
+    violations.length === 0
+  ) {
     return undefined;
   }
 
@@ -147,16 +167,18 @@ function buildOwnershipAmbiguityDriver(
     fallbackCount: getPrimaryIssueCount(topIssues, violations),
     trend:
       deriveIssueTrend(
-        getTopIssueDeltaTotal(comparison?.topIssueDeltas, isOwnershipTopIssueDelta)
+        getTopIssueDeltaTotal(
+          comparison?.topIssueDeltas,
+          isOwnershipTopIssueDelta
+        )
       ) ??
-      deriveMetricFamilyTrend(
-        findMetricFamilyDelta(comparison, 'ownership')
-      ),
+      deriveMetricFamilyTrend(findMetricFamilyDelta(comparison, 'ownership')),
     explanation: buildMeasurementExplanation({
       measurement,
       issueCount: getPrimaryIssueCount(topIssues, violations),
       issueLabel: 'ownership issue',
-      fallbackLabel: 'Ownership ambiguity is present in current governance findings.',
+      fallbackLabel:
+        'Ownership ambiguity is present in current governance findings.',
     }),
   });
 }
@@ -170,7 +192,11 @@ function buildChangeImpactRadiusDriver(
   const topIssues = assessment.topIssues.filter(isDependencyTopIssue);
   const violations = assessment.violations.filter(isDependencyViolation);
 
-  if (!hasMeasurementPressure(measurement) && topIssues.length === 0 && violations.length === 0) {
+  if (
+    !hasMeasurementPressure(measurement) &&
+    topIssues.length === 0 &&
+    violations.length === 0
+  ) {
     return undefined;
   }
 
@@ -181,7 +207,10 @@ function buildChangeImpactRadiusDriver(
     fallbackCount: getPrimaryIssueCount(topIssues, violations),
     trend:
       deriveIssueTrend(
-        getTopIssueDeltaTotal(comparison?.topIssueDeltas, isDependencyTopIssueDelta)
+        getTopIssueDeltaTotal(
+          comparison?.topIssueDeltas,
+          isDependencyTopIssueDelta
+        )
       ) ??
       deriveMetricFamilyTrend(
         findMetricFamilyDelta(comparison, 'architecture')
@@ -190,7 +219,8 @@ function buildChangeImpactRadiusDriver(
       measurement,
       issueCount: getPrimaryIssueCount(topIssues, violations),
       issueLabel: 'dependency hotspot',
-      fallbackLabel: 'Dependency coupling pressure is present in current governance findings.',
+      fallbackLabel:
+        'Dependency coupling pressure is present in current governance findings.',
     }),
   });
 }
@@ -204,7 +234,11 @@ function buildCostOfChangeDriver(
   const topIssues = assessment.topIssues.filter(isCostOfChangeTopIssue);
   const violations = assessment.violations.filter(isCostOfChangeViolation);
 
-  if (!hasMeasurementPressure(measurement) && topIssues.length === 0 && violations.length === 0) {
+  if (
+    !hasMeasurementPressure(measurement) &&
+    topIssues.length === 0 &&
+    violations.length === 0
+  ) {
     return undefined;
   }
 
@@ -213,12 +247,15 @@ function buildCostOfChangeDriver(
     label: 'Cost-of-change pressure',
     measurement,
     fallbackCount: getPrimaryIssueCount(topIssues, violations),
-    trend: deriveMetricFamilyTrend(findMetricFamilyDelta(comparison, 'architecture')),
+    trend: deriveMetricFamilyTrend(
+      findMetricFamilyDelta(comparison, 'architecture')
+    ),
     explanation: buildMeasurementExplanation({
       measurement,
       issueCount: getPrimaryIssueCount(topIssues, violations),
       issueLabel: 'architectural drift issue',
-      fallbackLabel: 'Architectural entropy pressure is present in current governance findings.',
+      fallbackLabel:
+        'Architectural entropy pressure is present in current governance findings.',
     }),
   });
 }
@@ -240,12 +277,15 @@ function buildOnboardingFrictionDriver(
     label: 'Knowledge transfer / onboarding friction',
     measurement,
     fallbackCount: violations.length,
-    trend: deriveMetricFamilyTrend(findMetricFamilyDelta(comparison, 'documentation')),
+    trend: deriveMetricFamilyTrend(
+      findMetricFamilyDelta(comparison, 'documentation')
+    ),
     explanation: buildMeasurementExplanation({
       measurement,
       issueCount: violations.length,
       issueLabel: 'documentation gap',
-      fallbackLabel: 'Documentation gaps are present in current governance findings.',
+      fallbackLabel:
+        'Documentation gaps are present in current governance findings.',
     }),
   });
 }
@@ -335,7 +375,9 @@ function buildMeasurementExplanation(input: {
   const { measurement, issueCount, issueLabel, fallbackLabel } = input;
 
   if (measurement && issueCount > 0) {
-    return `${measurement.name} score is ${measurement.score} with ${issueCount} ${pluralize(issueLabel, issueCount)}.`;
+    return `${measurement.name} score is ${
+      measurement.score
+    } with ${issueCount} ${pluralize(issueLabel, issueCount)}.`;
   }
 
   if (measurement) {
@@ -343,7 +385,9 @@ function buildMeasurementExplanation(input: {
   }
 
   if (issueCount > 0) {
-    return `${issueCount} ${pluralize(issueLabel, issueCount)} ${issueCount === 1 ? 'is' : 'are'} present in current governance findings.`;
+    return `${issueCount} ${pluralize(issueLabel, issueCount)} ${
+      issueCount === 1 ? 'is' : 'are'
+    } present in current governance findings.`;
   }
 
   return fallbackLabel;
@@ -422,7 +466,9 @@ function findMetricFamilyDelta(
   comparison: SnapshotComparison | undefined,
   family: GovernanceMetricFamily
 ): SnapshotMetricFamilyDelta | undefined {
-  return comparison?.metricFamilyDeltas?.find((delta) => delta.family === family);
+  return comparison?.metricFamilyDeltas?.find(
+    (delta) => delta.family === family
+  );
 }
 
 function getTopIssueDeltaTotal(

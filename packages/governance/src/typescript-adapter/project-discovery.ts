@@ -1,6 +1,6 @@
 import { minimatch } from 'minimatch';
 
-import type { GovernanceProjectInput } from '../core/index.js';
+import type { GovernanceProjectInput } from '@anarchitects/governance-core';
 
 import {
   discoveryPatternNoMatchesDiagnostic,

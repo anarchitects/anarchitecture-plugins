@@ -4,7 +4,7 @@ import path from 'node:path';
 import type {
   AiHandoffUseCase,
   GovernanceAiHandoffPayload,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export interface AiHandoffArtifacts {
   payloadAbsolutePath: string;

@@ -1,1 +1,1 @@
-export { buildTopIssues } from '../core/assessment.js';
+export { buildTopIssues } from '@anarchitects/governance-core';

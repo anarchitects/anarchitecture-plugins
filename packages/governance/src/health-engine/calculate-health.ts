@@ -9,7 +9,7 @@ import {
   Recommendation,
   GovernanceTopIssue,
   Violation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export type MetricWeights = Partial<Record<Measurement['id'], number>>;
 export interface HealthExplainabilityInput {

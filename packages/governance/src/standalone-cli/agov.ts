@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Violation } from '../core/index.js';
+import type { Violation } from '@anarchitects/governance-core';
 import {
   GenericWorkspaceLoadError,
   GenericWorkspaceValidationError,

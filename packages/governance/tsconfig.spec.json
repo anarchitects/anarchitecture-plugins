@@ -6,9 +6,15 @@
   },
   "include": [
     "jest.config.cts",
+    "src/core/**/*.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "src/standalone-cli/**",
+    "src/typescript-adapter/**",
+    "src/manual-workspace/**"
   ],
   "references": [
     {

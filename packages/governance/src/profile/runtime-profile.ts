@@ -1,6 +1,9 @@
 import { dirname, join, posix } from 'node:path';
 
-import type { GovernanceProfile, ProfileOverrides } from '../core/index.js';
+import type {
+  GovernanceProfile,
+  ProfileOverrides,
+} from '@anarchitects/governance-core';
 
 // Profiles are user-owned runtime governance configuration files. Presets may
 // seed these files during init, but executors always resolve runtime behavior

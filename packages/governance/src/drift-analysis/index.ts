@@ -2,4 +2,4 @@ export {
   buildDriftSummary,
   compareSnapshots,
   summarizeDrift,
-} from '../core/drift.js';
+} from '@anarchitects/governance-core';

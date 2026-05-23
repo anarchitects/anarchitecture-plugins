@@ -3,8 +3,8 @@ import type {
   GovernanceExceptionReport,
   GovernanceProfile,
   GovernanceWorkspace,
-} from '../core/index.js';
-import { buildGovernanceAssessment } from '../core/index.js';
+} from '@anarchitects/governance-core';
+import { buildGovernanceAssessment } from '@anarchitects/governance-core';
 import {
   calculateHealthScore,
   buildRecommendations,

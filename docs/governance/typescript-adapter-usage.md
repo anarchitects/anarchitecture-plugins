@@ -40,8 +40,8 @@ Responsibilities are split as follows:
 The TypeScript Adapter modules are implemented as deterministic library
 building blocks.
 
-The standalone CLI on this branch still exposes the manual generic workspace
-path:
+The standalone CLI package remains the intended host for the manual generic
+workspace path:
 
 ```bash
 agov check --workspace <workspace.yaml|workspace.json> --profile <profile.json>

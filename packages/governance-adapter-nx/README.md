@@ -3,6 +3,7 @@
 `@anarchitects/governance-adapter-nx` is the Plugins-owned Nx adapter boundary for the Governance ecosystem. It remains in `anarchitects/anarchitecture-plugins` because it owns Nx-specific workspace graph loading, metadata extraction, workspace normalization, Nx capability production, and mapping into published Governance Core contracts.
 
 This package depends on the published `@anarchitects/governance-core` package. It must not depend on `@anarchitects/nx-governance` host internals, executors, generators, or plugin runtime modules.
+It also must not own standalone CLI behavior or TypeScript adapter behavior.
 
 ## Public API
 

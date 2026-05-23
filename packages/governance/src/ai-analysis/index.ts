@@ -7,7 +7,7 @@ import {
   Recommendation,
   SnapshotComparison,
   SnapshotViolation,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 export function buildRootCauseRequest(params: {
   profile: string;

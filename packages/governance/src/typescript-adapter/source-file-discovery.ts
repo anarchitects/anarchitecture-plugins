@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-import type { GovernanceProjectInput } from '../core/index.js';
+import type { GovernanceProjectInput } from '@anarchitects/governance-core';
 
 import type { TypeScriptSourceFileNode } from './types.js';
 

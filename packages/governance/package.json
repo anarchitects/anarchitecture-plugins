@@ -25,9 +25,6 @@
       "default": "./dist/plugin/index.js"
     }
   },
-  "bin": {
-    "agov": "dist/standalone-cli/bin/agov.js"
-  },
   "license": "Apache-2.0",
   "executors": "dist/index.json",
   "generators": "dist/index.json",

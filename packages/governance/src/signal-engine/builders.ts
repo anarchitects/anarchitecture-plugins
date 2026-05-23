@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { Violation } from '../core/index.js';
+import type { Violation } from '@anarchitects/governance-core';
 import type {
   GovernanceSignal,
   GovernanceSignalCategory,

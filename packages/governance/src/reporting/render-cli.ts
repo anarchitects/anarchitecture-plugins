@@ -1,4 +1,4 @@
-import { GovernanceAssessment } from '../core/index.js';
+import { GovernanceAssessment } from '@anarchitects/governance-core';
 
 const TOP_ISSUES_LIMIT = 10;
 

@@ -41,19 +41,19 @@ canonical `GovernanceWorkspace` contract before evaluation.
 
 ## Installation
 
-The MVP currently ships through the existing package
-`@anarchitects/nx-governance`, which exposes the `agov` binary.
+The standalone `agov` binary is Community-owned and should be consumed from
+`@anarchitects/governance-cli`, not from `@anarchitects/nx-governance`.
 
 ```bash
-npm install --save-dev @anarchitects/nx-governance
+npm install --save-dev @anarchitects/governance-cli
 ```
 
 ```bash
-yarn add --dev @anarchitects/nx-governance
+yarn add --dev @anarchitects/governance-cli
 ```
 
 ```bash
-pnpm add --save-dev @anarchitects/nx-governance
+pnpm add --save-dev @anarchitects/governance-cli
 ```
 
 Run the binary with your package manager, for example:
@@ -62,9 +62,7 @@ Run the binary with your package manager, for example:
 npx agov check --workspace governance.workspace.yaml --profile profile.json
 ```
 
-If the package naming or distribution model changes later, update this document
-to match the published CLI package. For the MVP, use the installed `agov`
-binary from `@anarchitects/nx-governance`.
+`@anarchitects/nx-governance` no longer publishes the `agov` binary.
 
 ## Inputs
 

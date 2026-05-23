@@ -9,7 +9,7 @@ import type {
   GovernanceProjectInput,
   GovernanceWorkspace,
   GovernanceWorkspaceAdapterResult,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import { buildInventory } from '../inventory/build-inventory.js';
 
 import { createManualWorkspaceCapability } from './capability.js';

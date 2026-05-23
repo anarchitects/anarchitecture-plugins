@@ -2,7 +2,7 @@ import type {
   GovernanceProject,
   GovernanceWorkspace,
   Ownership,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 import type { GovernanceInsightDriver } from './models.js';
 
 export interface FeatureImpactAssessment {

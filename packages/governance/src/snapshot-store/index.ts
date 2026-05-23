@@ -9,7 +9,7 @@ import {
   GovernanceAssessment,
   MetricSnapshot,
   SnapshotDeliveryImpactSummary,
-} from '../core/index.js';
+} from '@anarchitects/governance-core';
 
 const DEFAULT_SNAPSHOT_DIR = '.governance-metrics/snapshots';
 

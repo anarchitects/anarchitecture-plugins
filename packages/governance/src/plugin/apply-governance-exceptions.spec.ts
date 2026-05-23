@@ -1,4 +1,7 @@
-import type { GovernanceException, Violation } from '../core/index.js';
+import type {
+  GovernanceException,
+  Violation,
+} from '@anarchitects/governance-core';
 import type {
   ConformanceFinding,
   ConformanceSnapshot,
