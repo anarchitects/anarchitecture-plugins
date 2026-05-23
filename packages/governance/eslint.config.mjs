@@ -27,10 +27,18 @@ const governanceCoreHostForbiddenImports = [
 ];
 
 const governanceHostForbiddenImports = [
+  '@anarchitects/nx-governance',
+  '@anarchitects/nx-governance/*',
   '@anarchitects/governance-core/*',
   '@anarchitects/governance-adapter-nx/*',
   '@anarchitects/governance-cli',
   '@anarchitects/governance-adapter-typescript',
+  '../index',
+  '../index.*',
+  '../../index',
+  '../../index.*',
+  '../../../index',
+  '../../../index.*',
   '../core',
   '../core/*',
   '../../core',

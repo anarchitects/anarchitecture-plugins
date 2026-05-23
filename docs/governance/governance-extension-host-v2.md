@@ -172,7 +172,7 @@ Important constraints:
 ## Minimal Extension Authoring Example
 
 ```ts
-import type { GovernanceExtensionDefinition } from '@anarchitects/nx-governance';
+import type { GovernanceExtensionDefinition } from '@anarchitects/governance-core';
 
 export const governanceExtension: GovernanceExtensionDefinition = {
   id: 'example-extension',

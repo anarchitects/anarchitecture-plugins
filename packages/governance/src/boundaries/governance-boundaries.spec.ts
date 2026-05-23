@@ -212,6 +212,15 @@ describe('governance boundary enforcement', () => {
           specifier === '@anarchitects/governance-adapter-typescript',
       },
       {
+        kind: 'import',
+        rule: 'Host-owned runtime must not import the root compatibility shell.',
+        matches: (specifier) =>
+          specifier === '@anarchitects/nx-governance' ||
+          specifier === '../index.js' ||
+          specifier === '../../index.js' ||
+          specifier === '../../../index.js',
+      },
+      {
         kind: 'text',
         rule: 'Host-owned runtime must not reference Community source paths directly.',
         pattern:

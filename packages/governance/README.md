@@ -12,6 +12,17 @@ Large Nx monorepos accumulate structural debt silently: cross-domain imports sli
 
 This package is the Nx host package in the Governance split. It owns Nx-facing runtime behavior such as plugin inference, executors, generators, extension discovery, and output orchestration. It consumes published `@anarchitects/governance-core` contracts and deterministic Core APIs, and it consumes `@anarchitects/governance-adapter-nx` for Nx workspace extraction and mapping.
 
+## Entrypoints
+
+Use package-specific entrypoints after the split:
+
+- `@anarchitects/nx-governance/host` for intentional host-owned TypeScript exports
+- `@anarchitects/nx-governance/plugin` for the Nx plugin entrypoint
+- `@anarchitects/governance-adapter-nx` for Nx adapter APIs
+- `@anarchitects/governance-core` for canonical Governance contracts and deterministic logic
+
+The package root `@anarchitects/nx-governance` now exists as a compatibility shell for existing consumers. It is not the canonical place for new Core or adapter imports.
+
 Compatibility regression coverage for the split package topology lives in:
 
 - `packages/governance/src/compatibility/public-workflows.spec.ts`

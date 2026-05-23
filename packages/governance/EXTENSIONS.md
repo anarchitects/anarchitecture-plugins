@@ -1,6 +1,6 @@
 # Nx Governance Extensions
 
-This is the practical guide for registering and authoring governance extensions in `@anarchitects/nx-governance`.
+This is the practical guide for registering and authoring governance extensions for the Nx Governance host.
 
 For the architecture-level model and roadmap context, see:
 
@@ -80,7 +80,7 @@ Legacy probing still safely skips missing governance entrypoints on ordinary Nx 
 ## Minimal extension authoring example
 
 ```ts
-import type { GovernanceExtensionDefinition } from '@anarchitects/nx-governance';
+import type { GovernanceExtensionDefinition } from '@anarchitects/governance-core';
 
 export const governanceExtension: GovernanceExtensionDefinition = {
   id: 'example-extension',
@@ -103,7 +103,7 @@ Requirements:
 
 ## Public extension contracts
 
-The package root exports the extension-facing contracts you should build against:
+Use the published `@anarchitects/governance-core` package for extension-facing contracts:
 
 - `GovernanceExtensionDefinition`
 - `GovernanceExtensionHost`
@@ -119,6 +119,8 @@ Extensions should also reuse shared output contracts such as:
 - `GovernanceSignal`
 - `Violation`
 - `Measurement`
+
+The `@anarchitects/nx-governance` package root remains a compatibility shell for existing consumers, but it is no longer the canonical extension authoring surface.
 
 ## Capability usage
 
