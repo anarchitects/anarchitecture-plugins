@@ -36,11 +36,23 @@ export default [
               message:
                 'The Nx adapter package must not depend on Nx host package internals.',
             },
+            {
+              name: '@anarchitects/governance-cli',
+              message:
+                'The Nx adapter package must not depend on the standalone Governance CLI package.',
+            },
+            {
+              name: '@anarchitects/governance-adapter-typescript',
+              message:
+                'The Nx adapter package must not depend on the TypeScript adapter package.',
+            },
           ],
           patterns: [
             {
               group: [
                 '@anarchitects/nx-governance/*',
+                '@anarchitects/governance-cli/*',
+                '@anarchitects/governance-adapter-typescript/*',
                 '@anarchitects/governance-core/*',
                 '**/governance/src/core/**',
                 '**/governance/src/plugin/**',

@@ -39,6 +39,8 @@ This package does not own:
 
 Those remain in `@anarchitects/nx-governance`.
 
+The host package rewiring step is tracked separately in Plugins `#385`.
+
 ## Installation
 
 Consumers should install the host package:

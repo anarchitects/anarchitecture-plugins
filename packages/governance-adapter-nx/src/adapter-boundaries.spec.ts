@@ -26,6 +26,19 @@ describe('governance adapter nx boundary enforcement', () => {
           matchImport(line, /^@anarchitects\/nx-governance(?:\/|$)/),
       },
       {
+        rule: 'Adapter must not import the standalone Governance CLI package.',
+        test: (line) =>
+          matchImport(line, /^@anarchitects\/governance-cli(?:\/|$)/),
+      },
+      {
+        rule: 'Adapter must not import the TypeScript adapter package.',
+        test: (line) =>
+          matchImport(
+            line,
+            /^@anarchitects\/governance-adapter-typescript(?:\/|$)/
+          ),
+      },
+      {
         rule: 'Adapter must import Governance Core from the published package root only.',
         test: (line) => matchImport(line, /^@anarchitects\/governance-core\//),
       },
