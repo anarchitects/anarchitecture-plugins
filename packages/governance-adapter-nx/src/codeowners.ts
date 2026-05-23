@@ -46,13 +46,13 @@ export function ownersForProjectRoot(
 }
 
 function normalizeForCodeowners(input: string): string {
-  return input
-    .replace(/^\//, '')
-    .replace(/\/$/, '')
-    .trim();
+  return input.replace(/^\//, '').replace(/\/$/, '').trim();
 }
 
-function matchesCodeownersPattern(projectRoot: string, pattern: string): boolean {
+function matchesCodeownersPattern(
+  projectRoot: string,
+  pattern: string
+): boolean {
   const normalizedPattern = normalizePattern(pattern);
   const regex = globToRegex(normalizedPattern);
   const projectCandidates = [

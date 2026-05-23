@@ -20,6 +20,9 @@
     },
     {
       "path": "./packages/governance"
+    },
+    {
+      "path": "./packages/governance-adapter-nx"
     }
   ]
 }

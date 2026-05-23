@@ -5,10 +5,30 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
+"@anarchitects/governance-adapter-nx@workspace:*, @anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx":
+  version: 0.0.0-use.local
+  resolution: "@anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx"
+  dependencies:
+    "@anarchitects/governance-core": "npm:0.0.1"
+    "@nx/devkit": "npm:22.7.2"
+    tslib: "npm:^2.3.0"
+  peerDependencies:
+    nx: ">=19 <23"
+  languageName: unknown
+  linkType: soft
+
+"@anarchitects/governance-core@npm:0.0.1":
+  version: 0.0.1
+  resolution: "@anarchitects/governance-core@npm:0.0.1"
+  checksum: 10c0/ec25db3472bc9abe9441a879baadeb520242d81b0dc8b713e7c3e981f0f1aad73e5295e52bbc36bfdde8fd733d201b1d8b6362280c3ef3cc0ae017f32808b0e2
+  languageName: node
+  linkType: hard
+
 "@anarchitects/nx-governance@workspace:packages/governance":
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
   dependencies:
+    "@anarchitects/governance-adapter-nx": "workspace:*"
     minimatch: "npm:9.0.5"
     tslib: "npm:^2.6.2"
     typescript: "npm:~5.9.2"

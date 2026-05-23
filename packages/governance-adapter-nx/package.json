@@ -1,0 +1,79 @@
+{
+  "name": "@anarchitects/governance-adapter-nx",
+  "version": "0.0.1",
+  "description": "Nx-specific Governance adapter that maps Nx workspace state into Governance Core contracts.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/governance-adapter-nx"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@anarchitecture-plugins/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "nx": {
+    "name": "governance-adapter-nx",
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/architecture"
+      }
+    },
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "packages/governance-adapter-nx/dist",
+          "main": "packages/governance-adapter-nx/src/index.ts",
+          "tsConfig": "packages/governance-adapter-nx/tsconfig.lib.json",
+          "rootDir": "packages/governance-adapter-nx/src",
+          "generatePackageJson": false
+        }
+      },
+      "test": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/governance-adapter-nx/jest.config.cts",
+          "passWithNoTests": false
+        }
+      }
+    },
+    "tags": [
+      "npm:public",
+      "type:library",
+      "domain:governance"
+    ]
+  },
+  "dependencies": {
+    "@anarchitects/governance-core": "0.0.1",
+    "@nx/devkit": "22.7.2",
+    "tslib": "^2.3.0"
+  },
+  "peerDependencies": {
+    "nx": ">=19 <23"
+  }
+}
