@@ -50,6 +50,7 @@ import {
   summarizeRootCause,
   summarizeScorecard,
   summarizeSmellClusters,
+  summarizeDriftInterpretation,
   summarizeDrift,
   scopeGovernanceDependencies,
 } from '@anarchitects/governance-core';
@@ -100,8 +101,7 @@ import {
 } from './snapshot-runtime.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
-import { AI_PAYLOAD_LIMITS } from './ai-payload-scope.js';
-import { summarizeDriftInterpretation } from './drift-ai-analysis.js';
+import { AI_PAYLOAD_LIMITS } from './ai-payload-limits.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -592,14 +592,6 @@ export async function runGovernanceAiRootCause(
     },
   });
   const analysis = summarizeRootCause(request);
-  const rootCauseProjectScope = new Set<string>();
-  for (const violation of topViolations) {
-    rootCauseProjectScope.add(violation.source);
-    if (violation.target) {
-      rootCauseProjectScope.add(violation.target);
-    }
-  }
-
   const {
     request: scopedRootCauseRequest,
     payloadScope: rootCausePayloadScope,
@@ -607,7 +599,6 @@ export async function runGovernanceAiRootCause(
     request,
     dependencies: assessment.workspace.dependencies,
     topViolations,
-    projectScope: rootCauseProjectScope,
     dependencyLimit: AI_PAYLOAD_LIMITS.rootCauseDependencies,
     topViolationsLimit: options.topViolations ?? 10,
   });

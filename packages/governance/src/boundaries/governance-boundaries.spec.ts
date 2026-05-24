@@ -305,6 +305,7 @@ describe('governance boundary enforcement', () => {
         './governance-run-renderers.js',
         './snapshot-runtime.js',
         './pr-impact-host-context.js',
+        './ai-payload-limits.js',
       ])
     );
 
