@@ -27,13 +27,10 @@ import {
   DriftSignal,
   DriftSummary,
   GovernanceAssessment,
-  GovernanceDependency,
   GovernanceProfile,
   MetricSnapshot,
   rankTopViolations,
   SnapshotComparison,
-  SnapshotDeliveryImpactSummary,
-  SnapshotViolation,
   summarizeArchitectureRecommendations,
   summarizeCognitiveLoad,
   summarizeManagementInsights,
@@ -62,7 +59,6 @@ import {
 } from '../snapshot-store/index.js';
 import { readConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import {
   buildManagementInsightsPrompt,
   exportAiHandoffArtifacts,
@@ -72,6 +68,35 @@ import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import {
+  renderAiCognitiveLoadCliReport,
+  renderAiDriftCliReport,
+  renderAiOnboardingCliReport,
+  renderAiPrImpactCliReport,
+  renderAiRecommendationsCliReport,
+  renderAiRefactoringSuggestionsCliReport,
+  renderAiRootCauseCliReport,
+  renderAiScorecardCliReport,
+  renderAiSmellClustersCliReport,
+  renderDriftCliReport,
+} from './governance-run-renderers.js';
+import {
+  resolveOptionalSnapshotComparison,
+  resolveSnapshotPath,
+  toSnapshotDeliveryImpactSummary,
+} from './snapshot-runtime.js';
+import {
+  compareViolationsForPriority,
+  AI_PAYLOAD_LIMITS,
+  buildTruncationMetadata,
+  sliceDependenciesForProjectScope,
+  sliceTopItems,
+} from './ai-payload-scope.js';
+import {
+  readChangedFiles,
+  resolveAffectedProjects,
+} from './pr-impact-host-context.js';
+import { summarizeDriftInterpretation } from './drift-ai-analysis.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -271,16 +296,6 @@ export interface GovernanceAiOnboardingRunResult {
   success: boolean;
 }
 
-const AI_PAYLOAD_LIMITS = {
-  rootCauseDependencies: 120,
-  prImpactDependencies: 120,
-  driftSignals: 12,
-  driftDeltas: 12,
-  driftViolations: 20,
-  scorecardViolations: 20,
-  scorecardDeltas: 12,
-};
-
 interface GovernanceAssessmentArtifactsOptions {
   asOf?: Date;
 }
@@ -430,7 +445,7 @@ export async function runGovernanceDrift(
 export async function runGovernanceManagementInsights(
   options: GovernanceManagementInsightsRunOptions = {}
 ): Promise<GovernanceManagementInsightsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     profile: options.profile,
     output: options.output,
     failOnViolation: options.failOnViolation,
@@ -468,7 +483,7 @@ export async function runGovernanceManagementInsights(
 export async function runGovernanceAiManagementInsights(
   options: GovernanceAiManagementInsightsRunOptions = {}
 ): Promise<GovernanceAiManagementInsightsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     profile: options.profile,
     output: options.output,
     failOnViolation: options.failOnViolation,
@@ -534,7 +549,7 @@ export async function runGovernanceAiManagementInsights(
 export async function runGovernanceAiRootCause(
   options: GovernanceAiRootCauseRunOptions = {}
 ): Promise<GovernanceAiRootCauseRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -664,7 +679,7 @@ export async function runGovernanceAiRootCause(
 export async function runGovernanceAiPrImpact(
   options: GovernanceAiPrImpactRunOptions = {}
 ): Promise<GovernanceAiPrImpactRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -939,7 +954,7 @@ export async function runGovernanceAiDrift(
 export async function runGovernanceAiCognitiveLoad(
   options: GovernanceAiCognitiveLoadRunOptions = {}
 ): Promise<GovernanceAiCognitiveLoadRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1059,7 +1074,7 @@ export async function runGovernanceAiCognitiveLoad(
 export async function runGovernanceAiRecommendations(
   options: GovernanceAiRecommendationsRunOptions = {}
 ): Promise<GovernanceAiRecommendationsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1068,7 +1083,10 @@ export async function runGovernanceAiRecommendations(
     assessment.violations.map((violation) => ({
       type: violation.ruleId,
       source: violation.project,
-      target: asString(violation.details?.target),
+      target:
+        typeof violation.details?.target === 'string'
+          ? violation.details.target
+          : undefined,
       severity: violation.severity,
       message: violation.message,
       ruleId: violation.ruleId,
@@ -1128,7 +1146,7 @@ export async function runGovernanceAiRecommendations(
 export async function runGovernanceAiSmellClusters(
   options: GovernanceAiSmellClustersRunOptions = {}
 ): Promise<GovernanceAiSmellClustersRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1137,7 +1155,10 @@ export async function runGovernanceAiSmellClusters(
     assessment.violations.map((violation) => ({
       type: violation.ruleId,
       source: violation.project,
-      target: asString(violation.details?.target),
+      target:
+        typeof violation.details?.target === 'string'
+          ? violation.details.target
+          : undefined,
       severity: violation.severity,
       message: violation.message,
       ruleId: violation.ruleId,
@@ -1211,7 +1232,7 @@ export async function runGovernanceAiSmellClusters(
 export async function runGovernanceAiRefactoringSuggestions(
   options: GovernanceAiRefactoringSuggestionsRunOptions = {}
 ): Promise<GovernanceAiRefactoringSuggestionsRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1220,7 +1241,10 @@ export async function runGovernanceAiRefactoringSuggestions(
     assessment.violations.map((violation) => ({
       type: violation.ruleId,
       source: violation.project,
-      target: asString(violation.details?.target),
+      target:
+        typeof violation.details?.target === 'string'
+          ? violation.details.target
+          : undefined,
       severity: violation.severity,
       message: violation.message,
       ruleId: violation.ruleId,
@@ -1336,7 +1360,7 @@ export async function runGovernanceAiRefactoringSuggestions(
 export async function runGovernanceAiScorecard(
   options: GovernanceAiScorecardRunOptions = {}
 ): Promise<GovernanceAiScorecardRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1476,7 +1500,7 @@ export async function runGovernanceAiScorecard(
 export async function runGovernanceAiOnboarding(
   options: GovernanceAiOnboardingRunOptions = {}
 ): Promise<GovernanceAiOnboardingRunResult> {
-  const assessment = await buildAssessment({
+  const { assessment } = await buildAssessmentArtifacts({
     ...options,
     reportType: 'health',
   });
@@ -1485,7 +1509,10 @@ export async function runGovernanceAiOnboarding(
     assessment.violations.map((violation) => ({
       type: violation.ruleId,
       source: violation.project,
-      target: asString(violation.details?.target),
+      target:
+        typeof violation.details?.target === 'string'
+          ? violation.details.target
+          : undefined,
       severity: violation.severity,
       message: violation.message,
       ruleId: violation.ruleId,
@@ -1575,14 +1602,6 @@ export async function runGovernanceAiOnboarding(
     rendered,
     success,
   };
-}
-
-async function buildAssessment(
-  options: GovernanceRunOptions
-): Promise<GovernanceAssessment> {
-  const { assessment } = await buildAssessmentArtifacts(options);
-
-  return assessment;
 }
 
 export async function buildGovernanceAssessmentArtifacts(
@@ -1718,589 +1737,6 @@ function loadConformanceSnapshot(
   }
 }
 
-function resolveSnapshotPath(
-  explicitPath: string | undefined,
-  fallbackPath: string | undefined
-): string | undefined {
-  if (!explicitPath) {
-    return fallbackPath;
-  }
-
-  return path.isAbsolute(explicitPath)
-    ? explicitPath
-    : path.resolve(workspaceRoot, explicitPath);
-}
-
-async function resolveOptionalSnapshotComparison(options: {
-  snapshotDir?: string;
-  baseline?: string;
-  current?: string;
-}): Promise<SnapshotComparison | undefined> {
-  const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
-  const baselinePath = resolveSnapshotPath(
-    options.baseline,
-    snapshotPaths.at(-2)
-  );
-  const currentPath = resolveSnapshotPath(
-    options.current,
-    snapshotPaths.at(-1)
-  );
-
-  if (!baselinePath || !currentPath) {
-    return undefined;
-  }
-
-  const baseline = await readMetricSnapshot(baselinePath);
-  const current = await readMetricSnapshot(currentPath);
-
-  return compareSnapshots(baseline, current);
-}
-
-function toSnapshotDeliveryImpactSummary(
-  deliveryImpact: DeliveryImpactAssessment
-): SnapshotDeliveryImpactSummary {
-  return {
-    indices: deliveryImpact.indices
-      .map((index) => ({
-        id: index.id,
-        score: index.score,
-        risk: index.risk,
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    topDrivers: deliveryImpact.drivers.slice(0, 5).map((driver) => ({
-      id: driver.id,
-      label: driver.label,
-      value: driver.value,
-      score: driver.score,
-      unit: driver.unit,
-      trend: driver.trend,
-    })),
-  };
-}
-
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error.';
-}
-
-function renderDriftCliReport(
-  comparison: SnapshotComparison,
-  signals: DriftSignal[],
-  summary: DriftSummary
-): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance Drift Analysis');
-  lines.push('');
-  lines.push(`Baseline: ${comparison.baseline.timestamp}`);
-  lines.push(`Current: ${comparison.current.timestamp}`);
-  lines.push(
-    `Violation delta: +${comparison.newViolations.length} / -${comparison.resolvedViolations.length}`
-  );
-  lines.push(`Overall trend: ${formatDriftStatus(summary.overallTrend)}`);
-
-  if (
-    comparison.healthDelta &&
-    (comparison.healthDelta.baselineStatus !==
-      comparison.healthDelta.currentStatus ||
-      comparison.healthDelta.baselineGrade !==
-        comparison.healthDelta.currentGrade)
-  ) {
-    lines.push(
-      `Health transition: ${formatDriftStatus(
-        comparison.healthDelta.baselineStatus
-      )} (${comparison.healthDelta.baselineGrade}) -> ${formatDriftStatus(
-        comparison.healthDelta.currentStatus
-      )} (${comparison.healthDelta.currentGrade})`
-    );
-  }
-
-  if (summary.topWorsening.length > 0) {
-    lines.push('');
-    lines.push('Top Worsening:');
-    for (const signal of summary.topWorsening) {
-      lines.push(
-        `- ${signal.label}: ${formatDriftDelta(signal.delta)} (${
-          signal.baseline
-        } -> ${signal.current})`
-      );
-    }
-  }
-
-  if (summary.topImproving.length > 0) {
-    lines.push('');
-    lines.push('Top Improving:');
-    for (const signal of summary.topImproving) {
-      lines.push(
-        `- ${signal.label}: ${formatDriftDelta(signal.delta)} (${
-          signal.baseline
-        } -> ${signal.current})`
-      );
-    }
-  }
-
-  if (signals.length > 0) {
-    lines.push('');
-    lines.push('Signals:');
-
-    for (const signal of signals) {
-      lines.push(
-        `- ${signal.label}: ${signal.status} (${formatDriftDelta(
-          signal.delta
-        )}, magnitude ${signal.magnitude.toFixed(3)})`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiRootCauseCliReport(
-  analysis: AiAnalysisResult,
-  snapshotPath: string,
-  selectedViolations: number
-): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Root Cause');
-  lines.push('');
-  lines.push(`Snapshot: ${snapshotPath}`);
-  lines.push(`Prioritized violations: ${selectedViolations}`);
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function summarizeDriftInterpretation(
-  request: AiAnalysisRequest,
-  signals: DriftSignal[],
-  summary: DriftSummary
-): AiAnalysisResult {
-  const findings = signals.map((signal) => ({
-    id: `drift-${signal.id}`,
-    title: signal.label,
-    detail: `Status is ${signal.status} with delta ${formatDriftDelta(
-      signal.delta
-    )} and magnitude ${signal.magnitude.toFixed(3)}.`,
-    signals: ['drift-analysis', 'snapshot-comparison'],
-    confidence: 1,
-  }));
-
-  const recommendations: AiAnalysisResult['recommendations'] = [
-    {
-      id: 'drift-review-regressing-signals',
-      title: 'Review Regressing Signals First',
-      priority: summary.worseningCount > 0 ? 'high' : 'low',
-      reason:
-        summary.worseningCount > 0
-          ? `There are ${summary.worseningCount} worsening drift signals. Prioritize investigation of those signals before broader refactoring.`
-          : 'No worsening drift signals were detected in this comparison window.',
-    },
-    {
-      id: 'drift-validate-trend-window',
-      title: 'Validate Trend Window Confidence',
-      priority: 'medium',
-      reason:
-        request.inputs.metadata &&
-        typeof request.inputs.metadata['trendWindowInsufficient'] ===
-          'boolean' &&
-        request.inputs.metadata['trendWindowInsufficient']
-          ? 'Fewer than four snapshots were available. Treat conclusions as provisional and continue collecting trend data.'
-          : 'Trend window is sufficient for directional interpretation. Continue monitoring for persistence across future snapshots.',
-    },
-  ];
-
-  return {
-    kind: 'drift',
-    summary: `Deterministic drift interpretation indicates a ${summary.overallTrend} trend (${summary.worseningCount} worsening, ${summary.improvingCount} improving, ${summary.stableCount} stable).`,
-    findings,
-    recommendations,
-    metadata: {
-      trend: summary.overallTrend,
-      worseningCount: summary.worseningCount,
-      improvingCount: summary.improvingCount,
-      stableCount: summary.stableCount,
-      signalCount: signals.length,
-      topWorsening: summary.topWorsening,
-      topImproving: summary.topImproving,
-      ...request.inputs.metadata,
-    },
-  };
-}
-
-function renderAiDriftCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Drift Interpretation');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function formatDriftStatus(status: string): string {
-  return status[0]?.toUpperCase() + status.slice(1);
-}
-
-function formatDriftDelta(delta: number): string {
-  return `${delta > 0 ? '+' : ''}${delta.toFixed(3)}`;
-}
-
-function renderAiPrImpactCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI PR Impact');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiCognitiveLoadCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Cognitive Load');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Signals:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiRecommendationsCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Recommendations');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiSmellClustersCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Smell Clusters');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiRefactoringSuggestionsCliReport(
-  analysis: AiAnalysisResult
-): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Refactoring Suggestions');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiScorecardCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Scorecard');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function renderAiOnboardingCliReport(analysis: AiAnalysisResult): string {
-  const lines: string[] = [];
-  lines.push('Nx Governance AI Onboarding');
-  lines.push('');
-  lines.push(`Summary: ${analysis.summary}`);
-
-  if (analysis.findings.length > 0) {
-    lines.push('');
-    lines.push('Findings:');
-    for (const finding of analysis.findings) {
-      lines.push(`- ${finding.title}: ${finding.detail}`);
-    }
-  }
-
-  if (analysis.recommendations.length > 0) {
-    lines.push('');
-    lines.push('Recommendations:');
-    for (const recommendation of analysis.recommendations) {
-      lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
-      );
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function readChangedFiles(baseRef: string, headRef: string): string[] {
-  try {
-    const output = execFileSync(
-      'git',
-      ['diff', '--name-only', `${baseRef}...${headRef}`],
-      {
-        cwd: workspaceRoot,
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }
-    )
-      .toString()
-      .trim();
-
-    if (!output) {
-      return [];
-    }
-
-    return output
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-  } catch {
-    return [];
-  }
-}
-
-function resolveAffectedProjects(
-  assessment: GovernanceAssessment,
-  changedFiles: string[]
-): GovernanceAssessment['workspace']['projects'] {
-  if (changedFiles.length === 0) {
-    return [];
-  }
-
-  const changedSet = new Set(changedFiles);
-
-  return assessment.workspace.projects.filter((project) => {
-    const normalizedRoot = project.root.replace(/\\/g, '/').replace(/\/+$/, '');
-
-    for (const filePath of changedSet) {
-      const normalizedPath = filePath.replace(/\\/g, '/');
-      if (
-        normalizedPath === normalizedRoot ||
-        normalizedPath.startsWith(`${normalizedRoot}/`)
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  });
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function sliceDependenciesForProjectScope(
-  dependencies: GovernanceDependency[],
-  projectScope: Set<string>,
-  limit: number
-): { items: GovernanceDependency[]; truncation: TruncationMetadata } {
-  const filtered = dependencies.filter(
-    (dependency) =>
-      projectScope.has(dependency.source) || projectScope.has(dependency.target)
-  );
-
-  const sorted = [...filtered].sort(
-    (a, b) =>
-      a.source.localeCompare(b.source) ||
-      a.target.localeCompare(b.target) ||
-      a.type.localeCompare(b.type)
-  );
-
-  const items = sorted.slice(0, Math.max(0, limit));
-  return {
-    items,
-    truncation: buildTruncationMetadata(sorted.length, items.length, limit),
-  };
-}
-
-interface TruncationMetadata {
-  totalCount: number;
-  selectedCount: number;
-  limit: number;
-  truncated: boolean;
-}
-
-function buildTruncationMetadata(
-  totalCount: number,
-  selectedCount: number,
-  limit: number
-): TruncationMetadata {
-  return {
-    totalCount,
-    selectedCount,
-    limit,
-    truncated: selectedCount < totalCount,
-  };
-}
-
-function sliceTopItems<T>(
-  items: T[],
-  limit: number,
-  compare: (a: T, b: T) => number
-): { items: T[]; truncation: TruncationMetadata } {
-  const sorted = [...items].sort(compare);
-  const selected = sorted.slice(0, Math.max(0, limit));
-
-  return {
-    items: selected,
-    truncation: buildTruncationMetadata(sorted.length, selected.length, limit),
-  };
-}
-
-function compareViolationsForPriority(
-  a: SnapshotViolation,
-  b: SnapshotViolation
-): number {
-  const severityRank = (severity?: SnapshotViolation['severity']): number => {
-    if (severity === 'error') return 3;
-    if (severity === 'warning') return 2;
-    if (severity === 'info') return 1;
-    return 0;
-  };
-
-  return (
-    severityRank(b.severity) - severityRank(a.severity) ||
-    (a.source ?? '').localeCompare(b.source ?? '') ||
-    (a.type ?? '').localeCompare(b.type ?? '') ||
-    (a.target ?? '').localeCompare(b.target ?? '')
-  );
 }

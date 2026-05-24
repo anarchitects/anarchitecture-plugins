@@ -116,6 +116,67 @@ describe('governance extension architecture boundaries', () => {
     );
   });
 
+  it('keeps run-governance focused on orchestration by delegating host helpers to focused modules', () => {
+    const runGovernanceSource = readGovernanceSource(
+      'plugin/run-governance.ts'
+    );
+
+    expect(runGovernanceSource).toContain(
+      "from './governance-run-renderers.js';"
+    );
+    expect(runGovernanceSource).toContain("from './snapshot-runtime.js';");
+    expect(runGovernanceSource).toContain(
+      "from './pr-impact-host-context.js';"
+    );
+    expect(runGovernanceSource).toContain("from './ai-payload-scope.js';");
+    expect(runGovernanceSource).toContain("from './drift-ai-analysis.js';");
+
+    expect(runGovernanceSource).not.toMatch(/const AI_PAYLOAD_LIMITS =/);
+    expect(runGovernanceSource).not.toMatch(
+      /function renderDriftCliReport|function renderAiRootCauseCliReport|function renderAiDriftCliReport|function renderAiPrImpactCliReport|function renderAiCognitiveLoadCliReport|function renderAiRecommendationsCliReport|function renderAiSmellClustersCliReport|function renderAiRefactoringSuggestionsCliReport|function renderAiScorecardCliReport|function renderAiOnboardingCliReport/
+    );
+    expect(runGovernanceSource).not.toMatch(
+      /function resolveSnapshotPath|function resolveOptionalSnapshotComparison|function toSnapshotDeliveryImpactSummary/
+    );
+    expect(runGovernanceSource).not.toMatch(
+      /function readChangedFiles|function resolveAffectedProjects/
+    );
+    expect(runGovernanceSource).not.toMatch(
+      /function summarizeDriftInterpretation|function sliceDependenciesForProjectScope|function buildTruncationMetadata|function sliceTopItems|function compareViolationsForPriority|function asString/
+    );
+  });
+
+  it('keeps run-governance imports constrained to Community package roots and focused host modules', () => {
+    const runGovernanceSource = readGovernanceSource(
+      'plugin/run-governance.ts'
+    );
+    const specifiers = [
+      ...runGovernanceSource.matchAll(/from ['"]([^'"]+)['"]/g),
+    ]
+      .map((match) => match[1])
+      .sort((left, right) => left.localeCompare(right));
+
+    const disallowed = specifiers.filter(
+      (specifier) =>
+        ![
+          '@nx/devkit',
+          '@anarchitects/governance-core',
+          '@anarchitects/governance-adapter-nx',
+          'node:path',
+        ].includes(specifier) &&
+        !specifier.startsWith('../presets/') &&
+        !specifier.startsWith('../profile/') &&
+        !specifier.startsWith('../reporting/') &&
+        !specifier.startsWith('../snapshot-store/') &&
+        !specifier.startsWith('../conformance-adapter/') &&
+        !specifier.startsWith('../ai-handoff/') &&
+        !specifier.startsWith('../nx-host/extensions/') &&
+        !specifier.startsWith('./')
+    );
+
+    expect(disallowed).toEqual([]);
+  });
+
   it('keeps Nx-specific extension discovery isolated under nx-host', () => {
     const nxHostExtensionConfigSource = readGovernanceSource(
       'nx-host/extensions/config.ts'
