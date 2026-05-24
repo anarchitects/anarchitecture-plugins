@@ -5,8 +5,8 @@ Related: Community #127
 Community baseline consumed in this pass:
 
 - `@anarchitects/governance-core@0.0.4`
-- `@anarchitects/governance-cli@0.0.3`
-- `@anarchitects/governance-adapter-typescript@0.0.3`
+- `@anarchitects/governance-cli@0.0.4`
+- `@anarchitects/governance-adapter-typescript@0.0.4`
 
 ## Scope
 
@@ -169,3 +169,16 @@ Result:
 - `#394` can close once the code changes in this repository are accepted.
 - `#388` can start. It should treat the remaining excluded legacy trees as
   cleanup debt, not as a blocker for the Nx host/Core boundary split.
+
+## Release sequencing notes
+
+- `@anarchitects/governance-adapter-nx` is the first package that must be
+  published from this repository. `@anarchitects/nx-governance` depends on it.
+- `@anarchitects/nx-governance` must not be published with
+  `"@anarchitects/governance-adapter-nx": "workspace:*"`. The manifest now pins
+  the current publishable adapter version instead of a workspace protocol.
+- Community `#127` no longer blocks Plugins `#388`. The remaining Governance
+  follow-up issues are non-blocking release debt:
+  - Plugins `#402` for quarantined legacy tree deletion
+  - Plugins `#403` for future Git/VCS adapter extraction from host IO
+  - Community `#133` for the future Community Git/VCS adapter package
