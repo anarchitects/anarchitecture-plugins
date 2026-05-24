@@ -43,7 +43,6 @@ import {
   SnapshotComparison,
   summarizeArchitectureRecommendations,
   summarizeCognitiveLoad,
-  summarizeDriftInterpretation,
   summarizeManagementInsights,
   summarizeOnboarding,
   summarizePrImpact,
@@ -101,34 +100,7 @@ import {
 } from './snapshot-runtime.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
-import {
-  renderAiCognitiveLoadCliReport,
-  renderAiDriftCliReport,
-  renderAiOnboardingCliReport,
-  renderAiPrImpactCliReport,
-  renderAiRecommendationsCliReport,
-  renderAiRefactoringSuggestionsCliReport,
-  renderAiRootCauseCliReport,
-  renderAiScorecardCliReport,
-  renderAiSmellClustersCliReport,
-  renderDriftCliReport,
-} from './governance-run-renderers.js';
-import {
-  resolveOptionalSnapshotComparison,
-  resolveSnapshotPath,
-  toSnapshotDeliveryImpactSummary,
-} from './snapshot-runtime.js';
-import {
-  compareViolationsForPriority,
-  AI_PAYLOAD_LIMITS,
-  buildTruncationMetadata,
-  sliceDependenciesForProjectScope,
-  sliceTopItems,
-} from './ai-payload-scope.js';
-import {
-  readChangedFiles,
-  resolveAffectedProjects,
-} from './pr-impact-host-context.js';
+import { AI_PAYLOAD_LIMITS } from './ai-payload-scope.js';
 import { summarizeDriftInterpretation } from './drift-ai-analysis.js';
 
 export interface GovernanceRunOptions {
