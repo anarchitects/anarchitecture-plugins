@@ -213,6 +213,15 @@ describe('governance boundary enforcement', () => {
       },
       {
         kind: 'import',
+        rule: 'Host-owned runtime must not reintroduce temporary plugin-side Core shims.',
+        matches: (specifier) =>
+          startsWithRelativeBoundary(specifier, './ai-payload-scope') ||
+          startsWithRelativeBoundary(specifier, '../plugin/ai-payload-scope') ||
+          startsWithRelativeBoundary(specifier, './drift-ai-analysis') ||
+          startsWithRelativeBoundary(specifier, '../plugin/drift-ai-analysis'),
+      },
+      {
+        kind: 'import',
         rule: 'Host-owned runtime must not deep-import or tunnel through local Nx adapter internals.',
         matches: (specifier) =>
           specifier.startsWith('@anarchitects/governance-adapter-nx/') ||
@@ -253,6 +262,60 @@ describe('governance boundary enforcement', () => {
       violations,
       'Host/runtime boundary violations detected.'
     );
+  });
+
+  it('keeps run-governance focused on host orchestration instead of local Core helper definitions', () => {
+    const runGovernanceSource = readFileSync(
+      path.join(governanceSourceRoot, 'plugin', 'run-governance.ts'),
+      'utf8'
+    );
+
+    expect(runGovernanceSource).not.toMatch(
+      /\b(?:function|const)\s+(?:sliceGovernancePayloadItems|scopeGovernanceDependencies|compareGovernanceViolationsForPriority|buildScopedRootCauseRequest|buildScopedDriftRequest|buildScopedScorecardRequest|summarizeDriftInterpretation|buildPrImpactContext|buildCognitiveLoadContext|buildRecommendationsTrendContext|countWorseningDriftSignals|buildPersistentSmellSignals|buildRefactoringSuggestionsContext|buildOnboardingContext)\b/
+    );
+  });
+
+  it('keeps run-governance imports constrained to published Community package roots and focused host modules', () => {
+    const runGovernanceSource = readFileSync(
+      path.join(governanceSourceRoot, 'plugin', 'run-governance.ts'),
+      'utf8'
+    );
+    const importSpecifiers = findImportMatches(runGovernanceSource).map(
+      (match) => match.specifier
+    );
+    const allowedPrefixes = [
+      '@nx/devkit',
+      '@anarchitects/governance-core',
+      '@anarchitects/governance-adapter-nx',
+      'node:path',
+      '../presets/',
+      '../profile/',
+      '../reporting/',
+      '../snapshot-store/',
+      '../conformance-adapter/',
+      '../ai-handoff/',
+      '../nx-host/extensions/',
+      './',
+    ];
+
+    expect(importSpecifiers).toEqual(
+      expect.arrayContaining([
+        '@anarchitects/governance-core',
+        '@anarchitects/governance-adapter-nx',
+        './governance-run-renderers.js',
+        './snapshot-runtime.js',
+        './pr-impact-host-context.js',
+      ])
+    );
+
+    const disallowed = importSpecifiers.filter(
+      (specifier) =>
+        !allowedPrefixes.some(
+          (prefix) => specifier === prefix || specifier.startsWith(prefix)
+        )
+    );
+
+    expect(disallowed).toEqual([]);
   });
 });
 
@@ -354,7 +417,7 @@ function findImportMatches(source: string): Array<{
   line: number;
 }> {
   const importPattern =
-    /(?:^|\n)\s*(?:import|export)\s+(?:type\s+)?(?:[^'"\n]+?\s+from\s+)?['"]([^'"]+)['"]/g;
+    /(?:^|\n)\s*(?:import|export)\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g;
   const matches: Array<{ specifier: string; line: number }> = [];
 
   for (const match of source.matchAll(importPattern)) {

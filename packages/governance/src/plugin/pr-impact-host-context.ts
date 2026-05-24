@@ -1,8 +1,6 @@
 import { workspaceRoot } from '@nx/devkit';
+import type { GovernanceProject } from '@anarchitects/governance-core';
 import { execFileSync } from 'node:child_process';
-
-import type { GovernanceAssessment } from '@anarchitects/governance-core';
-
 export function readChangedFiles(baseRef: string, headRef: string): string[] {
   try {
     const output = execFileSync(
@@ -24,23 +22,23 @@ export function readChangedFiles(baseRef: string, headRef: string): string[] {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+      .sort((left, right) => left.localeCompare(right));
   } catch {
     return [];
   }
 }
 
 export function resolveAffectedProjects(
-  assessment: GovernanceAssessment,
+  projects: GovernanceProject[],
   changedFiles: string[]
-): GovernanceAssessment['workspace']['projects'] {
+): GovernanceProject[] {
   if (changedFiles.length === 0) {
     return [];
   }
 
   const changedSet = new Set(changedFiles);
 
-  return assessment.workspace.projects.filter((project) => {
+  return projects.filter((project) => {
     const normalizedRoot = project.root.replace(/\\/g, '/').replace(/\/+$/, '');
 
     for (const filePath of changedSet) {

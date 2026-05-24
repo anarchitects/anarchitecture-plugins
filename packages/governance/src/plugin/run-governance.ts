@@ -9,12 +9,22 @@ import {
   buildAiScorecardHandoffPayload,
   buildArchitectureRecommendationsRequest,
   buildCognitiveLoadRequest,
+  buildCognitiveLoadContext,
+  buildGovernancePayloadTruncationMetadata,
   buildGovernanceAssessment,
   buildDeliveryImpactAssessment,
   buildDriftSummary,
+  buildOnboardingContext,
   buildGovernanceAssessmentArtifacts as buildCoreGovernanceAssessmentArtifacts,
+  buildPersistentSmellSignals,
+  buildPrImpactContext,
   buildGovernanceWorkspace,
   buildManagementInsightsAiRequest,
+  buildRecommendationsTrendContext,
+  buildRefactoringSuggestionsContext,
+  buildScopedDriftRequest,
+  buildScopedRootCauseRequest,
+  buildScopedScorecardRequest,
   buildOnboardingRequest,
   buildPrImpactRequest,
   buildRefactoringSuggestionsRequest,
@@ -33,6 +43,7 @@ import {
   SnapshotComparison,
   summarizeArchitectureRecommendations,
   summarizeCognitiveLoad,
+  summarizeDriftInterpretation,
   summarizeManagementInsights,
   summarizeOnboarding,
   summarizePrImpact,
@@ -41,6 +52,7 @@ import {
   summarizeScorecard,
   summarizeSmellClusters,
   summarizeDrift,
+  scopeGovernanceDependencies,
 } from '@anarchitects/governance-core';
 import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
 
@@ -64,8 +76,29 @@ import {
   exportAiHandoffArtifacts,
 } from '../ai-handoff/index.js';
 import { resolveConformanceInput } from './resolve-conformance-input.js';
+import {
+  readChangedFiles,
+  resolveAffectedProjects,
+} from './pr-impact-host-context.js';
+import {
+  renderAiCognitiveLoadCliReport,
+  renderAiDriftCliReport,
+  renderAiOnboardingCliReport,
+  renderAiPrImpactCliReport,
+  renderAiRecommendationsCliReport,
+  renderAiRefactoringSuggestionsCliReport,
+  renderAiRootCauseCliReport,
+  renderAiScorecardCliReport,
+  renderAiSmellClustersCliReport,
+  renderDriftCliReport,
+} from './governance-run-renderers.js';
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
+import {
+  resolveOptionalSnapshotComparison,
+  resolveSnapshotPath,
+  toSnapshotDeliveryImpactSummary,
+} from './snapshot-runtime.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import {
@@ -595,31 +628,17 @@ export async function runGovernanceAiRootCause(
     }
   }
 
-  const rootCauseDependencySlice = sliceDependenciesForProjectScope(
-    assessment.workspace.dependencies,
-    rootCauseProjectScope,
-    AI_PAYLOAD_LIMITS.rootCauseDependencies
-  );
-
-  const scopedRootCauseRequest = {
-    ...request,
-    inputs: {
-      ...request.inputs,
-      dependencies: rootCauseDependencySlice.items,
-      metadata: {
-        ...(request.inputs.metadata ?? {}),
-        payloadScope: {
-          projectScopeCount: rootCauseProjectScope.size,
-          dependencies: rootCauseDependencySlice.truncation,
-          violations: buildTruncationMetadata(
-            snapshot.violations.length,
-            topViolations.length,
-            options.topViolations ?? 10
-          ),
-        },
-      },
-    },
-  };
+  const {
+    request: scopedRootCauseRequest,
+    payloadScope: rootCausePayloadScope,
+  } = buildScopedRootCauseRequest({
+    request,
+    dependencies: assessment.workspace.dependencies,
+    topViolations,
+    projectScope: rootCauseProjectScope,
+    dependencyLimit: AI_PAYLOAD_LIMITS.rootCauseDependencies,
+    topViolationsLimit: options.topViolations ?? 10,
+  });
 
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
@@ -628,7 +647,7 @@ export async function runGovernanceAiRootCause(
       request: scopedRootCauseRequest,
       analysis,
       payloadScope: {
-        dependencies: rootCauseDependencySlice.truncation,
+        dependencies: rootCausePayloadScope.dependencies,
       },
       metadata: {
         snapshotPath: path.relative(workspaceRoot, snapshotSource),
@@ -688,32 +707,24 @@ export async function runGovernanceAiPrImpact(
   const headRef = options.headRef ?? 'HEAD';
   const changedFiles = readChangedFiles(baseRef, headRef);
 
-  const projectsByName = new Map(
-    assessment.workspace.projects.map((project) => [project.name, project])
+  const affectedProjects = resolveAffectedProjects(
+    assessment.workspace.projects,
+    changedFiles
   );
-  const affectedProjects = resolveAffectedProjects(assessment, changedFiles);
   const affectedProjectSet = new Set(
     affectedProjects.map((project) => project.name)
   );
-  const affectedDomains = new Set(
-    affectedProjects
-      .map((project) => project.domain)
-      .filter((domain): domain is string => Boolean(domain))
+  const { items: scopedDependencies } = scopeGovernanceDependencies(
+    assessment.workspace.dependencies,
+    affectedProjectSet
   );
-
-  const scopedDependencies = assessment.workspace.dependencies.filter(
-    (dependency) =>
-      affectedProjectSet.has(dependency.source) ||
-      affectedProjectSet.has(dependency.target)
-  );
-
-  const crossDomainDependencyEdges = scopedDependencies.filter((dependency) => {
-    const sourceDomain = projectsByName.get(dependency.source)?.domain;
-    const targetDomain = projectsByName.get(dependency.target)?.domain;
-    return Boolean(
-      sourceDomain && targetDomain && sourceDomain !== targetDomain
-    );
-  }).length;
+  const prImpactContext = buildPrImpactContext({
+    affectedProjects,
+    dependencies: assessment.workspace.dependencies,
+    projects: assessment.workspace.projects,
+    changedFiles,
+    changedFilesCount: changedFiles.length,
+  });
 
   const request = buildPrImpactRequest({
     profile: options.profile ?? assessment.profile,
@@ -723,16 +734,12 @@ export async function runGovernanceAiPrImpact(
       baseRef,
       headRef,
       changedFiles,
-      changedFilesCount: changedFiles.length,
-      affectedProjectsCount: affectedProjects.length,
-      affectedDomainCount: affectedDomains.size,
-      crossDomainDependencyEdges,
-      affectedDomains: [...affectedDomains].sort((a, b) => a.localeCompare(b)),
+      ...prImpactContext,
     },
   });
 
   const analysis = summarizePrImpact(request);
-  const prImpactDependencySlice = sliceDependenciesForProjectScope(
+  const prImpactDependencySlice = scopeGovernanceDependencies(
     scopedDependencies,
     affectedProjectSet,
     AI_PAYLOAD_LIMITS.prImpactDependencies
@@ -747,7 +754,7 @@ export async function runGovernanceAiPrImpact(
         ...(request.inputs.metadata ?? {}),
         payloadScope: {
           dependencies: prImpactDependencySlice.truncation,
-          affectedProjects: buildTruncationMetadata(
+          affectedProjects: buildGovernancePayloadTruncationMetadata(
             affectedProjects.length,
             affectedProjects.length,
             affectedProjects.length
@@ -836,68 +843,16 @@ export async function runGovernanceAiDrift(
   };
 
   const analysis = summarizeDriftInterpretation(request, signals, summary);
-  const signalSlice = sliceTopItems(
-    signals,
-    AI_PAYLOAD_LIMITS.driftSignals,
-    (a, b) => b.magnitude - a.magnitude || a.id.localeCompare(b.id)
-  );
-  const metricDeltaSlice = sliceTopItems(
-    comparison?.metricDeltas ?? [],
-    AI_PAYLOAD_LIMITS.driftDeltas,
-    (a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id)
-  );
-  const scoreDeltaSlice = sliceTopItems(
-    comparison?.scoreDeltas ?? [],
-    AI_PAYLOAD_LIMITS.driftDeltas,
-    (a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id)
-  );
-  const newViolationSlice = sliceTopItems(
-    comparison?.newViolations ?? [],
-    AI_PAYLOAD_LIMITS.driftViolations,
-    compareViolationsForPriority
-  );
-  const resolvedViolationSlice = sliceTopItems(
-    comparison?.resolvedViolations ?? [],
-    AI_PAYLOAD_LIMITS.driftViolations,
-    compareViolationsForPriority
-  );
-
-  const scopedDriftRequest = {
-    ...request,
-    inputs: {
-      ...request.inputs,
-      comparison: comparison
-        ? {
-            baseline: {
-              timestamp: comparison.baseline.timestamp,
-              branch: comparison.baseline.branch,
-              commitSha: comparison.baseline.commitSha,
-            },
-            current: {
-              timestamp: comparison.current.timestamp,
-              branch: comparison.current.branch,
-              commitSha: comparison.current.commitSha,
-            },
-            metricDeltas: metricDeltaSlice.items,
-            scoreDeltas: scoreDeltaSlice.items,
-            newViolations: newViolationSlice.items,
-            resolvedViolations: resolvedViolationSlice.items,
-          }
-        : undefined,
-      metadata: {
-        ...(request.inputs.metadata ?? {}),
-        signals: signalSlice.items,
-        driftSummary: summary,
-        payloadScope: {
-          signals: signalSlice.truncation,
-          metricDeltas: metricDeltaSlice.truncation,
-          scoreDeltas: scoreDeltaSlice.truncation,
-          newViolations: newViolationSlice.truncation,
-          resolvedViolations: resolvedViolationSlice.truncation,
-        },
-      },
-    },
-  };
+  const { request: scopedDriftRequest, payloadScope: driftPayloadScope } =
+    buildScopedDriftRequest({
+      request,
+      comparison: comparison ?? undefined,
+      signals,
+      summary,
+      signalLimit: AI_PAYLOAD_LIMITS.driftSignals,
+      deltaLimit: AI_PAYLOAD_LIMITS.driftDeltas,
+      violationLimit: AI_PAYLOAD_LIMITS.driftViolations,
+    });
 
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
@@ -905,13 +860,7 @@ export async function runGovernanceAiDrift(
     payload: buildAiDriftHandoffPayload({
       request: scopedDriftRequest,
       analysis,
-      payloadScope: {
-        signals: signalSlice.truncation,
-        metricDeltas: metricDeltaSlice.truncation,
-        scoreDeltas: scoreDeltaSlice.truncation,
-        newViolations: newViolationSlice.truncation,
-        resolvedViolations: resolvedViolationSlice.truncation,
-      },
+      payloadScope: { ...driftPayloadScope },
     }),
   });
 
@@ -959,10 +908,6 @@ export async function runGovernanceAiCognitiveLoad(
     reportType: 'health',
   });
 
-  const projectsByName = new Map(
-    assessment.workspace.projects.map((project) => [project.name, project])
-  );
-
   const selectedProjects = assessment.workspace.projects
     .filter((project) => {
       if (options.project) {
@@ -980,72 +925,29 @@ export async function runGovernanceAiCognitiveLoad(
   const selectedProjectNames = new Set(
     selectedProjects.map((project) => project.name)
   );
-  const scopedDependencies = assessment.workspace.dependencies.filter(
-    (dependency) =>
-      selectedProjectNames.has(dependency.source) ||
-      selectedProjectNames.has(dependency.target)
+  const { items: scopedDependencies } = scopeGovernanceDependencies(
+    assessment.workspace.dependencies,
+    selectedProjectNames
   );
-
-  const fanoutByProject = new Map<string, number>();
-  for (const dependency of scopedDependencies) {
-    if (selectedProjectNames.has(dependency.source)) {
-      fanoutByProject.set(
-        dependency.source,
-        (fanoutByProject.get(dependency.source) ?? 0) + 1
-      );
-    }
-  }
-
-  const fanoutValues = [...fanoutByProject.values()];
-  const maxFanout = fanoutValues.length > 0 ? Math.max(...fanoutValues) : 0;
-  const averageFanout =
-    fanoutValues.length > 0
-      ? Number(
-          (
-            fanoutValues.reduce((sum, value) => sum + value, 0) /
-            fanoutValues.length
-          ).toFixed(2)
-        )
-      : 0;
-
-  const affectedDomains = new Set(
-    selectedProjects
-      .map((project) => project.domain)
-      .filter((domain): domain is string => Boolean(domain))
-  );
-  const crossDomainDependencyEdges = scopedDependencies.filter((dependency) => {
-    const sourceDomain = projectsByName.get(dependency.source)?.domain;
-    const targetDomain = projectsByName.get(dependency.target)?.domain;
-    return Boolean(
-      sourceDomain && targetDomain && sourceDomain !== targetDomain
-    );
-  }).length;
-
-  const topFanoutProjects = [...fanoutByProject.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, Math.max(1, options.topProjects ?? 10))
-    .map(([project, fanout]) => ({ project, fanout }));
+  const cognitiveLoadContext = buildCognitiveLoadContext({
+    selectedProjects,
+    dependencies: assessment.workspace.dependencies,
+    projects: assessment.workspace.projects,
+    scope: options.project
+      ? 'project'
+      : options.domain
+      ? 'domain'
+      : 'workspace',
+    project: options.project,
+    domain: options.domain,
+    topProjectsLimit: Math.max(1, options.topProjects ?? 10),
+  });
 
   const request = buildCognitiveLoadRequest({
     profile: options.profile ?? assessment.profile,
     affectedProjects: selectedProjects.map((project) => project.name),
     dependencies: scopedDependencies,
-    metadata: {
-      scope: options.project
-        ? 'project'
-        : options.domain
-        ? 'domain'
-        : 'workspace',
-      project: options.project,
-      domain: options.domain,
-      selectedProjectsCount: selectedProjects.length,
-      affectedDomainCount: affectedDomains.size,
-      scopedDependencyCount: scopedDependencies.length,
-      crossDomainDependencyEdges,
-      averageFanout,
-      maxFanout,
-      topFanoutProjects,
-    },
+    metadata: { ...cognitiveLoadContext },
   });
 
   const analysis = summarizeCognitiveLoad(request);
@@ -1096,15 +998,22 @@ export async function runGovernanceAiRecommendations(
 
   const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
   let comparison: SnapshotComparison | undefined;
-  let worseningSignalCount = 0;
+  let trendContext = buildRecommendationsTrendContext({
+    signals: [],
+    summary: buildDriftSummary([]),
+    snapshotCount: snapshotPaths.length,
+  });
 
   if (snapshotPaths.length >= 2) {
     const baseline = await readMetricSnapshot(snapshotPaths.at(-2) as string);
     const current = await readMetricSnapshot(snapshotPaths.at(-1) as string);
     comparison = compareSnapshots(baseline, current);
-    worseningSignalCount = summarizeDrift(comparison).filter(
-      (signal) => signal.status === 'worsening'
-    ).length;
+    const comparisonSignals = summarizeDrift(comparison);
+    trendContext = buildRecommendationsTrendContext({
+      signals: comparisonSignals,
+      summary: buildDriftSummary(comparisonSignals),
+      snapshotCount: snapshotPaths.length,
+    });
   }
 
   const request = buildArchitectureRecommendationsRequest({
@@ -1115,8 +1024,8 @@ export async function runGovernanceAiRecommendations(
     metadata: {
       totalViolations: assessment.violations.length,
       analyzedViolations: prioritizedViolations.length,
-      worseningSignalCount,
-      snapshotCount: snapshotPaths.length,
+      worseningSignalCount: trendContext.worseningSignalCount,
+      snapshotCount: trendContext.snapshotCount,
     },
   });
 
@@ -1171,27 +1080,9 @@ export async function runGovernanceAiSmellClusters(
   const recentSnapshots = await Promise.all(
     recentPaths.map((snapshotPath) => readMetricSnapshot(snapshotPath))
   );
-
-  const persistentKeyCounts = new Map<string, number>();
-  for (const snapshot of recentSnapshots) {
-    const uniqueKeys = new Set(
-      snapshot.violations.map(
-        (violation) => `${violation.type}|${violation.source}`
-      )
-    );
-
-    for (const key of uniqueKeys) {
-      persistentKeyCounts.set(key, (persistentKeyCounts.get(key) ?? 0) + 1);
-    }
-  }
-
-  const persistentSmellSignals = [...persistentKeyCounts.entries()]
-    .filter(([, count]) => count >= 2)
-    .map(([key, count]) => {
-      const [type, source] = key.split('|');
-      return { type: type ?? 'unknown', source: source ?? 'unknown', count };
-    })
-    .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+  const persistentSmellSignals = buildPersistentSmellSignals({
+    recentSnapshots,
+  });
 
   const request = buildSmellClustersRequest({
     profile: options.profile ?? assessment.profile,
@@ -1252,86 +1143,25 @@ export async function runGovernanceAiRefactoringSuggestions(
     options.topViolations ?? 10
   );
 
-  const projectsByName = new Map(
-    assessment.workspace.projects.map((project) => [project.name, project])
-  );
-
-  const hotspotCounts = new Map<string, number>();
-  for (const violation of prioritizedViolations) {
-    hotspotCounts.set(
-      violation.source,
-      (hotspotCounts.get(violation.source) ?? 0) + 1
-    );
-  }
-
-  const fanoutCounts = new Map<string, number>();
-  for (const dependency of assessment.workspace.dependencies) {
-    fanoutCounts.set(
-      dependency.source,
-      (fanoutCounts.get(dependency.source) ?? 0) + 1
-    );
-  }
-
   const topProjectsLimit = Math.max(1, options.topProjects ?? 5);
-  const hotspotProjects = [...hotspotCounts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, topProjectsLimit)
-    .map(([project, count]) => ({ project, count }));
-
-  const highFanoutProjects = [...fanoutCounts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, topProjectsLimit)
-    .map(([project, count]) => ({ project, count }));
-
   const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
   const recentPaths = snapshotPaths.slice(-3);
   const recentSnapshots = await Promise.all(
     recentPaths.map((snapshotPath) => readMetricSnapshot(snapshotPath))
   );
-
-  const persistentKeyCounts = new Map<string, number>();
-  for (const snapshot of recentSnapshots) {
-    const uniqueKeys = new Set(
-      snapshot.violations.map(
-        (violation) => `${violation.type}|${violation.source}`
-      )
-    );
-
-    for (const key of uniqueKeys) {
-      persistentKeyCounts.set(key, (persistentKeyCounts.get(key) ?? 0) + 1);
-    }
-  }
-
-  const persistentSmellSignals = [...persistentKeyCounts.entries()]
-    .filter(([, count]) => count >= 2)
-    .map(([key, count]) => {
-      const [type, source] = key.split('|');
-      return { type: type ?? 'unknown', source: source ?? 'unknown', count };
-    })
-    .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
-
-  const hotspotDomains = [
-    ...new Set(
-      hotspotProjects
-        .map((entry) => projectsByName.get(entry.project)?.domain)
-        .filter((domain): domain is string => Boolean(domain))
-    ),
-  ].sort((a, b) => a.localeCompare(b));
+  const refactoringContext = buildRefactoringSuggestionsContext({
+    violations: prioritizedViolations,
+    dependencies: assessment.workspace.dependencies,
+    projects: assessment.workspace.projects,
+    recentSnapshots,
+    topProjectsLimit,
+  });
 
   const request = buildRefactoringSuggestionsRequest({
     profile: options.profile ?? assessment.profile,
     dependencies: assessment.workspace.dependencies,
     topViolations: prioritizedViolations,
-    metadata: {
-      analyzedViolations: prioritizedViolations.length,
-      totalViolations: assessment.violations.length,
-      hotspotProjects,
-      highFanoutProjects,
-      persistentSmellSignals,
-      snapshotCount: snapshotPaths.length,
-      sampledSnapshotCount: recentSnapshots.length,
-      hotspotDomains,
-    },
+    metadata: { ...refactoringContext },
   });
 
   const analysis = summarizeRefactoringSuggestions(request);
@@ -1405,57 +1235,16 @@ export async function runGovernanceAiScorecard(
   });
 
   const analysis = summarizeScorecard(request);
-  const snapshotViolationSlice = sliceTopItems(
-    snapshot.violations,
-    AI_PAYLOAD_LIMITS.scorecardViolations,
-    compareViolationsForPriority
-  );
-  const scorecardMetricDeltaSlice = sliceTopItems(
-    comparison?.metricDeltas ?? [],
-    AI_PAYLOAD_LIMITS.scorecardDeltas,
-    (a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id)
-  );
-  const scorecardScoreDeltaSlice = sliceTopItems(
-    comparison?.scoreDeltas ?? [],
-    AI_PAYLOAD_LIMITS.scorecardDeltas,
-    (a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.id.localeCompare(b.id)
-  );
-
-  const scopedScorecardRequest = {
-    ...request,
-    inputs: {
-      ...request.inputs,
-      snapshot: {
-        ...snapshot,
-        violations: snapshotViolationSlice.items,
-      },
-      comparison: comparison
-        ? {
-            ...comparison,
-            baseline: {
-              ...comparison.baseline,
-              violations: [],
-            },
-            current: {
-              ...comparison.current,
-              violations: [],
-            },
-            metricDeltas: scorecardMetricDeltaSlice.items,
-            scoreDeltas: scorecardScoreDeltaSlice.items,
-            newViolations: [],
-            resolvedViolations: [],
-          }
-        : undefined,
-      metadata: {
-        ...(request.inputs.metadata ?? {}),
-        payloadScope: {
-          snapshotViolations: snapshotViolationSlice.truncation,
-          metricDeltas: scorecardMetricDeltaSlice.truncation,
-          scoreDeltas: scorecardScoreDeltaSlice.truncation,
-        },
-      },
-    },
-  };
+  const {
+    request: scopedScorecardRequest,
+    payloadScope: scorecardPayloadScope,
+  } = buildScopedScorecardRequest({
+    request,
+    snapshot,
+    comparison,
+    violationLimit: AI_PAYLOAD_LIMITS.scorecardViolations,
+    deltaLimit: AI_PAYLOAD_LIMITS.scorecardDeltas,
+  });
 
   const handoffArtifacts = exportAiHandoffArtifacts({
     workspaceRoot,
@@ -1463,11 +1252,7 @@ export async function runGovernanceAiScorecard(
     payload: buildAiScorecardHandoffPayload({
       request: scopedScorecardRequest,
       analysis,
-      payloadScope: {
-        snapshotViolations: snapshotViolationSlice.truncation,
-        metricDeltas: scorecardMetricDeltaSlice.truncation,
-        scoreDeltas: scorecardScoreDeltaSlice.truncation,
-      },
+      payloadScope: { ...scorecardPayloadScope },
     }),
   });
 
@@ -1520,65 +1305,19 @@ export async function runGovernanceAiOnboarding(
     options.topViolations ?? 10
   );
 
-  const domainCounts = new Map<string, number>();
-  const layerCounts = new Map<string, number>();
-  const fanoutCounts = new Map<string, number>();
-
-  for (const project of assessment.workspace.projects) {
-    if (project.domain) {
-      domainCounts.set(
-        project.domain,
-        (domainCounts.get(project.domain) ?? 0) + 1
-      );
-    }
-
-    if (project.layer) {
-      layerCounts.set(project.layer, (layerCounts.get(project.layer) ?? 0) + 1);
-    }
-  }
-
-  for (const dependency of assessment.workspace.dependencies) {
-    fanoutCounts.set(
-      dependency.source,
-      (fanoutCounts.get(dependency.source) ?? 0) + 1
-    );
-  }
-
-  const topProjectsLimit = Math.max(1, options.topProjects ?? 5);
-  const topFanoutProjects = [...fanoutCounts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, topProjectsLimit)
-    .map(([project, count]) => ({ project, count }));
-
-  const ownedProjectsCount = assessment.workspace.projects.filter((project) =>
-    Boolean(project.ownership?.team)
-  ).length;
+  const onboardingContext = buildOnboardingContext({
+    projects: assessment.workspace.projects,
+    dependencies: assessment.workspace.dependencies,
+    topViolations: prioritizedViolations,
+    topProjectsLimit: Math.max(1, options.topProjects ?? 5),
+    totalViolationsCount: assessment.violations.length,
+  });
 
   const request = buildOnboardingRequest({
     profile: options.profile ?? assessment.profile,
     dependencies: assessment.workspace.dependencies,
     topViolations: prioritizedViolations,
-    metadata: {
-      projectCount: assessment.workspace.projects.length,
-      dependencyCount: assessment.workspace.dependencies.length,
-      ownershipCoverage:
-        assessment.workspace.projects.length > 0
-          ? Number(
-              (
-                ownedProjectsCount / assessment.workspace.projects.length
-              ).toFixed(3)
-            )
-          : 0,
-      domainSummary: [...domainCounts.entries()]
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .map(([domain, count]) => ({ domain, count })),
-      layerSummary: [...layerCounts.entries()]
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .map(([layer, count]) => ({ layer, count })),
-      topFanoutProjects,
-      analyzedViolations: prioritizedViolations.length,
-      totalViolations: assessment.violations.length,
-    },
+    metadata: { ...onboardingContext },
   });
 
   const analysis = summarizeOnboarding(request);
