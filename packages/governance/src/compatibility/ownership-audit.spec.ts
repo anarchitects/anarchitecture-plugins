@@ -40,6 +40,34 @@ describe('nx-governance ownership audit guards', () => {
     );
   });
 
+  it('keeps the host package publishable with a semver adapter dependency', () => {
+    const packageManifest = JSON.parse(
+      readFileSync(path.join(governanceRoot, 'package.json'), 'utf8')
+    ) as {
+      dependencies?: Record<string, string>;
+    };
+    const adapterManifest = JSON.parse(
+      readFileSync(
+        path.join(
+          governanceRoot,
+          '..',
+          'governance-adapter-nx',
+          'package.json'
+        ),
+        'utf8'
+      )
+    ) as {
+      version: string;
+    };
+
+    expect(
+      packageManifest.dependencies?.['@anarchitects/governance-adapter-nx']
+    ).toBe(adapterManifest.version);
+    expect(
+      packageManifest.dependencies?.['@anarchitects/governance-adapter-nx']
+    ).not.toMatch(/^workspace:/);
+  });
+
   it('keeps leaked Core-like, CLI, manual-workspace, and TypeScript adapter trees out of the build and test program surfaces', () => {
     const tsconfigLib = JSON.parse(
       readFileSync(path.join(governanceRoot, 'tsconfig.lib.json'), 'utf8')

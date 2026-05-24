@@ -1,29 +1,50 @@
-# actionlint: allow-read-secrets NPM_TOKEN
 name: Publish
-env:
-  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*@*'
+
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+permissions:
+  contents: read
+  id-token: write
 
 concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  id-token: write
-
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Derive project from tag
+        id: tag
+        shell: bash
+        run: |
+          project="${GITHUB_REF_NAME%@*}"
+          version="${GITHUB_REF_NAME##*@}"
+
+          if [ -z "$project" ] || [ -z "$version" ] || [ "$project" = "$GITHUB_REF_NAME" ]; then
+            echo "Invalid release tag: $GITHUB_REF_NAME"
+            echo "Expected format: <nx-project-name>@<version>"
+            exit 1
+          fi
+
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          echo "Publishing project: $project"
+          echo "Version: $version"
+
+      - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Enable Corepack
         run: corepack enable
@@ -33,15 +54,26 @@ jobs:
         with:
           node-version: 24
           cache: 'yarn'
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Build all packages
-        run: yarn nx run-many -t build --all
+      - name: Validate Nx project exists
+        shell: bash
+        run: |
+          yarn nx show project "${{ steps.tag.outputs.project }}" > /dev/null
 
-      - name: Publish packages
-        run: yarn nx release publish --yes
+      - name: Build project
+        run: yarn nx build "${{ steps.tag.outputs.project }}"
+
+      - name: Typecheck project
+        run: yarn nx typecheck "${{ steps.tag.outputs.project }}"
+
+      - name: Test project
+        run: yarn nx test "${{ steps.tag.outputs.project }}"
+
+      - name: Publish project
+        run: yarn nx release publish --projects "${{ steps.tag.outputs.project }}" --yes
         env:
           NPM_CONFIG_PROVENANCE: true
