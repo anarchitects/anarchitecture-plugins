@@ -14,10 +14,12 @@ import {
   buildGovernanceAssessment,
   buildDeliveryImpactAssessment,
   buildDriftSummary,
+  buildSnapshotDeliveryImpactSummary,
   buildOnboardingContext,
   buildGovernanceAssessmentArtifacts as buildCoreGovernanceAssessmentArtifacts,
   buildPersistentSmellSignals,
   buildPrImpactContext,
+  resolveAffectedGovernanceProjects,
   buildGovernanceWorkspace,
   buildManagementInsightsAiRequest,
   buildRecommendationsTrendContext,
@@ -76,10 +78,7 @@ import {
   exportAiHandoffArtifacts,
 } from '../ai-handoff/index.js';
 import { resolveConformanceInput } from './resolve-conformance-input.js';
-import {
-  readChangedFiles,
-  resolveAffectedProjects,
-} from './pr-impact-host-context.js';
+import { readChangedFiles } from './pr-impact-host-context.js';
 import {
   renderAiCognitiveLoadCliReport,
   renderAiDriftCliReport,
@@ -97,7 +96,6 @@ import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExte
 import {
   resolveOptionalSnapshotComparison,
   resolveSnapshotPath,
-  toSnapshotDeliveryImpactSummary,
 } from './snapshot-runtime.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
@@ -346,7 +344,7 @@ export async function runGovernanceSnapshot(
     assessment,
     snapshotDir: options.snapshotDir,
     metricSchemaVersion: options.metricSchemaVersion,
-    deliveryImpact: toSnapshotDeliveryImpactSummary(deliveryImpact),
+    deliveryImpact: buildSnapshotDeliveryImpactSummary(deliveryImpact),
   });
 
   const rendered =
@@ -670,10 +668,10 @@ export async function runGovernanceAiPrImpact(
   const headRef = options.headRef ?? 'HEAD';
   const changedFiles = readChangedFiles(baseRef, headRef);
 
-  const affectedProjects = resolveAffectedProjects(
-    assessment.workspace.projects,
-    changedFiles
-  );
+  const affectedProjects = resolveAffectedGovernanceProjects({
+    projects: assessment.workspace.projects,
+    changedFiles,
+  });
   const affectedProjectSet = new Set(
     affectedProjects.map((project) => project.name)
   );

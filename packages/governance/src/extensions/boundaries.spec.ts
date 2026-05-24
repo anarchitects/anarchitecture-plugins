@@ -120,6 +120,12 @@ describe('governance extension architecture boundaries', () => {
     const runGovernanceSource = readGovernanceSource(
       'plugin/run-governance.ts'
     );
+    const prImpactHostContextSource = readGovernanceSource(
+      'plugin/pr-impact-host-context.ts'
+    );
+    const snapshotRuntimeSource = readGovernanceSource(
+      'plugin/snapshot-runtime.ts'
+    );
 
     expect(runGovernanceSource).toContain(
       "from './governance-run-renderers.js';"
@@ -133,6 +139,12 @@ describe('governance extension architecture boundaries', () => {
     expect(runGovernanceSource).not.toContain("from './drift-ai-analysis.js';");
     expect(runGovernanceSource).toMatch(
       /summarizeDriftInterpretation[\s\S]*from '@anarchitects\/governance-core';/
+    );
+    expect(runGovernanceSource).toMatch(
+      /resolveAffectedGovernanceProjects[\s\S]*from '@anarchitects\/governance-core';/
+    );
+    expect(runGovernanceSource).toMatch(
+      /buildSnapshotDeliveryImpactSummary[\s\S]*from '@anarchitects\/governance-core';/
     );
 
     expect(runGovernanceSource).not.toMatch(/const AI_PAYLOAD_LIMITS =/);
@@ -149,6 +161,24 @@ describe('governance extension architecture boundaries', () => {
       /function summarizeDriftInterpretation|function sliceDependenciesForProjectScope|function buildTruncationMetadata|function sliceTopItems|function compareViolationsForPriority|function asString/
     );
     expect(runGovernanceSource).not.toContain('rootCauseProjectScope');
+
+    expect(prImpactHostContextSource).toContain(
+      'export function readChangedFiles'
+    );
+    expect(prImpactHostContextSource).not.toContain(
+      'export function resolveAffectedProjects'
+    );
+    expect(prImpactHostContextSource).not.toContain('GovernanceProject');
+
+    expect(snapshotRuntimeSource).toContain(
+      'export function resolveSnapshotPath'
+    );
+    expect(snapshotRuntimeSource).toContain(
+      'export async function resolveOptionalSnapshotComparison'
+    );
+    expect(snapshotRuntimeSource).not.toContain(
+      'export function toSnapshotDeliveryImpactSummary'
+    );
   });
 
   it('keeps run-governance imports constrained to Community package roots and focused host modules', () => {
