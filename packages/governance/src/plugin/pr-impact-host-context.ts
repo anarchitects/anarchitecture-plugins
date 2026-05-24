@@ -1,6 +1,6 @@
 import { workspaceRoot } from '@nx/devkit';
-import type { GovernanceProject } from '@anarchitects/governance-core';
 import { execFileSync } from 'node:child_process';
+
 export function readChangedFiles(baseRef: string, headRef: string): string[] {
   try {
     const output = execFileSync(
@@ -26,31 +26,4 @@ export function readChangedFiles(baseRef: string, headRef: string): string[] {
   } catch {
     return [];
   }
-}
-
-export function resolveAffectedProjects(
-  projects: GovernanceProject[],
-  changedFiles: string[]
-): GovernanceProject[] {
-  if (changedFiles.length === 0) {
-    return [];
-  }
-
-  const changedSet = new Set(changedFiles);
-
-  return projects.filter((project) => {
-    const normalizedRoot = project.root.replace(/\\/g, '/').replace(/\/+$/, '');
-
-    for (const filePath of changedSet) {
-      const normalizedPath = filePath.replace(/\\/g, '/');
-      if (
-        normalizedPath === normalizedRoot ||
-        normalizedPath.startsWith(`${normalizedRoot}/`)
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  });
 }

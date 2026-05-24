@@ -4,14 +4,15 @@ Issue: Plugins #394
 Related: Community #127  
 Community baseline consumed in this pass:
 
-- `@anarchitects/governance-core@0.0.3`
+- `@anarchitects/governance-core@0.0.4`
 - `@anarchitects/governance-cli@0.0.3`
 - `@anarchitects/governance-adapter-typescript@0.0.3`
 
 ## Scope
 
 This audit records the final boundary state for `@anarchitects/nx-governance`
-after the published Community `0.0.3` packages were consumed in Plugins.
+after the published Community package updates were consumed in Plugins,
+including the Core `0.0.4` micro-follow-up helpers.
 
 Target architecture after this pass:
 
@@ -67,7 +68,7 @@ Target architecture after this pass:
 
 ## Concrete cleanup completed in Plugins #394
 
-- Updated `@anarchitects/governance-core` to `0.0.3` in both
+- Updated `@anarchitects/governance-core` to `0.0.4` in both
   `@anarchitects/nx-governance` and `@anarchitects/governance-adapter-nx`.
 - Replaced active host-runtime imports of local deterministic modules with
   public `@anarchitects/governance-core` imports.
@@ -102,18 +103,18 @@ Target architecture after this pass:
 
 ## Final small-surface decisions
 
-| Module / helper                                                | Decision                                    | Notes                                                                                                                                                                                                         |
-| -------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plugin/governance-run-renderers.ts`                           | `KEEP_AS_NX_EXECUTOR_RENDERING`             | Executor-facing CLI rendering stays host-owned. It is presentation, not reusable governance analysis.                                                                                                         |
-| `plugin/pr-impact-host-context.ts#readChangedFiles`            | `KEEP_AS_NX_HOST_IO`                        | Uses `git`, `workspaceRoot`, and process-level IO.                                                                                                                                                            |
-| `plugin/pr-impact-host-context.ts#resolveAffectedProjects`     | `KEEP_TEMPORARILY_WITH_COMMUNITY_FOLLOW_UP` | Pure `changedFiles -> GovernanceProject[]` mapping is host-independent. Keep local for now; proposed future Core API: `resolveAffectedGovernanceProjects(...)` or `mapChangedFilesToGovernanceProjects(...)`. |
-| `plugin/snapshot-runtime.ts#resolveSnapshotPath`               | `KEEP_AS_NX_HOST_IO`                        | Workspace-root-relative path handling stays local.                                                                                                                                                            |
-| `plugin/snapshot-runtime.ts#resolveOptionalSnapshotComparison` | `KEEP_AS_NX_HOST_IO`                        | Snapshot discovery/loading stays local even though it composes Core `compareSnapshots(...)`.                                                                                                                  |
-| `plugin/snapshot-runtime.ts#toSnapshotDeliveryImpactSummary`   | `KEEP_TEMPORARILY_WITH_COMMUNITY_FOLLOW_UP` | Pure `DeliveryImpactAssessment -> SnapshotDeliveryImpactSummary` mapping. Proposed future Core API: `buildSnapshotDeliveryImpactSummary(...)`.                                                                |
-| `plugin/ai-payload-scope.ts`                                   | `REMOVED_FROM_ACTIVE_RUNTIME`               | Replaced with published Core `0.0.3` payload helpers and a host-owned `plugin/ai-payload-limits.ts` constants file.                                                                                           |
-| `plugin/drift-ai-analysis.ts`                                  | `REMOVED_FROM_ACTIVE_RUNTIME`               | `summarizeDriftInterpretation(...)` now imports directly from `@anarchitects/governance-core`.                                                                                                                |
-| `plugin/ai-payload-limits.ts`                                  | `KEEP_AS_NX_HOST_OPTIONS`                   | Constants only. These are host defaults for handoff size, not reusable deterministic analysis.                                                                                                                |
-| `governance-adapter-nx/src/codeowners.ts`                      | `KEEP_AS_NX_ADAPTER_OWNED`                  | CODEOWNERS-to-Nx-project ownership mapping is still adapter-local. Generic CODEOWNERS parsing could move to Community later, but it is not required for `#394`.                                               |
+| Module / helper                                                | Decision                        | Notes                                                                                                                                                           |
+| -------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plugin/governance-run-renderers.ts`                           | `KEEP_AS_NX_EXECUTOR_RENDERING` | Executor-facing CLI rendering stays host-owned. It is presentation, not reusable governance analysis.                                                           |
+| `plugin/pr-impact-host-context.ts#readChangedFiles`            | `KEEP_AS_NX_HOST_IO`            | Uses `git`, `workspaceRoot`, and process-level IO.                                                                                                              |
+| `plugin/pr-impact-host-context.ts#resolveAffectedProjects`     | `REPLACED_WITH_COMMUNITY_API`   | Active runtime now uses published Core `resolveAffectedGovernanceProjects(...)`. `pr-impact-host-context.ts` keeps only git changed-files host IO.              |
+| `plugin/snapshot-runtime.ts#resolveSnapshotPath`               | `KEEP_AS_NX_HOST_IO`            | Workspace-root-relative path handling stays local.                                                                                                              |
+| `plugin/snapshot-runtime.ts#resolveOptionalSnapshotComparison` | `KEEP_AS_NX_HOST_IO`            | Snapshot discovery/loading stays local even though it composes Core `compareSnapshots(...)`.                                                                    |
+| `plugin/snapshot-runtime.ts#toSnapshotDeliveryImpactSummary`   | `REPLACED_WITH_COMMUNITY_API`   | Active runtime now uses published Core `buildSnapshotDeliveryImpactSummary(...)`. `snapshot-runtime.ts` keeps only snapshot path and file orchestration.        |
+| `plugin/ai-payload-scope.ts`                                   | `REMOVED_FROM_ACTIVE_RUNTIME`   | Replaced with published Core payload helpers and a host-owned `plugin/ai-payload-limits.ts` constants file.                                                     |
+| `plugin/drift-ai-analysis.ts`                                  | `REMOVED_FROM_ACTIVE_RUNTIME`   | `summarizeDriftInterpretation(...)` now imports directly from `@anarchitects/governance-core`.                                                                  |
+| `plugin/ai-payload-limits.ts`                                  | `KEEP_AS_NX_HOST_OPTIONS`       | Constants only. These are host defaults for handoff size, not reusable deterministic analysis.                                                                  |
+| `governance-adapter-nx/src/codeowners.ts`                      | `KEEP_AS_NX_ADAPTER_OWNED`      | CODEOWNERS-to-Nx-project ownership mapping is still adapter-local. Generic CODEOWNERS parsing could move to Community later, but it is not required for `#394`. |
 
 ## Remaining intentional quarantine
 
@@ -151,7 +152,7 @@ It does not export local Core-like implementation folders.
 Plugins `#394` is no longer blocked on Community `#127`.
 
 The major reusable Core-candidate helper logic identified in earlier passes has
-been replaced by published Core `0.0.3` APIs in active runtime. The remaining
+been replaced by published Core `0.0.4` APIs in active runtime. The remaining
 follow-up items listed above are narrow, non-blocking utility candidates rather
 than host/runtime ownership blockers.
 
@@ -161,8 +162,6 @@ Core split.
 
 Non-blocking future Community follow-up remains limited to:
 
-- generic changed-file to governance-project mapping
-- snapshot delivery-impact summary shaping
 - optional generic CODEOWNERS parsing if Community wants a host-independent utility
 
 Result:
