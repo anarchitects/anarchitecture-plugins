@@ -81,95 +81,88 @@ export function renderAiRootCauseCliReport(
   snapshotPath: string,
   selectedViolations: number
 ): string {
-  const lines = buildAiReportLines('Nx Governance AI Root Cause', analysis);
-  lines.splice(2, 0, `Snapshot: ${snapshotPath}`);
-  lines.splice(3, 0, `Prioritized violations: ${selectedViolations}`);
-
-  return lines.join('\n');
+  return renderAiAnalysisReport('Nx Governance AI Root Cause', analysis, [
+    `Snapshot: ${snapshotPath}`,
+    `Prioritized violations: ${selectedViolations}`,
+  ]);
 }
 
 export function renderAiDriftCliReport(analysis: AiAnalysisResult): string {
-  return renderAiAnalysisCliReport(
+  return renderAiAnalysisReport(
     'Nx Governance AI Drift Interpretation',
     analysis
   );
 }
 
 export function renderAiPrImpactCliReport(analysis: AiAnalysisResult): string {
-  return renderAiAnalysisCliReport('Nx Governance AI PR Impact', analysis);
+  return renderAiAnalysisReport('Nx Governance AI PR Impact', analysis);
 }
 
 export function renderAiCognitiveLoadCliReport(
   analysis: AiAnalysisResult
 ): string {
-  return renderAiAnalysisCliReport(
+  return renderAiAnalysisReport(
     'Nx Governance AI Cognitive Load',
     analysis,
-    {
-      findingsLabel: 'Signals',
-    }
+    [],
+    'Signals'
   );
 }
 
 export function renderAiRecommendationsCliReport(
   analysis: AiAnalysisResult
 ): string {
-  return renderAiAnalysisCliReport(
-    'Nx Governance AI Recommendations',
-    analysis
-  );
+  return renderAiAnalysisReport('Nx Governance AI Recommendations', analysis);
 }
 
 export function renderAiSmellClustersCliReport(
   analysis: AiAnalysisResult
 ): string {
-  return renderAiAnalysisCliReport('Nx Governance AI Smell Clusters', analysis);
+  return renderAiAnalysisReport('Nx Governance AI Smell Clusters', analysis);
 }
 
 export function renderAiRefactoringSuggestionsCliReport(
   analysis: AiAnalysisResult
 ): string {
-  return renderAiAnalysisCliReport(
+  return renderAiAnalysisReport(
     'Nx Governance AI Refactoring Suggestions',
     analysis
   );
 }
 
 export function renderAiScorecardCliReport(analysis: AiAnalysisResult): string {
-  return renderAiAnalysisCliReport('Nx Governance AI Scorecard', analysis);
+  return renderAiAnalysisReport('Nx Governance AI Scorecard', analysis);
 }
 
 export function renderAiOnboardingCliReport(
   analysis: AiAnalysisResult
 ): string {
-  return renderAiAnalysisCliReport('Nx Governance AI Onboarding', analysis);
+  return renderAiAnalysisReport('Nx Governance AI Onboarding', analysis);
 }
 
-function renderAiAnalysisCliReport(
+function renderAiAnalysisReport(
   title: string,
   analysis: AiAnalysisResult,
-  options: {
-    findingsLabel?: string;
-  } = {}
+  preamble: string[] = [],
+  findingsLabel = 'Findings'
 ): string {
-  return buildAiReportLines(title, analysis, options).join('\n');
-}
-
-function buildAiReportLines(
-  title: string,
-  analysis: AiAnalysisResult,
-  options: {
-    findingsLabel?: string;
-  } = {}
-): string[] {
   const lines: string[] = [];
   lines.push(title);
   lines.push('');
+
+  for (const line of preamble) {
+    lines.push(line);
+  }
+
+  if (preamble.length > 0) {
+    lines.push('');
+  }
+
   lines.push(`Summary: ${analysis.summary}`);
 
   if (analysis.findings.length > 0) {
     lines.push('');
-    lines.push(`${options.findingsLabel ?? 'Findings'}:`);
+    lines.push(`${findingsLabel}:`);
     for (const finding of analysis.findings) {
       lines.push(`- ${finding.title}: ${finding.detail}`);
     }
@@ -185,7 +178,7 @@ function buildAiReportLines(
     }
   }
 
-  return lines;
+  return lines.join('\n');
 }
 
 function formatDriftStatus(status: string): string {

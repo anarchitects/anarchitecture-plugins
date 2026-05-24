@@ -1,12 +1,11 @@
 import { workspaceRoot } from '@nx/devkit';
-import path from 'node:path';
-
-import type {
-  DeliveryImpactAssessment,
-  SnapshotComparison,
-  SnapshotDeliveryImpactSummary,
+import {
+  compareSnapshots,
+  type DeliveryImpactAssessment,
+  type SnapshotComparison,
+  type SnapshotDeliveryImpactSummary,
 } from '@anarchitects/governance-core';
-import { compareSnapshots } from '@anarchitects/governance-core';
+import path from 'node:path';
 
 import {
   listMetricSnapshots,
