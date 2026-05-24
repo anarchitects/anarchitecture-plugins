@@ -67,7 +67,7 @@ Target architecture after this pass:
 
 ## Concrete cleanup completed in Plugins #394
 
-- Updated `@anarchitects/governance-core` to `0.0.2` in both
+- Updated `@anarchitects/governance-core` to `0.0.3` in both
   `@anarchitects/nx-governance` and `@anarchitects/governance-adapter-nx`.
 - Replaced active host-runtime imports of local deterministic modules with
   public `@anarchitects/governance-core` imports.
@@ -100,6 +100,41 @@ Target architecture after this pass:
   - imports from `@anarchitects/governance-adapter-typescript`
   - source-path imports from `anarchitects/anarchitecture-community`
 
+## Final small-surface decisions
+
+| Module / helper                                                | Decision                                    | Notes                                                                                                                                                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plugin/governance-run-renderers.ts`                           | `KEEP_AS_NX_EXECUTOR_RENDERING`             | Executor-facing CLI rendering stays host-owned. It is presentation, not reusable governance analysis.                                                                                                         |
+| `plugin/pr-impact-host-context.ts#readChangedFiles`            | `KEEP_AS_NX_HOST_IO`                        | Uses `git`, `workspaceRoot`, and process-level IO.                                                                                                                                                            |
+| `plugin/pr-impact-host-context.ts#resolveAffectedProjects`     | `KEEP_TEMPORARILY_WITH_COMMUNITY_FOLLOW_UP` | Pure `changedFiles -> GovernanceProject[]` mapping is host-independent. Keep local for now; proposed future Core API: `resolveAffectedGovernanceProjects(...)` or `mapChangedFilesToGovernanceProjects(...)`. |
+| `plugin/snapshot-runtime.ts#resolveSnapshotPath`               | `KEEP_AS_NX_HOST_IO`                        | Workspace-root-relative path handling stays local.                                                                                                                                                            |
+| `plugin/snapshot-runtime.ts#resolveOptionalSnapshotComparison` | `KEEP_AS_NX_HOST_IO`                        | Snapshot discovery/loading stays local even though it composes Core `compareSnapshots(...)`.                                                                                                                  |
+| `plugin/snapshot-runtime.ts#toSnapshotDeliveryImpactSummary`   | `KEEP_TEMPORARILY_WITH_COMMUNITY_FOLLOW_UP` | Pure `DeliveryImpactAssessment -> SnapshotDeliveryImpactSummary` mapping. Proposed future Core API: `buildSnapshotDeliveryImpactSummary(...)`.                                                                |
+| `plugin/ai-payload-scope.ts`                                   | `REMOVED_FROM_ACTIVE_RUNTIME`               | Replaced with published Core `0.0.3` payload helpers and a host-owned `plugin/ai-payload-limits.ts` constants file.                                                                                           |
+| `plugin/drift-ai-analysis.ts`                                  | `REMOVED_FROM_ACTIVE_RUNTIME`               | `summarizeDriftInterpretation(...)` now imports directly from `@anarchitects/governance-core`.                                                                                                                |
+| `plugin/ai-payload-limits.ts`                                  | `KEEP_AS_NX_HOST_OPTIONS`                   | Constants only. These are host defaults for handoff size, not reusable deterministic analysis.                                                                                                                |
+| `governance-adapter-nx/src/codeowners.ts`                      | `KEEP_AS_NX_ADAPTER_OWNED`                  | CODEOWNERS-to-Nx-project ownership mapping is still adapter-local. Generic CODEOWNERS parsing could move to Community later, but it is not required for `#394`.                                               |
+
+## Remaining intentional quarantine
+
+The following trees still exist physically and remain excluded from compile,
+test, export, and active runtime surfaces:
+
+- `core/**`
+- `standalone-cli/**`
+- `manual-workspace/**`
+- `typescript-adapter/**`
+- `health-engine/**`
+- `metric-engine/**`
+- `policy-engine/**`
+- `signal-engine/**`
+- `inventory/**`
+- `ai-analysis/**`
+- `delivery-impact/**`
+
+They remain as cleanup debt only. They are not part of the published host or
+adapter runtime, and boundary tests fail if active code imports them.
+
 ## Package-surface result
 
 `@anarchitects/nx-governance` remains host-focused:
@@ -115,12 +150,20 @@ It does not export local Core-like implementation folders.
 
 Plugins `#394` is no longer blocked on Community `#127`.
 
-The remaining reusable Core-candidate helper logic identified in earlier passes
-has been replaced by published Core `0.0.3` APIs in active runtime.
+The major reusable Core-candidate helper logic identified in earlier passes has
+been replaced by published Core `0.0.3` APIs in active runtime. The remaining
+follow-up items listed above are narrow, non-blocking utility candidates rather
+than host/runtime ownership blockers.
 
 CLI-owned and TypeScript-adapter-owned legacy trees remain quarantined from
 `@anarchitects/nx-governance` runtime and are not a blocker for the Nx host /
 Core split.
+
+Non-blocking future Community follow-up remains limited to:
+
+- generic changed-file to governance-project mapping
+- snapshot delivery-impact summary shaping
+- optional generic CODEOWNERS parsing if Community wants a host-independent utility
 
 Result:
 

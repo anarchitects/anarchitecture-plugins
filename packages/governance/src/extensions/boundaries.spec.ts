@@ -128,8 +128,12 @@ describe('governance extension architecture boundaries', () => {
     expect(runGovernanceSource).toContain(
       "from './pr-impact-host-context.js';"
     );
-    expect(runGovernanceSource).toContain("from './ai-payload-scope.js';");
-    expect(runGovernanceSource).toContain("from './drift-ai-analysis.js';");
+    expect(runGovernanceSource).toContain("from './ai-payload-limits.js';");
+    expect(runGovernanceSource).not.toContain("from './ai-payload-scope.js';");
+    expect(runGovernanceSource).not.toContain("from './drift-ai-analysis.js';");
+    expect(runGovernanceSource).toMatch(
+      /summarizeDriftInterpretation[\s\S]*from '@anarchitects\/governance-core';/
+    );
 
     expect(runGovernanceSource).not.toMatch(/const AI_PAYLOAD_LIMITS =/);
     expect(runGovernanceSource).not.toMatch(
@@ -144,6 +148,7 @@ describe('governance extension architecture boundaries', () => {
     expect(runGovernanceSource).not.toMatch(
       /function summarizeDriftInterpretation|function sliceDependenciesForProjectScope|function buildTruncationMetadata|function sliceTopItems|function compareViolationsForPriority|function asString/
     );
+    expect(runGovernanceSource).not.toContain('rootCauseProjectScope');
   });
 
   it('keeps run-governance imports constrained to Community package roots and focused host modules', () => {
