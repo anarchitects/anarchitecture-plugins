@@ -48,7 +48,7 @@ describe('governanceExtensionNx', () => {
     expect(typeof createGovernanceExtensionNx().register).toBe('function');
   });
 
-  it('does not duplicate generic Core rules during extension registration', () => {
+  it('does not duplicate generic rules, signals, or metrics during extension registration', () => {
     const host = createHost();
 
     governanceExtensionNx.register(host);

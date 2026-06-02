@@ -54,8 +54,8 @@ export const governanceExtensionNx: GovernanceExtensionDefinition = {
   version: GOVERNANCE_EXTENSION_NX_VERSION,
   optionalCapabilities: [...GOVERNANCE_EXTENSION_NX_OPTIONAL_CAPABILITIES],
   register(): void {
-    // #408 found no existing Nx-specific rule implementations to register.
-    // Future Nx-specific rules and #409 intelligence providers belong here.
+    // #408 and #409 found no existing Nx-specific contributions to register.
+    // Future Nx-specific rules and intelligence providers belong here.
   },
 };
 
