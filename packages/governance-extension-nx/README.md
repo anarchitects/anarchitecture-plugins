@@ -1,8 +1,13 @@
 # @anarchitects/governance-extension-nx
 
-`@anarchitects/governance-extension-nx` is the dedicated Governance Core extension package for future Nx-specific governance interpretation.
+`@anarchitects/governance-extension-nx` is the dedicated Governance Core
+extension package for future Nx-specific governance interpretation.
 
-This package introduces the extension boundary only. It does not move rules, metrics, recommendations, enrichers, signal providers, extraction logic, host composition, executors, renderers, or profile registration.
+This package introduces the extension boundary only. #408 classified the
+current rule implementations and found no existing Nx-specific rules to move.
+It does not move generic rules, metrics, recommendations, enrichers, signal
+providers, extraction logic, host composition, executors, renderers, or profile
+registration.
 
 ## Public API
 
@@ -35,7 +40,7 @@ It uses only public Governance Core extension contracts.
 
 ## Responsibilities
 
-This package will eventually own Nx-specific:
+This package owns future Nx-specific:
 
 - rule packs
 - metric providers
@@ -44,7 +49,12 @@ This package will eventually own Nx-specific:
 - enrichers
 - capability-aware interpretation
 
-For this package introduction, registration is intentionally no-op. The extension exposes identity, metadata, optional Nx capability requirements, and a Core-compatible registration entrypoint.
+Registration is currently no-op. No rule packs, metric providers, signal
+providers, or enrichers are registered because no current rule implementation is
+Nx-specific.
+
+Current generic project/dependency, ownership, metadata, domain, layer, and tag
+convention rules remain outside this package.
 
 ## Non-Responsibilities
 
@@ -75,6 +85,7 @@ Those responsibilities remain in the adapter, host, executors, renderers, or Gov
 
 Planned follow-up issues:
 
-- `#408` moves Nx rules.
+- `#408` classified existing rules and found no current Nx-specific rules to
+  move.
 - `#409` moves Nx metrics and recommendations.
 - `#410` wires host composition.

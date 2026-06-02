@@ -48,8 +48,19 @@ describe('governanceExtensionNx', () => {
     expect(typeof createGovernanceExtensionNx().register).toBe('function');
   });
 
-  it('registers through the Governance Core host contract as a no-op boundary', () => {
+  it('does not duplicate generic Core rules during extension registration', () => {
     const host = createHost();
+
+    governanceExtensionNx.register(host);
+
+    expect(host.registerEnricher).not.toHaveBeenCalled();
+    expect(host.registerRulePack).not.toHaveBeenCalled();
+    expect(host.registerSignalProvider).not.toHaveBeenCalled();
+    expect(host.registerMetricProvider).not.toHaveBeenCalled();
+  });
+
+  it('skips safely when optional Nx capabilities are absent', () => {
+    const host = createHost({ capabilities: [] });
 
     governanceExtensionNx.register(host);
 
@@ -68,7 +79,18 @@ describe('governanceExtensionNx', () => {
   });
 });
 
-function createHost(): GovernanceExtensionHost {
+function createHost(
+  options: { capabilities?: GovernanceCapability[] } = {}
+): GovernanceExtensionHost {
+  const capabilities = options.capabilities ?? [
+    {
+      id: 'nx.project-graph',
+      data: {
+        projectCount: 0,
+        projects: [],
+      },
+    },
+  ];
   const context: GovernanceExtensionHostContext = {
     workspaceRoot: '/workspace',
     profileName: 'frontend-layered',
@@ -81,26 +103,12 @@ function createHost(): GovernanceExtensionHost {
       dependencies: [],
     },
     capabilities: {
-      has: (id) => id === 'nx.project-graph',
+      has: (id) => capabilities.some((capability) => capability.id === id),
       get: <TData = unknown>(id: string) =>
-        id === 'nx.project-graph'
-          ? ({
-              id: 'nx.project-graph',
-              data: {
-                projectCount: 0,
-                projects: [],
-              },
-            } as GovernanceCapability<TData>)
-          : undefined,
-      list: () => [
-        {
-          id: 'nx.project-graph',
-          data: {
-            projectCount: 0,
-            projects: [],
-          },
-        },
-      ],
+        capabilities.find((capability) => capability.id === id) as
+          | GovernanceCapability<TData>
+          | undefined,
+      list: () => [...capabilities],
     },
   };
 
