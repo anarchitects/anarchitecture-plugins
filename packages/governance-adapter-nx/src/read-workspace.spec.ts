@@ -162,6 +162,35 @@ describe('read-workspace adapter compatibility', () => {
         },
       },
     ]);
+    expect(typedResult.dependencies).toEqual([]);
+    expect(typedResult.nodes).toEqual([
+      {
+        id: 'booking-ui',
+        name: 'booking-ui',
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: 'libs/booking/ui',
+        path: 'libs/booking/ui',
+        tags: ['scope:booking', 'layer:ui'],
+        classification: {
+          layer: 'ui',
+          scope: 'booking',
+          tags: ['scope:booking', 'layer:ui'],
+        },
+        metadata: {
+          documentation: true,
+          nx: {
+            projectType: 'library',
+            targets: ['build', 'test'],
+          },
+        },
+        ownership: {
+          contacts: ['@booking-team'],
+          source: 'codeowners',
+        },
+      },
+    ]);
+    expect(typedResult.relations).toEqual([]);
     expect(typedResult.capabilities).toEqual([
       {
         id: 'capability:nx',

@@ -1,3 +1,5 @@
+import type { GovernanceDiagnostic } from '@anarchitects/governance-core';
+
 export interface AdapterProject {
   name: string;
   root: string;
@@ -12,6 +14,7 @@ export interface AdapterDependency {
   target: string;
   type: string;
   sourceFile?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AdapterWorkspaceSnapshot {
@@ -19,4 +22,5 @@ export interface AdapterWorkspaceSnapshot {
   projects: AdapterProject[];
   dependencies: AdapterDependency[];
   codeownersByProject: Record<string, string[]>;
+  diagnostics?: GovernanceDiagnostic[];
 }
