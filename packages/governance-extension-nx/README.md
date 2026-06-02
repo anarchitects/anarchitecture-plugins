@@ -5,9 +5,10 @@ extension package for future Nx-specific governance interpretation.
 
 This package introduces the extension boundary only. #408 classified the
 current rule implementations and found no existing Nx-specific rules to move.
-It does not move generic rules, metrics, recommendations, enrichers, signal
-providers, extraction logic, host composition, executors, renderers, or profile
-registration.
+#409 classified the current metrics, signals, scoring, and recommendations and
+found no existing Nx-specific implementation to move. It does not move generic
+rules, metrics, recommendations, enrichers, signal providers, extraction logic,
+host composition, executors, renderers, or profile registration.
 
 ## Public API
 
@@ -50,11 +51,13 @@ This package owns future Nx-specific:
 - capability-aware interpretation
 
 Registration is currently no-op. No rule packs, metric providers, signal
-providers, or enrichers are registered because no current rule implementation is
-Nx-specific.
+providers, or enrichers are registered because no current rule, metric, signal,
+or recommendation implementation is Nx-specific.
 
 Current generic project/dependency, ownership, metadata, domain, layer, and tag
 convention rules remain outside this package.
+Current generic metrics, signals, scoring, delivery-impact indices, and
+recommendations also remain outside this package.
 
 ## Non-Responsibilities
 
@@ -87,5 +90,6 @@ Planned follow-up issues:
 
 - `#408` classified existing rules and found no current Nx-specific rules to
   move.
-- `#409` moves Nx metrics and recommendations.
+- `#409` classified existing metrics, signals, scoring, and recommendations and
+  found no current Nx-specific implementation to move.
 - `#410` wires host composition.
