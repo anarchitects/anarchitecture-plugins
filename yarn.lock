@@ -9,7 +9,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx"
   dependencies:
-    "@anarchitects/governance-core": "npm:0.0.4"
+    "@anarchitects/governance-core": "npm:0.1.0"
     "@nx/devkit": "npm:22.7.2"
     tslib: "npm:^2.3.0"
   peerDependencies:
@@ -21,6 +21,13 @@ __metadata:
   version: 0.0.4
   resolution: "@anarchitects/governance-core@npm:0.0.4"
   checksum: 10c0/faccffbe94634054c51f8903d2dd295f6ec837e98c9fb7653c16451c4e889928a1ac4119dc2d60af15b0ea4141b37ee709dd24cafb94dd613f3d3e5528365338
+  languageName: node
+  linkType: hard
+
+"@anarchitects/governance-core@npm:0.1.0":
+  version: 0.1.0
+  resolution: "@anarchitects/governance-core@npm:0.1.0"
+  checksum: 10c0/e17abedc9680e63c7721420972b079211fd49deef68106aeb2a3ef56c00190645bee99259de5a3c441e7f5a10e4a72d3275c673f9c0d6d27fa78be91520bdfd2
   languageName: node
   linkType: hard
 

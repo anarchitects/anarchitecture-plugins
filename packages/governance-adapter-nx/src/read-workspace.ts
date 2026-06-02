@@ -2,7 +2,10 @@ import { createProjectGraphAsync, workspaceRoot } from '@nx/devkit';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-core';
+import type {
+  GovernanceDiagnostic,
+  GovernanceWorkspaceAdapterResult,
+} from '@anarchitects/governance-core';
 
 import { ownersForProjectRoot, readCodeowners } from './codeowners.js';
 import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
@@ -45,23 +48,74 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
   });
 
   const projectNames = new Set(projects.map((project) => project.name));
+  const diagnostics: GovernanceDiagnostic[] = [];
 
   const dependencies = Object.entries(graph.dependencies).flatMap(
-    ([source, edges]) =>
-      (projectNames.has(source) ? edges : []).flatMap((edge) => {
+    ([source, edges]) => {
+      if (!projectNames.has(source)) {
+        diagnostics.push({
+          code: 'NX_ADAPTER_DEPENDENCY_SOURCE_NOT_FOUND',
+          message: `Skipped Nx dependency edges from unknown source project "${source}".`,
+          severity: 'warning',
+          kind: 'warning',
+          category: 'adapter',
+          source: 'governance-adapter-nx',
+          details: {
+            sourceProjectId: source,
+          },
+        });
+        return [];
+      }
+
+      return edges.flatMap((edge) => {
+        if (!edge || typeof edge !== 'object') {
+          diagnostics.push({
+            code: 'NX_ADAPTER_DEPENDENCY_EDGE_INVALID',
+            message: `Skipped malformed Nx dependency edge from "${source}".`,
+            severity: 'warning',
+            kind: 'warning',
+            category: 'adapter',
+            source: 'governance-adapter-nx',
+            details: {
+              sourceProjectId: source,
+            },
+          });
+          return [];
+        }
+
         if (!projectNames.has(edge.target)) {
+          diagnostics.push({
+            code: 'NX_ADAPTER_DEPENDENCY_TARGET_NOT_FOUND',
+            message: `Skipped Nx dependency from "${source}" to unknown target project "${edge.target}".`,
+            severity: 'warning',
+            kind: 'warning',
+            category: 'adapter',
+            source: 'governance-adapter-nx',
+            reference: {
+              projectId: source,
+              targetProjectId: edge.target,
+            },
+            details: {
+              sourceProjectId: source,
+              targetProjectId: edge.target,
+              dependencyType: edge.type ?? 'unknown',
+            },
+          });
           return [];
         }
 
         const sourceFile = (edge as { sourceFile?: string }).sourceFile;
+        const metadata = nxDependencyMetadata(edge);
 
         return {
           source,
           target: edge.target,
           type: edge.type ?? 'unknown',
           sourceFile,
+          ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
         };
-      })
+      });
+    }
   );
 
   const codeownersByProject = Object.fromEntries(
@@ -76,6 +130,7 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
     projects,
     dependencies,
     codeownersByProject,
+    ...(diagnostics.length > 0 ? { diagnostics } : {}),
   };
 }
 
@@ -129,6 +184,21 @@ export function resolveProjectTagsAndMetadata(
       ...graphMetadata,
     },
   };
+}
+
+function nxDependencyMetadata(edge: unknown): Record<string, unknown> {
+  const record = asRecord(edge);
+  if (!record) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).filter(
+      ([key, value]) =>
+        !['source', 'target', 'type', 'sourceFile'].includes(key) &&
+        value !== undefined
+    )
+  );
 }
 
 function readJsonFileSafe(filePath: string): Record<string, unknown> | null {
