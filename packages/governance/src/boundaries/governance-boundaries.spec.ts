@@ -301,7 +301,7 @@ describe('governance boundary enforcement', () => {
     expect(importSpecifiers).toEqual(
       expect.arrayContaining([
         '@anarchitects/governance-core',
-        '@anarchitects/governance-adapter-nx',
+        './compose-governance-runtime.js',
         './governance-run-renderers.js',
         './snapshot-runtime.js',
         './pr-impact-host-context.js',

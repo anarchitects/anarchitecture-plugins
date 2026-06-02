@@ -84,7 +84,12 @@ Those responsibilities remain in the adapter, host, executors, renderers, or Gov
 
 ## Relationship To The Nx Host
 
-`@anarchitects/nx-governance` remains the user-facing Nx host package. It will compose adapters and extensions in a later issue. This package does not modify host composition.
+`@anarchitects/nx-governance` remains the user-facing Nx host package. #410
+wires the host composition flow that loads the Nx adapter and registers
+Governance extensions through public Governance Core contracts.
+
+This package does not own host composition, executors, generators, renderers,
+or output routing.
 
 Planned follow-up issues:
 
@@ -92,4 +97,4 @@ Planned follow-up issues:
   move.
 - `#409` classified existing metrics, signals, scoring, and recommendations and
   found no current Nx-specific implementation to move.
-- `#410` wires host composition.
+- `#410` wires host composition in `@anarchitects/nx-governance`.
