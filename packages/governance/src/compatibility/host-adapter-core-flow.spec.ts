@@ -14,11 +14,21 @@ describe('host -> adapter -> core compatibility flow', () => {
       path.join(__dirname, '..', 'plugin', 'run-governance.ts'),
       'utf8'
     );
+    const compositionSource = readFileSync(
+      path.join(__dirname, '..', 'plugin', 'compose-governance-runtime.ts'),
+      'utf8'
+    );
 
     expect(runGovernanceSource).toContain(
       "from '@anarchitects/governance-core';"
     );
     expect(runGovernanceSource).toContain(
+      "from './compose-governance-runtime.js';"
+    );
+    expect(compositionSource).toContain(
+      "from '@anarchitects/governance-core';"
+    );
+    expect(compositionSource).toContain(
       "from '@anarchitects/governance-adapter-nx';"
     );
     expect(runGovernanceSource).not.toMatch(

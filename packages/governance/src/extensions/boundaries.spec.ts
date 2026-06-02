@@ -90,25 +90,29 @@ describe('governance extension architecture boundaries', () => {
     expect(runtimeFilesWithNxCapabilityLiteral).toEqual([]);
   });
 
-  it('keeps run-governance wiring pointed at adapter-owned Nx capability creation and assessment diagnostics flow', () => {
+  it('keeps host composition pointed at adapter-owned Nx capability creation and assessment diagnostics flow', () => {
     const runGovernanceSource = readGovernanceSource(
       'plugin/run-governance.ts'
+    );
+    const compositionSource = readGovernanceSource(
+      'plugin/compose-governance-runtime.ts'
     );
     const assessmentArtifactsSource = readGovernanceSource(
       'plugin/build-assessment-artifacts.ts'
     );
 
-    expect(runGovernanceSource).toContain(
+    expect(runGovernanceSource).toContain('composeNxGovernanceRuntime');
+    expect(compositionSource).toContain(
       "from '@anarchitects/governance-adapter-nx';"
     );
-    expect(runGovernanceSource).toContain(
+    expect(compositionSource).toContain(
       "from '@anarchitects/governance-core';"
     );
-    expect(runGovernanceSource).toContain(
+    expect(compositionSource).toContain(
       'const adapterCapabilities = adapterResult.capabilities ?? [];'
     );
-    expect(runGovernanceSource).toContain('capabilities: adapterCapabilities');
-    expect(runGovernanceSource).toContain(
+    expect(compositionSource).toContain('capabilities: adapterCapabilities');
+    expect(compositionSource).toContain(
       'extensionDiagnostics: extensionRegistration.diagnostics'
     );
     expect(assessmentArtifactsSource).toContain(

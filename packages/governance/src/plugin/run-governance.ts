@@ -16,11 +16,9 @@ import {
   buildDriftSummary,
   buildSnapshotDeliveryImpactSummary,
   buildOnboardingContext,
-  buildGovernanceAssessmentArtifacts as buildCoreGovernanceAssessmentArtifacts,
   buildPersistentSmellSignals,
   buildPrImpactContext,
   resolveAffectedGovernanceProjects,
-  buildGovernanceWorkspace,
   buildManagementInsightsAiRequest,
   buildRecommendationsTrendContext,
   buildRefactoringSuggestionsContext,
@@ -34,7 +32,6 @@ import {
   buildScorecardRequest,
   buildSmellClustersRequest,
   compareSnapshots,
-  DefaultGovernanceCapabilityRegistry,
   DeliveryImpactAssessment,
   DriftSignal,
   DriftSummary,
@@ -56,7 +53,6 @@ import {
   summarizeDrift,
   scopeGovernanceDependencies,
 } from '@anarchitects/governance-core';
-import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
 
 import {
   loadProfileOverrides,
@@ -91,8 +87,6 @@ import {
   renderAiSmellClustersCliReport,
   renderDriftCliReport,
 } from './governance-run-renderers.js';
-import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
-import { registerNxGovernanceExtensionsWithDiagnostics as registerGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
 import {
   resolveOptionalSnapshotComparison,
   resolveSnapshotPath,
@@ -100,6 +94,7 @@ import {
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
 import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
 import { AI_PAYLOAD_LIMITS } from './ai-payload-limits.js';
+import { composeNxGovernanceRuntime } from './compose-governance-runtime.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -1348,39 +1343,19 @@ async function buildAssessmentArtifacts(
     },
   };
 
-  const { adapterResult } = await loadNxGovernanceWorkspaceContext();
-  const inventory = buildGovernanceWorkspace(adapterResult, overrides);
-  loadGovernanceExtensionConfig({ workspaceRoot });
-  const adapterCapabilities = adapterResult.capabilities ?? [];
-  const capabilities = new DefaultGovernanceCapabilityRegistry(
-    adapterCapabilities
-  );
-  const extensionContext = {
-    workspaceRoot,
-    profileName,
-    options: { ...options },
-    inventory,
-    capabilities,
-  };
-  const extensionRegistration =
-    await registerGovernanceExtensionsWithDiagnostics({
-      ...extensionContext,
-    });
   const resolvedConformanceInput = resolveConformanceInput(
     options.conformanceJson
   );
   const conformanceSnapshot = loadConformanceSnapshot(resolvedConformanceInput);
-  const artifacts = await buildCoreGovernanceAssessmentArtifacts({
+  const { artifacts } = await composeNxGovernanceRuntime({
+    workspaceRoot,
+    profileName,
+    options: { ...options } as Record<string, unknown>,
     profile: effectiveProfile,
-    workspace: inventory,
+    profileOverrides: overrides,
     warnings: overrides.runtimeWarnings,
     exceptions: overrides.exceptions,
     conformanceFindings: conformanceSnapshot?.findings ?? [],
-    capabilities: adapterCapabilities,
-    diagnostics: adapterResult.diagnostics ?? [],
-    extensionRegistry: extensionRegistration.registry,
-    extensionContext,
-    extensionDiagnostics: extensionRegistration.diagnostics,
     asOf: artifactsOptions.asOf,
   });
 
