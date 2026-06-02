@@ -31,6 +31,25 @@ Compatibility regression coverage for the split package topology lives in:
 - `packages/governance/src/compatibility/public-workflows.spec.ts`
 - `packages/governance/src/compatibility/host-adapter-core-flow.spec.ts`
 
+## Runtime composition
+
+`@anarchitects/nx-governance` remains the Governance composition root for Nx.
+
+Executors and command entrypoints are thin runtime wrappers. They preserve the existing executor names, command names, and runtime options, then delegate Governance execution to the host pipeline. They do not perform adapter extraction, extension registration, rule evaluation, metric calculation, recommendation generation, or adapter/extension/Core composition themselves.
+
+The host pipeline owns the composition flow:
+
+```text
+executor or command
+  -> @anarchitects/nx-governance host
+    -> @anarchitects/governance-adapter-nx
+    -> @anarchitects/governance-extension-nx
+    -> @anarchitects/governance-core
+    -> host-owned output routing and artifact generation
+```
+
+Executors remain owned by `@anarchitects/nx-governance`. Generators remain owned by `@anarchitects/nx-governance`. Phase 2 changes how they invoke Governance; it does not relocate them.
+
 ---
 
 ## Table of contents

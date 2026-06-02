@@ -14,29 +14,18 @@ describe('workspace-graph executor', () => {
     ).toBe('Projects: 4\nDependencies: 9');
   });
 
-  it('prints project and dependency counts from the adapter snapshot', async () => {
+  it('prints project and dependency counts from the host composition summary', async () => {
     const info = jest.fn();
     const error = jest.fn();
-    const readSnapshot = jest.fn().mockResolvedValue({
-      source: 'nx-graph' as const,
-      extractedAt: '2026-03-17T00:00:00.000Z',
-      projects: [
-        { id: 'a', name: 'a', type: 'library', tags: [] },
-        { id: 'b', name: 'b', type: 'library', tags: [] },
-      ],
-      dependencies: [
-        { sourceProjectId: 'a', targetProjectId: 'b', type: 'static' },
-      ],
+    const summarizeGraph = jest.fn().mockResolvedValue({
+      summary: { projectCount: 2, dependencyCount: 1 },
+      source: 'host-canonical-workspace',
     });
-    const summarize = jest
-      .fn()
-      .mockReturnValue({ projectCount: 2, dependencyCount: 1 });
 
     const result = await runWorkspaceGraphExecutor(
-      {},
+      { graphJson: 'dist/project-graph.json' },
       {
-        readSnapshot,
-        summarize,
+        summarizeGraph,
         info,
         error,
       }
@@ -45,20 +34,22 @@ describe('workspace-graph executor', () => {
     expect(result).toEqual({ success: true });
     expect(info).toHaveBeenCalledWith('Projects: 2\nDependencies: 1');
     expect(error).not.toHaveBeenCalled();
-    expect(readSnapshot).toHaveBeenCalledWith({});
+    expect(summarizeGraph).toHaveBeenCalledWith({
+      graphJson: 'dist/project-graph.json',
+    });
   });
 
   it('returns unsuccessful when graph loading fails', async () => {
     const info = jest.fn();
     const error = jest.fn();
-    const readSnapshot = jest.fn().mockRejectedValue(new Error('graph failed'));
-    const summarize = jest.fn();
+    const summarizeGraph = jest
+      .fn()
+      .mockRejectedValue(new Error('graph failed'));
 
     const result = await runWorkspaceGraphExecutor(
       {},
       {
-        readSnapshot,
-        summarize,
+        summarizeGraph,
         info,
         error,
       }
@@ -67,6 +58,5 @@ describe('workspace-graph executor', () => {
     expect(result).toEqual({ success: false });
     expect(error).toHaveBeenCalledWith('graph failed');
     expect(info).not.toHaveBeenCalled();
-    expect(summarize).not.toHaveBeenCalled();
   });
 });

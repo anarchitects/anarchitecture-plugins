@@ -11,7 +11,13 @@ import {
   type GovernanceWorkspaceAdapterResult,
   type ProfileOverrides,
 } from '@anarchitects/governance-core';
-import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
+import {
+  loadNxGovernanceWorkspaceContext,
+  readWorkspaceGraphSnapshot,
+  summarizeWorkspaceGraph,
+  type GraphAdapterOptions,
+  type GraphSummary,
+} from '@anarchitects/governance-adapter-nx';
 
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
@@ -37,6 +43,13 @@ export interface ComposeNxGovernanceRuntimeResult {
   extensionContext: GovernanceExtensionHostContext;
   extensionRegistration: GovernanceExtensionRegistrationResult;
   artifacts: GovernanceAssessmentArtifacts;
+}
+
+export type NxGovernanceWorkspaceGraphSummaryInput = GraphAdapterOptions;
+
+export interface NxGovernanceWorkspaceGraphSummaryResult {
+  summary: GraphSummary;
+  source: 'host-canonical-workspace' | 'adapter-graph-json';
 }
 
 export async function composeNxGovernanceRuntime(
@@ -81,5 +94,34 @@ export async function composeNxGovernanceRuntime(
     extensionContext,
     extensionRegistration,
     artifacts,
+  };
+}
+
+export async function summarizeNxGovernanceWorkspaceGraph(
+  input: NxGovernanceWorkspaceGraphSummaryInput = {}
+): Promise<NxGovernanceWorkspaceGraphSummaryResult> {
+  if (input.graphJson) {
+    const snapshot = await readWorkspaceGraphSnapshot({
+      graphJson: input.graphJson,
+    });
+
+    return {
+      summary: summarizeWorkspaceGraph(snapshot),
+      source: 'adapter-graph-json',
+    };
+  }
+
+  const { adapterResult } = await loadNxGovernanceWorkspaceContext();
+
+  return {
+    summary: {
+      projectCount:
+        adapterResult.nodes?.length ?? adapterResult.projects?.length ?? 0,
+      dependencyCount:
+        adapterResult.relations?.length ??
+        adapterResult.dependencies?.length ??
+        0,
+    },
+    source: 'host-canonical-workspace',
   };
 }

@@ -1,12 +1,12 @@
 import { logger } from '@nx/devkit';
 
-import {
-  GraphSummary,
-  WorkspaceGraphSnapshot,
-  readWorkspaceGraphSnapshot,
-  summarizeWorkspaceGraph,
-} from '@anarchitects/governance-adapter-nx';
+import { summarizeNxGovernanceWorkspaceGraph } from '../../plugin/compose-governance-runtime.js';
 import { WorkspaceGraphExecutorOptions } from '../types.js';
+
+interface GraphSummary {
+  projectCount: number;
+  dependencyCount: number;
+}
 
 export default async function workspaceGraphExecutor(
   options: WorkspaceGraphExecutorOptions = {}
@@ -15,20 +15,18 @@ export default async function workspaceGraphExecutor(
 }
 
 interface WorkspaceGraphExecutorDeps {
-  readSnapshot: (
+  summarizeGraph: (
     options: WorkspaceGraphExecutorOptions
-  ) => Promise<WorkspaceGraphSnapshot>;
-  summarize: (snapshot: WorkspaceGraphSnapshot) => GraphSummary;
+  ) => Promise<{ summary: GraphSummary }>;
   info: (message: string) => void;
   error: (message: string) => void;
 }
 
 const defaultDeps: WorkspaceGraphExecutorDeps = {
-  readSnapshot: (options) =>
-    readWorkspaceGraphSnapshot({
+  summarizeGraph: (options) =>
+    summarizeNxGovernanceWorkspaceGraph({
       graphJson: options.graphJson,
     }),
-  summarize: (snapshot) => summarizeWorkspaceGraph(snapshot),
   info: (message) => logger.info(message),
   error: (message) => logger.error(message),
 };
@@ -38,8 +36,7 @@ export async function runWorkspaceGraphExecutor(
   deps: WorkspaceGraphExecutorDeps = defaultDeps
 ): Promise<{ success: boolean }> {
   try {
-    const snapshot = await deps.readSnapshot(options);
-    const summary = deps.summarize(snapshot);
+    const { summary } = await deps.summarizeGraph(options);
 
     deps.info(renderWorkspaceGraphSummary(summary));
     return { success: true };

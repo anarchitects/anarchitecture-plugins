@@ -22,7 +22,10 @@ import type {
 import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
 
 import { registerNxGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
-import { composeNxGovernanceRuntime } from './compose-governance-runtime.js';
+import {
+  composeNxGovernanceRuntime,
+  summarizeNxGovernanceWorkspaceGraph,
+} from './compose-governance-runtime.js';
 
 const mockedLoadNxGovernanceWorkspaceContext = jest.mocked(
   loadNxGovernanceWorkspaceContext
@@ -207,6 +210,48 @@ describe('composeNxGovernanceRuntime', () => {
     expect(result.artifacts.extensionDiagnostics).toEqual([
       expect.objectContaining({ code: 'governance.extension.loaded' }),
     ]);
+  });
+
+  it('summarizes the workspace graph through canonical host adapter output', async () => {
+    mockedLoadNxGovernanceWorkspaceContext.mockResolvedValue({
+      adapterResult: {
+        workspaceRoot,
+        nodes: [
+          { id: 'app', kind: 'project' },
+          { id: 'shared-data', kind: 'project' },
+        ],
+        relations: [
+          {
+            sourceNodeId: 'app',
+            targetNodeId: 'shared-data',
+            kind: 'dependency',
+          },
+        ],
+        projects: [
+          { id: 'legacy-app' },
+          { id: 'legacy-shared-data' },
+          { id: 'legacy-extra' },
+        ],
+        dependencies: [],
+      },
+      snapshot: {
+        root: workspaceRoot,
+        projects: [],
+        dependencies: [],
+        codeownersByProject: {},
+      },
+    });
+
+    const result = await summarizeNxGovernanceWorkspaceGraph();
+
+    expect(result).toEqual({
+      summary: {
+        projectCount: 2,
+        dependencyCount: 1,
+      },
+      source: 'host-canonical-workspace',
+    });
+    expect(mockedLoadNxGovernanceWorkspaceContext).toHaveBeenCalledTimes(1);
   });
 });
 
