@@ -1,0 +1,49 @@
+{
+  "name": "@anarchitects/governance-extension-nx",
+  "version": "0.0.1",
+  "description": "Governance Core extension boundary for future Nx-specific governance interpretation.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/governance-extension-nx"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@anarchitecture-plugins/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "nx": {
+    "metadata": {
+      "documentation": true,
+      "ownership": {
+        "team": "@anarchitects/architecture"
+      }
+    },
+    "tags": [
+      "npm:public",
+      "type:extension",
+      "domain:governance"
+    ]
+  },
+  "dependencies": {
+    "@anarchitects/governance-core": "0.1.0",
+    "tslib": "^2.3.0"
+  }
+}

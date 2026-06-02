@@ -23,6 +23,9 @@
     },
     {
       "path": "./packages/governance-adapter-nx"
+    },
+    {
+      "path": "./packages/governance-extension-nx"
     }
   ]
 }

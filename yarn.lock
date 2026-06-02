@@ -31,6 +31,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@anarchitects/governance-extension-nx@workspace:packages/governance-extension-nx":
+  version: 0.0.0-use.local
+  resolution: "@anarchitects/governance-extension-nx@workspace:packages/governance-extension-nx"
+  dependencies:
+    "@anarchitects/governance-core": "npm:0.1.0"
+    tslib: "npm:^2.3.0"
+  languageName: unknown
+  linkType: soft
+
 "@anarchitects/nx-governance@workspace:packages/governance":
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
