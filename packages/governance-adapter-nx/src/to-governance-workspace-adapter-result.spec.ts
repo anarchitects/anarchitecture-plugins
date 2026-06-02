@@ -154,7 +154,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           },
         },
       ],
-      capabilities: [
+      capabilities: expect.arrayContaining([
         {
           id: 'capability:nx',
           data: {
@@ -177,7 +177,60 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
             ],
           },
         },
-      ],
+        {
+          id: 'nx.dependency-graph',
+          source: 'governance-adapter-nx',
+          data: {
+            dependencyCount: 1,
+            dependencies: [
+              {
+                sourceProjectId: 'booking-ui',
+                targetProjectId: 'booking-domain',
+                type: 'static',
+                sourceFile: 'libs/booking/ui/src/lib/ui.ts',
+              },
+            ],
+          },
+          metadata: {
+            sourceSystem: 'nx',
+          },
+        },
+        {
+          id: 'nx.project-graph',
+          source: 'governance-adapter-nx',
+          data: {
+            workspaceRoot: '/workspace',
+            projectCount: 2,
+            projects: [
+              {
+                id: 'booking-domain',
+                name: 'booking-domain',
+                root: 'libs/booking/domain',
+                type: 'library',
+              },
+              {
+                id: 'booking-ui',
+                name: 'booking-ui',
+                root: 'libs/booking/ui',
+                type: 'library',
+              },
+            ],
+          },
+          metadata: {
+            sourceSystem: 'nx',
+          },
+        },
+      ]),
     });
+    expect(result.capabilities?.map((capability) => capability.id)).toEqual([
+      'capability:nx',
+      'nx.dependency-graph',
+      'nx.inferred-targets',
+      'nx.ownership-evidence',
+      'nx.project-graph',
+      'nx.project-metadata',
+      'nx.project-tags',
+      'nx.targets',
+    ]);
   });
 });

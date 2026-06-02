@@ -12,6 +12,8 @@ The public barrel intentionally exposes only adapter seams:
 - `readWorkspaceGraphSnapshotFromJson`
 - `summarizeWorkspaceGraph`
 - `createNxCapability`
+- `createNxCapabilities`
+- `createNxCanonicalCapabilities`
 - `readNxWorkspaceSnapshot`
 - `createNxWorkspaceAdapterResult`
 - `readNxWorkspaceAdapterResult`
@@ -27,7 +29,8 @@ This package owns:
 - CODEOWNERS-to-project ownership mapping
 - Nx workspace normalization
 - Nx-to-Core adapter result mapping
-- `capability:nx` production
+- legacy `capability:nx` production
+- canonical `nx.*` capability production
 
 This package does not own:
 
@@ -40,6 +43,25 @@ This package does not own:
 Those remain in `@anarchitects/nx-governance`.
 
 The split-boundary cleanup and release sequencing are tracked separately in Plugins `#394` and `#388`.
+
+## Capabilities
+
+The adapter emits `GovernanceWorkspaceAdapterResult.capabilities` so hosts and future extensions can determine which Nx extraction facts are available without importing adapter internals.
+
+`capability:nx` remains as the legacy compatibility capability. Canonical capabilities use stable namespaced IDs:
+
+| Capability ID            | Meaning                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `nx.project-graph`       | Nx projects were loaded from the project graph.                                                |
+| `nx.dependency-graph`    | Nx project dependencies were loaded from the project graph.                                    |
+| `nx.project-metadata`    | One or more projects expose Nx/project metadata keys.                                          |
+| `nx.project-tags`        | One or more projects expose Nx tags.                                                           |
+| `nx.targets`             | One or more projects expose target names.                                                      |
+| `nx.inferred-targets`    | Project Crystal inference inputs are described; inference remains owned by the Nx host plugin. |
+| `nx.governance-profiles` | Governance profile files were discovered under `tools/governance/profiles/*.json`.             |
+| `nx.ownership-evidence`  | CODEOWNERS-derived ownership evidence is available for one or more projects.                   |
+
+Nx-specific facts stay in capability `data` or `metadata`. Rule findings, recommendations, and policy violations are not emitted by this adapter.
 
 ## Installation
 

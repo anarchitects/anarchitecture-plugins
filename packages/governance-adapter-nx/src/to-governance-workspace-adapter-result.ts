@@ -6,7 +6,7 @@ import type {
   GovernanceWorkspaceAdapterResult,
 } from '@anarchitects/governance-core';
 
-import { createNxCapability } from './capability.js';
+import { createNxCapabilities } from './capability.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
 export function toGovernanceWorkspaceAdapterResult(
@@ -30,12 +30,10 @@ export function toGovernanceWorkspaceAdapterResult(
       relationInputFromDependencyInput(dependency, index)
     ),
     ...(snapshot.diagnostics ? { diagnostics: snapshot.diagnostics } : {}),
-    capabilities: [
-      createNxCapability({
-        workspaceRoot: snapshot.root,
-        snapshot,
-      }),
-    ],
+    capabilities: createNxCapabilities({
+      workspaceRoot: snapshot.root,
+      snapshot,
+    }),
   };
 }
 

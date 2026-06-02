@@ -82,7 +82,19 @@ describe('host -> adapter -> core compatibility flow', () => {
       (project) => project.id === 'booking-ui'
     );
 
-    expect(adapterResult.capabilities).toEqual([capability]);
+    expect(adapterResult.capabilities).toEqual(
+      expect.arrayContaining([capability])
+    );
+    expect(adapterResult.capabilities?.map((c) => c.id)).toEqual([
+      'capability:nx',
+      'nx.dependency-graph',
+      'nx.inferred-targets',
+      'nx.ownership-evidence',
+      'nx.project-graph',
+      'nx.project-metadata',
+      'nx.project-tags',
+      'nx.targets',
+    ]);
     expect(workspace).toMatchObject({
       id: 'workspace',
       name: 'workspace',

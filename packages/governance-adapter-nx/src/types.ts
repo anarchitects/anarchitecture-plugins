@@ -22,5 +22,6 @@ export interface AdapterWorkspaceSnapshot {
   projects: AdapterProject[];
   dependencies: AdapterDependency[];
   codeownersByProject: Record<string, string[]>;
+  governanceProfileFiles?: string[];
   diagnostics?: GovernanceDiagnostic[];
 }

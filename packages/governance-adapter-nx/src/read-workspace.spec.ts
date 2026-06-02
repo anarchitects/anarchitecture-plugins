@@ -6,6 +6,7 @@ import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-
 
 import {
   createNxWorkspaceAdapterResult,
+  discoverGovernanceProfileFiles,
   resolveProjectTagsAndMetadata,
 } from './read-workspace.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
@@ -191,22 +192,78 @@ describe('read-workspace adapter compatibility', () => {
       },
     ]);
     expect(typedResult.relations).toEqual([]);
-    expect(typedResult.capabilities).toEqual([
-      {
-        id: 'capability:nx',
-        data: {
-          workspaceRoot: '/workspace',
-          projects: [
-            {
-              name: 'booking-ui',
-              root: 'libs/booking/ui',
-              type: 'library',
-              tags: ['scope:booking', 'layer:ui'],
-              targets: ['build', 'test'],
-            },
-          ],
+    expect(typedResult.capabilities).toEqual(
+      expect.arrayContaining([
+        {
+          id: 'capability:nx',
+          data: {
+            workspaceRoot: '/workspace',
+            projects: [
+              {
+                name: 'booking-ui',
+                root: 'libs/booking/ui',
+                type: 'library',
+                tags: ['scope:booking', 'layer:ui'],
+                targets: ['build', 'test'],
+              },
+            ],
+          },
         },
-      },
+        {
+          id: 'nx.project-graph',
+          source: 'governance-adapter-nx',
+          data: {
+            workspaceRoot: '/workspace',
+            projectCount: 1,
+            projects: [
+              {
+                id: 'booking-ui',
+                name: 'booking-ui',
+                root: 'libs/booking/ui',
+                type: 'library',
+              },
+            ],
+          },
+          metadata: {
+            sourceSystem: 'nx',
+          },
+        },
+      ])
+    );
+    expect(
+      typedResult.capabilities?.map((capability) => capability.id)
+    ).toEqual([
+      'capability:nx',
+      'nx.dependency-graph',
+      'nx.inferred-targets',
+      'nx.ownership-evidence',
+      'nx.project-graph',
+      'nx.project-metadata',
+      'nx.project-tags',
+      'nx.targets',
+    ]);
+  });
+
+  it('discovers governance profile files without requiring host composition', () => {
+    mkdirSync(join(testRoot, 'tools/governance/profiles'), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(testRoot, 'tools/governance/profiles/z-profile.json'),
+      '{}'
+    );
+    writeFileSync(
+      join(testRoot, 'tools/governance/profiles/frontend-layered.json'),
+      '{}'
+    );
+    writeFileSync(
+      join(testRoot, 'tools/governance/profiles/readme.txt'),
+      'not a profile'
+    );
+
+    expect(discoverGovernanceProfileFiles(testRoot)).toEqual([
+      'tools/governance/profiles/frontend-layered.json',
+      'tools/governance/profiles/z-profile.json',
     ]);
   });
 });
