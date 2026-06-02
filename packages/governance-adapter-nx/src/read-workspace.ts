@@ -1,5 +1,5 @@
 import { createProjectGraphAsync, workspaceRoot } from '@nx/devkit';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type {
@@ -124,12 +124,14 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
       ownersForProjectRoot(project.root, codeownersEntries),
     ])
   );
+  const governanceProfileFiles = discoverGovernanceProfileFiles(workspaceRoot);
 
   return {
     root: workspaceRoot,
     projects,
     dependencies,
     codeownersByProject,
+    ...(governanceProfileFiles.length > 0 ? { governanceProfileFiles } : {}),
     ...(diagnostics.length > 0 ? { diagnostics } : {}),
   };
 }
@@ -184,6 +186,23 @@ export function resolveProjectTagsAndMetadata(
       ...graphMetadata,
     },
   };
+}
+
+export function discoverGovernanceProfileFiles(rootPath: string): string[] {
+  const profileDirectory = join(rootPath, 'tools', 'governance', 'profiles');
+
+  if (!existsSync(profileDirectory)) {
+    return [];
+  }
+
+  try {
+    return readdirSync(profileDirectory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => `tools/governance/profiles/${entry.name}`)
+      .sort((left, right) => left.localeCompare(right));
+  } catch {
+    return [];
+  }
 }
 
 function nxDependencyMetadata(edge: unknown): Record<string, unknown> {
