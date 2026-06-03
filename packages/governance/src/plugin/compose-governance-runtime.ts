@@ -21,13 +21,18 @@ import {
 
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
+import type { GovernanceProfileComposition } from '../profile/runtime-profile.js';
+
+interface NxGovernanceProfileOverrides extends ProfileOverrides {
+  composition?: GovernanceProfileComposition;
+}
 
 export interface ComposeNxGovernanceRuntimeInput {
   workspaceRoot: string;
   profileName: string;
   options: Readonly<Record<string, unknown>>;
   profile: GovernanceProfile;
-  profileOverrides: ProfileOverrides;
+  profileOverrides: NxGovernanceProfileOverrides;
   warnings?: string[];
   exceptions?: ProfileOverrides['exceptions'];
   conformanceFindings?: Parameters<
@@ -61,18 +66,28 @@ export async function composeNxGovernanceRuntime(
     input.profileOverrides
   );
 
-  loadGovernanceExtensionConfig({ workspaceRoot: input.workspaceRoot });
+  const profileComposition = input.profileOverrides.composition ?? {};
+  loadGovernanceExtensionConfig({
+    workspaceRoot: input.workspaceRoot,
+    profileComposition,
+  });
 
   const adapterCapabilities = adapterResult.capabilities ?? [];
   const extensionContext: GovernanceExtensionHostContext = {
     workspaceRoot: input.workspaceRoot,
     profileName: input.profileName,
-    options: { ...input.options },
+    options: {
+      ...input.options,
+      profileComposition,
+    },
     inventory: workspace,
     capabilities: new DefaultGovernanceCapabilityRegistry(adapterCapabilities),
   };
   const extensionRegistration =
-    await registerNxGovernanceExtensionsWithDiagnostics(extensionContext);
+    await registerNxGovernanceExtensionsWithDiagnostics(extensionContext, {
+      workspaceRoot: input.workspaceRoot,
+      profileComposition,
+    });
   const artifacts = await buildCoreGovernanceAssessmentArtifacts({
     profile: input.profile,
     workspace,

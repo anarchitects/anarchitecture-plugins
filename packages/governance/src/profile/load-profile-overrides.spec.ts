@@ -88,6 +88,133 @@ describe('loadProfileOverrides', () => {
     }
   });
 
+  it('loads declarative composition for extensions, renderers, and settings', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        composition: {
+          legacyPluginProbing: false,
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-nx',
+              optional: false,
+              options: {
+                rulePacks: ['default'],
+              },
+            },
+          ],
+          renderers: [
+            {
+              id: 'cli',
+              enabled: true,
+              options: {
+                verbose: false,
+              },
+            },
+            {
+              id: 'governance-graph',
+              enabled: true,
+            },
+          ],
+          settings: {
+            severityThreshold: 'warning',
+          },
+        },
+      });
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.composition).toEqual({
+        legacyPluginProbing: false,
+        extensions: [
+          {
+            package: '@anarchitects/governance-extension-nx',
+            optional: false,
+            options: {
+              rulePacks: ['default'],
+            },
+          },
+        ],
+        renderers: [
+          {
+            id: 'cli',
+            enabled: true,
+            options: {
+              verbose: false,
+            },
+          },
+          {
+            id: 'governance-graph',
+            enabled: true,
+          },
+        ],
+        settings: {
+          severityThreshold: 'warning',
+        },
+      });
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects unknown renderer ids in profile composition', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        composition: {
+          renderers: [
+            {
+              id: 'unknown-renderer',
+            },
+          ],
+        },
+      });
+
+      await expect(
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
+      ).rejects.toThrow(
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} has unknown composition renderer "unknown-renderer".`
+      );
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects invalid profile composition extension config early', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        composition: {
+          extensions: [
+            {
+              package: '',
+            },
+          ],
+        },
+      });
+
+      await expect(
+        loadProfileOverrides(workspaceRoot, 'frontend-layered')
+      ).rejects.toThrow(
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} has invalid composition.extensions[0].package: expected a non-empty string.`
+      );
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
   it('passes through optional normalized rule configuration without changing legacy fields', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 

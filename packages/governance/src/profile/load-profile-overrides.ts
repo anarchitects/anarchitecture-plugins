@@ -14,6 +14,8 @@ import {
 } from '@anarchitects/governance-core';
 import {
   GovernanceProfileFile,
+  GovernanceProfileComposition,
+  GovernanceProfileRendererId,
   GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
   GOVERNANCE_DEFAULT_PROFILE_NAME,
   GOVERNANCE_LEGACY_PROFILE_NAME,
@@ -30,8 +32,17 @@ const LEGACY_PROFILE_METRIC_KEY_MAP = {
   layerIntegrityWeight: 'layer-integrity',
 } as const;
 
+const SUPPORTED_PROFILE_RENDERERS = [
+  'cli',
+  'json',
+  'governance-graph',
+  'management-report',
+  'ai-handoff',
+] as const satisfies GovernanceProfileRendererId[];
+
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
+  composition: GovernanceProfileComposition;
   exceptions: GovernanceException[];
   eslintHelperPath: string;
   runtimeWarnings: string[];
@@ -81,6 +92,7 @@ export async function loadProfileOverrides(
       : [];
 
   const exceptions = normalizeProfileExceptions(raw.exceptions, filePath);
+  const composition = normalizeProfileComposition(raw.composition, filePath);
   const allowedLayerDependencies = normalizeAllowedLayerDependencies(
     raw.allowedLayerDependencies,
     layers,
@@ -111,6 +123,7 @@ export async function loadProfileOverrides(
       ...builtInProfile.metrics,
       ...normalizeMetricWeights(raw.metrics),
     },
+    composition,
     exceptions,
     eslintHelperPath,
     projectOverrides: raw.projectOverrides ?? {},
@@ -157,11 +170,200 @@ function buildDefaultResolvedOverrides(
     rules: profile.rules,
     health: profile.health,
     metrics: profile.metrics,
+    composition: {},
     exceptions: [],
     eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
     projectOverrides: {},
     runtimeWarnings: [],
   };
+}
+
+function normalizeProfileComposition(
+  raw: unknown,
+  filePath: string
+): GovernanceProfileComposition {
+  if (raw === undefined) {
+    return {};
+  }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid composition: expected an object.`
+    );
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  const composition: GovernanceProfileComposition = {};
+
+  if (candidate.legacyPluginProbing !== undefined) {
+    if (typeof candidate.legacyPluginProbing !== 'boolean') {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.legacyPluginProbing: expected a boolean.`
+      );
+    }
+
+    composition.legacyPluginProbing = candidate.legacyPluginProbing;
+  }
+
+  if (candidate.extensions !== undefined) {
+    composition.extensions = normalizeProfileCompositionExtensions(
+      candidate.extensions,
+      filePath
+    );
+  }
+
+  if (candidate.renderers !== undefined) {
+    composition.renderers = normalizeProfileCompositionRenderers(
+      candidate.renderers,
+      filePath
+    );
+  }
+
+  if (candidate.settings !== undefined) {
+    if (
+      !candidate.settings ||
+      typeof candidate.settings !== 'object' ||
+      Array.isArray(candidate.settings)
+    ) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.settings: expected an object.`
+      );
+    }
+
+    composition.settings = {
+      ...(candidate.settings as Record<string, unknown>),
+    };
+  }
+
+  return composition;
+}
+
+function normalizeProfileCompositionExtensions(
+  raw: unknown,
+  filePath: string
+): GovernanceProfileComposition['extensions'] {
+  if (!Array.isArray(raw)) {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid composition.extensions: expected an array.`
+    );
+  }
+
+  const seenPackages = new Set<string>();
+  return raw.map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.extensions[${index}]: expected an object.`
+      );
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const packageName = candidate.package;
+    if (typeof packageName !== 'string' || packageName.trim().length === 0) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.extensions[${index}].package: expected a non-empty string.`
+      );
+    }
+
+    if (seenPackages.has(packageName)) {
+      throw new Error(
+        `Governance profile at ${filePath} has duplicate composition extension package "${packageName}".`
+      );
+    }
+    seenPackages.add(packageName);
+
+    const optional = candidate.optional;
+    if (optional !== undefined && typeof optional !== 'boolean') {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.extensions[${index}].optional: expected a boolean.`
+      );
+    }
+
+    const options = candidate.options;
+    if (
+      options !== undefined &&
+      (!options || typeof options !== 'object' || Array.isArray(options))
+    ) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.extensions[${index}].options: expected an object.`
+      );
+    }
+
+    return {
+      package: packageName,
+      ...(optional !== undefined ? { optional } : {}),
+      ...(options !== undefined
+        ? { options: { ...(options as Record<string, unknown>) } }
+        : {}),
+    };
+  });
+}
+
+function normalizeProfileCompositionRenderers(
+  raw: unknown,
+  filePath: string
+): GovernanceProfileComposition['renderers'] {
+  if (!Array.isArray(raw)) {
+    throw new Error(
+      `Governance profile at ${filePath} has invalid composition.renderers: expected an array.`
+    );
+  }
+
+  const supportedRenderers = new Set<string>(SUPPORTED_PROFILE_RENDERERS);
+  const seenRenderers = new Set<string>();
+
+  return raw.map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.renderers[${index}]: expected an object.`
+      );
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    const id = candidate.id;
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.renderers[${index}].id: expected a non-empty string.`
+      );
+    }
+
+    if (!supportedRenderers.has(id)) {
+      throw new Error(
+        `Governance profile at ${filePath} has unknown composition renderer "${id}".`
+      );
+    }
+
+    if (seenRenderers.has(id)) {
+      throw new Error(
+        `Governance profile at ${filePath} has duplicate composition renderer "${id}".`
+      );
+    }
+    seenRenderers.add(id);
+
+    const enabled = candidate.enabled;
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.renderers[${index}].enabled: expected a boolean.`
+      );
+    }
+
+    const options = candidate.options;
+    if (
+      options !== undefined &&
+      (!options || typeof options !== 'object' || Array.isArray(options))
+    ) {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.renderers[${index}].options: expected an object.`
+      );
+    }
+
+    return {
+      id: id as GovernanceProfileRendererId,
+      ...(enabled !== undefined ? { enabled } : {}),
+      ...(options !== undefined
+        ? { options: { ...(options as Record<string, unknown>) } }
+        : {}),
+    };
+  });
 }
 
 function normalizeRuleConfigs(

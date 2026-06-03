@@ -313,6 +313,8 @@ For the implemented Extension Host v2 model and compatibility behavior, see
 
 A **governance profile** is a JSON file at `tools/governance/profiles/<name>.json`. It is the single source of truth for what the workspace architecture _should_ look like. Every run of any governance executor reads this file and evaluates the live project graph against it.
 
+Profiles are configuration. They select policies, thresholds, extension activation, renderer defaults, and governance settings. They do not implement rules, metrics, recommendations, adapter extraction, or renderer logic. The host reads the selected profile, composes the adapter, extensions, Core assessment pipeline, and renderers, then routes output.
+
 The built-in presets are:
 
 - `frontend-layered` for the current UI-leaning Nx layered taxonomy
@@ -327,6 +329,40 @@ required.
 For the current responsibility split between profiles, presets, executor
 options, and init wiring, see
 [`docs/governance/configuration-model.md`](../../docs/governance/configuration-model.md).
+
+### Profile composition
+
+Profiles may include an optional `composition` block. This is the declarative registration layer for host composition:
+
+```jsonc
+{
+  "composition": {
+    "extensions": [
+      {
+        "package": "@anarchitects/governance-extension-nx",
+        "optional": false,
+        "options": {
+          "rulePacks": ["default"]
+        }
+      }
+    ],
+    "renderers": [
+      { "id": "cli", "enabled": true },
+      { "id": "governance-graph", "enabled": true }
+    ],
+    "settings": {
+      "severityThreshold": "warning"
+    },
+    "legacyPluginProbing": false
+  }
+}
+```
+
+Profile extensions are loaded through the same host extension registration flow as `nx.json.governance.extensions`. Profile-declared extensions are considered first; duplicate `nx.json` extension packages are ignored for that run. Existing `nx.json.governance.extensions` remains supported for compatibility.
+
+Renderer entries configure host output behavior, not renderer implementation. The supported renderer ids are `cli`, `json`, `governance-graph`, `management-report`, and `ai-handoff`. When no explicit executor `output` is provided, disabling `cli` and enabling `json` makes JSON the default report output. Explicit executor options still take precedence.
+
+Invalid composition is rejected when the profile is loaded. The loader validates extension entry shape, duplicate extension packages, renderer ids, duplicate renderers, renderer options, and composition settings shape. Missing required extension packages are reported by the host extension loader during registration.
 
 ### Boundary policy source
 
@@ -1406,6 +1442,25 @@ When `--output=json` is used, the full `GovernanceAssessment` is written to stdo
     "ownershipCoverageWeight": 0.2,
     "documentationCompletenessWeight": 0.2,
     "layerIntegrityWeight": 0.2
+  },
+
+  // Optional declarative host composition.
+  // Profiles configure what is active; they do not implement behavior.
+  "composition": {
+    "extensions": [
+      {
+        "package": "@anarchitects/governance-extension-nx",
+        "optional": false,
+        "options": {}
+      }
+    ],
+    "renderers": [
+      { "id": "cli", "enabled": true },
+      { "id": "json", "enabled": false },
+      { "id": "governance-graph", "enabled": true }
+    ],
+    "settings": {},
+    "legacyPluginProbing": false
   },
 
   // Explicit exceptions for known, reviewable deviations.

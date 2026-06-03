@@ -239,6 +239,46 @@ describe('runGovernance', () => {
     expect(health.assessment.topIssues.length).toBeGreaterThan(0);
   });
 
+  it('uses profile renderer composition as the default output only when no explicit output is provided', async () => {
+    const loggerInfo = jest
+      .spyOn(logger, 'info')
+      .mockImplementation(() => undefined);
+    const stdoutWrite = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    const overrides = await actualProfileModule.loadProfileOverrides(
+      workspaceRoot,
+      'frontend-layered'
+    );
+
+    mockedLoadProfileOverrides.mockResolvedValue({
+      ...overrides,
+      composition: {
+        renderers: [
+          {
+            id: 'cli',
+            enabled: false,
+          },
+          {
+            id: 'json',
+            enabled: true,
+          },
+        ],
+      },
+    });
+
+    const defaultResult = await runGovernance({ reportType: 'health' });
+    const explicitCliResult = await runGovernance({
+      output: 'cli',
+      reportType: 'health',
+    });
+
+    expect(() => JSON.parse(defaultResult.rendered)).not.toThrow();
+    expect(stdoutWrite).toHaveBeenCalledWith(`${defaultResult.rendered}\n`);
+    expect(explicitCliResult.rendered).toContain('Nx Governance -');
+    expect(loggerInfo).toHaveBeenCalledWith(explicitCliResult.rendered);
+  });
+
   it('uses the explicit runtime profile option when resolving governance configuration', async () => {
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
 
@@ -1316,7 +1356,10 @@ describe('runGovernance', () => {
     expect(receivedContext?.workspaceRoot).toBe(workspaceRoot);
     expect(receivedContext?.profileName).toBe('frontend-layered');
     expect(receivedContext?.inventory.root).toBe(workspaceRoot);
-    expect(receivedContext?.options).toEqual({ reportType: 'health' });
+    expect(receivedContext?.options).toEqual({
+      reportType: 'health',
+      profileComposition: {},
+    });
     expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
     expect(
       receivedContext?.capabilities.get<{

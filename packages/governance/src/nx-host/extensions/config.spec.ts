@@ -31,6 +31,76 @@ describe('governance extension config loader', () => {
     });
   });
 
+  it('merges profile composition extensions before nx.json extensions', () => {
+    expect(
+      loadGovernanceExtensionConfig({
+        profileComposition: {
+          legacyPluginProbing: false,
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-nx',
+              options: {
+                rules: true,
+              },
+            },
+          ],
+        },
+        nxJson: {
+          governance: {
+            legacyPluginProbing: true,
+            extensions: [
+              {
+                package: '@anarchitects/governance-extension-nx',
+              },
+              {
+                package: '@anarchitects/governance-extension-angular',
+                optional: true,
+              },
+            ],
+          },
+        },
+      })
+    ).toEqual({
+      legacyPluginProbing: false,
+      extensions: [
+        {
+          package: '@anarchitects/governance-extension-nx',
+          options: {
+            rules: true,
+          },
+        },
+        {
+          package: '@anarchitects/governance-extension-angular',
+          optional: true,
+        },
+      ],
+    });
+  });
+
+  it('keeps existing nx.json extension config when profiles omit composition', () => {
+    expect(
+      loadGovernanceExtensionConfig({
+        nxJson: {
+          governance: {
+            legacyPluginProbing: false,
+            extensions: [
+              {
+                package: 'plugin-a',
+              },
+            ],
+          },
+        },
+      })
+    ).toEqual({
+      legacyPluginProbing: false,
+      extensions: [
+        {
+          package: 'plugin-a',
+        },
+      ],
+    });
+  });
+
   it('loads governance extension config from nx.json at an explicit workspace root', () => {
     const workspaceRoot = mkdtempSync(
       path.join(tmpdir(), 'governance-extension-config-')
