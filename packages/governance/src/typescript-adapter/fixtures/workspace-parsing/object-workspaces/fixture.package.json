@@ -1,6 +1,0 @@
-{
-  "name": "object-workspaces-demo",
-  "workspaces": {
-    "packages": ["apps/*", "packages/*"]
-  }
-}

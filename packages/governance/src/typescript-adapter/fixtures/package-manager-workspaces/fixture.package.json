@@ -1,7 +1,0 @@
-{
-  "name": "workspaces-demo",
-  "private": true,
-  "workspaces": {
-    "packages": ["packages/*", "libs/*"]
-  }
-}

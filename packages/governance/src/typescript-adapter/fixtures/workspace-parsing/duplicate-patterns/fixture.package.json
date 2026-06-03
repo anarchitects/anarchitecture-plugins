@@ -1,4 +1,0 @@
-{
-  "name": "duplicate-patterns-demo",
-  "workspaces": ["./apps/*", "apps/*", "packages/*/", "packages/*"]
-}
