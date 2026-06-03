@@ -5,7 +5,7 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
-"@anarchitects/governance-adapter-nx@npm:0.0.2, @anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx":
+"@anarchitects/governance-adapter-nx@npm:0.1.0, @anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx":
   version: 0.0.0-use.local
   resolution: "@anarchitects/governance-adapter-nx@workspace:packages/governance-adapter-nx"
   dependencies:
@@ -44,7 +44,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nx-governance@workspace:packages/governance"
   dependencies:
-    "@anarchitects/governance-adapter-nx": "npm:0.0.2"
+    "@anarchitects/governance-adapter-nx": "npm:0.1.0"
     "@anarchitects/governance-core": "npm:0.0.4"
     minimatch: "npm:9.0.5"
     tslib: "npm:^2.6.2"
