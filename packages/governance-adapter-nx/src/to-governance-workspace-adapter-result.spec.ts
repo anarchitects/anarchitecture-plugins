@@ -233,4 +233,99 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
       'nx.targets',
     ]);
   });
+
+  it('normalizes classification tag values while preserving raw tags', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'booking',
+          root: 'libs/booking',
+          type: 'library',
+          tags: [' domain: booking ', ' layer: domain ', 'scope: booking '],
+          targets: [],
+          metadata: {},
+        },
+        {
+          name: 'shared',
+          root: 'libs/shared',
+          type: 'library',
+          tags: ['domain: shared', 'layer:data-access '],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [
+        {
+          source: 'booking',
+          target: 'shared',
+          type: 'static',
+        },
+      ],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes?.[0]).toEqual(
+      expect.objectContaining({
+        id: 'booking',
+        tags: [' domain: booking ', ' layer: domain ', 'scope: booking '],
+        classification: {
+          domain: 'booking',
+          layer: 'domain',
+          scope: 'booking',
+          tags: [' domain: booking ', ' layer: domain ', 'scope: booking '],
+        },
+      })
+    );
+    expect(result.nodes?.[1]).toEqual(
+      expect.objectContaining({
+        id: 'shared',
+        tags: ['domain: shared', 'layer:data-access '],
+        classification: {
+          domain: 'shared',
+          layer: 'data-access',
+          tags: ['domain: shared', 'layer:data-access '],
+        },
+      })
+    );
+    expect(result.relations).toEqual([
+      expect.objectContaining({
+        sourceNodeId: 'booking',
+        targetNodeId: 'shared',
+        kind: 'dependency',
+      }),
+    ]);
+  });
+
+  it('treats empty canonical classification tag values as missing metadata', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'empty-tags',
+          root: 'libs/empty-tags',
+          type: 'library',
+          tags: ['domain: ', 'layer:    '],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes?.[0]).toEqual(
+      expect.objectContaining({
+        id: 'empty-tags',
+        tags: ['domain: ', 'layer:    '],
+        classification: {
+          tags: ['domain: ', 'layer:    '],
+        },
+      })
+    );
+  });
 });

@@ -2,6 +2,8 @@ import { createProjectGraphAsync, workspaceRoot } from '@nx/devkit';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { hasTagWithPrefix, readTagValue } from './tag-parsing.js';
+
 const UNKNOWN_PROJECT_TYPE = 'unknown';
 const UNKNOWN_DEPENDENCY_TYPE = 'unknown';
 
@@ -240,20 +242,6 @@ function inferProjectDomain(
 
 function inferProjectLayer(tags: string[]): string | undefined {
   return readTagValue(tags, 'layer');
-}
-
-function hasTagWithPrefix(tags: string[], prefix: string): boolean {
-  return tags.some((tag) => tag.startsWith(`${prefix}:`));
-}
-
-function readTagValue(tags: string[], prefix: string): string | undefined {
-  const matchingTag = tags.find((tag) => tag.startsWith(`${prefix}:`));
-  if (!matchingTag) {
-    return undefined;
-  }
-
-  const value = matchingTag.slice(prefix.length + 1);
-  return value ? value : undefined;
 }
 
 function normalizeProjectType(

@@ -200,6 +200,100 @@ describe('GraphAdapter', () => {
     }
   });
 
+  it('normalizes accidental tag whitespace without changing raw tag evidence', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        booking: {
+          data: {
+            root: 'libs/booking',
+            projectType: 'library',
+            tags: [' domain: booking ', ' layer: domain '],
+          },
+        },
+        shared: {
+          data: {
+            root: 'libs/shared',
+            projectType: 'library',
+            tags: ['domain: shared', 'layer:data-access '],
+          },
+        },
+      },
+      dependencies: {
+        booking: [{ target: 'shared', type: 'static' }],
+        shared: [],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects).toEqual([
+        {
+          id: 'booking',
+          name: 'booking',
+          root: 'libs/booking',
+          type: 'library',
+          tags: [' domain: booking ', ' layer: domain '],
+          domain: 'booking',
+          layer: 'domain',
+        },
+        {
+          id: 'shared',
+          name: 'shared',
+          root: 'libs/shared',
+          type: 'library',
+          tags: ['domain: shared', 'layer:data-access '],
+          domain: 'shared',
+          layer: 'data-access',
+        },
+      ]);
+      expect(snapshot.dependencies).toEqual([
+        {
+          sourceProjectId: 'booking',
+          targetProjectId: 'shared',
+          type: 'static',
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('treats empty domain and layer tag values as missing metadata', () => {
+    const fixture = makeGraphFixtureFile({
+      nodes: {
+        app: {
+          data: {
+            root: 'apps/app',
+            projectType: 'application',
+            tags: ['domain:   ', 'layer:'],
+          },
+        },
+      },
+      dependencies: {
+        app: [],
+      },
+    });
+
+    try {
+      const snapshot = adapter.readSnapshotFromJson(fixture.filePath);
+
+      expect(snapshot.projects).toEqual([
+        {
+          id: 'app',
+          name: 'app',
+          root: 'apps/app',
+          type: 'application',
+          tags: ['domain:   ', 'layer:'],
+          domain: undefined,
+          layer: undefined,
+        },
+      ]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it('uses scope tags as fallback only when workspace scope tags are present', () => {
     const fixture = makeGraphFixtureFile({
       nodes: {
