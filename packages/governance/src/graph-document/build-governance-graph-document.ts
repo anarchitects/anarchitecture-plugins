@@ -1,11 +1,15 @@
 import type {
   GovernanceAssessment,
-  GovernanceDependency,
-  GovernanceProject,
   GovernanceSignal,
   GovernanceSignalSeverity,
   Violation,
 } from '@anarchitects/governance-core';
+import type { GovernanceAssessmentArtifacts } from '../plugin/build-assessment-artifacts.js';
+import {
+  buildGovernanceRenderingModel,
+  type RenderableCanonicalNode,
+  type RenderableCanonicalRelation,
+} from '../reporting/canonical-rendering-model.js';
 import {
   GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION,
   type GovernanceGraphDocument,
@@ -24,6 +28,7 @@ import {
 
 export interface GovernanceGraphBuilderInput {
   assessment: GovernanceAssessment;
+  artifacts?: GovernanceAssessmentArtifacts;
   signals?: GovernanceSignal[];
   generatedAt?: string;
   schemaVersion?: string;
@@ -72,25 +77,34 @@ const HEALTH_ORDER: Record<GovernanceGraphHealth, number> = {
 export function buildGovernanceGraphDocument(
   input: GovernanceGraphBuilderInput
 ): GovernanceGraphDocument {
-  const workspace = input.assessment.workspace;
+  const renderingModel = buildGovernanceRenderingModel(
+    input.artifacts ?? input.assessment
+  );
+  const workspace = renderingModel.assessment.workspace;
   const ownershipRequired = resolveOwnershipRequirement(input);
   const documentationRequired = resolveDocumentationRequirement(input);
-  const nodes = [...workspace.projects].sort(compareProjects);
-  const edges = [...workspace.dependencies].sort(compareDependencies);
+  const nodes = [...renderingModel.nodes].sort(compareNodes);
+  const edges = [...renderingModel.relations].sort(compareRelations);
 
   const nodeDrafts = new Map<string, DraftGraphNode>(
-    nodes.map((project) => {
-      const owner = readOwner(project);
-      const metadata = serializeProjectMetadata(project.metadata);
+    nodes.map((nodeInput) => {
+      const owner = readNodeOwner(nodeInput);
+      const metadata = serializeNodeMetadata(
+        nodeInput,
+        renderingModel.hasCanonicalGraph
+      );
 
       return [
-        project.id,
+        nodeInput.id,
         {
           node: {
-            id: project.id,
-            label: project.name,
-            type: project.type,
-            tags: uniqueSorted(project.tags),
+            id: nodeInput.id,
+            label: nodeInput.name ?? nodeInput.id,
+            type: readNodeType(nodeInput),
+            tags: uniqueSorted([
+              ...(nodeInput.tags ?? []),
+              ...(nodeInput.classification?.tags ?? []),
+            ]),
             ...(owner ? { owner } : {}),
             ...(metadata ? { metadata } : {}),
           },
@@ -101,16 +115,16 @@ export function buildGovernanceGraphDocument(
   );
 
   const edgeDrafts = new Map<string, DraftGraphEdge>(
-    edges.map((dependency) => {
-      const edgeId = buildEdgeId(dependency);
+    edges.map((relation) => {
+      const edgeId = buildEdgeId(relation);
       return [
         edgeId,
         {
           edge: {
             id: edgeId,
-            source: dependency.source,
-            target: dependency.target,
-            type: dependency.type,
+            source: relation.sourceNodeId,
+            target: relation.targetNodeId,
+            type: readRelationType(relation),
           },
           findings: [],
         },
@@ -143,13 +157,13 @@ export function buildGovernanceGraphDocument(
   const finalizedNodes = [...nodeDrafts.values()]
     .map(({ node, findings }) => {
       const sortedFindings = [...findings].sort(compareFindings);
-      const resolvedNode = workspace.projects.find(
-        (project) => project.id === node.id
-      );
+      const resolvedNode = nodes.find((candidate) => candidate.id === node.id);
       const nodeStatus = deriveGovernanceGraphNodeStatus({
         findings: sortedFindings.map(stripRelatedProjects),
         owner: node.owner,
-        ownershipSource: resolvedNode?.ownership?.source,
+        ownershipSource: normalizeOwnershipSource(
+          resolvedNode?.ownership?.source
+        ),
         ownershipRequired,
         documentation: node.metadata?.documentation,
         documentationRequired,
@@ -378,26 +392,28 @@ function countHealth(
   );
 }
 
-function compareProjects(
-  left: GovernanceProject,
-  right: GovernanceProject
+function compareNodes(
+  left: RenderableCanonicalNode,
+  right: RenderableCanonicalNode
 ): number {
   return (
     left.id.localeCompare(right.id) ||
-    left.name.localeCompare(right.name) ||
-    left.root.localeCompare(right.root)
+    (left.name ?? '').localeCompare(right.name ?? '') ||
+    (left.root ?? left.path ?? '').localeCompare(right.root ?? right.path ?? '')
   );
 }
 
-function compareDependencies(
-  left: GovernanceDependency,
-  right: GovernanceDependency
+function compareRelations(
+  left: RenderableCanonicalRelation,
+  right: RenderableCanonicalRelation
 ): number {
   return (
-    left.source.localeCompare(right.source) ||
-    left.target.localeCompare(right.target) ||
-    left.type.localeCompare(right.type) ||
-    (left.sourceFile ?? '').localeCompare(right.sourceFile ?? '')
+    left.sourceNodeId.localeCompare(right.sourceNodeId) ||
+    left.targetNodeId.localeCompare(right.targetNodeId) ||
+    readRelationType(left).localeCompare(readRelationType(right)) ||
+    readMetadataString(left.metadata, 'sourceFile').localeCompare(
+      readMetadataString(right.metadata, 'sourceFile')
+    )
   );
 }
 
@@ -473,8 +489,12 @@ function compareViolations(left: Violation, right: Violation): number {
   );
 }
 
-function buildEdgeId(dependency: GovernanceDependency): string {
-  return [dependency.source, dependency.target, dependency.type].join('->');
+function buildEdgeId(relation: RenderableCanonicalRelation): string {
+  return [
+    relation.sourceNodeId,
+    relation.targetNodeId,
+    readRelationType(relation),
+  ].join('->');
 }
 
 function buildEdgePairKey(source: string, target: string): string {
@@ -522,12 +542,12 @@ function resolveDocumentationRequirement(
     : undefined;
 }
 
-function isKnownNode(project: GovernanceProject | undefined): boolean {
-  if (!project) {
+function isKnownNode(node: RenderableCanonicalNode | undefined): boolean {
+  if (!node) {
     return false;
   }
 
-  return Boolean(project.id && project.name && project.root);
+  return Boolean(node.id && (node.name || node.id) && (node.root || node.path));
 }
 
 function isKnownEdge(
@@ -554,10 +574,27 @@ function mapSignalSource(
   return 'signal';
 }
 
-function readOwner(project: GovernanceProject): string | undefined {
+function readNodeOwner(node: RenderableCanonicalNode): string | undefined {
   return (
-    normalizeText(project.ownership?.team) ??
-    normalizeText(project.ownership?.contacts?.[0])
+    normalizeText(node.ownership?.team) ??
+    normalizeText(node.ownership?.contacts?.[0])
+  );
+}
+
+function readNodeType(node: RenderableCanonicalNode): string {
+  return (
+    readNestedMetadataString(node.metadata, ['nx', 'projectType']) ??
+    readOptionalMetadataString(node.metadata, 'projectType') ??
+    normalizeText(node.kind) ??
+    'unknown'
+  );
+}
+
+function readRelationType(relation: RenderableCanonicalRelation): string {
+  return (
+    readOptionalMetadataString(relation.metadata, 'dependencyType') ??
+    normalizeText(relation.kind) ??
+    'unknown'
   );
 }
 
@@ -567,11 +604,33 @@ function readRuleId(
   return normalizeText(asString(metadata?.ruleId));
 }
 
-function serializeProjectMetadata(
-  metadata: Record<string, unknown>
+function serializeNodeMetadata(
+  node: RenderableCanonicalNode,
+  preserveComplexMetadata: boolean
 ): Record<string, string | number | boolean | null> | undefined {
+  const metadata = preserveComplexMetadata
+    ? {
+        ...(node.metadata ?? {}),
+        ...(node.sourceSystem ? { sourceSystem: node.sourceSystem } : {}),
+        ...(node.kind ? { kind: node.kind } : {}),
+        ...(node.root ? { root: node.root } : {}),
+        ...(node.path ? { path: node.path } : {}),
+        ...(node.classification?.domain
+          ? { domain: node.classification.domain }
+          : {}),
+        ...(node.classification?.layer
+          ? { layer: node.classification.layer }
+          : {}),
+        ...(node.classification?.scope
+          ? { scope: node.classification.scope }
+          : {}),
+      }
+    : node.metadata ?? {};
   const normalizedEntries = Object.entries(metadata)
-    .map(([key, value]) => [key, toSerializablePrimitive(value)] as const)
+    .map(
+      ([key, value]) =>
+        [key, toSerializablePrimitive(value, preserveComplexMetadata)] as const
+    )
     .filter(
       (entry): entry is [string, string | number | boolean | null] =>
         entry[1] !== undefined
@@ -586,7 +645,8 @@ function serializeProjectMetadata(
 }
 
 function toSerializablePrimitive(
-  value: unknown
+  value: unknown,
+  preserveComplexMetadata = false
 ): string | number | boolean | null | undefined {
   if (typeof value === 'string') {
     return value;
@@ -600,7 +660,85 @@ function toSerializablePrimitive(
     return null;
   }
 
+  if (preserveComplexMetadata && (Array.isArray(value) || isRecord(value))) {
+    return stableStringify(value);
+  }
+
   return undefined;
+}
+
+function normalizeOwnershipSource(
+  source: string | undefined
+): 'project-metadata' | 'codeowners' | 'merged' | 'none' | undefined {
+  if (
+    source === 'project-metadata' ||
+    source === 'codeowners' ||
+    source === 'merged' ||
+    source === 'none'
+  ) {
+    return source;
+  }
+
+  return undefined;
+}
+
+function readMetadataString(
+  metadata: Record<string, unknown> | undefined,
+  key: string
+): string {
+  return normalizeText(asString(metadata?.[key])) ?? '';
+}
+
+function readOptionalMetadataString(
+  metadata: Record<string, unknown> | undefined,
+  key: string
+): string | undefined {
+  return normalizeText(asString(metadata?.[key]));
+}
+
+function readNestedMetadataString(
+  metadata: Record<string, unknown> | undefined,
+  path: string[]
+): string | undefined {
+  let current: unknown = metadata;
+
+  for (const key of path) {
+    const record = isRecord(current) ? current : undefined;
+    if (!record) {
+      return undefined;
+    }
+    current = record[key];
+  }
+
+  return normalizeText(asString(current));
+}
+
+function stableStringify(value: unknown): string | undefined {
+  try {
+    return JSON.stringify(sortJsonValue(value));
+  } catch {
+    return undefined;
+  }
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortJsonValue);
+  }
+
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nestedValue]) => [key, sortJsonValue(nestedValue)])
+    );
+  }
+
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function stripRelatedProjects(

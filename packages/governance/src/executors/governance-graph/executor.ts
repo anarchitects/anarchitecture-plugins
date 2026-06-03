@@ -36,6 +36,7 @@ const defaultDeps: GovernanceGraphExecutorDeps = {
     buildGovernanceGraphDocument({
       assessment: artifacts.assessment,
       signals: artifacts.signals,
+      artifacts,
     }),
   ensureDirectory: async (directoryPath) => {
     await mkdir(directoryPath, { recursive: true });

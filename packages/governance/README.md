@@ -50,6 +50,18 @@ executor or command
 
 Executors remain owned by `@anarchitects/nx-governance`. Generators remain owned by `@anarchitects/nx-governance`. Phase 2 changes how they invoke Governance; it does not relocate them.
 
+## Renderer responsibilities
+
+Renderers and artifact generators consume completed Governance assessment artifacts. They own presentation, visualization, JSON shaping, HTML rendering, and output routing. They do not perform adapter extraction, extension registration, rule evaluation, metric calculation, or recommendation generation.
+
+Canonical rendering uses `nodes`, `relations`, `capabilities`, `diagnostics`, `findings`, `measurements`, `metrics`, `scores`, and `recommendations` from the host-composed artifacts when those fields are available. This does not mean every field is rendered in every output. Canonical artifacts are the source model; each renderer decides what is useful for its format.
+
+Default human-readable reports stay concise and decision-oriented. They prioritize health/status, key findings, diagnostics that require attention, top recommendations, and relevant graph or architecture summaries. Raw canonical graph, capability, and diagnostic detail stays available in JSON or explicit technical artifacts instead of being dumped into normal CLI output.
+
+`projects` and `dependencies` remain compatibility inputs and continue to be emitted in existing assessment JSON for current Nx Governance consumers.
+
+Graph rendering treats `nodes` and `relations` as the canonical graph model. Legacy `workspace.projects` and `workspace.dependencies` are still accepted as fallback input so existing artifacts and tests remain compatible.
+
 ---
 
 ## Table of contents
@@ -1185,7 +1197,7 @@ This is emitted whenever `boundaryPolicySource` is set to `"eslint"`, reminding 
 
 ### JSON output schema
 
-When `--output=json` is used, the full `GovernanceAssessment` is written to stdout:
+When `--output=json` is used, the full `GovernanceAssessment` is written to stdout. Host-composed runs may also add top-level canonical rendering fields such as `nodes`, `relations`, `capabilities`, `diagnostics`, and `extensionDiagnostics`; existing `workspace.projects` and `workspace.dependencies` remain available for compatibility.
 
 ```jsonc
 {

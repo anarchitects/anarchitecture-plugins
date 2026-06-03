@@ -10,6 +10,7 @@ import type {
   GovernanceTopIssue,
   Violation,
 } from '@anarchitects/governance-core';
+import type { GovernanceAssessmentArtifacts } from '../plugin/build-assessment-artifacts.js';
 import {
   GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION,
   buildGovernanceGraphDocument,
@@ -414,6 +415,90 @@ describe('buildGovernanceGraphDocument', () => {
 
     expect(left).toEqual(right);
   });
+
+  it('builds graph nodes and edges from canonical artifacts with legacy workspace fallback preserved', () => {
+    const assessment = createAssessment({
+      workspaceProjects: [
+        createProject({
+          id: 'legacy-only',
+          type: 'library',
+          tags: ['domain:legacy'],
+        }),
+      ],
+      dependencies: [
+        {
+          source: 'legacy-only',
+          target: 'legacy-only',
+          type: 'implicit',
+        },
+      ],
+    });
+    const artifacts = createArtifactsWithCanonicalGraph(assessment);
+
+    const document = buildGovernanceGraphDocument({
+      assessment,
+      artifacts,
+      signals: [
+        {
+          id: 'signal-policy',
+          source: 'policy',
+          type: 'domain-boundary-violation',
+          sourceProjectId: 'orders-app',
+          targetProjectId: 'shared-util',
+          relatedProjectIds: ['orders-app', 'shared-util'],
+          severity: 'error',
+          category: 'boundary',
+          message: 'Orders cannot depend on shared util.',
+          metadata: {
+            ruleId: 'domain-boundary',
+          },
+          createdAt: '2026-05-01T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(document.nodes.map((node) => node.id)).toEqual([
+      'orders-app',
+      'shared-util',
+    ]);
+    expect(document.edges).toEqual([
+      expect.objectContaining({
+        id: 'orders-app->shared-util->static',
+        source: 'orders-app',
+        target: 'shared-util',
+        type: 'static',
+        health: 'critical',
+        findings: [
+          expect.objectContaining({
+            id: 'signal-policy',
+            source: 'policy',
+            ruleId: 'domain-boundary',
+          }),
+        ],
+      }),
+    ]);
+    expect(document.nodes[0]).toMatchObject({
+      id: 'orders-app',
+      label: 'Orders App',
+      type: 'application',
+      tags: ['domain:orders', 'layer:app'],
+      owner: '@org/orders',
+      metadata: {
+        domain: 'orders',
+        kind: 'project',
+        layer: 'app',
+        nx: '{"projectType":"application","targets":["build","test"]}',
+        path: 'apps/orders',
+        root: 'apps/orders',
+        sourceSystem: 'nx',
+      },
+    });
+    expect(document.summary).toMatchObject({
+      nodeCount: 2,
+      edgeCount: 1,
+      findingCount: 1,
+    });
+  });
 });
 
 function createAssessment(
@@ -594,5 +679,77 @@ function createHealthScore(): HealthScore {
       weakestMetrics: [],
       dominantIssues: [],
     },
+  };
+}
+
+function createArtifactsWithCanonicalGraph(
+  assessment: GovernanceAssessment
+): GovernanceAssessmentArtifacts {
+  return {
+    assessment,
+    signals: [],
+    exceptionApplication: {
+      declaredExceptions: [],
+      exceptionStatuses: {},
+      policyViolations: [],
+      conformanceFindings: [],
+      activePolicyViolations: [],
+      suppressedPolicyViolations: [],
+      reactivatedPolicyViolations: [],
+      activeConformanceFindings: [],
+      suppressedConformanceFindings: [],
+      reactivatedConformanceFindings: [],
+    },
+    extensionDiagnostics: [],
+    adapterResult: {
+      workspaceRoot: '.',
+      nodes: [
+        {
+          id: 'orders-app',
+          name: 'Orders App',
+          kind: 'project',
+          sourceSystem: 'nx',
+          root: 'apps/orders',
+          path: 'apps/orders',
+          tags: ['domain:orders', 'layer:app'],
+          classification: {
+            domain: 'orders',
+            layer: 'app',
+            tags: ['domain:orders', 'layer:app'],
+          },
+          ownership: {
+            team: '@org/orders',
+            source: 'project-metadata',
+          },
+          metadata: {
+            nx: {
+              projectType: 'application',
+              targets: ['build', 'test'],
+            },
+          },
+        },
+        {
+          id: 'shared-util',
+          name: 'Shared Util',
+          kind: 'project',
+          sourceSystem: 'nx',
+          root: 'libs/shared/util',
+          path: 'libs/shared/util',
+          tags: ['domain:shared', 'layer:util'],
+        },
+      ],
+      relations: [
+        {
+          id: 'nx:orders-app->shared-util:static:0',
+          sourceNodeId: 'orders-app',
+          targetNodeId: 'shared-util',
+          kind: 'dependency',
+          metadata: {
+            dependencyType: 'static',
+            sourceFile: 'apps/orders/src/main.ts',
+          },
+        },
+      ],
+    } as GovernanceAssessmentArtifacts['adapterResult'],
   };
 }
