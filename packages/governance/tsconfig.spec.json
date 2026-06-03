@@ -10,25 +10,6 @@
     "src/**/*.spec.ts",
     "src/**/*.d.ts"
   ],
-  "exclude": [
-    "src/health-engine/**",
-    "src/metric-engine/**",
-    "src/policy-engine/**",
-    "src/signal-engine/**",
-    "src/inventory/**",
-    "src/ai-analysis/**",
-    "src/delivery-impact/**",
-    "src/core/**",
-    "src/standalone-cli/**",
-    "src/typescript-adapter/**",
-    "src/manual-workspace/**",
-    "src/plugin/apply-governance-exceptions.ts",
-    "src/plugin/apply-governance-exceptions.spec.ts",
-    "src/plugin/build-exception-report.ts",
-    "src/plugin/build-exception-report.spec.ts",
-    "src/plugin/evaluate-exception-lifecycle.ts",
-    "src/plugin/evaluate-exception-lifecycle.spec.ts"
-  ],
   "references": [
     {
       "path": "./tsconfig.lib.json"

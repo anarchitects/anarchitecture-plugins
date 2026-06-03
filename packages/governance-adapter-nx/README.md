@@ -1,74 +1,140 @@
 # @anarchitects/governance-adapter-nx
 
-`@anarchitects/governance-adapter-nx` is the Anarchitects Nx adapter boundary for the Governance ecosystem. It remains in `anarchitects/anarchitecture-plugins` because it owns Nx-specific workspace graph loading, metadata extraction, workspace normalization, Nx capability production, and mapping into published Governance Core contracts.
+## Overview
 
-This package depends on the published `@anarchitects/governance-core` package. It must not depend on `@anarchitects/nx-governance` host internals, executors, generators, or plugin runtime modules. It also must not own standalone CLI behavior or TypeScript adapter behavior.
+@anarchitects/governance-adapter-nx provides Nx-specific extraction and mapping for Governance. It reads Nx workspace/project graph information and maps that data into Governance Core contracts.
 
-## Public API
+Use this package when you need programmatic access to canonical Nx governance inputs, capabilities, and adapter results.
 
-The public barrel intentionally exposes only adapter seams:
+## Key Concepts
 
-- `readWorkspaceGraphSnapshot`
-- `readWorkspaceGraphSnapshotFromJson`
-- `summarizeWorkspaceGraph`
-- `createNxCapability`
-- `createNxCapabilities`
-- `createNxCanonicalCapabilities`
-- `readNxWorkspaceSnapshot`
-- `createNxWorkspaceAdapterResult`
-- `readNxWorkspaceAdapterResult`
-- `loadNxGovernanceWorkspaceContext`
-- `resolveProjectTagsAndMetadata`
-
-## Ownership Boundary
-
-This package owns:
-
-- Nx graph loading
-- Nx metadata extraction
-- CODEOWNERS-to-project ownership mapping
-- Nx workspace normalization
-- Nx-to-Core adapter result mapping
-- legacy `capability:nx` production
-- canonical `nx.*` capability production
-
-This package does not own:
-
-- `@anarchitects/nx-governance` host runtime orchestration
-- executors
-- generators
-- Project Crystal inference
-- plugin runtime internals
-
-Those remain in `@anarchitects/nx-governance`.
-
-The split-boundary cleanup and release sequencing are tracked separately in Plugins `#394` and `#388`.
-
-## Capabilities
-
-The adapter emits `GovernanceWorkspaceAdapterResult.capabilities` so hosts and future extensions can determine which Nx extraction facts are available without importing adapter internals.
-
-`capability:nx` remains as the legacy compatibility capability. Canonical capabilities use stable namespaced IDs:
-
-| Capability ID            | Meaning                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------- |
-| `nx.project-graph`       | Nx projects were loaded from the project graph.                                                |
-| `nx.dependency-graph`    | Nx project dependencies were loaded from the project graph.                                    |
-| `nx.project-metadata`    | One or more projects expose Nx/project metadata keys.                                          |
-| `nx.project-tags`        | One or more projects expose Nx tags.                                                           |
-| `nx.targets`             | One or more projects expose target names.                                                      |
-| `nx.inferred-targets`    | Project Crystal inference inputs are described; inference remains owned by the Nx host plugin. |
-| `nx.governance-profiles` | Governance profile files were discovered under `tools/governance/profiles/*.json`.             |
-| `nx.ownership-evidence`  | CODEOWNERS-derived ownership evidence is available for one or more projects.                   |
-
-Nx-specific facts stay in capability `data` or `metadata`. Rule findings, recommendations, and policy violations are not emitted by this adapter.
+- Adapter snapshot: normalized Nx projects, dependencies, ownership evidence, and profile discovery.
+- Capability emission: machine-readable nx.\* capability signals for host and extension packages.
+- Core contract mapping: conversion from Nx workspace state into Governance Core adapter results.
 
 ## Installation
 
-Consumers should install the host package:
+Most users install @anarchitects/nx-governance (the Nx host package):
 
 ```bash
-nx add @anarchitects/nx-governance
+yarn nx add @anarchitects/nx-governance
 ```
 
-The host package remains the user-facing Nx product surface. This adapter boundary exists so the host can consume a dedicated published Nx adapter package without embedding adapter implementation details.
+Direct dependency installation is intended for package consumers integrating the adapter API.
+
+## Quick Start
+
+```ts
+import {
+  readNxWorkspaceSnapshot,
+  createNxWorkspaceAdapterResult,
+} from '@anarchitects/governance-adapter-nx';
+
+const snapshot = await readNxWorkspaceSnapshot();
+const adapterResult = createNxWorkspaceAdapterResult(snapshot);
+
+console.log(snapshot.projects.length, adapterResult.capabilities.length);
+```
+
+## Architecture
+
+This package sits between Nx data and Governance Core contracts.
+
+```mermaid
+flowchart LR
+	A[Nx workspace and project graph] --> B[@anarchitects/governance-adapter-nx]
+	B --> C[@anarchitects/governance-core]
+	D[@anarchitects/nx-governance] --> B
+```
+
+More implementation-oriented architecture notes are available in ../../docs/architecture/governance-plugin-side-packages.md.
+
+## Responsibilities
+
+This package owns:
+
+- Nx extraction
+- canonical nodes
+- canonical relations
+- capabilities
+- ownership evidence mapping
+- Governance Core adapter mapping
+
+This package does not own:
+
+- Governance rule evaluation
+- recommendation generation
+- Nx host orchestration
+- Nx generators and executors
+- report rendering
+
+## Public API
+
+### Functions
+
+- readWorkspaceGraphSnapshot
+- readWorkspaceGraphSnapshotFromJson
+- summarizeWorkspaceGraph
+- createNxCapability
+- createNxCapabilities
+- createNxCanonicalCapabilities
+- readNxWorkspaceSnapshot
+- createNxWorkspaceAdapterResult
+- readNxWorkspaceAdapterResult
+- loadNxGovernanceWorkspaceContext
+- resolveProjectTagsAndMetadata
+- discoverGovernanceProfileFiles
+
+### Types and constants
+
+- GraphAdapter and related snapshot types
+- AdapterWorkspaceSnapshot and related adapter types
+- NX_CANONICAL_CAPABILITY_IDS and NxCanonicalCapabilityId
+
+## Usage
+
+Use the adapter directly for extraction and capability analysis:
+
+```ts
+import {
+  readNxWorkspaceSnapshot,
+  createNxCanonicalCapabilities,
+} from '@anarchitects/governance-adapter-nx';
+
+const snapshot = await readNxWorkspaceSnapshot();
+const capabilities = createNxCanonicalCapabilities({
+  workspaceRoot: snapshot.root,
+  snapshot,
+});
+```
+
+## Configuration
+
+- Reads workspace data through Nx APIs.
+- Discovers governance profiles under tools/governance/profiles/\*.json.
+- Supports JSON graph fallback input when consuming exported Nx graph JSON.
+
+## Related Packages
+
+- @anarchitects/nx-governance: composes this adapter into Nx executors and generators.
+- @anarchitects/governance-core: target contract model and deterministic governance logic.
+- @anarchitects/governance-extension-nx: consumes adapter capabilities for Nx-specific governance interpretation.
+
+## Compatibility
+
+- Peer dependency: Nx >=19 and <23.
+- Depends on @anarchitects/governance-core.
+
+## FAQ
+
+### Should workspace users call this package directly?
+
+Usually no. Nx users typically interact with @anarchitects/nx-governance commands. Direct adapter usage is for library integration and advanced tooling.
+
+### Does this package evaluate governance rules?
+
+No. It extracts and maps Nx data; rule and metric evaluation belongs to Governance Core and extension packages.
+
+## License
+
+Apache-2.0

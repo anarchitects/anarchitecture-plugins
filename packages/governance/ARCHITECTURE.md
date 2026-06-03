@@ -2,7 +2,8 @@
 
 ## 1. Purpose
 
-`@anarchitects/nx-governance` is the shared governance core for Nx workspaces.
+`@anarchitects/nx-governance` is the Nx host package for Governance in Nx
+workspaces.
 
 It turns workspace structure into:
 
@@ -12,29 +13,48 @@ It turns workspace structure into:
 - CLI and JSON reports
 - snapshot and AI payload inputs
 
-The core is intentionally ecosystem-neutral. Framework- and language-specific intelligence should live in separate extension plugins that contribute into the shared governance pipeline.
+The deterministic Governance contracts and analysis live in
+`@anarchitects/governance-core`. Nx workspace extraction lives in
+`@anarchitects/governance-adapter-nx`. Nx-specific interpretation belongs in
+`governance-extension-nx`. This package composes those pieces for Nx executors,
+generators, Project Crystal inference, profiles, artifacts, and output routing.
 
 ## 2. Product model
 
-The intended architecture is:
+The intended package architecture is:
 
-- one shared core plugin: `@anarchitects/nx-governance`
-- multiple ecosystem-specific extension plugins such as `@anarchitects/nx-governance-angular`
+- `@anarchitects/nx-governance` as the Nx host/runtime package
+- `@anarchitects/governance-adapter-nx` as the Nx extraction and mapping package
+- `governance-extension-nx` as the Nx interpretation package
+- community-owned packages such as `@anarchitects/governance-core`,
+  `@anarchitects/governance-cli`, and
+  `@anarchitects/governance-adapter-typescript` as the owners for portable
+  Core, standalone CLI, and generic TypeScript adapter behavior
 
-This keeps generic governance concerns in one place and prevents the core package from accumulating Angular-, React-, JVM-, or .NET-specific runtime logic.
+This keeps the Nx host focused and prevents it from accumulating Core,
+standalone CLI, generic TypeScript adapter, Angular-, React-, JVM-, or
+.NET-specific runtime logic.
 
 ### Generic governance concerns
 
-These stay in the core package:
+These are not owned by `@anarchitects/nx-governance` anymore; they are consumed
+through published packages and extension contracts:
 
-- Nx graph loading and workspace normalization
 - dependency and boundary analysis
 - ownership and documentation checks
 - signal aggregation
 - metric calculation and health scoring
-- CLI and JSON reporting
-- snapshot and AI payload generation
-- extension discovery and execution lifecycle
+- portable snapshot and AI payload generation
+
+Nx host concerns stay in this package:
+
+- Nx executors and generators
+- Project Crystal inference
+- profile/config resolution
+- host composition and extension loading
+- workspace-root-relative artifact paths
+- snapshot persistence
+- executor-facing CLI, JSON, management, graph, and AI handoff rendering
 
 ### Ecosystem-specific manifestations
 
@@ -48,13 +68,12 @@ These belong in extension plugins:
 
 ## 3. Core vs extension responsibilities
 
-The core owns:
+Community Core owns:
 
-- the governance execution lifecycle
 - shared data contracts
 - scoring and score aggregation
-- reporting and machine-readable outputs
-- extension registration and ordering
+- deterministic governance analysis
+- portable report/source models
 
 Delivery-impact and management-insight contracts also belong here. They are
 deterministic, platform-independent TypeScript contracts derived from shared
@@ -101,6 +120,14 @@ registration, stdout/logging, and artifact behavior remain host concerns.
 External system context such as GitHub, Jira, Linear, CI, or framework-specific
 intelligence belongs in adapters or extensions, not in the delivery-impact core.
 
+`@anarchitects/nx-governance` owns:
+
+- the Nx execution lifecycle
+- executor/generator entrypoints
+- profile/config resolution
+- extension loading and ordering in an Nx workspace
+- host-owned rendering and artifact writing
+
 Extensions own:
 
 - workspace enrichers
@@ -143,22 +170,23 @@ For the authoring view and example code, see [EXTENSIONS.md](./EXTENSIONS.md).
 
 ## 5. Execution flow
 
-The core runtime owns the full orchestration pipeline:
+The Nx host runtime owns the orchestration pipeline:
 
 ```text
 runGovernance
-  -> load profile and Nx snapshot
+  -> load profile and Nx adapter snapshot
   -> build normalized governance workspace
   -> discover and register governance extensions
   -> apply workspace enrichers
-  -> evaluate core policies and extension rule packs
+  -> evaluate Core policies and extension rule packs
   -> merge core and extension signals
   -> merge core and extension metrics
   -> calculate health and top issues
   -> render reports, snapshots, and AI payloads
 ```
 
-This preserves one governance truth even when multiple ecosystem engines contribute analysis.
+This preserves one governance truth while keeping extraction, Core analysis,
+host orchestration, and extension interpretation in separate bounded contexts.
 
 Exception-backed findings already have explicit report shapes in the core
 assessment model:
@@ -173,7 +201,7 @@ the current exception implementation.
 
 ## 6. Module structure
 
-The core package lives under:
+The Nx host package lives under:
 
 ```text
 packages/governance/src
@@ -181,12 +209,18 @@ packages/governance/src
 
 The main architectural areas are:
 
-- `plugin` for orchestration and executor entrypoints
-- `inventory` and `nx-adapter` for workspace normalization
-- `policy-engine`, `signal-engine`, and `metrics` for shared governance evaluation
-- `health` and `reporting` for score aggregation and output
-- `snapshot` and `ai` for downstream consumption
-- `extensions` for extension discovery, registration, and public contracts
+- `plugin` for host orchestration
+- `executors` for Nx executor entrypoints
+- `generators` for Nx generator entrypoints
+- `nx-host` for Nx extension discovery/loading
+- `profile` and `presets` for profile resolution and scaffolding
+- `reporting`, `snapshot-store`, `ai-handoff`, and `graph-document` for
+  host-owned output and artifact concerns
+- `extensions` for portable extension runtime wrappers around Core contracts
+- `compatibility` and `boundaries` for package-surface guardrails
+
+Removed plugins-side legacy source trees are documented in
+[`../../docs/governance/source-organization.md`](../../docs/governance/source-organization.md).
 
 ## 7. Project Crystal inference
 

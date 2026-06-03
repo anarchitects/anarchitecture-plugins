@@ -1,100 +1,114 @@
 # @anarchitects/governance-extension-nx
 
-`@anarchitects/governance-extension-nx` is the dedicated Governance Core
-extension package for future Nx-specific governance interpretation.
+## Overview
 
-This package introduces the extension boundary only. #408 classified the
-current rule implementations and found no existing Nx-specific rules to move.
-#409 classified the current metrics, signals, scoring, and recommendations and
-found no existing Nx-specific implementation to move. It does not move generic
-rules, metrics, recommendations, enrichers, signal providers, extraction logic,
-host composition, executors, renderers, or profile registration.
+@anarchitects/governance-extension-nx is the Nx-focused Governance extension package. It contributes (and is designed to grow) Nx-specific governance interpretation using Governance Core extension contracts.
 
-## Public API
+Use this package when you want to register Nx-specific rules, metrics, recommendations, or enrichers in the Governance ecosystem.
 
-- `governanceExtensionNx`
-- `createGovernanceExtensionNx`
-- `GOVERNANCE_EXTENSION_NX_ID`
-- `GOVERNANCE_EXTENSION_NX_NAME`
-- `GOVERNANCE_EXTENSION_NX_VERSION`
-- `GOVERNANCE_EXTENSION_NX_OPTIONAL_CAPABILITIES`
+## Key Concepts
+
+- Extension boundary: isolates Nx-specific governance intelligence from host and adapter responsibilities.
+- Capability-aware contributions: extension behavior can react to adapter-provided nx.\* capabilities.
+- Core-first contracts: extension registration is defined through @anarchitects/governance-core extension APIs.
+
+## Installation
+
+Install through the host package for normal Nx usage:
+
+```bash
+yarn nx add @anarchitects/nx-governance
+```
+
+Direct installation is useful when consuming extension definitions in custom tooling.
+
+## Quick Start
+
+```ts
+import {
+  governanceExtensionNx,
+  createGovernanceExtensionNx,
+} from '@anarchitects/governance-extension-nx';
+
+const extension = createGovernanceExtensionNx();
+console.log(governanceExtensionNx.id, extension.version);
+```
 
 ## Architecture
 
-The dependency direction is:
-
-```text
-@anarchitects/governance-extension-nx
-  -> @anarchitects/governance-core
+```mermaid
+flowchart TD
+  A[@anarchitects/nx-governance] --> B[@anarchitects/governance-adapter-nx]
+  B --> C[@anarchitects/governance-core]
+  D[@anarchitects/governance-extension-nx] --> C
 ```
 
-The extension package must not depend on:
-
-- `@anarchitects/governance-adapter-nx`
-- `@anarchitects/nx-governance` host internals
-- executor internals
-- renderer internals
-- generator internals
-- Governance Core source paths
-
-It uses only public Governance Core extension contracts.
+More implementation-oriented architecture notes are available in ../../docs/architecture/governance-plugin-side-packages.md.
 
 ## Responsibilities
 
-This package owns future Nx-specific:
+This package owns:
 
-- rule packs
-- metric providers
-- signal providers
+- rules
+- metrics
 - recommendations
 - enrichers
-- capability-aware interpretation
-
-Registration is currently no-op. No rule packs, metric providers, signal
-providers, or enrichers are registered because no current rule, metric, signal,
-or recommendation implementation is Nx-specific.
-
-Current generic project/dependency, ownership, metadata, domain, layer, and tag
-convention rules remain outside this package.
-Current generic metrics, signals, scoring, delivery-impact indices, and
-recommendations also remain outside this package.
-
-## Non-Responsibilities
+- capability-aware Nx interpretation
 
 This package does not own:
 
-- Nx project graph loading
-- Nx workspace discovery
-- Nx config loading
-- Project Crystal target inference
-- Nx executors
-- Nx generators
-- output routing
-- rendering
-- adapter extraction logic
-- canonical Governance semantics
+- Nx metadata discovery
+- Nx extraction
+- report rendering
+- host orchestration
+- Nx generators and executors
 
-Those responsibilities remain in the adapter, host, executors, renderers, or Governance Core.
+## Public API
 
-## Relationship To The Nx Adapter
+- governanceExtensionNx
+- createGovernanceExtensionNx
+- GOVERNANCE_EXTENSION_NX_ID
+- GOVERNANCE_EXTENSION_NX_NAME
+- GOVERNANCE_EXTENSION_NX_VERSION
+- GOVERNANCE_EXTENSION_NX_OPTIONAL_CAPABILITIES
+- default export (governanceExtensionNx)
 
-`@anarchitects/governance-adapter-nx` extracts Nx facts and emits canonical nodes, relations, and `nx.*` capabilities.
+## Usage
 
-`@anarchitects/governance-extension-nx` interprets those capabilities in future work. It does not import the adapter or duplicate adapter extraction logic.
+Use the exported extension definition in a host composition flow that accepts Governance Core extension definitions.
 
-## Relationship To The Nx Host
+```ts
+import { governanceExtensionNx } from '@anarchitects/governance-extension-nx';
 
-`@anarchitects/nx-governance` remains the user-facing Nx host package. #410
-wires the host composition flow that loads the Nx adapter and registers
-Governance extensions through public Governance Core contracts.
+// Register the extension in your Governance host composition.
+void governanceExtensionNx;
+```
 
-This package does not own host composition, executors, generators, renderers,
-or output routing.
+## Configuration
 
-Planned follow-up issues:
+This package has no standalone configuration file format. Configuration is provided by the host layer (for example, profile composition and extension registration in Nx governance setup).
 
-- `#408` classified existing rules and found no current Nx-specific rules to
-  move.
-- `#409` classified existing metrics, signals, scoring, and recommendations and
-  found no current Nx-specific implementation to move.
-- `#410` wires host composition in `@anarchitects/nx-governance`.
+## Related Packages
+
+- @anarchitects/governance-core: extension contracts and canonical governance model.
+- @anarchitects/governance-adapter-nx: supplies nx.\* capabilities and canonical workspace facts.
+- @anarchitects/nx-governance: user-facing host that composes adapter and extension packages.
+
+## Compatibility
+
+- Depends on @anarchitects/governance-core.
+- Intended for composition through @anarchitects/nx-governance in Nx environments.
+
+## FAQ
+
+### Does this package replace the adapter package?
+
+No. The adapter extracts Nx facts; this extension interprets Nx facts through extension contracts.
+
+### Does this package render reports?
+
+No. Rendering and output routing belong to host/runtime layers.
+
+## License
+
+Apache-2.0

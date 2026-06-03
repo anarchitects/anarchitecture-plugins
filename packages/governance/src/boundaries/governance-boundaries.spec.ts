@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 interface BoundaryViolation {
@@ -24,79 +24,30 @@ interface TextBoundaryRule {
 type BoundaryRule = ImportBoundaryRule | TextBoundaryRule;
 
 const governanceSourceRoot = path.resolve(__dirname, '..');
-const excludedHostRuntimeFiles = new Set([
-  path.join(governanceSourceRoot, 'plugin', 'apply-governance-exceptions.ts'),
-  path.join(governanceSourceRoot, 'plugin', 'build-exception-report.ts'),
-  path.join(governanceSourceRoot, 'plugin', 'evaluate-exception-lifecycle.ts'),
-]);
+const retiredLocalCoreAndStandalonePaths = [
+  'core',
+  'policy-engine',
+  'metric-engine',
+  'health-engine',
+  'signal-engine',
+  'inventory',
+  'ai-analysis',
+  'delivery-impact',
+  'standalone-cli',
+  'typescript-adapter',
+  'manual-workspace',
+  'plugin/apply-governance-exceptions.ts',
+  'plugin/build-exception-report.ts',
+  'plugin/evaluate-exception-lifecycle.ts',
+].map((entry) => path.join(governanceSourceRoot, entry));
 
 describe('governance boundary enforcement', () => {
-  it('keeps Core-facing runtime source free of Nx, host, and adapter leakage', () => {
-    const coreFacingFiles = collectImplementationFiles([
-      'core',
-      'policy-engine',
-      'metric-engine',
-      'health-engine',
-      'signal-engine',
-      'inventory',
-    ]);
+  it('keeps retired local Core-like, standalone CLI, manual-workspace, and TypeScript adapter sources absent', () => {
+    const existingRetiredPaths = retiredLocalCoreAndStandalonePaths
+      .filter((retiredPath) => existsSync(retiredPath))
+      .map((retiredPath) => path.relative(governanceSourceRoot, retiredPath));
 
-    const violations = scanBoundaryViolations(coreFacingFiles, [
-      {
-        kind: 'import',
-        rule: 'Core-facing modules must not import Nx APIs.',
-        matches: (specifier) =>
-          specifier === 'nx' || specifier.startsWith('@nx/'),
-      },
-      {
-        kind: 'import',
-        rule: 'Core-facing modules must not import adapter internals.',
-        matches: (specifier) =>
-          startsWithRelativeBoundary(specifier, '../nx-adapter') ||
-          startsWithRelativeBoundary(specifier, '../conformance-adapter') ||
-          startsWithRelativeBoundary(specifier, '../typescript-adapter') ||
-          startsWithRelativeBoundary(specifier, '../manual-workspace'),
-      },
-      {
-        kind: 'import',
-        rule: 'Core-facing modules must not import host-owned runtime modules.',
-        matches: (specifier) =>
-          startsWithRelativeBoundary(specifier, '../nx-host') ||
-          startsWithRelativeBoundary(specifier, '../standalone-cli') ||
-          startsWithRelativeBoundary(specifier, '../executors') ||
-          startsWithRelativeBoundary(specifier, '../generators') ||
-          startsWithRelativeBoundary(specifier, '../plugin'),
-      },
-      {
-        kind: 'import',
-        rule: 'Core-facing modules must not import filesystem APIs.',
-        matches: (specifier) =>
-          specifier === 'fs' ||
-          specifier === 'node:fs' ||
-          specifier === 'path' ||
-          specifier === 'node:path',
-      },
-      {
-        kind: 'text',
-        rule: 'Core-facing modules must not reference Nx configuration files directly.',
-        pattern: /\bnx\.json\b/,
-      },
-      {
-        kind: 'text',
-        rule: 'Core-facing modules must not depend on Nx project graph types.',
-        pattern: /\bProjectGraph\b|\bCreateNodes\b/,
-      },
-      {
-        kind: 'text',
-        rule: 'Core-facing modules must not access process-level host runtime directly.',
-        pattern: /\bprocess\./,
-      },
-    ]);
-
-    expectBoundaryViolationsToBeEmpty(
-      violations,
-      'Core-facing boundary violations detected.'
-    );
+    expect(existingRetiredPaths).toEqual([]);
   });
 
   it('keeps portable extension contracts and runtime free of Nx and host-owned discovery/loading', () => {
@@ -359,7 +310,6 @@ function collectImplementationFilesFromDirectory(
 
 function isImplementationFile(filePath: string): boolean {
   return (
-    !excludedHostRuntimeFiles.has(filePath) &&
     filePath.endsWith('.ts') &&
     !filePath.endsWith('.spec.ts') &&
     !filePath.endsWith('.test.ts') &&

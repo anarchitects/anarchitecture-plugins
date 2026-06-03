@@ -14,23 +14,5 @@
       "path": "../governance-adapter-nx/tsconfig.lib.json"
     }
   ],
-  "exclude": [
-    "jest.config.cts",
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "src/health-engine/**",
-    "src/metric-engine/**",
-    "src/policy-engine/**",
-    "src/signal-engine/**",
-    "src/inventory/**",
-    "src/ai-analysis/**",
-    "src/delivery-impact/**",
-    "src/core/**",
-    "src/standalone-cli/**",
-    "src/typescript-adapter/**",
-    "src/manual-workspace/**",
-    "src/plugin/apply-governance-exceptions.ts",
-    "src/plugin/build-exception-report.ts",
-    "src/plugin/evaluate-exception-lifecycle.ts"
-  ]
+  "exclude": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }

@@ -1,26 +1,29 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const governanceRoot = path.resolve(__dirname, '..', '..');
 const sourceRoot = path.join(governanceRoot, 'src');
-const quarantinedDirectories = [
-  'health-engine',
-  'metric-engine',
-  'policy-engine',
-  'signal-engine',
-  'inventory',
-  'ai-analysis',
-  'delivery-impact',
-  'core',
-  'standalone-cli',
-  'typescript-adapter',
-  'manual-workspace',
-] as const;
-const quarantinedFiles = new Set([
+const retiredSourcePaths = [
+  ...[
+    'health-engine',
+    'metric-engine',
+    'policy-engine',
+    'signal-engine',
+    'inventory',
+    'ai-analysis',
+    'delivery-impact',
+    'core',
+    'standalone-cli',
+    'typescript-adapter',
+    'manual-workspace',
+  ].map((directory) => path.join(sourceRoot, directory)),
   path.join(sourceRoot, 'plugin', 'apply-governance-exceptions.ts'),
+  path.join(sourceRoot, 'plugin', 'apply-governance-exceptions.spec.ts'),
   path.join(sourceRoot, 'plugin', 'build-exception-report.ts'),
+  path.join(sourceRoot, 'plugin', 'build-exception-report.spec.ts'),
   path.join(sourceRoot, 'plugin', 'evaluate-exception-lifecycle.ts'),
-]);
+  path.join(sourceRoot, 'plugin', 'evaluate-exception-lifecycle.spec.ts'),
+] as const;
 
 describe('nx-governance ownership audit guards', () => {
   it('keeps the host package free of standalone CLI publishing and Community adapter dependencies', () => {
@@ -68,7 +71,15 @@ describe('nx-governance ownership audit guards', () => {
     ).not.toMatch(/^workspace:/);
   });
 
-  it('keeps leaked Core-like, CLI, manual-workspace, and TypeScript adapter trees out of the build and test program surfaces', () => {
+  it('keeps retired Core-like, CLI, manual-workspace, and TypeScript adapter source absent from nx-governance', () => {
+    const existingRetiredPaths = retiredSourcePaths
+      .filter((retiredPath) => existsSync(retiredPath))
+      .map((retiredPath) => path.relative(sourceRoot, retiredPath));
+
+    expect(existingRetiredPaths).toEqual([]);
+  });
+
+  it('keeps obsolete quarantine exclusions out of the build and test program surfaces', () => {
     const tsconfigLib = JSON.parse(
       readFileSync(path.join(governanceRoot, 'tsconfig.lib.json'), 'utf8')
     ) as {
@@ -79,46 +90,36 @@ describe('nx-governance ownership audit guards', () => {
     ) as {
       exclude?: string[];
     };
+    const obsoleteExclusions = [
+      'src/health-engine/**',
+      'src/metric-engine/**',
+      'src/policy-engine/**',
+      'src/signal-engine/**',
+      'src/inventory/**',
+      'src/ai-analysis/**',
+      'src/delivery-impact/**',
+      'src/core/**',
+      'src/standalone-cli/**',
+      'src/typescript-adapter/**',
+      'src/manual-workspace/**',
+      'src/plugin/apply-governance-exceptions.ts',
+      'src/plugin/apply-governance-exceptions.spec.ts',
+      'src/plugin/build-exception-report.ts',
+      'src/plugin/build-exception-report.spec.ts',
+      'src/plugin/evaluate-exception-lifecycle.ts',
+      'src/plugin/evaluate-exception-lifecycle.spec.ts',
+    ];
 
-    expect(tsconfigLib.exclude).toEqual(
-      expect.arrayContaining([
-        'src/health-engine/**',
-        'src/metric-engine/**',
-        'src/policy-engine/**',
-        'src/signal-engine/**',
-        'src/inventory/**',
-        'src/ai-analysis/**',
-        'src/delivery-impact/**',
-        'src/core/**',
-        'src/standalone-cli/**',
-        'src/typescript-adapter/**',
-        'src/manual-workspace/**',
-        'src/plugin/apply-governance-exceptions.ts',
-        'src/plugin/build-exception-report.ts',
-        'src/plugin/evaluate-exception-lifecycle.ts',
-      ])
-    );
-    expect(tsconfigSpec.exclude).toEqual(
-      expect.arrayContaining([
-        'src/health-engine/**',
-        'src/metric-engine/**',
-        'src/policy-engine/**',
-        'src/signal-engine/**',
-        'src/inventory/**',
-        'src/ai-analysis/**',
-        'src/delivery-impact/**',
-        'src/core/**',
-        'src/standalone-cli/**',
-        'src/typescript-adapter/**',
-        'src/manual-workspace/**',
-        'src/plugin/apply-governance-exceptions.ts',
-        'src/plugin/apply-governance-exceptions.spec.ts',
-        'src/plugin/build-exception-report.ts',
-        'src/plugin/build-exception-report.spec.ts',
-        'src/plugin/evaluate-exception-lifecycle.ts',
-        'src/plugin/evaluate-exception-lifecycle.spec.ts',
-      ])
-    );
+    expect(
+      (tsconfigLib.exclude ?? []).filter((entry) =>
+        obsoleteExclusions.includes(entry)
+      )
+    ).toEqual([]);
+    expect(
+      (tsconfigSpec.exclude ?? []).filter((entry) =>
+        obsoleteExclusions.includes(entry)
+      )
+    ).toEqual([]);
   });
 
   it('keeps active nx-governance implementation files free of local Core-like, CLI, and TypeScript adapter imports', () => {
@@ -172,22 +173,12 @@ function collectImplementationFiles(directory: string): string[] {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const resolved = path.join(directory, entry.name);
 
-    if (
-      entry.isDirectory() &&
-      quarantinedDirectories.includes(
-        entry.name as (typeof quarantinedDirectories)[number]
-      )
-    ) {
-      continue;
-    }
-
     if (entry.isDirectory()) {
       collected.push(...collectImplementationFiles(resolved));
       continue;
     }
 
     if (
-      !quarantinedFiles.has(resolved) &&
       entry.isFile() &&
       resolved.endsWith('.ts') &&
       !resolved.endsWith('.spec.ts') &&

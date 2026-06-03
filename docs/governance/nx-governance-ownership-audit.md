@@ -2,6 +2,8 @@
 
 Issue: Plugins #394  
 Related: Community #127  
+Cleanup update: Plugins #402
+
 Community baseline consumed in this pass:
 
 - `@anarchitects/governance-core@0.0.4`
@@ -13,6 +15,13 @@ Community baseline consumed in this pass:
 This audit records the final boundary state for `@anarchitects/nx-governance`
 after the published Community package updates were consumed in Plugins,
 including the Core `0.0.4` micro-follow-up helpers.
+
+Plugins #402 completed the plugins-side cleanup that #394 left as quarantine
+debt: local Core-like, standalone CLI, manual workspace, TypeScript adapter,
+analysis, delivery-impact, policy, metric, signal, inventory, and legacy
+exception-helper source trees have been removed from `@anarchitects/nx-governance`.
+The active package now keeps only host-owned runtime, executor, generator,
+profile, rendering, extension-loading, and compatibility guardrail code.
 
 Target architecture after this pass:
 
@@ -38,33 +47,33 @@ Target architecture after this pass:
 
 ## Final Classification
 
-| Module / Path                                                    | Current responsibility                                             | Target owner                                  | Final state                              | Notes                                                                                                                                                  |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/governance/src/plugin/**`                              | Nx runtime orchestration, option resolution, output writing        | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | `run-governance.ts` now orchestrates published Core APIs instead of local deterministic modules.                                                       |
-| `packages/governance/src/nx-host/**`                             | Nx extension discovery, config loading, module loading             | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Host-only Nx integration remains local.                                                                                                                |
-| `packages/governance/src/executors/**`                           | Nx executor entrypoints and compatibility shell                    | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Public executor ids and target behavior stay unchanged.                                                                                                |
-| `packages/governance/src/generators/**`                          | Nx generator entrypoints and scaffolding                           | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Nx-specific package setup remains local.                                                                                                               |
-| `packages/governance/src/conformance-adapter/**`                 | Host-side conformance input loading                                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Still an Nx host integration concern.                                                                                                                  |
-| `packages/governance/src/snapshot-store/**`                      | Snapshot persistence and workspace-relative file IO                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Output persistence remains host-owned.                                                                                                                 |
-| `packages/governance/src/ai-handoff/**`                          | AI handoff file rendering and persistence                          | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Host writes artifacts; deterministic request construction now comes from Core where available.                                                         |
-| `packages/governance/src/reporting/**`                           | CLI, JSON, and management rendering                                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Presentation remains Nx host-owned.                                                                                                                    |
-| `packages/governance-adapter-nx/src/**`                          | Nx graph loading and Nx-to-Core workspace mapping                  | `@anarchitects/governance-adapter-nx`         | `KEEP_AS_NX_ADAPTER_OWNED`               | Adapter remains responsible for Nx workspace extraction and mapping.                                                                                   |
-| `packages/governance/src/health-engine/**`                       | Deterministic health scoring and recommendations                   | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core health and recommendation APIs. Directory is excluded from build/test/package surface.                     |
-| `packages/governance/src/metric-engine/**`                       | Deterministic metric calculation                                   | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core metric APIs. Directory is excluded from build/test/package surface.                                        |
-| `packages/governance/src/policy-engine/**`                       | Deterministic policy evaluation                                    | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core policy APIs. Directory is excluded from build/test/package surface.                                        |
-| `packages/governance/src/signal-engine/**`                       | Deterministic signal builders and signal contracts                 | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core signal APIs. Directory is excluded from build/test/package surface.                                        |
-| `packages/governance/src/inventory/**`                           | Workspace normalization and inventory assembly                     | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core workspace/inventory APIs. Directory is excluded from build/test/package surface.                           |
-| `packages/governance/src/ai-analysis/**`                         | Deterministic AI request builders and summarizers                  | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core AI request and summarizer APIs for supported flows. Directory is excluded from build/test/package surface. |
-| `packages/governance/src/delivery-impact/**`                     | Deterministic delivery-impact calculation and models               | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Active host runtime now uses published Core delivery-impact APIs. Directory is excluded from build/test/package surface.                               |
-| `packages/governance/src/plugin/apply-governance-exceptions.ts`  | Legacy local exception application helper                          | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Host runtime now calls published Core exception APIs through the Core artifact builder. File is excluded from active build/test surface.               |
-| `packages/governance/src/plugin/build-exception-report.ts`       | Legacy local exception report helper                               | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Host runtime now uses published Core exception report output from Core artifacts. File is excluded from active build/test surface.                     |
-| `packages/governance/src/plugin/evaluate-exception-lifecycle.ts` | Legacy local exception lifecycle helper                            | `@anarchitects/governance-core`               | `REPLACED_WITH_COMMUNITY_API`            | Host runtime now uses published Core exception lifecycle handling. File is excluded from active build/test surface.                                    |
-| `packages/governance/src/core/**`                                | Legacy local Core contracts and deterministic logic                | `@anarchitects/governance-core`               | `EXCLUDED_LEGACY_ONLY_WITH_REMOVAL_PLAN` | No active host runtime imports remain. Tree is excluded from build/test/package surface and guarded by boundary tests.                                 |
-| `packages/governance/src/standalone-cli/**`                      | Standalone CLI runtime                                             | `@anarchitects/governance-cli`                | `EXCLUDED_LEGACY_ONLY_WITH_REMOVAL_PLAN` | Not part of `@anarchitects/nx-governance` runtime or exports. Tree is excluded from build/test/package surface.                                        |
-| `packages/governance/src/manual-workspace/**`                    | Generic non-Nx workspace loading for standalone CLI flows          | `@anarchitects/governance-cli`                | `EXCLUDED_LEGACY_ONLY_WITH_REMOVAL_PLAN` | Not part of Nx host runtime. Tree is excluded from build/test/package surface.                                                                         |
-| `packages/governance/src/typescript-adapter/**`                  | Generic TypeScript workspace discovery and import graph extraction | `@anarchitects/governance-adapter-typescript` | `EXCLUDED_LEGACY_ONLY_WITH_REMOVAL_PLAN` | Not part of Nx host runtime. Tree is excluded from build/test/package surface.                                                                         |
-| `packages/governance/src/index.ts`                               | Root compatibility shell                                           | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Kept as a documented compatibility shell; Core-like local modules are not exported.                                                                    |
-| `packages/governance/src/host-public-api.ts`                     | Host-focused package entrypoint                                    | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`                  | Canonical host-facing entrypoint remains local.                                                                                                        |
+| Module / Path                                                    | Current responsibility                                             | Target owner                                  | Final state                | Notes                                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages/governance/src/plugin/**`                              | Nx runtime orchestration, option resolution, output writing        | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | `run-governance.ts` now orchestrates published Core APIs instead of local deterministic modules.            |
+| `packages/governance/src/nx-host/**`                             | Nx extension discovery, config loading, module loading             | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Host-only Nx integration remains local.                                                                     |
+| `packages/governance/src/executors/**`                           | Nx executor entrypoints and compatibility shell                    | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Public executor ids and target behavior stay unchanged.                                                     |
+| `packages/governance/src/generators/**`                          | Nx generator entrypoints and scaffolding                           | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Nx-specific package setup remains local.                                                                    |
+| `packages/governance/src/conformance-adapter/**`                 | Host-side conformance input loading                                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Still an Nx host integration concern.                                                                       |
+| `packages/governance/src/snapshot-store/**`                      | Snapshot persistence and workspace-relative file IO                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Output persistence remains host-owned.                                                                      |
+| `packages/governance/src/ai-handoff/**`                          | AI handoff file rendering and persistence                          | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Host writes artifacts; deterministic request construction now comes from Core where available.              |
+| `packages/governance/src/reporting/**`                           | CLI, JSON, and management rendering                                | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Presentation remains Nx host-owned.                                                                         |
+| `packages/governance-adapter-nx/src/**`                          | Nx graph loading and Nx-to-Core workspace mapping                  | `@anarchitects/governance-adapter-nx`         | `KEEP_AS_NX_ADAPTER_OWNED` | Adapter remains responsible for Nx workspace extraction and mapping.                                        |
+| `packages/governance/src/health-engine/**`                       | Deterministic health scoring and recommendations                   | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core health and recommendation APIs.                                     |
+| `packages/governance/src/metric-engine/**`                       | Deterministic metric calculation                                   | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core metric APIs.                                                        |
+| `packages/governance/src/policy-engine/**`                       | Deterministic policy evaluation                                    | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core policy APIs.                                                        |
+| `packages/governance/src/signal-engine/**`                       | Deterministic signal builders and signal contracts                 | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core signal APIs.                                                        |
+| `packages/governance/src/inventory/**`                           | Workspace normalization and inventory assembly                     | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core workspace/inventory APIs.                                           |
+| `packages/governance/src/ai-analysis/**`                         | Deterministic AI request builders and summarizers                  | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core AI request and summarizer APIs for supported flows.                 |
+| `packages/governance/src/delivery-impact/**`                     | Deterministic delivery-impact calculation and models               | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Active host runtime uses published Core delivery-impact APIs.                                               |
+| `packages/governance/src/plugin/apply-governance-exceptions.ts`  | Legacy local exception application helper                          | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Host runtime calls published Core exception APIs through the Core artifact builder.                         |
+| `packages/governance/src/plugin/build-exception-report.ts`       | Legacy local exception report helper                               | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Host runtime uses published Core exception report output from Core artifacts.                               |
+| `packages/governance/src/plugin/evaluate-exception-lifecycle.ts` | Legacy local exception lifecycle helper                            | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | Host runtime uses published Core exception lifecycle handling.                                              |
+| `packages/governance/src/core/**`                                | Legacy local Core contracts and deterministic logic                | `@anarchitects/governance-core`               | `REMOVED_IN_PLUGINS_402`   | No active host runtime imports remained before removal. Boundary tests now fail if this local tree returns. |
+| `packages/governance/src/standalone-cli/**`                      | Standalone CLI runtime                                             | `@anarchitects/governance-cli`                | `REMOVED_IN_PLUGINS_402`   | Standalone CLI behavior belongs to Community CLI, not the Nx host package.                                  |
+| `packages/governance/src/manual-workspace/**`                    | Generic non-Nx workspace loading for standalone CLI flows          | `@anarchitects/governance-cli`                | `REMOVED_IN_PLUGINS_402`   | Manual workspace behavior belongs to the standalone CLI/community side.                                     |
+| `packages/governance/src/typescript-adapter/**`                  | Generic TypeScript workspace discovery and import graph extraction | `@anarchitects/governance-adapter-typescript` | `REMOVED_IN_PLUGINS_402`   | Generic TypeScript adapter behavior belongs to the Community adapter package.                               |
+| `packages/governance/src/index.ts`                               | Root compatibility shell                                           | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Kept as a documented compatibility shell; Core-like local modules are not exported.                         |
+| `packages/governance/src/host-public-api.ts`                     | Host-focused package entrypoint                                    | `@anarchitects/nx-governance`                 | `KEEP_AS_NX_HOST_OWNED`    | Canonical host-facing entrypoint remains local.                                                             |
 
 ## Concrete cleanup completed in Plugins #394
 
@@ -116,10 +125,9 @@ Target architecture after this pass:
 | `plugin/ai-payload-limits.ts`                                  | `KEEP_AS_NX_HOST_OPTIONS`       | Constants only. These are host defaults for handoff size, not reusable deterministic analysis.                                                                  |
 | `governance-adapter-nx/src/codeowners.ts`                      | `KEEP_AS_NX_ADAPTER_OWNED`      | CODEOWNERS-to-Nx-project ownership mapping is still adapter-local. Generic CODEOWNERS parsing could move to Community later, but it is not required for `#394`. |
 
-## Remaining intentional quarantine
+## Plugins #402 cleanup completion
 
-The following trees still exist physically and remain excluded from compile,
-test, export, and active runtime surfaces:
+The following trees no longer exist in the plugins-side Nx host source:
 
 - `core/**`
 - `standalone-cli/**`
@@ -133,8 +141,9 @@ test, export, and active runtime surfaces:
 - `ai-analysis/**`
 - `delivery-impact/**`
 
-They remain as cleanup debt only. They are not part of the published host or
-adapter runtime, and boundary tests fail if active code imports them.
+The corresponding legacy exclusions were removed from `tsconfig.lib.json`,
+`tsconfig.spec.json`, and `jest.config.cts`. Boundary tests now fail if those
+local source paths return or if active host code imports their retired paths.
 
 ## Package-surface result
 
@@ -156,9 +165,8 @@ been replaced by published Core `0.0.4` APIs in active runtime. The remaining
 follow-up items listed above are narrow, non-blocking utility candidates rather
 than host/runtime ownership blockers.
 
-CLI-owned and TypeScript-adapter-owned legacy trees remain quarantined from
-`@anarchitects/nx-governance` runtime and are not a blocker for the Nx host /
-Core split.
+CLI-owned and TypeScript-adapter-owned behavior is no longer present as local
+Nx host source and is not a blocker for the Nx host / Core split.
 
 Non-blocking future Community follow-up remains limited to:
 
@@ -166,9 +174,11 @@ Non-blocking future Community follow-up remains limited to:
 
 Result:
 
-- `#394` can close once the code changes in this repository are accepted.
-- `#388` can start. It should treat the remaining excluded legacy trees as
-  cleanup debt, not as a blocker for the Nx host/Core boundary split.
+- `#394` can remain closed.
+- Plugins `#402` completes the plugins-side removal of the remaining excluded
+  legacy trees.
+- Future Nx host work should treat Community Core, CLI, and TypeScript adapter
+  packages as the authoritative owners for the removed behavior.
 
 ## Release sequencing notes
 
@@ -177,8 +187,7 @@ Result:
 - `@anarchitects/nx-governance` must not be published with
   `"@anarchitects/governance-adapter-nx": "workspace:*"`. The manifest now pins
   the current publishable adapter version instead of a workspace protocol.
-- Community `#127` no longer blocks Plugins `#388`. The remaining Governance
+- Community `#127` no longer blocks Plugins `#388`. Remaining Governance
   follow-up issues are non-blocking release debt:
-  - Plugins `#402` for quarantined legacy tree deletion
   - Plugins `#403` for future Git/VCS adapter extraction from host IO
   - Community `#133` for the future Community Git/VCS adapter package
