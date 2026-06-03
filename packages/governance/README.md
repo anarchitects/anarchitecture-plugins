@@ -104,6 +104,7 @@ Run as root-level inferred/explicit commands:
 yarn nx repo-health --profile=frontend-layered
 yarn nx repo-architecture --output=json --outputPath=dist/governance/repo-architecture.json
 yarn nx governance-graph --format=html --outputPath=dist/governance/graph.html
+yarn nx governance-graph --format=json --outputPath=dist/governance/graph.json
 ```
 
 Use generator-driven setup and extension registration:

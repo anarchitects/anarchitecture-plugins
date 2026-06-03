@@ -620,7 +620,7 @@ describe('governance initGenerator', () => {
 
     expect(readme).toContain('nx governance-graph');
     expect(readme).toContain('dist/governance/graph.html');
-    expect(readme).toContain('format: html');
+    expect(readme).toContain('--format=html');
   });
 
   it('documents JSON graph generation through executor options in the README', () => {
