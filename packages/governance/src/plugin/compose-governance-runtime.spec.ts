@@ -158,7 +158,26 @@ describe('composeNxGovernanceRuntime', () => {
       profileName: 'test-profile',
       options: { reportType: 'health' },
       profile: buildProfile(),
-      profileOverrides: { projectOverrides: {} },
+      profileOverrides: {
+        projectOverrides: {},
+        composition: {
+          legacyPluginProbing: false,
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-nx',
+            },
+          ],
+          renderers: [
+            {
+              id: 'cli',
+              enabled: true,
+            },
+          ],
+          settings: {
+            severityThreshold: 'warning',
+          },
+        },
+      },
       warnings: ['profile warning'],
       conformanceFindings: [],
       asOf: new Date('2026-06-02T00:00:00.000Z'),
@@ -168,7 +187,27 @@ describe('composeNxGovernanceRuntime', () => {
     expect(
       mockedRegisterNxGovernanceExtensionsWithDiagnostics
     ).toHaveBeenCalledWith(
-      expect.objectContaining({ profileName: 'test-profile' })
+      expect.objectContaining({ profileName: 'test-profile' }),
+      {
+        workspaceRoot,
+        profileComposition: {
+          legacyPluginProbing: false,
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-nx',
+            },
+          ],
+          renderers: [
+            {
+              id: 'cli',
+              enabled: true,
+            },
+          ],
+          settings: {
+            severityThreshold: 'warning',
+          },
+        },
+      }
     );
     expect(result.adapterResult).toBe(adapterResult);
     expect(result.workspace.projects).toHaveLength(2);
@@ -178,6 +217,23 @@ describe('composeNxGovernanceRuntime', () => {
     expect(receivedContext?.capabilities.get('capability:nx')).toEqual(
       adapterResult.capabilities?.[0]
     );
+    expect(receivedContext?.options.profileComposition).toEqual({
+      legacyPluginProbing: false,
+      extensions: [
+        {
+          package: '@anarchitects/governance-extension-nx',
+        },
+      ],
+      renderers: [
+        {
+          id: 'cli',
+          enabled: true,
+        },
+      ],
+      settings: {
+        severityThreshold: 'warning',
+      },
+    });
     expect(result.artifacts.workspace.projects[0]?.metadata).toEqual(
       expect.objectContaining({ extensionTouched: true })
     );

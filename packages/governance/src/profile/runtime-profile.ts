@@ -25,7 +25,34 @@ export interface GovernanceProfileFile extends ProfileOverrides {
   eslint?: {
     helperPath?: string;
   };
+  composition?: GovernanceProfileComposition;
 }
+
+export interface GovernanceProfileComposition {
+  extensions?: GovernanceProfileExtensionRegistration[];
+  renderers?: GovernanceProfileRendererRegistration[];
+  settings?: Record<string, unknown>;
+  legacyPluginProbing?: boolean;
+}
+
+export interface GovernanceProfileExtensionRegistration {
+  package: string;
+  optional?: boolean;
+  options?: Record<string, unknown>;
+}
+
+export interface GovernanceProfileRendererRegistration {
+  id: GovernanceProfileRendererId;
+  enabled?: boolean;
+  options?: Record<string, unknown>;
+}
+
+export type GovernanceProfileRendererId =
+  | 'cli'
+  | 'json'
+  | 'governance-graph'
+  | 'management-report'
+  | 'ai-handoff';
 
 export function resolveGovernanceProfileRelativePath(
   profileName: string

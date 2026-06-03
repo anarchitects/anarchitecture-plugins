@@ -303,13 +303,14 @@ export async function runGovernance(
 ): Promise<GovernanceRunResult> {
   const artifacts = await buildAssessmentArtifacts(options);
   const { assessment } = artifacts;
+  const output = options.output ?? resolveProfileConfiguredOutput(artifacts);
 
   const rendered =
-    options.output === 'json'
+    output === 'json'
       ? renderJsonReport(artifacts)
       : renderCliReport(artifacts);
 
-  if (options.output === 'json') {
+  if (output === 'json') {
     process.stdout.write(`${rendered}\n`);
   } else {
     logger.info(rendered);
@@ -1363,6 +1364,7 @@ async function buildAssessmentArtifacts(
   return {
     ...artifacts,
     adapterResult,
+    profileComposition: overrides.composition,
     assessment: buildGovernanceAssessment({
       workspace: artifacts.workspace,
       profile: profileName,
@@ -1376,6 +1378,20 @@ async function buildAssessmentArtifacts(
       reportType: options.reportType,
     }),
   };
+}
+
+function resolveProfileConfiguredOutput(
+  artifacts: GovernanceAssessmentArtifacts
+): GovernanceRunOptions['output'] {
+  const renderers = artifacts.profileComposition?.renderers ?? [];
+  const cliRenderer = renderers.find((renderer) => renderer.id === 'cli');
+  const jsonRenderer = renderers.find((renderer) => renderer.id === 'json');
+
+  if (cliRenderer?.enabled === false && jsonRenderer?.enabled === true) {
+    return 'json';
+  }
+
+  return 'cli';
 }
 
 function normalizeMetricWeights(
