@@ -30,6 +30,7 @@
     "access": "public"
   },
   "nx": {
+    "name": "governance-extension-nx",
     "metadata": {
       "documentation": true,
       "ownership": {
