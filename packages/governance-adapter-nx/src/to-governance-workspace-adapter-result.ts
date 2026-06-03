@@ -7,6 +7,7 @@ import type {
 } from '@anarchitects/governance-core';
 
 import { createNxCapabilities } from './capability.js';
+import { readTagValue } from './tag-parsing.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
 export function toGovernanceWorkspaceAdapterResult(
@@ -157,14 +158,4 @@ function projectOwnershipFromSnapshot(
     contacts,
     source: 'codeowners',
   };
-}
-
-function readTagValue(tags: string[], prefix: string): string | undefined {
-  const matchingTag = tags.find((tag) => tag.startsWith(`${prefix}:`));
-  if (!matchingTag) {
-    return undefined;
-  }
-
-  const value = matchingTag.slice(prefix.length + 1);
-  return value ? value : undefined;
 }
