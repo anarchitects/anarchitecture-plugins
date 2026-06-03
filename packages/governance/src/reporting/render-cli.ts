@@ -1,8 +1,21 @@
-import { GovernanceAssessment } from '@anarchitects/governance-core';
+import type {
+  GovernanceAssessment,
+  GovernanceDiagnostic,
+} from '@anarchitects/governance-core';
+import type { GovernanceExtensionDiagnostic } from '../extensions/diagnostics.js';
+
+import {
+  buildGovernanceRenderingModel,
+  type GovernanceRendererInput,
+} from './canonical-rendering-model.js';
 
 const TOP_ISSUES_LIMIT = 10;
+const DIAGNOSTIC_ATTENTION_PATTERN =
+  /(error|warning|warn|failed|failure|invalid|missing|required|deprecated|unable)/i;
 
-export function renderCliReport(assessment: GovernanceAssessment): string {
+export function renderCliReport(input: GovernanceRendererInput): string {
+  const model = buildGovernanceRenderingModel(input);
+  const assessment = model.assessment;
   const lines: string[] = [];
 
   lines.push(`Nx Governance - ${assessment.profile}`);
@@ -14,7 +27,22 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
   );
   lines.push(`Projects: ${assessment.workspace.projects.length}`);
   lines.push(`Dependencies: ${assessment.workspace.dependencies.length}`);
+  if (model.hasCanonicalGraph) {
+    lines.push(
+      `Canonical Graph: ${model.nodes.length} nodes, ${model.relations.length} relations`
+    );
+  }
   lines.push(`Violations: ${assessment.violations.length}`);
+
+  const attentionDiagnostics = selectAttentionDiagnostics(
+    model.diagnostics,
+    model.extensionDiagnostics
+  );
+  if (attentionDiagnostics.length > 0) {
+    lines.push(
+      `Diagnostics requiring attention: ${attentionDiagnostics.length}`
+    );
+  }
 
   lines.push('');
   lines.push('Signal Sources:');
@@ -39,6 +67,18 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
     lines.push('Warnings:');
     for (const warning of assessment.warnings) {
       lines.push(`- ${warning}`);
+    }
+  }
+
+  if (attentionDiagnostics.length > 0) {
+    lines.push('');
+    lines.push('Diagnostics Requiring Attention:');
+    for (const diagnostic of attentionDiagnostics) {
+      lines.push(
+        `- ${diagnostic.code}: ${diagnostic.message}${formatDiagnosticSource(
+          diagnostic
+        )}`
+      );
     }
   }
 
@@ -202,4 +242,34 @@ export function renderCliReport(assessment: GovernanceAssessment): string {
 
 function formatHealthStatus(status: GovernanceAssessment['health']['status']) {
   return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
+}
+
+type RenderedDiagnostic = GovernanceDiagnostic | GovernanceExtensionDiagnostic;
+
+function selectAttentionDiagnostics(
+  diagnostics: GovernanceDiagnostic[],
+  extensionDiagnostics: GovernanceExtensionDiagnostic[]
+): RenderedDiagnostic[] {
+  return [
+    ...diagnostics.filter(isGovernanceDiagnosticRequiringAttention),
+    ...extensionDiagnostics.filter(
+      (diagnostic) => diagnostic.severity !== 'notice'
+    ),
+  ];
+}
+
+function isGovernanceDiagnosticRequiringAttention(
+  diagnostic: GovernanceDiagnostic
+): boolean {
+  return DIAGNOSTIC_ATTENTION_PATTERN.test(
+    `${diagnostic.code} ${diagnostic.message}`
+  );
+}
+
+function formatDiagnosticSource(diagnostic: RenderedDiagnostic): string {
+  if ('severity' in diagnostic) {
+    return ` (${diagnostic.severity})`;
+  }
+
+  return diagnostic.source ? ` (${diagnostic.source})` : '';
 }

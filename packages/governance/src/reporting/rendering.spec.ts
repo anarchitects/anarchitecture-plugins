@@ -1,5 +1,6 @@
 import type { GovernanceAssessment } from '@anarchitects/governance-core';
 
+import type { GovernanceAssessmentArtifacts } from '../plugin/build-assessment-artifacts.js';
 import { renderCliReport } from './render-cli.js';
 import { renderJsonReport } from './render-json.js';
 
@@ -302,6 +303,70 @@ describe('governance report rendering', () => {
       ],
     });
   });
+
+  it('keeps CLI rendering concise while JSON retains canonical artifact detail', () => {
+    const artifacts = makeArtifacts();
+
+    const cli = renderCliReport(artifacts);
+    const json = JSON.parse(renderJsonReport(artifacts)) as {
+      nodes: unknown[];
+      relations: unknown[];
+      diagnostics: unknown[];
+      extensionDiagnostics: unknown[];
+      capabilities: unknown[];
+      recommendations: unknown[];
+      workspace: { projects: unknown[]; dependencies: unknown[] };
+    };
+
+    expect(cli).toContain('Projects: 0');
+    expect(cli).toContain('Dependencies: 0');
+    expect(cli).toContain('Canonical Graph: 2 nodes, 1 relations');
+    expect(cli).not.toContain('Capabilities:');
+    expect(cli).not.toContain('nx.project-graph');
+    expect(cli).toContain('Diagnostics requiring attention: 1');
+    expect(cli).toContain('Recommendations:');
+    expect(cli).toContain(
+      '- adapter.graph.warning: Adapter graph warning. (governance-adapter-nx)'
+    );
+    expect(cli).not.toContain('governance.extension.loaded');
+
+    expect(json.workspace.projects).toEqual([]);
+    expect(json.workspace.dependencies).toEqual([]);
+    expect(json.nodes).toHaveLength(2);
+    expect(json.relations).toHaveLength(1);
+    expect(json.capabilities).toEqual([
+      {
+        id: 'nx.project-graph',
+        version: '1',
+        data: {
+          projectCount: 2,
+        },
+      },
+    ]);
+    expect(json.diagnostics).toEqual([
+      {
+        code: 'adapter.graph.warning',
+        source: 'governance-adapter-nx',
+        message: 'Adapter graph warning.',
+      },
+    ]);
+    expect(json.extensionDiagnostics).toEqual([
+      {
+        code: 'governance.extension.loaded',
+        severity: 'notice',
+        message: 'Loaded extension.',
+        extensionId: 'governance-extension-nx',
+      },
+    ]);
+    expect(json.recommendations).toEqual([
+      {
+        id: 'reduce-dependencies',
+        title: 'Reduce dependencies',
+        priority: 'medium',
+        reason: 'Dependency pressure is elevated.',
+      },
+    ]);
+  });
 });
 
 function makeAssessment(): GovernanceAssessment {
@@ -543,5 +608,113 @@ function makeAssessment(): GovernanceAssessment {
       },
     },
     recommendations: [],
+  };
+}
+
+function makeArtifacts(): GovernanceAssessmentArtifacts {
+  const assessment = {
+    ...makeAssessment(),
+    recommendations: [
+      {
+        id: 'reduce-dependencies',
+        title: 'Reduce dependencies',
+        priority: 'medium',
+        reason: 'Dependency pressure is elevated.',
+      },
+    ],
+  } satisfies GovernanceAssessment;
+
+  return {
+    assessment,
+    signals: [],
+    exceptionApplication: {
+      declaredExceptions: [],
+      exceptionStatuses: {},
+      policyViolations: [],
+      conformanceFindings: [],
+      activePolicyViolations: [],
+      suppressedPolicyViolations: [],
+      reactivatedPolicyViolations: [],
+      activeConformanceFindings: [],
+      suppressedConformanceFindings: [],
+      reactivatedConformanceFindings: [],
+    },
+    adapterResult: {
+      workspaceRoot: '/workspace',
+      nodes: [
+        {
+          id: 'orders-app',
+          name: 'Orders App',
+          kind: 'project',
+          sourceSystem: 'nx',
+          root: 'apps/orders',
+          path: 'apps/orders',
+          tags: ['domain:orders', 'layer:app'],
+          classification: {
+            domain: 'orders',
+            layer: 'app',
+            tags: ['domain:orders', 'layer:app'],
+          },
+          metadata: {
+            nx: {
+              projectType: 'application',
+              targets: ['build', 'test'],
+            },
+          },
+        },
+        {
+          id: 'shared-util',
+          name: 'Shared Util',
+          kind: 'project',
+          sourceSystem: 'nx',
+          root: 'libs/shared/util',
+          path: 'libs/shared/util',
+          tags: ['domain:shared', 'layer:util'],
+        },
+      ],
+      relations: [
+        {
+          id: 'nx:orders-app->shared-util:static:0',
+          sourceNodeId: 'orders-app',
+          targetNodeId: 'shared-util',
+          kind: 'dependency',
+          metadata: {
+            dependencyType: 'static',
+            sourceFile: 'apps/orders/src/main.ts',
+          },
+        },
+      ],
+      diagnostics: [
+        {
+          code: 'adapter.graph.warning',
+          source: 'governance-adapter-nx',
+          message: 'Adapter graph warning.',
+        },
+      ],
+    } as GovernanceAssessmentArtifacts['adapterResult'],
+    capabilities: [
+      {
+        id: 'nx.project-graph',
+        version: '1',
+        data: {
+          projectCount: 2,
+        },
+      },
+    ],
+    diagnostics: [
+      {
+        code: 'adapter.graph.warning',
+        source: 'governance-adapter-nx',
+        message: 'Adapter graph warning.',
+      },
+    ],
+    extensionDiagnostics: [
+      {
+        code: 'governance.extension.loaded',
+        severity: 'notice',
+        message: 'Loaded extension.',
+        extensionId: 'governance-extension-nx',
+      },
+    ],
   };
 }

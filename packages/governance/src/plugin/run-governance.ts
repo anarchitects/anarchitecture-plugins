@@ -301,12 +301,13 @@ interface GovernanceAssessmentArtifactsOptions {
 export async function runGovernance(
   options: GovernanceRunOptions = {}
 ): Promise<GovernanceRunResult> {
-  const { assessment } = await buildAssessmentArtifacts(options);
+  const artifacts = await buildAssessmentArtifacts(options);
+  const { assessment } = artifacts;
 
   const rendered =
     options.output === 'json'
-      ? renderJsonReport(assessment)
-      : renderCliReport(assessment);
+      ? renderJsonReport(artifacts)
+      : renderCliReport(artifacts);
 
   if (options.output === 'json') {
     process.stdout.write(`${rendered}\n`);
@@ -1347,7 +1348,7 @@ async function buildAssessmentArtifacts(
     options.conformanceJson
   );
   const conformanceSnapshot = loadConformanceSnapshot(resolvedConformanceInput);
-  const { artifacts } = await composeNxGovernanceRuntime({
+  const { adapterResult, artifacts } = await composeNxGovernanceRuntime({
     workspaceRoot,
     profileName,
     options: { ...options } as Record<string, unknown>,
@@ -1361,6 +1362,7 @@ async function buildAssessmentArtifacts(
 
   return {
     ...artifacts,
+    adapterResult,
     assessment: buildGovernanceAssessment({
       workspace: artifacts.workspace,
       profile: profileName,
