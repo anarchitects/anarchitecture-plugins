@@ -83,4 +83,6 @@ See [AGENTS.md](AGENTS.md) and [.github/copilot-instructions.md](.github/copilot
 
 ## License
 
-MIT © Anarchitects
+Copyright © 2026 Optimalist BV and Anarchitects contributors.
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
