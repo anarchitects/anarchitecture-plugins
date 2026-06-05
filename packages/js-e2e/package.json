@@ -1,6 +1,7 @@
 {
   "name": "nx-js-e2e",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "private": true,
   "nx": {
     "projectType": "application",

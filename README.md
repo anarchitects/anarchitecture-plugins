@@ -3,6 +3,7 @@
 Nx plugin monorepo for architecture, governance, and developer workflow automation.
 
 This repository publishes focused Nx plugins that improve monorepo maintainability through:
+
 - convention-over-configuration
 - inference-first targets (Project Crystal)
 - thin executors and safe generators
@@ -16,11 +17,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, quality gates, and c
 
 The workspace is organized as independent plugin packages under `packages/`.
 
-| Plugin | Package | Purpose |
-|---|---|---|
-| Nx Governance | `@anarchitects/nx-governance` | Workspace governance-as-code: boundaries, ownership, architecture health, and scored reports. |
-| Nx TypeORM | `@anarchitects/nx-typeorm` | TypeORM workflows for Nx: bootstrap, migration generate/run/revert, schema checks, and seeding. |
-| Nx JS | `@anarchitects/nx-js` | Extensions around `@nx/js`, including secondary entry point generation for libraries. |
+| Plugin        | Package                       | Purpose                                                                                         |
+| ------------- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| Nx Governance | `@anarchitects/nx-governance` | Workspace governance-as-code: boundaries, ownership, architecture health, and scored reports.   |
+| Nx TypeORM    | `@anarchitects/nx-typeorm`    | TypeORM workflows for Nx: bootstrap, migration generate/run/revert, schema checks, and seeding. |
+| Nx JS         | `@anarchitects/nx-js`         | Extensions around `@nx/js`, including secondary entry point generation for libraries.           |
 
 ## Plugin Documentation
 
@@ -73,6 +74,7 @@ yarn nx affected -t build,test,lint
 ## Design Principles
 
 All plugins in this monorepo should follow the same standards:
+
 - Prefer inference (`createNodesV2`) when behavior can be derived from conventions.
 - Keep executors deterministic and minimal; delegate heavy work to underlying tools.
 - Keep generators idempotent and non-destructive.
@@ -83,4 +85,6 @@ See [AGENTS.md](AGENTS.md) and [.github/copilot-instructions.md](.github/copilot
 
 ## License
 
-MIT © Anarchitects
+Copyright © 2026 Optimalist BV and Anarchitects contributors.
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

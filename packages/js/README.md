@@ -38,17 +38,17 @@ nx g @anarchitects/nx-js:secondary-entry-point --project=<project> --name=<segme
 
 **Required options**
 
-| Option | Description |
-| --- | --- |
-| `--project` | Name of the Nx library project to add the entry point to. |
-| `--name` | Path segment for the new entry point (e.g. `feature`, `data/access`). |
+| Option      | Description                                                           |
+| ----------- | --------------------------------------------------------------------- |
+| `--project` | Name of the Nx library project to add the entry point to.             |
+| `--name`    | Path segment for the new entry point (e.g. `feature`, `data/access`). |
 
 **Optional options**
 
-| Option | Default | Description |
-| --- | --- | --- |
+| Option          | Default | Description                         |
+| --------------- | ------- | ----------------------------------- |
 | `--buildTarget` | `build` | Name of the build target to update. |
-| `--skipFormat` | `false` | Skip formatting generated files. |
+| `--skipFormat`  | `false` | Skip formatting generated files.    |
 
 #### What it does
 
@@ -64,13 +64,13 @@ The generator always runs these steps:
 
 #### Bundler behavior
 
-| Bundler | Executor | What is updated | Mutation |
-| --- | --- | --- | --- |
-| `tsc` | `@nx/js:tsc` | `project.json` | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`. |
-| `swc` | `@nx/js:swc` | `project.json` | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`. |
-| `rollup` | `@nx/rollup:rollup` | `project.json` | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`. |
-| `esbuild` | `@nx/esbuild:esbuild` | `project.json` | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`. |
-| `vite` | `@nx/vite:build` | `vite.config.*` | Adds `"<segment>/index": "src/<segment>/index.ts"` to `build.lib.entry`. Converts `entry` from a string to an object if needed. |
+| Bundler   | Executor              | What is updated | Mutation                                                                                                                        |
+| --------- | --------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `tsc`     | `@nx/js:tsc`          | `project.json`  | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`.                                       |
+| `swc`     | `@nx/js:swc`          | `project.json`  | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`.                                       |
+| `rollup`  | `@nx/rollup:rollup`   | `project.json`  | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`.                                       |
+| `esbuild` | `@nx/esbuild:esbuild` | `project.json`  | Appends to `options.additionalEntryPoints[]`; sets `options.generateExportsField = true`.                                       |
+| `vite`    | `@nx/vite:build`      | `vite.config.*` | Adds `"<segment>/index": "src/<segment>/index.ts"` to `build.lib.entry`. Converts `entry` from a string to an object if needed. |
 
 **Inferred targets**
 
@@ -145,4 +145,6 @@ yarn nx lint nx-js
 
 ## License
 
-This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+Copyright © 2026 Optimalist BV and Anarchitects contributors.
+
+Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.

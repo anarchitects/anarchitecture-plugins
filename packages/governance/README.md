@@ -143,4 +143,6 @@ Use ../../docs/architecture/governance-plugin-side-packages.md and ../../docs/mi
 
 ## License
 
-Apache-2.0
+Copyright © 2026 Optimalist BV and Anarchitects contributors.
+
+Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.

@@ -137,4 +137,6 @@ No. It extracts and maps Nx data; rule and metric evaluation belongs to Governan
 
 ## License
 
-Apache-2.0
+Copyright © 2026 Optimalist BV and Anarchitects contributors.
+
+Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.
