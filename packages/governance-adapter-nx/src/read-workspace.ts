@@ -20,32 +20,40 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
   const graph = await createProjectGraphAsync();
   const codeownersEntries = readCodeowners(workspaceRoot);
 
-  const projects = Object.values(graph.nodes).map((node) => {
-    const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
-    const targets =
-      node.data.targets && typeof node.data.targets === 'object'
-        ? Object.keys(node.data.targets)
-        : [];
-    const graphMetadata =
-      node.data.metadata && typeof node.data.metadata === 'object'
-        ? (node.data.metadata as Record<string, unknown>)
-        : {};
-    const { tags, metadata } = resolveProjectTagsAndMetadata(
-      node.data.root,
-      workspaceRoot,
-      graphTags,
-      graphMetadata
-    );
+  const projects = Object.values(graph.nodes)
+    .map((node) => {
+      const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+      const targets =
+        node.data.targets && typeof node.data.targets === 'object'
+          ? sortedStrings(Object.keys(node.data.targets))
+          : [];
+      const graphMetadata =
+        node.data.metadata && typeof node.data.metadata === 'object'
+          ? (node.data.metadata as Record<string, unknown>)
+          : {};
+      const { tags, metadata } = resolveProjectTagsAndMetadata(
+        node.data.root,
+        workspaceRoot,
+        graphTags,
+        graphMetadata
+      );
 
-    return {
-      name: node.name,
-      root: node.data.root,
-      type: node.data.projectType ?? 'unknown',
-      tags,
-      targets,
-      metadata,
-    };
-  });
+      return {
+        name: node.name,
+        root: node.data.root,
+        ...(asString(node.data.sourceRoot)
+          ? { sourceRoot: asString(node.data.sourceRoot) }
+          : {}),
+        type: node.data.projectType ?? 'unknown',
+        tags,
+        targets,
+        implicitDependencies: sortedStrings(
+          toStringArray(node.data.implicitDependencies)
+        ),
+        metadata,
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   const projectNames = new Set(projects.map((project) => project.name));
   const diagnostics: GovernanceDiagnostic[] = [];
@@ -54,14 +62,14 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
     ([source, edges]) => {
       if (!projectNames.has(source)) {
         diagnostics.push({
-          code: 'NX_ADAPTER_DEPENDENCY_SOURCE_NOT_FOUND',
-          message: `Skipped Nx dependency edges from unknown source project "${source}".`,
+          code: 'NX_ADAPTER_RELATION_SOURCE_NOT_FOUND',
+          message: `Skipped Nx relation edges from unknown source node "${source}".`,
           severity: 'warning',
           kind: 'warning',
           category: 'adapter',
           source: 'governance-adapter-nx',
           details: {
-            sourceProjectId: source,
+            sourceNodeId: source,
           },
         });
         return [];
@@ -70,14 +78,14 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
       return edges.flatMap((edge) => {
         if (!edge || typeof edge !== 'object') {
           diagnostics.push({
-            code: 'NX_ADAPTER_DEPENDENCY_EDGE_INVALID',
-            message: `Skipped malformed Nx dependency edge from "${source}".`,
+            code: 'NX_ADAPTER_RELATION_EDGE_INVALID',
+            message: `Skipped malformed Nx relation edge from source node "${source}".`,
             severity: 'warning',
             kind: 'warning',
             category: 'adapter',
             source: 'governance-adapter-nx',
             details: {
-              sourceProjectId: source,
+              sourceNodeId: source,
             },
           });
           return [];
@@ -85,19 +93,15 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
 
         if (!projectNames.has(edge.target)) {
           diagnostics.push({
-            code: 'NX_ADAPTER_DEPENDENCY_TARGET_NOT_FOUND',
-            message: `Skipped Nx dependency from "${source}" to unknown target project "${edge.target}".`,
+            code: 'NX_ADAPTER_RELATION_TARGET_NOT_FOUND',
+            message: `Skipped Nx relation from source node "${source}" to unknown target node "${edge.target}".`,
             severity: 'warning',
             kind: 'warning',
             category: 'adapter',
             source: 'governance-adapter-nx',
-            reference: {
-              projectId: source,
-              targetProjectId: edge.target,
-            },
             details: {
-              sourceProjectId: source,
-              targetProjectId: edge.target,
+              sourceNodeId: source,
+              targetNodeId: edge.target,
               dependencyType: edge.type ?? 'unknown',
             },
           });
@@ -240,6 +244,10 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -250,4 +258,8 @@ function toStringArray(value: unknown): string[] {
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values)];
+}
+
+function sortedStrings(values: string[]): string[] {
+  return [...values].sort((left, right) => left.localeCompare(right));
 }

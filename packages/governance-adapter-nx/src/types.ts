@@ -3,9 +3,11 @@ import type { GovernanceDiagnostic } from '@anarchitects/governance-core';
 export interface AdapterProject {
   name: string;
   root: string;
+  sourceRoot?: string;
   type: string;
   tags?: string[];
   targets?: string[];
+  implicitDependencies?: string[];
   metadata: Record<string, unknown>;
 }
 

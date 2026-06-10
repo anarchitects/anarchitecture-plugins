@@ -85,11 +85,11 @@ describe('host -> adapter -> core compatibility flow', () => {
       workspaceRoot: snapshot.root,
       snapshot,
     });
-    const bookingDomainProject = workspace.projects.find(
-      (project) => project.id === 'booking-domain'
+    const bookingDomainNode = adapterResult.nodes?.find(
+      (node) => node.id === 'booking-domain'
     );
-    const bookingUiProject = workspace.projects.find(
-      (project) => project.id === 'booking-ui'
+    const bookingUiNode = adapterResult.nodes?.find(
+      (node) => node.id === 'booking-ui'
     );
 
     expect(adapterResult.capabilities).toEqual(
@@ -109,26 +109,37 @@ describe('host -> adapter -> core compatibility flow', () => {
       id: 'workspace',
       name: 'workspace',
       root: '/workspace',
-      dependencies: [
-        {
-          source: 'booking-ui',
-          target: 'booking-domain',
-          type: 'static',
-          sourceFile: 'libs/booking/ui/src/lib/ui.ts',
-        },
-      ],
     });
-    expect(bookingUiProject).toMatchObject({
+    expect(adapterResult.relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceNodeId: 'booking-ui',
+          targetNodeId: 'booking-domain',
+          kind: 'dependency',
+          metadata: expect.objectContaining({
+            nx: expect.objectContaining({
+              dependencyType: 'static',
+              sourceFile: 'libs/booking/ui/src/lib/ui.ts',
+            }),
+          }),
+        }),
+      ])
+    );
+    expect(bookingUiNode).toMatchObject({
       id: 'booking-ui',
       root: 'libs/booking/ui',
-      domain: 'booking',
-      layer: 'ui',
+      classification: {
+        scope: 'booking',
+        layer: 'ui',
+      },
     });
-    expect(bookingDomainProject).toMatchObject({
+    expect(bookingDomainNode).toMatchObject({
       id: 'booking-domain',
       root: 'libs/booking/domain',
-      domain: 'booking',
-      layer: 'domain',
+      classification: {
+        scope: 'booking',
+        layer: 'domain',
+      },
     });
   });
 });
