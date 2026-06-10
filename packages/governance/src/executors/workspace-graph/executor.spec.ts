@@ -10,15 +10,19 @@ describe('workspace-graph executor', () => {
 
   it('renders diagnostic summary output', () => {
     expect(
-      renderWorkspaceGraphSummary({ projectCount: 4, dependencyCount: 9 })
-    ).toBe('Projects: 4\nDependencies: 9');
+      renderWorkspaceGraphSummary({
+        nodeCount: 4,
+        relationCount: 9,
+        dependencyRelationCount: 9,
+      })
+    ).toBe('Nodes: 4\nRelations: 9\nDependency Relations: 9');
   });
 
-  it('prints project and dependency counts from the host composition summary', async () => {
+  it('prints canonical node and relation counts from the host composition summary', async () => {
     const info = jest.fn();
     const error = jest.fn();
     const summarizeGraph = jest.fn().mockResolvedValue({
-      summary: { projectCount: 2, dependencyCount: 1 },
+      summary: { nodeCount: 2, relationCount: 1, dependencyRelationCount: 1 },
       source: 'host-canonical-workspace',
     });
 
@@ -32,7 +36,9 @@ describe('workspace-graph executor', () => {
     );
 
     expect(result).toEqual({ success: true });
-    expect(info).toHaveBeenCalledWith('Projects: 2\nDependencies: 1');
+    expect(info).toHaveBeenCalledWith(
+      'Nodes: 2\nRelations: 1\nDependency Relations: 1'
+    );
     expect(error).not.toHaveBeenCalled();
     expect(summarizeGraph).toHaveBeenCalledWith({
       graphJson: 'dist/project-graph.json',

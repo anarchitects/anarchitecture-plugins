@@ -16,7 +16,6 @@ import {
   readWorkspaceGraphSnapshot,
   summarizeWorkspaceGraph,
   type GraphAdapterOptions,
-  type GraphSummary,
 } from '@anarchitects/governance-adapter-nx';
 
 import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
@@ -26,6 +25,47 @@ import type { GovernanceProfileComposition } from '../profile/runtime-profile.js
 interface NxGovernanceProfileOverrides extends ProfileOverrides {
   composition?: GovernanceProfileComposition;
 }
+
+export interface RuntimeGovernanceNode {
+  id: string;
+  name?: string;
+  kind?: string;
+  technology?: string;
+  sourceSystem?: string;
+  root?: string;
+  path?: string;
+  tags?: string[];
+  classification?: Record<string, unknown>;
+  ownership?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RuntimeGovernanceRelation {
+  id?: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  kind?: string;
+  metadata?: Record<string, unknown>;
+}
+export type RuntimeGovernanceWorkspace = Omit<
+  GovernanceWorkspace,
+  'projects' | 'dependencies'
+> & {
+  nodes: RuntimeGovernanceNode[];
+  relations: RuntimeGovernanceRelation[];
+  metadata?: Record<string, unknown>;
+};
+export type RuntimeGovernanceExtensionContext = Omit<
+  GovernanceExtensionHostContext,
+  'inventory'
+> & {
+  inventory: RuntimeGovernanceWorkspace;
+};
+type CanonicalAdapterResult = GovernanceWorkspaceAdapterResult & {
+  workspace?: Partial<RuntimeGovernanceWorkspace>;
+  nodes?: RuntimeGovernanceNode[];
+  relations?: RuntimeGovernanceRelation[];
+};
 
 export interface ComposeNxGovernanceRuntimeInput {
   workspaceRoot: string;
@@ -43,17 +83,23 @@ export interface ComposeNxGovernanceRuntimeInput {
 
 export interface ComposeNxGovernanceRuntimeResult {
   adapterResult: GovernanceWorkspaceAdapterResult;
-  workspace: GovernanceWorkspace;
+  workspace: RuntimeGovernanceWorkspace;
   adapterCapabilities: GovernanceCapability[];
-  extensionContext: GovernanceExtensionHostContext;
+  extensionContext: RuntimeGovernanceExtensionContext;
   extensionRegistration: GovernanceExtensionRegistrationResult;
   artifacts: GovernanceAssessmentArtifacts;
 }
 
 export type NxGovernanceWorkspaceGraphSummaryInput = GraphAdapterOptions;
 
+export interface NxGovernanceWorkspaceGraphSummary {
+  nodeCount: number;
+  relationCount: number;
+  dependencyRelationCount?: number;
+}
+
 export interface NxGovernanceWorkspaceGraphSummaryResult {
-  summary: GraphSummary;
+  summary: NxGovernanceWorkspaceGraphSummary;
   source: 'host-canonical-workspace' | 'adapter-graph-json';
 }
 
@@ -64,7 +110,7 @@ export async function composeNxGovernanceRuntime(
   const workspace = buildGovernanceWorkspace(
     adapterResult,
     input.profileOverrides
-  );
+  ) as unknown as RuntimeGovernanceWorkspace;
 
   const profileComposition = input.profileOverrides.composition ?? {};
   loadGovernanceExtensionConfig({
@@ -73,7 +119,7 @@ export async function composeNxGovernanceRuntime(
   });
 
   const adapterCapabilities = adapterResult.capabilities ?? [];
-  const extensionContext: GovernanceExtensionHostContext = {
+  const extensionContext: RuntimeGovernanceExtensionContext = {
     workspaceRoot: input.workspaceRoot,
     profileName: input.profileName,
     options: {
@@ -84,20 +130,24 @@ export async function composeNxGovernanceRuntime(
     capabilities: new DefaultGovernanceCapabilityRegistry(adapterCapabilities),
   };
   const extensionRegistration =
-    await registerNxGovernanceExtensionsWithDiagnostics(extensionContext, {
-      workspaceRoot: input.workspaceRoot,
-      profileComposition,
-    });
+    await registerNxGovernanceExtensionsWithDiagnostics(
+      extensionContext as unknown as GovernanceExtensionHostContext,
+      {
+        workspaceRoot: input.workspaceRoot,
+        profileComposition,
+      }
+    );
   const artifacts = await buildCoreGovernanceAssessmentArtifacts({
     profile: input.profile,
-    workspace,
+    workspace: workspace as unknown as GovernanceWorkspace,
     warnings: input.warnings,
     exceptions: input.exceptions,
     conformanceFindings: input.conformanceFindings ?? [],
     capabilities: adapterCapabilities,
     diagnostics: adapterResult.diagnostics ?? [],
     extensionRegistry: extensionRegistration.registry,
-    extensionContext,
+    extensionContext:
+      extensionContext as unknown as GovernanceExtensionHostContext,
     extensionDiagnostics: extensionRegistration.diagnostics,
     asOf: input.asOf,
   });
@@ -119,24 +169,63 @@ export async function summarizeNxGovernanceWorkspaceGraph(
     const snapshot = await readWorkspaceGraphSnapshot({
       graphJson: input.graphJson,
     });
+    const graphSummary = summarizeWorkspaceGraph(snapshot);
 
     return {
-      summary: summarizeWorkspaceGraph(snapshot),
+      summary: {
+        nodeCount: graphSummary.projectCount,
+        relationCount: graphSummary.dependencyCount,
+        dependencyRelationCount: graphSummary.dependencyCount,
+      },
       source: 'adapter-graph-json',
     };
   }
 
   const { adapterResult } = await loadNxGovernanceWorkspaceContext();
+  const relations = readCanonicalRelations(adapterResult);
 
   return {
     summary: {
-      projectCount:
-        adapterResult.nodes?.length ?? adapterResult.projects?.length ?? 0,
-      dependencyCount:
-        adapterResult.relations?.length ??
-        adapterResult.dependencies?.length ??
-        0,
+      nodeCount: readCanonicalNodes(adapterResult).length,
+      relationCount: relations.length,
+      dependencyRelationCount: countDependencyRelations(relations),
     },
     source: 'host-canonical-workspace',
   };
+}
+
+function readCanonicalNodes(
+  adapterResult: GovernanceWorkspaceAdapterResult
+): RuntimeGovernanceNode[] {
+  const canonicalAdapterResult = adapterResult as CanonicalAdapterResult;
+
+  return (
+    canonicalWorkspace(canonicalAdapterResult)?.nodes ??
+    canonicalAdapterResult.nodes ??
+    []
+  );
+}
+
+function readCanonicalRelations(
+  adapterResult: GovernanceWorkspaceAdapterResult
+): RuntimeGovernanceRelation[] {
+  const canonicalAdapterResult = adapterResult as CanonicalAdapterResult;
+
+  return (
+    canonicalWorkspace(canonicalAdapterResult)?.relations ??
+    canonicalAdapterResult.relations ??
+    []
+  );
+}
+
+function canonicalWorkspace(
+  adapterResult: CanonicalAdapterResult
+): Partial<RuntimeGovernanceWorkspace> | undefined {
+  return adapterResult.workspace;
+}
+
+function countDependencyRelations(
+  relations: RuntimeGovernanceRelation[]
+): number {
+  return relations.filter((relation) => relation.kind === 'dependency').length;
 }
