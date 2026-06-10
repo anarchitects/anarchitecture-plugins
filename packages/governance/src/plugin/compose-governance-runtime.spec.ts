@@ -1,3 +1,15 @@
+jest.mock('@anarchitects/governance-core', () => {
+  const actual = jest.requireActual(
+    '@anarchitects/governance-core'
+  ) as typeof import('@anarchitects/governance-core');
+
+  return {
+    ...actual,
+    buildGovernanceWorkspace: jest.fn(),
+    buildGovernanceAssessmentArtifacts: jest.fn(),
+  };
+});
+
 jest.mock('@anarchitects/governance-adapter-nx', () => {
   const actual = jest.requireActual(
     '@anarchitects/governance-adapter-nx'
@@ -6,6 +18,8 @@ jest.mock('@anarchitects/governance-adapter-nx', () => {
   return {
     ...actual,
     loadNxGovernanceWorkspaceContext: jest.fn(),
+    readWorkspaceGraphSnapshot: jest.fn(),
+    summarizeWorkspaceGraph: jest.fn(),
   };
 });
 
@@ -16,32 +30,123 @@ jest.mock('../nx-host/extensions/host.js', () => ({
 import { workspaceRoot } from '@nx/devkit';
 import type {
   GovernanceExtensionHostContext,
+  GovernanceExtensionRegistrationResult,
+  GovernanceAssessmentArtifacts,
   GovernanceProfile,
   GovernanceWorkspaceAdapterResult,
 } from '@anarchitects/governance-core';
-import { loadNxGovernanceWorkspaceContext } from '@anarchitects/governance-adapter-nx';
+import {
+  buildGovernanceWorkspace,
+  buildGovernanceAssessmentArtifacts,
+} from '@anarchitects/governance-core';
+import {
+  loadNxGovernanceWorkspaceContext,
+  readWorkspaceGraphSnapshot,
+  summarizeWorkspaceGraph,
+} from '@anarchitects/governance-adapter-nx';
 
 import { registerNxGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
 import {
   composeNxGovernanceRuntime,
+  type RuntimeGovernanceNode,
+  type RuntimeGovernanceRelation,
+  type RuntimeGovernanceExtensionContext,
+  type RuntimeGovernanceWorkspace,
   summarizeNxGovernanceWorkspaceGraph,
 } from './compose-governance-runtime.js';
 
+type CanonicalAdapterResult = GovernanceWorkspaceAdapterResult & {
+  nodes?: RuntimeGovernanceNode[];
+  relations?: RuntimeGovernanceRelation[];
+};
+
+const mockedBuildGovernanceWorkspace = jest.mocked(buildGovernanceWorkspace);
+const mockedBuildGovernanceAssessmentArtifacts = jest.mocked(
+  buildGovernanceAssessmentArtifacts
+);
 const mockedLoadNxGovernanceWorkspaceContext = jest.mocked(
   loadNxGovernanceWorkspaceContext
+);
+const mockedReadWorkspaceGraphSnapshot = jest.mocked(
+  readWorkspaceGraphSnapshot
 );
 const mockedRegisterNxGovernanceExtensionsWithDiagnostics = jest.mocked(
   registerNxGovernanceExtensionsWithDiagnostics
 );
+const mockedSummarizeWorkspaceGraph = jest.mocked(summarizeWorkspaceGraph);
 
 describe('composeNxGovernanceRuntime', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  it('composes the Nx adapter, extension registry, capabilities, diagnostics, and Core artifact generation', async () => {
-    let receivedContext: GovernanceExtensionHostContext | undefined;
+  it('composes canonical workspace inventory, capabilities, diagnostics, profile composition, and extension registration', async () => {
+    let receivedContext: RuntimeGovernanceExtensionContext | undefined;
     const adapterResult = buildAdapterResult();
+    const workspace = buildCanonicalWorkspace();
+    const extensionRegistration = {
+      registry: {
+        enrichers: [
+          {
+            pluginId: 'test-nx-extension',
+            contribution: {
+              enrichWorkspace() {
+                return workspace;
+              },
+            },
+          },
+        ],
+        rulePacks: [
+          {
+            pluginId: 'test-nx-extension',
+            contribution: {
+              evaluate() {
+                return [];
+              },
+            },
+          },
+        ],
+        signalProviders: [
+          {
+            pluginId: 'test-nx-extension',
+            contribution: {
+              provideSignals() {
+                return [];
+              },
+            },
+          },
+        ],
+        metricProviders: [
+          {
+            pluginId: 'test-nx-extension',
+            contribution: {
+              provideMetrics() {
+                return [];
+              },
+            },
+          },
+        ],
+      },
+      diagnostics: [
+        {
+          code: 'governance.extension.loaded',
+          severity: 'notice',
+          message: 'Loaded test extension.',
+          extensionId: 'test-nx-extension',
+        },
+      ],
+    } as unknown as GovernanceExtensionRegistrationResult;
+    const artifacts = {
+      assessment: {
+        workspace,
+      },
+      signals: [],
+      exceptionApplication: {},
+      extensionDiagnostics: extensionRegistration.diagnostics,
+      diagnostics: adapterResult.diagnostics,
+      capabilities: adapterResult.capabilities,
+      adapterResult,
+    } as unknown as GovernanceAssessmentArtifacts;
 
     mockedLoadNxGovernanceWorkspaceContext.mockResolvedValue({
       adapterResult,
@@ -52,106 +157,18 @@ describe('composeNxGovernanceRuntime', () => {
         codeownersByProject: {},
       },
     });
+    mockedBuildGovernanceWorkspace.mockReturnValue(
+      workspace as unknown as GovernanceExtensionHostContext['inventory']
+    );
     mockedRegisterNxGovernanceExtensionsWithDiagnostics.mockImplementation(
       async (context) => {
-        receivedContext = context;
+        receivedContext =
+          context as unknown as RuntimeGovernanceExtensionContext;
 
-        return {
-          registry: {
-            enrichers: [
-              {
-                pluginId: 'test-nx-extension',
-                contribution: {
-                  enrichWorkspace({ workspace }) {
-                    return {
-                      ...workspace,
-                      projects: workspace.projects.map((project) => ({
-                        ...project,
-                        metadata: {
-                          ...project.metadata,
-                          extensionTouched: true,
-                        },
-                      })),
-                    };
-                  },
-                },
-              },
-            ],
-            rulePacks: [
-              {
-                pluginId: 'test-nx-extension',
-                contribution: {
-                  evaluate({ workspace }) {
-                    return [
-                      {
-                        id: 'extension-domain-boundary',
-                        ruleId: 'domain-boundary',
-                        project: workspace.projects[0]?.id ?? 'unknown',
-                        severity: 'warning',
-                        category: 'boundary',
-                        message: 'Extension boundary violation',
-                      },
-                    ];
-                  },
-                },
-              },
-            ],
-            signalProviders: [
-              {
-                pluginId: 'test-nx-extension',
-                contribution: {
-                  provideSignals({ workspace, violations }) {
-                    return [
-                      {
-                        id: 'extension-signal',
-                        type: 'extension-warning',
-                        sourceProjectId: workspace.projects[0]?.id,
-                        relatedProjectIds: workspace.projects[0]
-                          ? [workspace.projects[0].id]
-                          : [],
-                        severity: 'warning',
-                        category: 'boundary',
-                        message: `Extension saw ${violations.length} violations.`,
-                        source: 'extension',
-                        createdAt: '2026-06-02T00:00:00.000Z',
-                      },
-                    ];
-                  },
-                },
-              },
-            ],
-            metricProviders: [
-              {
-                pluginId: 'test-nx-extension',
-                contribution: {
-                  provideMetrics() {
-                    return [
-                      {
-                        id: 'extension-coverage',
-                        name: 'Extension Coverage',
-                        family: 'architecture',
-                        value: 1,
-                        score: 90,
-                        maxScore: 100,
-                        unit: 'ratio',
-                      },
-                    ];
-                  },
-                },
-              },
-            ],
-          },
-          diagnostics: [
-            {
-              code: 'governance.extension.loaded',
-              severity: 'notice',
-              message: 'Loaded test extension.',
-              extensionId: 'test-nx-extension',
-            },
-          ],
-        };
+        return extensionRegistration;
       }
     );
+    mockedBuildGovernanceAssessmentArtifacts.mockResolvedValue(artifacts);
 
     const result = await composeNxGovernanceRuntime({
       workspaceRoot,
@@ -210,9 +227,14 @@ describe('composeNxGovernanceRuntime', () => {
       }
     );
     expect(result.adapterResult).toBe(adapterResult);
-    expect(result.workspace.projects).toHaveLength(2);
+    expect(result.workspace).toBe(workspace);
+    expect(result.workspace.nodes).toHaveLength(2);
+    expect(result.workspace.relations).toHaveLength(1);
     expect(result.adapterCapabilities).toEqual(adapterResult.capabilities);
-    expect(receivedContext?.inventory.projects).toHaveLength(2);
+    expect(receivedContext?.inventory.nodes).toHaveLength(2);
+    expect(receivedContext?.inventory.relations).toHaveLength(1);
+    expect('projects' in (receivedContext?.inventory ?? {})).toBe(false);
+    expect('dependencies' in (receivedContext?.inventory ?? {})).toBe(false);
     expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
     expect(receivedContext?.capabilities.get('capability:nx')).toEqual(
       adapterResult.capabilities?.[0]
@@ -234,35 +256,25 @@ describe('composeNxGovernanceRuntime', () => {
         severityThreshold: 'warning',
       },
     });
-    expect(result.artifacts.workspace.projects[0]?.metadata).toEqual(
-      expect.objectContaining({ extensionTouched: true })
-    );
-    expect(result.artifacts.violations).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          ruleId: 'domain-boundary',
-          sourcePluginId: 'test-nx-extension',
+    expect(mockedBuildGovernanceAssessmentArtifacts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profile: expect.objectContaining({ name: 'test-profile' }),
+        workspace,
+        capabilities: adapterResult.capabilities,
+        diagnostics: adapterResult.diagnostics,
+        extensionRegistry: extensionRegistration.registry,
+        extensionContext: expect.objectContaining({
+          inventory: workspace,
         }),
-      ])
+        extensionDiagnostics: extensionRegistration.diagnostics,
+      })
     );
-    expect(result.artifacts.signals).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'extension-signal',
-          sourcePluginId: 'test-nx-extension',
-        }),
-      ])
-    );
-    expect(result.artifacts.measurements).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'extension-coverage',
-          sourcePluginId: 'test-nx-extension',
-        }),
-      ])
-    );
-    expect(result.artifacts.recommendations.length).toBeGreaterThan(0);
+    expect(result.extensionRegistration).toEqual(extensionRegistration);
+    expect(result.artifacts).toBe(artifacts);
     expect(result.artifacts.diagnostics).toEqual(adapterResult.diagnostics);
+    expect(result.artifacts.extensionDiagnostics).toEqual(
+      extensionRegistration.diagnostics
+    );
     expect(result.artifacts.extensionDiagnostics).toEqual([
       expect.objectContaining({ code: 'governance.extension.loaded' }),
     ]);
@@ -283,12 +295,6 @@ describe('composeNxGovernanceRuntime', () => {
             kind: 'dependency',
           },
         ],
-        projects: [
-          { id: 'legacy-app' },
-          { id: 'legacy-shared-data' },
-          { id: 'legacy-extra' },
-        ],
-        dependencies: [],
       },
       snapshot: {
         root: workspaceRoot,
@@ -302,46 +308,106 @@ describe('composeNxGovernanceRuntime', () => {
 
     expect(result).toEqual({
       summary: {
-        projectCount: 2,
-        dependencyCount: 1,
+        nodeCount: 2,
+        relationCount: 1,
+        dependencyRelationCount: 1,
       },
       source: 'host-canonical-workspace',
     });
     expect(mockedLoadNxGovernanceWorkspaceContext).toHaveBeenCalledTimes(1);
   });
+
+  it('maps adapter graph-json summaries into canonical node and relation counts', async () => {
+    mockedReadWorkspaceGraphSnapshot.mockResolvedValue({
+      source: 'nx-graph',
+      extractedAt: '2026-06-10T00:00:00.000Z',
+      projects: [],
+      dependencies: [],
+    });
+    mockedSummarizeWorkspaceGraph.mockReturnValue({
+      projectCount: 3,
+      dependencyCount: 5,
+    });
+
+    const result = await summarizeNxGovernanceWorkspaceGraph({
+      graphJson: 'dist/project-graph.json',
+    });
+
+    expect(result).toEqual({
+      summary: {
+        nodeCount: 3,
+        relationCount: 5,
+        dependencyRelationCount: 5,
+      },
+      source: 'adapter-graph-json',
+    });
+    expect(mockedReadWorkspaceGraphSnapshot).toHaveBeenCalledWith({
+      graphJson: 'dist/project-graph.json',
+    });
+  });
 });
 
-function buildAdapterResult(): GovernanceWorkspaceAdapterResult {
+function buildAdapterResult(): CanonicalAdapterResult {
   return {
     workspaceRoot,
-    projects: [
+    nodes: [
       {
         id: 'app',
         name: 'app',
+        kind: 'project',
+        sourceSystem: 'nx',
         root: 'apps/app',
-        type: 'application',
-        domain: 'sales',
-        layer: 'app',
+        path: 'apps/app',
         tags: ['domain:sales', 'layer:app'],
-        metadata: { documentation: true },
+        classification: {
+          domain: 'sales',
+          layer: 'app',
+          tags: ['domain:sales', 'layer:app'],
+        },
+        metadata: {
+          nx: {
+            projectType: 'application',
+            root: 'apps/app',
+            tags: ['domain:sales', 'layer:app'],
+            targets: ['build'],
+          },
+        },
       },
       {
         id: 'shared-data',
         name: 'shared-data',
+        kind: 'project',
+        sourceSystem: 'nx',
         root: 'libs/shared-data',
-        type: 'library',
-        domain: 'data',
-        layer: 'data',
+        path: 'libs/shared-data',
         tags: ['domain:data', 'layer:data'],
-        metadata: { documentation: true },
+        classification: {
+          domain: 'data',
+          layer: 'data',
+          tags: ['domain:data', 'layer:data'],
+        },
+        metadata: {
+          nx: {
+            projectType: 'library',
+            root: 'libs/shared-data',
+            tags: ['domain:data', 'layer:data'],
+            targets: ['test'],
+          },
+        },
       },
     ],
-    dependencies: [
+    relations: [
       {
-        sourceProjectId: 'app',
-        targetProjectId: 'shared-data',
-        type: 'static',
-        sourceFile: 'apps/app/src/main.ts',
+        id: 'nx:app->shared-data:static:apps/app/src/main.ts',
+        sourceNodeId: 'app',
+        targetNodeId: 'shared-data',
+        kind: 'dependency',
+        metadata: {
+          nx: {
+            dependencyType: 'static',
+            sourceFile: 'apps/app/src/main.ts',
+          },
+        },
       },
     ],
     capabilities: [
@@ -360,6 +426,21 @@ function buildAdapterResult(): GovernanceWorkspaceAdapterResult {
         source: '@anarchitects/governance-adapter-nx',
       },
     ],
+  };
+}
+
+function buildCanonicalWorkspace(): RuntimeGovernanceWorkspace {
+  const adapterResult = buildAdapterResult();
+
+  return {
+    id: 'workspace',
+    name: 'workspace',
+    root: workspaceRoot,
+    nodes: adapterResult.nodes ?? [],
+    relations: adapterResult.relations ?? [],
+    metadata: {
+      sourceSystem: 'nx',
+    },
   };
 }
 

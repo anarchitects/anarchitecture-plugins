@@ -4,8 +4,9 @@ import { summarizeNxGovernanceWorkspaceGraph } from '../../plugin/compose-govern
 import { WorkspaceGraphExecutorOptions } from '../types.js';
 
 interface GraphSummary {
-  projectCount: number;
-  dependencyCount: number;
+  nodeCount: number;
+  relationCount: number;
+  dependencyRelationCount?: number;
 }
 
 export default async function workspaceGraphExecutor(
@@ -51,5 +52,11 @@ export async function runWorkspaceGraphExecutor(
 }
 
 export function renderWorkspaceGraphSummary(summary: GraphSummary): string {
-  return `Projects: ${summary.projectCount}\nDependencies: ${summary.dependencyCount}`;
+  return [
+    `Nodes: ${summary.nodeCount}`,
+    `Relations: ${summary.relationCount}`,
+    ...(summary.dependencyRelationCount === undefined
+      ? []
+      : [`Dependency Relations: ${summary.dependencyRelationCount}`]),
+  ].join('\n');
 }
