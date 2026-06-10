@@ -2,13 +2,14 @@
 
 ## Overview
 
-@anarchitects/governance-extension-nx is the Nx-focused Governance extension package. It contributes (and is designed to grow) Nx-specific governance interpretation using Governance Core extension contracts.
+@anarchitects/governance-extension-nx is the Nx-focused Governance extension package. It consumes canonical Governance workspace `nodes` and `relations`, then contributes Nx-specific enrichers, rule evaluation, signals, and metrics through Governance Core extension contracts.
 
 Use this package when you want to register Nx-specific rules, metrics, recommendations, or enrichers in the Governance ecosystem.
 
 ## Key Concepts
 
 - Extension boundary: isolates Nx-specific governance intelligence from host and adapter responsibilities.
+- Canonical graph inputs: extension behavior reads `workspace.nodes`, `workspace.relations`, `metadata.nx`, and `capability:nx`.
 - Capability-aware contributions: extension behavior can react to adapter-provided nx.\* capabilities.
 - Core-first contracts: extension registration is defined through @anarchitects/governance-core extension APIs.
 
@@ -34,6 +35,44 @@ const extension = createGovernanceExtensionNx();
 console.log(governanceExtensionNx.id, extension.version);
 ```
 
+The extension expects canonical workspace inventory:
+
+```ts
+const workspace = {
+  id: 'repo',
+  name: 'repo',
+  root: '/repo',
+  nodes: [
+    {
+      id: 'apps/store',
+      kind: 'project',
+      sourceSystem: 'nx',
+      metadata: {
+        nx: {
+          projectType: 'application',
+          tags: ['domain:commerce', 'layer:app'],
+          targets: ['build', 'test'],
+        },
+      },
+    },
+  ],
+  relations: [
+    {
+      id: 'nx:apps/store->libs/shared-ui:static:apps/store/src/app.ts',
+      sourceNodeId: 'apps/store',
+      targetNodeId: 'libs/shared-ui',
+      kind: 'dependency',
+      metadata: {
+        nx: {
+          dependencyType: 'static',
+          sourceFile: 'apps/store/src/app.ts',
+        },
+      },
+    },
+  ],
+};
+```
+
 ## Architecture
 
 ```mermaid
@@ -49,10 +88,11 @@ More implementation-oriented architecture notes are available in ../../docs/arch
 
 This package owns:
 
-- rules
-- metrics
-- recommendations
-- enrichers
+- canonical node enrichment
+- canonical relation enrichment
+- node/relation-referenced rule outputs
+- node/relation-referenced signals
+- Nx-focused metrics
 - capability-aware Nx interpretation
 
 This package does not own:
@@ -83,6 +123,8 @@ import { governanceExtensionNx } from '@anarchitects/governance-extension-nx';
 // Register the extension in your Governance host composition.
 void governanceExtensionNx;
 ```
+
+Registered contributions operate on canonical graph facts only. They do not read or emit `projects` or `dependencies` compatibility views.
 
 ## Configuration
 
