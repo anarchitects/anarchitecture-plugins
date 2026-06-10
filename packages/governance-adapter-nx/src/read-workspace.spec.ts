@@ -1,3 +1,4 @@
+import * as nxDevkit from '@nx/devkit';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -7,6 +8,7 @@ import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-
 import {
   createNxWorkspaceAdapterResult,
   discoverGovernanceProfileFiles,
+  readNxWorkspaceSnapshot,
   resolveProjectTagsAndMetadata,
 } from './read-workspace.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
@@ -20,6 +22,7 @@ describe('read-workspace adapter compatibility', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     rmSync(testRoot, { recursive: true, force: true });
   });
 
@@ -130,9 +133,11 @@ describe('read-workspace adapter compatibility', () => {
         {
           name: 'booking-ui',
           root: 'libs/booking/ui',
+          sourceRoot: 'libs/booking/ui/src',
           type: 'library',
           tags: ['scope:booking', 'layer:ui'],
           targets: ['build', 'test'],
+          implicitDependencies: ['shared'],
           metadata: {
             documentation: true,
           },
@@ -147,23 +152,11 @@ describe('read-workspace adapter compatibility', () => {
     const result = createNxWorkspaceAdapterResult(snapshot);
     const typedResult: GovernanceWorkspaceAdapterResult = result;
 
-    expect(typedResult.projects).toEqual([
-      {
-        id: 'booking-ui',
-        name: 'booking-ui',
-        root: 'libs/booking/ui',
-        type: 'library',
-        tags: ['scope:booking', 'layer:ui'],
-        metadata: {
-          documentation: true,
-        },
-        ownership: {
-          contacts: ['@booking-team'],
-          source: 'codeowners',
-        },
-      },
-    ]);
-    expect(typedResult.dependencies).toEqual([]);
+    expect(typedResult).not.toHaveProperty('projects');
+    expect(typedResult).not.toHaveProperty('dependencies');
+    expect(typedResult.metadata).toEqual({
+      sourceSystem: 'nx',
+    });
     expect(typedResult.nodes).toEqual([
       {
         id: 'booking-ui',
@@ -179,10 +172,16 @@ describe('read-workspace adapter compatibility', () => {
           tags: ['scope:booking', 'layer:ui'],
         },
         metadata: {
-          documentation: true,
           nx: {
             projectType: 'library',
+            root: 'libs/booking/ui',
+            sourceRoot: 'libs/booking/ui/src',
+            tags: ['scope:booking', 'layer:ui'],
             targets: ['build', 'test'],
+            implicitDependencies: ['shared'],
+            projectMetadata: {
+              documentation: true,
+            },
           },
         },
         ownership: {
@@ -264,6 +263,57 @@ describe('read-workspace adapter compatibility', () => {
     expect(discoverGovernanceProfileFiles(testRoot)).toEqual([
       'tools/governance/profiles/frontend-layered.json',
       'tools/governance/profiles/z-profile.json',
+    ]);
+  });
+
+  it('uses node and relation terminology in adapter diagnostics', async () => {
+    jest.spyOn(nxDevkit, 'createProjectGraphAsync').mockResolvedValue({
+      nodes: {
+        app: {
+          type: 'app',
+          name: 'app',
+          data: {
+            root: 'apps/app',
+            projectType: 'application',
+            tags: [],
+            targets: {},
+          },
+        },
+      },
+      dependencies: {
+        missing: [{ target: 'app', type: 'static' }],
+        app: [{ target: 'missing-target', type: 'dynamic' }, 'invalid-edge'],
+      },
+    } as unknown as Awaited<ReturnType<typeof nxDevkit.createProjectGraphAsync>>);
+
+    const snapshot = await readNxWorkspaceSnapshot();
+
+    expect(snapshot.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'NX_ADAPTER_RELATION_SOURCE_NOT_FOUND',
+        message:
+          'Skipped Nx relation edges from unknown source node "missing".',
+        details: {
+          sourceNodeId: 'missing',
+        },
+      }),
+      expect.objectContaining({
+        code: 'NX_ADAPTER_RELATION_TARGET_NOT_FOUND',
+        message:
+          'Skipped Nx relation from source node "app" to unknown target node "missing-target".',
+        details: {
+          sourceNodeId: 'app',
+          targetNodeId: 'missing-target',
+          dependencyType: 'dynamic',
+        },
+      }),
+      expect.objectContaining({
+        code: 'NX_ADAPTER_RELATION_EDGE_INVALID',
+        message: 'Skipped malformed Nx relation edge from source node "app".',
+        details: {
+          sourceNodeId: 'app',
+        },
+      }),
     ]);
   });
 });

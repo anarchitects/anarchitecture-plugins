@@ -43,6 +43,14 @@ describe('governance adapter nx boundary enforcement', () => {
         test: (line) => matchImport(line, /^@anarchitects\/governance-core\//),
       },
       {
+        rule: 'Adapter must not reference legacy project/dependency core contracts.',
+        test: (line) =>
+          matchToken(
+            line,
+            /\bGovernance(?:ProjectInput|DependencyInput|Project|Dependency)\b/
+          ),
+      },
+      {
         rule: 'Adapter must not import monolithic governance source paths.',
         test: (line) =>
           matchImport(
@@ -124,6 +132,11 @@ function matchImport(line: string, pattern: RegExp): string | null {
   }
 
   return pattern.test(match[1]) ? match[1] : null;
+}
+
+function matchToken(line: string, pattern: RegExp): string | null {
+  const match = line.match(pattern);
+  return match?.[0] ?? null;
 }
 
 function expectBoundaryViolationsToBeEmpty(

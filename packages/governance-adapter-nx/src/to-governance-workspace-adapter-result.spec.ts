@@ -1,19 +1,25 @@
 import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-core';
 
 import type { AdapterWorkspaceSnapshot } from './types.js';
-import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
+import {
+  buildNxGovernanceNodeId,
+  buildNxGovernanceRelationId,
+  toGovernanceWorkspaceAdapterResult,
+} from './to-governance-workspace-adapter-result.js';
 
 describe('toGovernanceWorkspaceAdapterResult', () => {
-  it('maps nx snapshot data into the core-owned adapter result shape', () => {
+  it('maps nx snapshot data into canonical nodes and relations only', () => {
     const snapshot: AdapterWorkspaceSnapshot = {
       root: '/workspace',
       projects: [
         {
           name: 'booking-ui',
           root: 'libs/booking/ui',
+          sourceRoot: 'libs/booking/ui/src',
           type: 'library',
           tags: ['scope:booking', 'layer:ui', 'type:ui'],
           targets: ['test', 'build'],
+          implicitDependencies: ['booking-domain'],
           metadata: {
             documentation: true,
           },
@@ -21,6 +27,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
         {
           name: 'booking-domain',
           root: 'libs/booking/domain',
+          sourceRoot: 'libs/booking/domain/src',
           type: 'library',
           tags: ['scope:booking', 'layer:domain', 'type:domain'],
           targets: ['lint'],
@@ -52,67 +59,10 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
 
     expect(result).toEqual({
       workspaceRoot: '/workspace',
-      projects: [
-        {
-          id: 'booking-ui',
-          name: 'booking-ui',
-          root: 'libs/booking/ui',
-          type: 'library',
-          tags: ['scope:booking', 'layer:ui', 'type:ui'],
-          metadata: {
-            documentation: true,
-          },
-        },
-        {
-          id: 'booking-domain',
-          name: 'booking-domain',
-          root: 'libs/booking/domain',
-          type: 'library',
-          tags: ['scope:booking', 'layer:domain', 'type:domain'],
-          metadata: {
-            ownership: {
-              team: 'booking-team',
-            },
-          },
-          ownership: {
-            contacts: ['@booking-team'],
-            source: 'codeowners',
-          },
-        },
-      ],
-      dependencies: [
-        {
-          sourceProjectId: 'booking-ui',
-          targetProjectId: 'booking-domain',
-          type: 'static',
-          sourceFile: 'libs/booking/ui/src/lib/ui.ts',
-          metadata: {
-            externalNodes: false,
-          },
-        },
-      ],
+      metadata: {
+        sourceSystem: 'nx',
+      },
       nodes: [
-        {
-          id: 'booking-ui',
-          name: 'booking-ui',
-          kind: 'project',
-          sourceSystem: 'nx',
-          root: 'libs/booking/ui',
-          path: 'libs/booking/ui',
-          tags: ['scope:booking', 'layer:ui', 'type:ui'],
-          classification: {
-            layer: 'ui',
-            scope: 'booking',
-            tags: ['scope:booking', 'layer:ui', 'type:ui'],
-          },
-          metadata: {
-            documentation: true,
-            nx: {
-              projectType: 'library',
-              targets: ['test', 'build'],
-            },
-          },
-        },
         {
           id: 'booking-domain',
           name: 'booking-domain',
@@ -127,30 +77,65 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
             tags: ['scope:booking', 'layer:domain', 'type:domain'],
           },
           metadata: {
-            ownership: {
-              team: 'booking-team',
-            },
             nx: {
               projectType: 'library',
+              root: 'libs/booking/domain',
+              sourceRoot: 'libs/booking/domain/src',
+              tags: ['scope:booking', 'layer:domain', 'type:domain'],
               targets: ['lint'],
+              projectMetadata: {
+                ownership: {
+                  team: 'booking-team',
+                },
+              },
             },
           },
           ownership: {
+            team: 'booking-team',
             contacts: ['@booking-team'],
             source: 'codeowners',
+          },
+        },
+        {
+          id: 'booking-ui',
+          name: 'booking-ui',
+          kind: 'project',
+          sourceSystem: 'nx',
+          root: 'libs/booking/ui',
+          path: 'libs/booking/ui',
+          tags: ['scope:booking', 'layer:ui', 'type:ui'],
+          classification: {
+            layer: 'ui',
+            scope: 'booking',
+            tags: ['scope:booking', 'layer:ui', 'type:ui'],
+          },
+          metadata: {
+            nx: {
+              projectType: 'library',
+              root: 'libs/booking/ui',
+              sourceRoot: 'libs/booking/ui/src',
+              tags: ['scope:booking', 'layer:ui', 'type:ui'],
+              targets: ['test', 'build'],
+              implicitDependencies: ['booking-domain'],
+              projectMetadata: {
+                documentation: true,
+              },
+            },
           },
         },
       ],
       relations: [
         {
-          id: 'nx:booking-ui->booking-domain:static:0',
+          id: 'nx:booking-ui->booking-domain:static:libs/booking/ui/src/lib/ui.ts',
           sourceNodeId: 'booking-ui',
           targetNodeId: 'booking-domain',
           kind: 'dependency',
           metadata: {
-            externalNodes: false,
-            dependencyType: 'static',
-            sourceFile: 'libs/booking/ui/src/lib/ui.ts',
+            nx: {
+              dependencyType: 'static',
+              sourceFile: 'libs/booking/ui/src/lib/ui.ts',
+              externalNodes: false,
+            },
           },
         },
       ],
@@ -222,6 +207,8 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
         },
       ]),
     });
+    expect(result).not.toHaveProperty('projects');
+    expect(result).not.toHaveProperty('dependencies');
     expect(result.capabilities?.map((capability) => capability.id)).toEqual([
       'capability:nx',
       'nx.dependency-graph',
@@ -231,6 +218,43 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
       'nx.project-metadata',
       'nx.project-tags',
       'nx.targets',
+    ]);
+  });
+
+  it('uses project metadata ownership when CODEOWNERS ownership is absent', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'payments-domain',
+          root: 'libs/payments/domain',
+          type: 'library',
+          tags: ['scope:payments', 'layer:domain'],
+          targets: [],
+          metadata: {
+            ownership: {
+              team: '@payments',
+              contacts: ['@payments-oncall'],
+              source: 'project-json',
+            },
+          },
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        id: 'payments-domain',
+        ownership: {
+          team: '@payments',
+          contacts: ['@payments-oncall'],
+          source: 'project-json',
+        },
+      }),
     ]);
   });
 
@@ -326,6 +350,36 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           tags: ['domain: ', 'layer:    '],
         },
       })
+    );
+  });
+
+  it('builds deterministic node and relation ids from nx identities', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'app',
+          root: 'apps/app',
+          type: 'application',
+          tags: [],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [
+        {
+          source: 'app',
+          target: 'shared',
+          type: 'static',
+          sourceFile: 'apps/app/src/main.ts',
+        },
+      ],
+      codeownersByProject: {},
+    };
+
+    expect(buildNxGovernanceNodeId(snapshot.projects[0])).toBe('app');
+    expect(buildNxGovernanceRelationId(snapshot.dependencies[0])).toBe(
+      'nx:app->shared:static:apps/app/src/main.ts'
     );
   });
 });
