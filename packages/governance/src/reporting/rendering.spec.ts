@@ -5,335 +5,144 @@ import { renderCliReport } from './render-cli.js';
 import { renderJsonReport } from './render-json.js';
 
 describe('governance report rendering', () => {
-  it('renders deterministic signal source rows in CLI output', () => {
+  it('renders canonical workspace nodes and relations in CLI output', () => {
     const rendered = renderCliReport(makeAssessment());
 
     expect(rendered).toContain('Health Score: 80 (Warning, B)');
-    expect(rendered).toContain('Metric Hotspots:');
-    expect(rendered).toContain('Project Hotspots:');
-    expect(rendered).toContain('Explainability:');
-    expect(rendered).toContain('- Documentation Completeness: 33/100');
+    expect(rendered).toContain('Nodes: 2');
+    expect(rendered).toContain('Relations: 1');
+    expect(rendered).not.toContain('Projects:');
+    expect(rendered).not.toContain('Dependencies:');
+    expect(rendered).toContain('Nodes:');
     expect(rendered).toContain(
-      '- payments-feature: 3 :: types=domain-boundary-violation,ownership-gap'
+      '- Orders App [orders-app] :: kind=project :: source=nx :: tech=typescript'
+    );
+    expect(rendered).toContain('class=domain=orders,layer=app,scope=public');
+    expect(rendered).toContain('owner=@org/orders');
+    expect(rendered).toContain(
+      '- Shared Util [shared-util] :: kind=project :: source=nx'
+    );
+    expect(rendered).toContain('Relations:');
+    expect(rendered).toContain(
+      '- nx:orders-app->shared-util:static:apps/orders/src/main.ts :: Orders App [orders-app] -> Shared Util [shared-util] :: kind=dependency'
     );
     expect(rendered).toContain(
-      '- summary: Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.'
+      'metadata=nx={dependencyType:static,sourceFile:apps/orders/src/main.ts}'
     );
-    expect(rendered).toContain('Signal Sources:');
-    expect(rendered).toContain('Signal Types:');
-    expect(rendered).toContain('Signal Severity:');
-    expect(rendered).toContain('Exceptions:');
-    expect(rendered).toContain('- declared: 3');
-    expect(rendered).toContain('- matched: 2');
-    expect(rendered).toContain('- unused: 1');
-    expect(rendered).toContain('- active: 1');
-    expect(rendered).toContain('- stale: 1');
-    expect(rendered).toContain('- expired: 1');
-    expect(rendered).toContain('- suppressed policy findings: 1');
-    expect(rendered).toContain('- suppressed conformance findings: 1');
-    expect(rendered).toContain('- reactivated policy findings: 1');
-    expect(rendered).toContain('- reactivated conformance findings: 0');
+  });
+
+  it('renders canonical references for signals, violations, recommendations, and exception findings', () => {
+    const rendered = renderCliReport(makeArtifacts());
+
+    expect(rendered).toContain('Signals:');
+    expect(rendered).toContain(
+      '- [warning] ownership-gap (extension) :: scope=node=Orders App [orders-app] :: Ownership is missing.'
+    );
+    expect(rendered).toContain(
+      '- [info] structural-dependency (extension) :: scope=relation=Orders App [orders-app] -> Shared Util [shared-util] [nx:orders-app->shared-util:static:apps/orders/src/main.ts] ; related nodes=Orders App [orders-app],Shared Util [shared-util] :: Dependency trace recorded.'
+    );
     expect(rendered).toContain('Suppressed Findings:');
     expect(rendered).toContain(
-      '- suppress-domain :: active :: policy/policy-violation :: [error] :: domain-boundary :: scope=orders-app -> shared-util -> related=orders-app,shared-util :: Suppressed domain boundary violation'
+      '- suppress-domain :: active :: policy/policy-violation :: [error] :: domain-boundary :: scope=relation=Orders App [orders-app] -> Shared Util [shared-util] [nx:orders-app->shared-util:static:apps/orders/src/main.ts] ; related nodes=Orders App [orders-app],Shared Util [shared-util] :: Suppressed domain boundary violation'
     );
     expect(rendered).toContain('Reactivated Findings:');
     expect(rendered).toContain(
-      '- stale-owner-gap :: stale :: policy/policy-violation :: [warning] :: ownership-presence :: scope=payments-feature :: Reactivated ownership gap'
+      '- stale-owner-gap :: stale :: policy/policy-violation :: [warning] :: ownership-presence :: scope=node=Shared Util [shared-util] :: Reactivated ownership gap'
     );
-    expect(rendered).toContain('Metric Families:');
     expect(rendered).toContain('Top Issues:');
-    expect(rendered).toContain('- graph: 3');
-    expect(rendered).toContain('- conformance: 1');
-    expect(rendered).toContain('- policy: 2');
-    expect(rendered).toContain('- structural-dependency: 2');
-    expect(rendered).toContain('- conformance-violation: 1');
-    expect(rendered).toContain('- info: 2');
-    expect(rendered).toContain('- warning: 3');
-    expect(rendered).toContain('- error: 1');
-    expect(rendered).toContain('- architecture: 80/100');
-    expect(rendered).toContain('- documentation: 33/100');
     expect(rendered).toContain(
-      '- [error] domain-boundary-violation (policy) x2 :: domain-boundary :: projects=orders-app,payments-feature :: Domain boundary violation'
+      '- [error] domain-boundary-violation (policy) x2 :: domain-boundary :: scope=relation=Orders App [orders-app] -> Shared Util [shared-util] [nx:orders-app->shared-util:static:apps/orders/src/main.ts] :: Domain boundary violation'
     );
-    expect(rendered.indexOf('Signal Sources:')).toBeLessThan(
-      rendered.indexOf('Signal Types:')
+    expect(rendered).toContain('Violation Details:');
+    expect(rendered).toContain(
+      '- [warning] ownership :: ownership-presence :: scope=node=Shared Util [shared-util] :: Shared Util is missing ownership metadata.'
     );
-    expect(rendered.indexOf('Signal Types:')).toBeLessThan(
-      rendered.indexOf('Signal Severity:')
-    );
-    expect(rendered.indexOf('Signal Severity:')).toBeLessThan(
-      rendered.indexOf('Exceptions:')
-    );
-    expect(rendered.indexOf('Exceptions:')).toBeLessThan(
-      rendered.indexOf('Metrics:')
-    );
-    expect(rendered.indexOf('Suppressed Findings:')).toBeLessThan(
-      rendered.indexOf('Metrics:')
-    );
-    expect(rendered.indexOf('Metrics:')).toBeLessThan(
-      rendered.indexOf('Metric Families:')
-    );
-    expect(rendered.indexOf('Metric Families:')).toBeLessThan(
-      rendered.indexOf('Metric Hotspots:')
-    );
-    expect(rendered.indexOf('Metric Hotspots:')).toBeLessThan(
-      rendered.indexOf('Project Hotspots:')
-    );
-    expect(rendered.indexOf('Project Hotspots:')).toBeLessThan(
-      rendered.indexOf('Explainability:')
-    );
-    expect(rendered.indexOf('Explainability:')).toBeLessThan(
-      rendered.indexOf('Top Issues:')
-    );
-    expect(rendered.indexOf('Metric Families:')).toBeLessThan(
-      rendered.indexOf('Top Issues:')
+    expect(rendered).toContain('Recommendations:');
+    expect(rendered).toContain(
+      '- (medium) Reduce dependency pressure :: scope=relation=Orders App [orders-app] -> Shared Util [shared-util] [nx:orders-app->shared-util:static:apps/orders/src/main.ts] - Dependency pressure is elevated.'
     );
   });
 
-  it('includes signal breakdown in JSON output', () => {
-    const rendered = renderJsonReport(makeAssessment());
+  it('renders canonical health subject hotspots', () => {
+    const rendered = renderCliReport(makeAssessment());
 
-    expect(JSON.parse(rendered)).toMatchObject({
-      health: {
-        score: 80,
-        status: 'warning',
-        grade: 'B',
-        hotspots: [],
-        metricHotspots: [
-          {
-            id: 'documentation-completeness',
-            name: 'Documentation Completeness',
-            score: 33,
-          },
-        ],
-        projectHotspots: [
-          {
-            project: 'payments-feature',
-            count: 3,
-            dominantIssueTypes: ['domain-boundary-violation', 'ownership-gap'],
-          },
-        ],
-        explainability: {
-          summary:
-            'Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.',
-          statusReason:
-            'Score 80 is below the Good threshold (85) but meets the Warning threshold (70).',
-          weakestMetrics: [
-            {
-              id: 'documentation-completeness',
-              name: 'Documentation Completeness',
-              score: 33,
-            },
-            {
-              id: 'architectural-entropy',
-              name: 'Architectural Entropy',
-              score: 80,
-            },
-          ],
-          dominantIssues: [
-            {
-              type: 'domain-boundary-violation',
-              source: 'policy',
-              severity: 'error',
-              count: 2,
-              projects: ['orders-app', 'payments-feature'],
-              ruleId: 'domain-boundary',
-              message: 'Domain boundary violation',
-            },
-            {
-              type: 'ownership-gap',
-              source: 'policy',
-              severity: 'warning',
-              count: 1,
-              projects: ['payments-feature'],
-              ruleId: 'ownership-presence',
-              message: 'Ownership gap',
-            },
-          ],
-        },
-      },
-      exceptions: {
-        summary: {
-          declaredCount: 3,
-          matchedCount: 2,
-          suppressedPolicyViolationCount: 1,
-          suppressedConformanceFindingCount: 1,
-          unusedExceptionCount: 1,
-          activeExceptionCount: 1,
-          staleExceptionCount: 1,
-          expiredExceptionCount: 1,
-          reactivatedPolicyViolationCount: 1,
-          reactivatedConformanceFindingCount: 0,
-        },
-        used: [
-          {
-            id: 'suppress-domain',
-            source: 'policy',
-            status: 'active',
-            reason: 'Known transition.',
-            owner: '@org/architecture',
-            review: {
-              reviewBy: '2026-06-01',
-            },
-            matchCount: 2,
-          },
-          {
-            id: 'stale-owner-gap',
-            source: 'policy',
-            status: 'stale',
-            reason: 'Needs review.',
-            owner: '@org/architecture',
-            review: {
-              reviewBy: '2026-04-01',
-            },
-            matchCount: 1,
-          },
-        ],
-        unused: [
-          {
-            id: 'unused-owner-gap',
-            source: 'conformance',
-            status: 'expired',
-            reason: 'Reserved but currently unmatched.',
-            owner: '@org/architecture',
-            review: {
-              expiresAt: '2026-03-01',
-            },
-            matchCount: 0,
-          },
-        ],
-        suppressedFindings: expect.arrayContaining([
-          {
-            kind: 'policy-violation',
-            exceptionId: 'suppress-domain',
-            source: 'policy',
-            status: 'active',
-            ruleId: 'domain-boundary',
-            category: 'boundary',
-            severity: 'error',
-            projectId: 'orders-app',
-            targetProjectId: 'shared-util',
-            relatedProjectIds: ['orders-app', 'shared-util'],
-            message: 'Suppressed domain boundary violation',
-          },
-          {
-            kind: 'conformance-finding',
-            exceptionId: 'suppress-domain',
-            source: 'conformance',
-            status: 'active',
-            ruleId: '@nx/conformance/enforce-project-boundaries',
-            category: 'boundary',
-            severity: 'warning',
-            projectId: 'orders-app',
-            relatedProjectIds: ['orders-app', 'shared-util'],
-            message: 'Suppressed conformance boundary warning',
-          },
-        ]),
-        reactivatedFindings: [
-          {
-            kind: 'policy-violation',
-            exceptionId: 'stale-owner-gap',
-            source: 'policy',
-            status: 'stale',
-            ruleId: 'ownership-presence',
-            category: 'ownership',
-            severity: 'warning',
-            projectId: 'payments-feature',
-            relatedProjectIds: [],
-            message: 'Reactivated ownership gap',
-          },
-        ],
-      },
-      signalBreakdown: {
-        total: 6,
-        bySource: [
-          { source: 'graph', count: 3 },
-          { source: 'conformance', count: 1 },
-          { source: 'policy', count: 2 },
-        ],
-        byType: [
-          { type: 'structural-dependency', count: 2 },
-          { type: 'conformance-violation', count: 1 },
-          { type: 'domain-boundary-violation', count: 2 },
-          { type: 'ownership-gap', count: 1 },
-        ],
-        bySeverity: [
-          { severity: 'info', count: 2 },
-          { severity: 'warning', count: 3 },
-          { severity: 'error', count: 1 },
-        ],
-      },
-      metricBreakdown: {
-        families: [
-          {
-            family: 'architecture',
-            score: 80,
-            measurements: [
-              {
-                id: 'architectural-entropy',
-                name: 'Architectural Entropy',
-                score: 80,
-              },
-            ],
-          },
-          {
-            family: 'documentation',
-            score: 33,
-            measurements: [
-              {
-                id: 'documentation-completeness',
-                name: 'Documentation Completeness',
-                score: 33,
-              },
-            ],
-          },
-        ],
-      },
-      topIssues: [
-        {
-          type: 'domain-boundary-violation',
-          source: 'policy',
-          severity: 'error',
-          count: 2,
-          projects: ['orders-app', 'payments-feature'],
-          ruleId: 'domain-boundary',
-          message: 'Domain boundary violation',
-        },
-      ],
-    });
+    expect(rendered).toContain('Metric Hotspots:');
+    expect(rendered).toContain('Subject Hotspots:');
+    expect(rendered).toContain(
+      '- Orders App [orders-app]: 2 :: type=node :: issues=domain-boundary-violation,ownership-gap'
+    );
+    expect(rendered).toContain(
+      '- Orders App [orders-app] -> Shared Util [shared-util] [nx:orders-app->shared-util:static:apps/orders/src/main.ts]: 1 :: type=relation :: issues=structural-dependency'
+    );
+    expect(rendered).not.toContain('Project Hotspots:');
   });
 
-  it('keeps CLI rendering concise while JSON retains canonical artifact detail', () => {
-    const artifacts = makeArtifacts();
-
-    const cli = renderCliReport(artifacts);
-    const json = JSON.parse(renderJsonReport(artifacts)) as {
-      nodes: unknown[];
-      relations: unknown[];
-      diagnostics: unknown[];
-      extensionDiagnostics: unknown[];
-      capabilities: unknown[];
-      recommendations: unknown[];
-      workspace: { projects: unknown[]; dependencies: unknown[] };
+  it('renders JSON from assessment workspace canonical graph rather than adapter fallback', () => {
+    const json = JSON.parse(renderJsonReport(makeArtifacts())) as {
+      workspace: Record<string, unknown>;
+      nodes: Array<Record<string, unknown>>;
+      relations: Array<Record<string, unknown>>;
+      signals: Array<Record<string, unknown>>;
+      diagnostics: Array<Record<string, unknown>>;
+      extensionDiagnostics: Array<Record<string, unknown>>;
+      capabilities: Array<Record<string, unknown>>;
     };
 
-    expect(cli).toContain('Projects: 0');
-    expect(cli).toContain('Dependencies: 0');
-    expect(cli).toContain('Canonical Graph: 2 nodes, 1 relations');
-    expect(cli).not.toContain('Capabilities:');
-    expect(cli).not.toContain('nx.project-graph');
-    expect(cli).toContain('Diagnostics requiring attention: 1');
-    expect(cli).toContain('Recommendations:');
-    expect(cli).toContain(
-      '- adapter.graph.warning: Adapter graph warning. (governance-adapter-nx)'
-    );
-    expect(cli).not.toContain('governance.extension.loaded');
+    expect(json.workspace).toMatchObject({
+      id: 'workspace',
+      name: 'workspace',
+      root: '/workspace',
+    });
+    expect(json.workspace).toHaveProperty('nodes');
+    expect(json.workspace).toHaveProperty('relations');
+    expect(json.workspace).not.toHaveProperty('projects');
+    expect(json.workspace).not.toHaveProperty('dependencies');
 
-    expect(json.workspace.projects).toEqual([]);
-    expect(json.workspace.dependencies).toEqual([]);
-    expect(json.nodes).toHaveLength(2);
-    expect(json.relations).toHaveLength(1);
+    expect(json.nodes).toEqual([
+      expect.objectContaining({
+        id: 'orders-app',
+        name: 'Orders App',
+        kind: 'project',
+        sourceSystem: 'nx',
+        technology: 'typescript',
+      }),
+      expect.objectContaining({
+        id: 'shared-util',
+        name: 'Shared Util',
+        kind: 'project',
+        sourceSystem: 'nx',
+      }),
+    ]);
+    expect(json.nodes).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'wrong-node',
+        }),
+      ])
+    );
+
+    expect(json.relations).toEqual([
+      expect.objectContaining({
+        id: 'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        sourceNodeId: 'orders-app',
+        sourceNodeName: 'Orders App',
+        targetNodeId: 'shared-util',
+        targetNodeName: 'Shared Util',
+        kind: 'dependency',
+      }),
+    ]);
+
+    expect(json.signals).toEqual([
+      expect.objectContaining({
+        id: 'signal:ownership',
+        nodeId: 'orders-app',
+      }),
+      expect.objectContaining({
+        id: 'signal:dependency',
+        relationId: 'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        relatedNodeIds: ['orders-app', 'shared-util'],
+      }),
+    ]);
     expect(json.capabilities).toEqual([
       {
         id: 'nx.project-graph',
@@ -358,26 +167,38 @@ describe('governance report rendering', () => {
         extensionId: 'governance-extension-nx',
       },
     ]);
-    expect(json.recommendations).toEqual([
-      {
-        id: 'reduce-dependencies',
-        title: 'Reduce dependencies',
-        priority: 'medium',
-        reason: 'Dependency pressure is elevated.',
-      },
-    ]);
+  });
+
+  it('preserves canonical workspace graph in assessment-only JSON output', () => {
+    const json = JSON.parse(renderJsonReport(makeAssessment())) as {
+      workspace: Record<string, unknown>;
+    };
+
+    expect(json.workspace).toMatchObject({
+      id: 'workspace',
+      name: 'workspace',
+      root: '/workspace',
+      nodes: [
+        expect.objectContaining({
+          id: 'orders-app',
+        }),
+        expect.objectContaining({
+          id: 'shared-util',
+        }),
+      ],
+      relations: [
+        expect.objectContaining({
+          id: 'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        }),
+      ],
+    });
   });
 });
 
 function makeAssessment(): GovernanceAssessment {
   return {
-    workspace: {
-      id: 'workspace',
-      name: 'workspace',
-      root: '/workspace',
-      projects: [],
-      dependencies: [],
-    },
+    workspace:
+      canonicalWorkspace() as unknown as GovernanceAssessment['workspace'],
     profile: 'frontend-layered',
     warnings: [],
     exceptions: {
@@ -439,24 +260,14 @@ function makeAssessment(): GovernanceAssessment {
           ruleId: 'domain-boundary',
           category: 'boundary',
           severity: 'error',
-          projectId: 'orders-app',
-          targetProjectId: 'shared-util',
-          relatedProjectIds: ['orders-app', 'shared-util'],
           message: 'Suppressed domain boundary violation',
+          reference: {
+            relationId:
+              'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+            relatedNodeIds: ['orders-app', 'shared-util'],
+          },
         },
-        {
-          kind: 'conformance-finding',
-          exceptionId: 'suppress-domain',
-          source: 'conformance',
-          status: 'active',
-          ruleId: '@nx/conformance/enforce-project-boundaries',
-          category: 'boundary',
-          severity: 'warning',
-          projectId: 'orders-app',
-          relatedProjectIds: ['orders-app', 'shared-util'],
-          message: 'Suppressed conformance boundary warning',
-        },
-      ],
+      ] as unknown as GovernanceAssessment['exceptions']['suppressedFindings'],
       reactivatedFindings: [
         {
           kind: 'policy-violation',
@@ -466,13 +277,26 @@ function makeAssessment(): GovernanceAssessment {
           ruleId: 'ownership-presence',
           category: 'ownership',
           severity: 'warning',
-          projectId: 'payments-feature',
-          relatedProjectIds: [],
           message: 'Reactivated ownership gap',
+          reference: {
+            nodeId: 'shared-util',
+          },
         },
-      ],
+      ] as unknown as GovernanceAssessment['exceptions']['reactivatedFindings'],
     },
-    violations: [],
+    violations: [
+      {
+        id: 'violation:ownership',
+        ruleId: 'ownership-presence',
+        project: 'unused-compat-field',
+        severity: 'warning',
+        category: 'ownership',
+        message: 'Shared Util is missing ownership metadata.',
+        reference: {
+          nodeId: 'shared-util',
+        },
+      },
+    ] as unknown as GovernanceAssessment['violations'],
     measurements: [
       {
         id: 'architectural-entropy',
@@ -491,25 +315,23 @@ function makeAssessment(): GovernanceAssessment {
         score: 33,
         maxScore: 100,
         unit: 'ratio',
+        metadata: {
+          reference: {
+            nodeId: 'orders-app',
+          },
+        },
       },
-    ],
+    ] as unknown as GovernanceAssessment['measurements'],
     signalBreakdown: {
-      total: 6,
-      bySource: [
-        { source: 'graph', count: 3 },
-        { source: 'conformance', count: 1 },
-        { source: 'policy', count: 2 },
-      ],
+      total: 2,
+      bySource: [{ source: 'extension', count: 2 }],
       byType: [
-        { type: 'structural-dependency', count: 2 },
-        { type: 'conformance-violation', count: 1 },
-        { type: 'domain-boundary-violation', count: 2 },
         { type: 'ownership-gap', count: 1 },
+        { type: 'structural-dependency', count: 1 },
       ],
       bySeverity: [
-        { severity: 'info', count: 2 },
-        { severity: 'warning', count: 3 },
-        { severity: 'error', count: 1 },
+        { severity: 'info', count: 1 },
+        { severity: 'warning', count: 1 },
       ],
     },
     metricBreakdown: {
@@ -544,16 +366,34 @@ function makeAssessment(): GovernanceAssessment {
         source: 'policy',
         severity: 'error',
         count: 2,
-        projects: ['orders-app', 'payments-feature'],
+        projects: [],
         ruleId: 'domain-boundary',
         message: 'Domain boundary violation',
+        reference: {
+          relationId:
+            'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        },
       },
-    ],
+    ] as unknown as GovernanceAssessment['topIssues'],
     health: {
       score: 80,
       status: 'warning',
       grade: 'B',
-      hotspots: [],
+      hotspots: [
+        {
+          subjectId: 'orders-app',
+          subjectType: 'node',
+          count: 2,
+          dominantIssueTypes: ['domain-boundary-violation', 'ownership-gap'],
+        },
+        {
+          subjectId:
+            'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+          subjectType: 'relation',
+          count: 1,
+          dominantIssueTypes: ['structural-dependency'],
+        },
+      ] as unknown as GovernanceAssessment['health']['hotspots'],
       metricHotspots: [
         {
           id: 'documentation-completeness',
@@ -561,13 +401,7 @@ function makeAssessment(): GovernanceAssessment {
           score: 33,
         },
       ],
-      projectHotspots: [
-        {
-          project: 'payments-feature',
-          count: 3,
-          dominantIssueTypes: ['domain-boundary-violation', 'ownership-gap'],
-        },
-      ],
+      projectHotspots: [],
       explainability: {
         summary:
           'Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.',
@@ -591,7 +425,7 @@ function makeAssessment(): GovernanceAssessment {
             source: 'policy',
             severity: 'error',
             count: 2,
-            projects: ['orders-app', 'payments-feature'],
+            projects: [],
             ruleId: 'domain-boundary',
             message: 'Domain boundary violation',
           },
@@ -600,33 +434,54 @@ function makeAssessment(): GovernanceAssessment {
             source: 'policy',
             severity: 'warning',
             count: 1,
-            projects: ['payments-feature'],
+            projects: [],
             ruleId: 'ownership-presence',
             message: 'Ownership gap',
           },
         ],
       },
     },
-    recommendations: [],
+    recommendations: [
+      {
+        id: 'reduce-dependencies',
+        title: 'Reduce dependency pressure',
+        priority: 'medium',
+        reason: 'Dependency pressure is elevated.',
+        reference: {
+          relationId:
+            'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        },
+      },
+    ] as unknown as GovernanceAssessment['recommendations'],
   };
 }
 
 function makeArtifacts(): GovernanceAssessmentArtifacts {
-  const assessment = {
-    ...makeAssessment(),
-    recommendations: [
-      {
-        id: 'reduce-dependencies',
-        title: 'Reduce dependencies',
-        priority: 'medium',
-        reason: 'Dependency pressure is elevated.',
-      },
-    ],
-  } satisfies GovernanceAssessment;
-
   return {
-    assessment,
-    signals: [],
+    assessment: makeAssessment(),
+    signals: [
+      {
+        id: 'signal:ownership',
+        type: 'ownership-gap',
+        severity: 'warning',
+        category: 'ownership',
+        message: 'Ownership is missing.',
+        source: 'extension',
+        nodeId: 'orders-app',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'signal:dependency',
+        type: 'structural-dependency',
+        severity: 'info',
+        category: 'dependency',
+        message: 'Dependency trace recorded.',
+        source: 'extension',
+        relationId: 'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        relatedNodeIds: ['orders-app', 'shared-util'],
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ] as unknown as GovernanceAssessmentArtifacts['signals'],
     exceptionApplication: {
       declaredExceptions: [],
       exceptionStatuses: {},
@@ -643,52 +498,15 @@ function makeArtifacts(): GovernanceAssessmentArtifacts {
       workspaceRoot: '/workspace',
       nodes: [
         {
-          id: 'orders-app',
-          name: 'Orders App',
-          kind: 'project',
-          sourceSystem: 'nx',
-          root: 'apps/orders',
-          path: 'apps/orders',
-          tags: ['domain:orders', 'layer:app'],
-          classification: {
-            domain: 'orders',
-            layer: 'app',
-            tags: ['domain:orders', 'layer:app'],
-          },
-          metadata: {
-            nx: {
-              projectType: 'application',
-              targets: ['build', 'test'],
-            },
-          },
-        },
-        {
-          id: 'shared-util',
-          name: 'Shared Util',
-          kind: 'project',
-          sourceSystem: 'nx',
-          root: 'libs/shared/util',
-          path: 'libs/shared/util',
-          tags: ['domain:shared', 'layer:util'],
+          id: 'wrong-node',
+          name: 'Wrong Node',
         },
       ],
       relations: [
         {
-          id: 'nx:orders-app->shared-util:static:0',
-          sourceNodeId: 'orders-app',
+          id: 'wrong-relation',
+          sourceNodeId: 'wrong-node',
           targetNodeId: 'shared-util',
-          kind: 'dependency',
-          metadata: {
-            dependencyType: 'static',
-            sourceFile: 'apps/orders/src/main.ts',
-          },
-        },
-      ],
-      diagnostics: [
-        {
-          code: 'adapter.graph.warning',
-          source: 'governance-adapter-nx',
-          message: 'Adapter graph warning.',
         },
       ],
     } as GovernanceAssessmentArtifacts['adapterResult'],
@@ -714,6 +532,84 @@ function makeArtifacts(): GovernanceAssessmentArtifacts {
         severity: 'notice',
         message: 'Loaded extension.',
         extensionId: 'governance-extension-nx',
+      },
+    ],
+  };
+}
+
+function canonicalWorkspace() {
+  return {
+    id: 'workspace',
+    name: 'workspace',
+    root: '/workspace',
+    nodes: [
+      {
+        id: 'orders-app',
+        name: 'Orders App',
+        kind: 'project',
+        sourceSystem: 'nx',
+        technology: 'typescript',
+        root: 'apps/orders',
+        path: 'apps/orders',
+        tags: ['domain:orders', 'layer:app'],
+        classification: {
+          domain: 'orders',
+          layer: 'app',
+          scope: 'public',
+          tags: ['domain:orders', 'layer:app'],
+        },
+        ownership: {
+          team: '@org/orders',
+          contacts: ['orders@anarchitects.dev'],
+          source: 'codeowners',
+        },
+        metadata: {
+          nx: {
+            projectType: 'application',
+            targets: ['build', 'test'],
+          },
+        },
+      },
+      {
+        id: 'shared-util',
+        name: 'Shared Util',
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: 'libs/shared/util',
+        path: 'libs/shared/util',
+        tags: ['domain:shared', 'layer:util'],
+        classification: {
+          domain: 'shared',
+          layer: 'util',
+          tags: ['domain:shared', 'layer:util'],
+        },
+        metadata: {
+          nx: {
+            projectType: 'library',
+            targets: ['lint'],
+          },
+        },
+      },
+    ],
+    relations: [
+      {
+        id: 'nx:orders-app->shared-util:static:apps/orders/src/main.ts',
+        sourceNodeId: 'orders-app',
+        targetNodeId: 'shared-util',
+        kind: 'dependency',
+        metadata: {
+          nx: {
+            dependencyType: 'static',
+            sourceFile: 'apps/orders/src/main.ts',
+          },
+        },
+        evidence: [
+          {
+            id: 'evidence:dependency',
+            type: 'nx-dependency',
+            reference: 'apps/orders/src/main.ts',
+          },
+        ],
       },
     ],
   };

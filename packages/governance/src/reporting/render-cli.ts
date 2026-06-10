@@ -1,22 +1,60 @@
 import type {
   GovernanceAssessment,
   GovernanceDiagnostic,
+  GovernanceSignal,
 } from '@anarchitects/governance-core';
 import type { GovernanceExtensionDiagnostic } from '../extensions/diagnostics.js';
 
 import {
   buildGovernanceRenderingModel,
+  buildNodeLabelMap,
+  buildRelationLabelMap,
   type GovernanceRendererInput,
+  type RenderableCanonicalNode,
+  type RenderableCanonicalRelation,
 } from './canonical-rendering-model.js';
 
 const TOP_ISSUES_LIMIT = 10;
 const DIAGNOSTIC_ATTENTION_PATTERN =
   /(error|warning|warn|failed|failure|invalid|missing|required|deprecated|unable)/i;
 
+type GovernanceEvidence = {
+  id: string;
+  type: string;
+  [key: string]: unknown;
+};
+
+interface CanonicalReference {
+  nodeId?: string;
+  relationId?: string;
+  relatedNodeIds?: string[];
+  relatedRelationIds?: string[];
+}
+
+interface CanonicalReferenceCarrier {
+  subjectId?: string;
+  reference?: CanonicalReference;
+  nodeId?: string;
+  relationId?: string;
+  relatedNodeIds?: string[];
+  relatedRelationIds?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+interface CanonicalSubjectHotspot {
+  subjectId: string;
+  subjectType?: 'node' | 'relation' | 'subject' | (string & {});
+  count: number;
+  dominantIssueTypes: string[];
+}
+
 export function renderCliReport(input: GovernanceRendererInput): string {
   const model = buildGovernanceRenderingModel(input);
   const assessment = model.assessment;
   const lines: string[] = [];
+  const nodeLabels = buildNodeLabelMap(model.nodes);
+  const relationLabels = buildRelationLabelMap(model.relations, nodeLabels);
+  const subjectHotspots = readSubjectHotspots(assessment);
 
   lines.push(`Nx Governance - ${assessment.profile}`);
   lines.push('');
@@ -25,13 +63,8 @@ export function renderCliReport(input: GovernanceRendererInput): string {
       assessment.health.status
     )}, ${assessment.health.grade})`
   );
-  lines.push(`Projects: ${assessment.workspace.projects.length}`);
-  lines.push(`Dependencies: ${assessment.workspace.dependencies.length}`);
-  if (model.hasCanonicalGraph) {
-    lines.push(
-      `Canonical Graph: ${model.nodes.length} nodes, ${model.relations.length} relations`
-    );
-  }
+  lines.push(`Nodes: ${model.nodes.length}`);
+  lines.push(`Relations: ${model.relations.length}`);
   lines.push(`Violations: ${assessment.violations.length}`);
 
   const attentionDiagnostics = selectAttentionDiagnostics(
@@ -42,6 +75,22 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     lines.push(
       `Diagnostics requiring attention: ${attentionDiagnostics.length}`
     );
+  }
+
+  if (model.nodes.length > 0) {
+    lines.push('');
+    lines.push('Nodes:');
+    for (const node of model.nodes) {
+      lines.push(`- ${formatRenderableNode(node)}`);
+    }
+  }
+
+  if (model.relations.length > 0) {
+    lines.push('');
+    lines.push('Relations:');
+    for (const relation of model.relations) {
+      lines.push(`- ${formatRenderableRelation(relation, nodeLabels)}`);
+    }
   }
 
   lines.push('');
@@ -60,6 +109,21 @@ export function renderCliReport(input: GovernanceRendererInput): string {
   lines.push('Signal Severity:');
   for (const entry of assessment.signalBreakdown.bySeverity) {
     lines.push(`- ${entry.severity}: ${entry.count}`);
+  }
+
+  if (model.signals.length > 0) {
+    lines.push('');
+    lines.push('Signals:');
+    for (const signal of [...model.signals].sort(compareSignals)) {
+      const scopeSuffix = formatScopeSuffix(
+        signal as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
+      lines.push(
+        `- [${signal.severity}] ${signal.type} (${signal.source})${scopeSuffix} :: ${signal.message}`
+      );
+    }
   }
 
   if (assessment.warnings.length > 0) {
@@ -109,21 +173,14 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     lines.push('Suppressed Findings:');
     for (const finding of assessment.exceptions.suppressedFindings) {
       const ruleIdSuffix = finding.ruleId ? ` :: ${finding.ruleId}` : '';
-      const projectScope = [
-        finding.projectId,
-        finding.targetProjectId,
-        finding.relatedProjectIds.length > 0
-          ? `related=${finding.relatedProjectIds.join(',')}`
-          : undefined,
-      ]
-        .filter((value): value is string => !!value)
-        .join(' -> ');
-      const projectScopeSuffix = projectScope
-        ? ` :: scope=${projectScope}`
-        : '';
+      const scopeSuffix = formatScopeSuffix(
+        finding as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
 
       lines.push(
-        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${projectScopeSuffix} :: ${finding.message}`
+        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${scopeSuffix} :: ${finding.message}`
       );
     }
   }
@@ -132,21 +189,14 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     lines.push('Reactivated Findings:');
     for (const finding of assessment.exceptions.reactivatedFindings) {
       const ruleIdSuffix = finding.ruleId ? ` :: ${finding.ruleId}` : '';
-      const projectScope = [
-        finding.projectId,
-        finding.targetProjectId,
-        finding.relatedProjectIds.length > 0
-          ? `related=${finding.relatedProjectIds.join(',')}`
-          : undefined,
-      ]
-        .filter((value): value is string => !!value)
-        .join(' -> ');
-      const projectScopeSuffix = projectScope
-        ? ` :: scope=${projectScope}`
-        : '';
+      const scopeSuffix = formatScopeSuffix(
+        finding as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
 
       lines.push(
-        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${projectScopeSuffix} :: ${finding.message}`
+        `- ${finding.exceptionId} :: ${finding.status} :: ${finding.source}/${finding.kind} :: [${finding.severity}]${ruleIdSuffix}${scopeSuffix} :: ${finding.message}`
       );
     }
   }
@@ -155,7 +205,12 @@ export function renderCliReport(input: GovernanceRendererInput): string {
   lines.push('Metrics:');
 
   for (const metric of assessment.measurements) {
-    lines.push(`- ${metric.name}: ${metric.score}/100`);
+    const scopeSuffix = formatScopeSuffix(
+      metric as unknown as CanonicalReferenceCarrier,
+      nodeLabels,
+      relationLabels
+    );
+    lines.push(`- ${metric.name}: ${metric.score}/100${scopeSuffix}`);
   }
 
   if (assessment.metricBreakdown.families.length > 0) {
@@ -179,14 +234,18 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     }
   }
 
-  if (assessment.health.projectHotspots.length > 0) {
+  if (subjectHotspots.length > 0) {
     lines.push('');
-    lines.push('Project Hotspots:');
-    for (const hotspot of assessment.health.projectHotspots) {
+    lines.push('Subject Hotspots:');
+    for (const hotspot of subjectHotspots) {
       lines.push(
-        `- ${hotspot.project}: ${
-          hotspot.count
-        } :: types=${hotspot.dominantIssueTypes.join(',')}`
+        `- ${resolveSubjectLabel(
+          hotspot.subjectId,
+          nodeLabels,
+          relationLabels
+        )}: ${hotspot.count} :: type=${
+          hotspot.subjectType ?? 'subject'
+        } :: issues=${hotspot.dominantIssueTypes.join(',')}`
       );
     }
   }
@@ -217,12 +276,29 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     lines.push('Top Issues:');
     for (const issue of assessment.topIssues.slice(0, TOP_ISSUES_LIMIT)) {
       const ruleIdSuffix = issue.ruleId ? ` :: ${issue.ruleId}` : '';
-      const projectsSuffix =
-        issue.projects.length > 0
-          ? ` :: projects=${issue.projects.join(',')}`
-          : '';
+      const scopeSuffix = formatScopeSuffix(
+        issue as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
       lines.push(
-        `- [${issue.severity}] ${issue.type} (${issue.source}) x${issue.count}${ruleIdSuffix}${projectsSuffix} :: ${issue.message}`
+        `- [${issue.severity}] ${issue.type} (${issue.source}) x${issue.count}${ruleIdSuffix}${scopeSuffix} :: ${issue.message}`
+      );
+    }
+  }
+
+  if (assessment.violations.length > 0) {
+    lines.push('');
+    lines.push('Violation Details:');
+    for (const violation of assessment.violations) {
+      const ruleIdSuffix = violation.ruleId ? ` :: ${violation.ruleId}` : '';
+      const scopeSuffix = formatScopeSuffix(
+        violation as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
+      lines.push(
+        `- [${violation.severity}] ${violation.category}${ruleIdSuffix}${scopeSuffix} :: ${violation.message}`
       );
     }
   }
@@ -231,8 +307,13 @@ export function renderCliReport(input: GovernanceRendererInput): string {
     lines.push('');
     lines.push('Recommendations:');
     for (const recommendation of assessment.recommendations) {
+      const scopeSuffix = formatScopeSuffix(
+        recommendation as unknown as CanonicalReferenceCarrier,
+        nodeLabels,
+        relationLabels
+      );
       lines.push(
-        `- (${recommendation.priority}) ${recommendation.title} - ${recommendation.reason}`
+        `- (${recommendation.priority}) ${recommendation.title}${scopeSuffix} - ${recommendation.reason}`
       );
     }
   }
@@ -272,4 +353,276 @@ function formatDiagnosticSource(diagnostic: RenderedDiagnostic): string {
   }
 
   return diagnostic.source ? ` (${diagnostic.source})` : '';
+}
+
+function formatRenderableNode(node: RenderableCanonicalNode): string {
+  const segments = [
+    `${node.name ?? node.id} [${node.id}]`,
+    ...(node.kind ? [`kind=${node.kind}`] : []),
+    ...(node.sourceSystem ? [`source=${node.sourceSystem}`] : []),
+    ...(node.technology ? [`tech=${node.technology}`] : []),
+    ...(node.classification
+      ? [`class=${formatClassification(node.classification)}`]
+      : []),
+    ...(node.ownership?.team ? [`owner=${node.ownership.team}`] : []),
+    ...(node.tags && node.tags.length > 0
+      ? [`tags=${node.tags.join(',')}`]
+      : []),
+    ...(node.path
+      ? [`path=${node.path}`]
+      : node.root
+      ? [`root=${node.root}`]
+      : []),
+    ...(node.metadata ? [`metadata=${formatMetadata(node.metadata)}`] : []),
+  ];
+
+  return segments.join(' :: ');
+}
+
+function formatRenderableRelation(
+  relation: RenderableCanonicalRelation,
+  nodeLabels: ReadonlyMap<string, string>
+): string {
+  const sourceLabel =
+    nodeLabels.get(relation.sourceNodeId) ?? relation.sourceNodeId;
+  const targetLabel =
+    nodeLabels.get(relation.targetNodeId) ?? relation.targetNodeId;
+  const segments = [
+    relation.id,
+    `${sourceLabel} -> ${targetLabel}`,
+    ...(relation.kind ? [`kind=${relation.kind}`] : []),
+    ...(relation.metadata
+      ? [`metadata=${formatMetadata(relation.metadata)}`]
+      : []),
+    ...(relation.evidence && relation.evidence.length > 0
+      ? [`evidence=${formatEvidence(relation.evidence)}`]
+      : []),
+  ];
+
+  return segments.join(' :: ');
+}
+
+function formatClassification(
+  classification: NonNullable<RenderableCanonicalNode['classification']>
+): string {
+  return [
+    ...(classification.domain ? [`domain=${classification.domain}`] : []),
+    ...(classification.layer ? [`layer=${classification.layer}`] : []),
+    ...(classification.scope ? [`scope=${classification.scope}`] : []),
+  ].join(',');
+}
+
+function formatMetadata(metadata: Record<string, unknown>): string {
+  return Object.entries(metadata)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${formatUnknown(value)}`)
+    .join(',');
+}
+
+function formatEvidence(evidence: GovernanceEvidence[]): string {
+  return [...evidence]
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((entry) => entry.type)
+    .join(',');
+}
+
+function formatUnknown(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(formatUnknown).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${key}:${formatUnknown(entry)}`)
+      .join(',')}}`;
+  }
+
+  return String(value);
+}
+
+function formatNodeReference(
+  nodeId: string,
+  nodeLabels: ReadonlyMap<string, string>
+): string {
+  return `node=${resolveSubjectLabel(nodeId, nodeLabels)}`;
+}
+
+function formatRelationReference(
+  relationId: string,
+  relationLabels: ReadonlyMap<string, string>
+): string {
+  return `relation=${resolveSubjectLabel(
+    undefined,
+    undefined,
+    relationLabels,
+    relationId
+  )}`;
+}
+
+function formatScopeSuffix(
+  carrier: CanonicalReferenceCarrier,
+  nodeLabels: ReadonlyMap<string, string>,
+  relationLabels: ReadonlyMap<string, string>
+): string {
+  const reference = readReference(carrier);
+  const segments = [
+    ...(reference.nodeId
+      ? [formatNodeReference(reference.nodeId, nodeLabels)]
+      : []),
+    ...(reference.relationId
+      ? [formatRelationReference(reference.relationId, relationLabels)]
+      : []),
+    ...(reference.relatedNodeIds && reference.relatedNodeIds.length > 0
+      ? [
+          `related nodes=${reference.relatedNodeIds
+            .map((nodeId) => resolveSubjectLabel(nodeId, nodeLabels))
+            .join(',')}`,
+        ]
+      : []),
+    ...(reference.relatedRelationIds && reference.relatedRelationIds.length > 0
+      ? [
+          `related relations=${reference.relatedRelationIds
+            .map((relationId) =>
+              resolveSubjectLabel(
+                undefined,
+                undefined,
+                relationLabels,
+                relationId
+              )
+            )
+            .join(',')}`,
+        ]
+      : []),
+    ...(carrier.subjectId &&
+    !reference.nodeId &&
+    !reference.relationId &&
+    !reference.relatedNodeIds?.length &&
+    !reference.relatedRelationIds?.length
+      ? [
+          `subject=${resolveSubjectLabel(
+            carrier.subjectId,
+            nodeLabels,
+            relationLabels
+          )}`,
+        ]
+      : []),
+  ];
+
+  return segments.length > 0 ? ` :: scope=${segments.join(' ; ')}` : '';
+}
+
+function readReference(carrier: CanonicalReferenceCarrier): CanonicalReference {
+  const directReference = asRecord(carrier.reference);
+  const metadataReference = asRecord(asRecord(carrier.metadata)?.reference);
+  const nodeId = asString(directReference?.nodeId) ?? asString(carrier.nodeId);
+  const relationId =
+    asString(directReference?.relationId) ?? asString(carrier.relationId);
+  const relatedNodeIds = uniqueSorted([
+    ...stringArray(directReference?.relatedNodeIds),
+    ...stringArray(metadataReference?.relatedNodeIds),
+    ...stringArray(carrier.relatedNodeIds),
+  ]);
+  const relatedRelationIds = uniqueSorted([
+    ...stringArray(directReference?.relatedRelationIds),
+    ...stringArray(metadataReference?.relatedRelationIds),
+    ...stringArray(carrier.relatedRelationIds),
+  ]);
+
+  return {
+    ...(nodeId ? { nodeId } : {}),
+    ...(relationId ? { relationId } : {}),
+    ...(relatedNodeIds.length > 0 ? { relatedNodeIds } : {}),
+    ...(relatedRelationIds.length > 0 ? { relatedRelationIds } : {}),
+  };
+}
+
+function readSubjectHotspots(
+  assessment: GovernanceAssessment
+): CanonicalSubjectHotspot[] {
+  const hotspots = (assessment.health as unknown as { hotspots?: unknown[] })
+    .hotspots;
+
+  if (!Array.isArray(hotspots)) {
+    return [];
+  }
+
+  return hotspots
+    .map((entry) => asRecord(entry))
+    .filter(
+      (
+        entry
+      ): entry is Record<string, unknown> & {
+        subjectId: string;
+        count: number;
+      } =>
+        Boolean(asString(entry?.subjectId)) && typeof entry?.count === 'number'
+    )
+    .map((entry) => ({
+      subjectId: asString(entry.subjectId) ?? 'unknown',
+      ...(asString(entry.subjectType)
+        ? { subjectType: asString(entry.subjectType) }
+        : {}),
+      count: entry.count as number,
+      dominantIssueTypes: uniqueSorted(stringArray(entry.dominantIssueTypes)),
+    }))
+    .sort(
+      (left, right) =>
+        left.subjectId.localeCompare(right.subjectId) ||
+        left.count - right.count
+    );
+}
+
+function resolveSubjectLabel(
+  subjectId: string | undefined,
+  nodeLabels?: ReadonlyMap<string, string>,
+  relationLabels?: ReadonlyMap<string, string>,
+  explicitRelationId?: string
+): string {
+  const relationLabel =
+    (subjectId ? relationLabels?.get(subjectId) : undefined) ??
+    (explicitRelationId ? relationLabels?.get(explicitRelationId) : undefined);
+  if (relationLabel) {
+    return relationLabel;
+  }
+
+  const nodeLabel = subjectId ? nodeLabels?.get(subjectId) : undefined;
+  if (nodeLabel) {
+    return nodeLabel;
+  }
+
+  return explicitRelationId ?? subjectId ?? 'unknown';
+}
+
+function compareSignals(
+  left: GovernanceSignal,
+  right: GovernanceSignal
+): number {
+  return (
+    left.id.localeCompare(right.id) ||
+    left.type.localeCompare(right.type) ||
+    left.severity.localeCompare(right.severity)
+  );
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === 'string');
 }
