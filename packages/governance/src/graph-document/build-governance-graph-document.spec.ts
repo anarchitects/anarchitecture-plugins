@@ -135,7 +135,7 @@ describe('buildGovernanceGraphDocument', () => {
       {
         id: 'orders-app',
         label: 'orders-app',
-        type: 'application',
+        type: 'project',
         tags: ['domain:orders', 'layer:app'],
         owner: '@org/orders',
         score: 70,
@@ -156,7 +156,13 @@ describe('buildGovernanceGraphDocument', () => {
           },
         ],
         metadata: {
+          domain: 'orders',
+          kind: 'project',
+          layer: 'app',
+          path: 'packages/orders-app',
+          root: 'packages/orders-app',
           score: 10,
+          sourceSystem: 'nx',
         },
         health: 'warning',
         findings: [],
@@ -164,7 +170,7 @@ describe('buildGovernanceGraphDocument', () => {
       {
         id: 'payments-app',
         label: 'payments-app',
-        type: 'application',
+        type: 'project',
         tags: ['domain:payments', 'layer:app'],
         owner: '@org/payments',
         score: 70,
@@ -184,13 +190,21 @@ describe('buildGovernanceGraphDocument', () => {
             message: 'Documentation metadata is missing or incomplete.',
           },
         ],
+        metadata: {
+          domain: 'payments',
+          kind: 'project',
+          layer: 'app',
+          path: 'packages/payments-app',
+          root: 'packages/payments-app',
+          sourceSystem: 'nx',
+        },
         health: 'warning',
         findings: [],
       },
       {
         id: 'shared-util',
         label: 'shared-util',
-        type: 'library',
+        type: 'project',
         tags: ['domain:shared', 'layer:shared'],
         owner: '@org/platform',
         score: 70,
@@ -213,7 +227,14 @@ describe('buildGovernanceGraphDocument', () => {
         metadata: {
           criticality: 'high',
           documented: true,
+          domain: 'shared',
+          kind: 'project',
+          layer: 'shared',
+          nested: '{"ignored":true}',
           nullable: null,
+          path: 'packages/shared-util',
+          root: 'packages/shared-util',
+          sourceSystem: 'nx',
         },
         health: 'warning',
         findings: [
@@ -508,14 +529,45 @@ function createAssessment(
     violations?: Violation[];
   } = {}
 ): GovernanceAssessment {
+  const workspaceProjects = input.workspaceProjects ?? [];
+  const dependencies = input.dependencies ?? [];
+
   return {
     workspace: {
       id: 'workspace',
       name: 'workspace',
       root: '.',
-      projects: input.workspaceProjects ?? [],
-      dependencies: input.dependencies ?? [],
-    },
+      projects: workspaceProjects,
+      dependencies,
+      nodes: workspaceProjects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: project.root,
+        path: project.root,
+        tags: project.tags,
+        classification: {
+          domain: readTagValue(project.tags, 'domain'),
+          layer: readTagValue(project.tags, 'layer'),
+          tags: project.tags,
+        },
+        ownership: project.ownership,
+        metadata: project.metadata,
+      })),
+      relations: dependencies.map((dependency, index) => ({
+        id: `${dependency.source}->${dependency.target}:${dependency.type}:${index}`,
+        sourceNodeId: dependency.source,
+        targetNodeId: dependency.target,
+        kind: 'dependency',
+        metadata: {
+          dependencyType: dependency.type,
+          ...(dependency.sourceFile
+            ? { sourceFile: dependency.sourceFile }
+            : {}),
+        },
+      })),
+    } as unknown as GovernanceAssessment['workspace'],
     profile: 'frontend-layered',
     warnings: [],
     exceptions: {
@@ -570,6 +622,11 @@ function createAssessment(
     health: createHealthScore(),
     recommendations: [] satisfies Recommendation[],
   };
+}
+
+function readTagValue(tags: string[], prefix: string): string | undefined {
+  const matchingTag = tags.find((tag) => tag.startsWith(`${prefix}:`));
+  return matchingTag ? matchingTag.slice(prefix.length + 1) : undefined;
 }
 
 function createProject(input: {
@@ -685,8 +742,62 @@ function createHealthScore(): HealthScore {
 function createArtifactsWithCanonicalGraph(
   assessment: GovernanceAssessment
 ): GovernanceAssessmentArtifacts {
+  const canonicalWorkspace = {
+    ...(assessment.workspace as unknown as Record<string, unknown>),
+    nodes: [
+      {
+        id: 'orders-app',
+        name: 'Orders App',
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: 'apps/orders',
+        path: 'apps/orders',
+        tags: ['domain:orders', 'layer:app'],
+        classification: {
+          domain: 'orders',
+          layer: 'app',
+          tags: ['domain:orders', 'layer:app'],
+        },
+        ownership: {
+          team: '@org/orders',
+          source: 'project-metadata',
+        },
+        metadata: {
+          nx: {
+            projectType: 'application',
+            targets: ['build', 'test'],
+          },
+        },
+      },
+      {
+        id: 'shared-util',
+        name: 'Shared Util',
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: 'libs/shared/util',
+        path: 'libs/shared/util',
+        tags: ['domain:shared', 'layer:util'],
+      },
+    ],
+    relations: [
+      {
+        id: 'nx:orders-app->shared-util:static:0',
+        sourceNodeId: 'orders-app',
+        targetNodeId: 'shared-util',
+        kind: 'dependency',
+        metadata: {
+          dependencyType: 'static',
+          sourceFile: 'apps/orders/src/main.ts',
+        },
+      },
+    ],
+  } as unknown as GovernanceAssessment['workspace'];
+
   return {
-    assessment,
+    assessment: {
+      ...assessment,
+      workspace: canonicalWorkspace,
+    },
     signals: [],
     exceptionApplication: {
       declaredExceptions: [],

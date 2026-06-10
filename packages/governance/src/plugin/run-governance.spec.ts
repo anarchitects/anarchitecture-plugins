@@ -892,10 +892,10 @@ describe('runGovernance', () => {
       expect(cliReport).toContain('- suppressed conformance findings: 1');
       expect(cliReport).toContain('- reactivated conformance findings: 1');
       expect(cliReport).toContain(
-        '- suppress-boundary :: active :: conformance/conformance-finding :: [error] :: @nx/conformance/enforce-project-boundaries :: scope=packages/governance -> related=packages/governance-e2e :: Suppressed conformance boundary violation'
+        '- suppress-boundary :: active :: conformance/conformance-finding :: [error] :: @nx/conformance/enforce-project-boundaries :: Suppressed conformance boundary violation'
       );
       expect(cliReport).toContain(
-        '- stale-owner-gap :: stale :: conformance/conformance-finding :: [warning] :: @nx/conformance/ensure-owners :: scope=packages/governance :: Reactivated conformance ownership warning'
+        '- stale-owner-gap :: stale :: conformance/conformance-finding :: [warning] :: @nx/conformance/ensure-owners :: Reactivated conformance ownership warning'
       );
 
       expect(JSON.parse(renderJsonReport(result.assessment))).toMatchObject({

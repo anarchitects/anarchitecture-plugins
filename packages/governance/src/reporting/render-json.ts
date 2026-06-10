@@ -17,6 +17,7 @@ export function renderJsonReport(input: GovernanceRendererInput): string {
       ...model.assessment,
       nodes: model.nodes,
       relations: model.relations,
+      signals: model.signals,
       capabilities: model.capabilities,
       diagnostics: model.diagnostics,
       extensionDiagnostics: model.extensionDiagnostics,
