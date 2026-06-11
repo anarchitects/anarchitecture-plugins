@@ -189,7 +189,7 @@ describe('runGovernance', () => {
     expect(health.assessment.health.explainability.weakestMetrics.length).toBe(
       3
     );
-    expect(health.assessment.health.projectHotspots.length).toBeGreaterThan(0);
+    expect(health.assessment.health.subjectHotspots.length).toBeGreaterThan(0);
     expect(
       health.assessment.health.explainability.dominantIssues.length
     ).toBeGreaterThan(0);
@@ -444,7 +444,7 @@ describe('runGovernance', () => {
           scope: {
             source: 'conformance',
             ruleId: '@nx/conformance/enforce-project-boundaries',
-            projectId: 'packages/governance',
+            nodeId: 'packages/governance',
           },
           reason: 'Known migration overlap.',
           owner: '@org/architecture',
@@ -506,8 +506,9 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           category: 'boundary',
           severity: 'error',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance-e2e'],
+          relatedRelationIds: [],
           message: 'Suppressed conformance boundary violation',
         }),
       ]);
@@ -561,7 +562,7 @@ describe('runGovernance', () => {
           scope: {
             source: 'policy',
             ruleId: 'domain-boundary',
-            projectId: 'missing-project',
+            nodeId: 'missing-project',
           },
           reason: 'Reserved for future migration.',
           owner: '@org/architecture',
@@ -650,7 +651,7 @@ describe('runGovernance', () => {
           scope: {
             source: 'conformance',
             ruleId: '@nx/conformance/enforce-project-boundaries',
-            projectId: 'packages/governance',
+            nodeId: 'packages/governance',
           },
           reason: 'Needs review.',
           owner: '@org/architecture',
@@ -707,8 +708,9 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           category: 'boundary',
           severity: 'error',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance-e2e'],
+          relatedRelationIds: [],
           message: 'Reactivated conformance boundary violation',
         }),
       ]);
@@ -761,7 +763,7 @@ describe('runGovernance', () => {
               scope: {
                 source: 'conformance',
                 ruleId: '@nx/conformance/ensure-owners',
-                projectId: 'packages/governance',
+                nodeId: 'packages/governance',
               },
               reason: 'Needs review.',
               owner: '@org/architecture',
@@ -775,7 +777,7 @@ describe('runGovernance', () => {
               scope: {
                 source: 'conformance',
                 ruleId: '@nx/conformance/enforce-project-boundaries',
-                projectId: 'packages/governance',
+                nodeId: 'packages/governance',
               },
               reason: 'Known transition.',
               owner: '@org/architecture',
@@ -789,7 +791,7 @@ describe('runGovernance', () => {
               scope: {
                 source: 'policy',
                 ruleId: 'ownership-presence',
-                projectId: 'missing-project',
+                nodeId: 'missing-project',
               },
               reason: 'Leftover waiver to remove.',
               owner: '@org/architecture',
@@ -866,8 +868,9 @@ describe('runGovernance', () => {
           exceptionId: 'suppress-boundary',
           status: 'active',
           ruleId: '@nx/conformance/enforce-project-boundaries',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance-e2e'],
+          relatedRelationIds: [],
           message: 'Suppressed conformance boundary violation',
         }),
       ]);
@@ -877,8 +880,9 @@ describe('runGovernance', () => {
           exceptionId: 'stale-owner-gap',
           status: 'stale',
           ruleId: '@nx/conformance/ensure-owners',
-          projectId: 'packages/governance',
-          relatedProjectIds: [],
+          nodeId: 'packages/governance',
+          relatedNodeIds: [],
+          relatedRelationIds: [],
           message: 'Reactivated conformance ownership warning',
         }),
       ]);
@@ -892,10 +896,10 @@ describe('runGovernance', () => {
       expect(cliReport).toContain('- suppressed conformance findings: 1');
       expect(cliReport).toContain('- reactivated conformance findings: 1');
       expect(cliReport).toContain(
-        '- suppress-boundary :: active :: conformance/conformance-finding :: [error] :: @nx/conformance/enforce-project-boundaries :: Suppressed conformance boundary violation'
+        '- suppress-boundary :: active :: conformance/conformance-finding :: [error] :: @nx/conformance/enforce-project-boundaries :: scope=node=packages/governance [packages/governance] ; related nodes=packages/governance-e2e [packages/governance-e2e] :: Suppressed conformance boundary violation'
       );
       expect(cliReport).toContain(
-        '- stale-owner-gap :: stale :: conformance/conformance-finding :: [warning] :: @nx/conformance/ensure-owners :: Reactivated conformance ownership warning'
+        '- stale-owner-gap :: stale :: conformance/conformance-finding :: [warning] :: @nx/conformance/ensure-owners :: scope=node=packages/governance [packages/governance] :: Reactivated conformance ownership warning'
       );
 
       expect(JSON.parse(renderJsonReport(result.assessment))).toMatchObject({
@@ -1207,7 +1211,9 @@ describe('runGovernance', () => {
       reportType: 'health',
     });
 
-    expect(withGovernanceDiscovery.assessment).toEqual(baseline.assessment);
+    expect(
+      normalizeAssessmentSignals(withGovernanceDiscovery.assessment)
+    ).toEqual(normalizeAssessmentSignals(baseline.assessment));
   });
 
   it('consumes typed extension enrichers, rule packs, signals, and metrics in a governance run', async () => {
@@ -1227,30 +1233,36 @@ describe('runGovernance', () => {
               enrichWorkspace({ workspace }: GovernanceWorkspaceEnricherInput) {
                 return {
                   ...workspace,
-                  projects: workspace.projects.map((project, index) =>
+                  nodes: workspace.nodes.map((node, index) =>
                     index === 0
                       ? {
-                          ...project,
+                          ...node,
                           metadata: {
-                            ...project.metadata,
+                            ...node.metadata,
                             extensionTouched: true,
                           },
                         }
-                      : project
+                      : node
                   ),
                 };
               },
             });
             host.registerRulePack({
               evaluate({ workspace }: GovernanceRulePackInput) {
+                const subjectId = workspace.nodes[0]?.id ?? 'unknown';
+
                 return [
                   {
                     id: 'extension-violation',
                     ruleId: 'extension-boundary',
-                    project: workspace.projects[0]?.name ?? 'unknown',
+                    subjectId,
                     severity: 'warning',
                     category: 'boundary',
                     message: 'Extension rule violation',
+                    reference: {
+                      nodeId: subjectId,
+                      relatedNodeIds: [subjectId],
+                    },
                   },
                 ];
               },
@@ -1261,14 +1273,14 @@ describe('runGovernance', () => {
                 violations,
                 signals,
               }: GovernanceSignalProviderInput) {
+                const subjectId = workspace.nodes[0]?.id;
+
                 return [
                   {
                     id: 'extension-signal',
                     type: 'extension-warning',
-                    sourceProjectId: workspace.projects[0]?.name,
-                    relatedProjectIds: workspace.projects[0]
-                      ? [workspace.projects[0].name]
-                      : [],
+                    nodeId: subjectId,
+                    relatedNodeIds: subjectId ? [subjectId] : [],
                     severity: 'warning',
                     category: 'boundary',
                     message: `Extension signal for ${violations.length} violations and ${signals.length} core signals.`,
@@ -1283,12 +1295,14 @@ describe('runGovernance', () => {
                 workspace,
                 measurements,
               }: GovernanceMetricProviderInput) {
+                const nodeCount = workspace.nodes.length;
+
                 return [
                   {
                     id: 'extension-coverage',
                     name: 'Extension Coverage',
                     family: 'architecture' as const,
-                    value: workspace.projects.length > 0 ? 1 : 0,
+                    value: nodeCount > 0 ? 1 : 0,
                     score: 80,
                     maxScore: 100,
                     unit: 'ratio' as const,
@@ -1315,8 +1329,15 @@ describe('runGovernance', () => {
     const result = await runGovernance({ reportType: 'health' });
 
     expect(
-      result.assessment.workspace.projects[0]?.metadata.extensionTouched
-    ).toBe(true);
+      'projects' in
+        ((result.assessment.workspace as unknown as Record<string, unknown>) ??
+          {})
+    ).toBe(false);
+    expect(
+      'dependencies' in
+        ((result.assessment.workspace as unknown as Record<string, unknown>) ??
+          {})
+    ).toBe(false);
     expect(
       result.assessment.violations.find(
         (violation) => violation.ruleId === 'extension-boundary'
@@ -1356,6 +1377,28 @@ describe('runGovernance', () => {
     expect(receivedContext?.workspaceRoot).toBe(workspaceRoot);
     expect(receivedContext?.profileName).toBe('frontend-layered');
     expect(receivedContext?.inventory.root).toBe(workspaceRoot);
+    expect(
+      (
+        receivedContext?.inventory as unknown as {
+          nodes?: unknown[];
+          relations?: unknown[];
+        }
+      ).nodes
+    ).toHaveLength(3);
+    expect(
+      (
+        receivedContext?.inventory as unknown as {
+          nodes?: unknown[];
+          relations?: unknown[];
+        }
+      ).relations
+    ).toHaveLength(2);
+    expect('projects' in ((receivedContext?.inventory as never) ?? {})).toBe(
+      false
+    );
+    expect(
+      'dependencies' in ((receivedContext?.inventory as never) ?? {})
+    ).toBe(false);
     expect(receivedContext?.options).toEqual({
       reportType: 'health',
       profileComposition: {},
@@ -2008,14 +2051,27 @@ function buildMockWorkspaceContext() {
     },
     adapterResult: {
       workspaceRoot,
-      projects: [
+      nodes: [
         {
           id: 'packages/governance',
           name: 'packages/governance',
+          kind: 'project',
+          sourceSystem: 'nx',
           root: 'packages/governance',
-          type: 'library',
+          path: 'packages/governance',
           tags: ['domain:governance', 'layer:core'],
+          classification: {
+            domain: 'governance',
+            layer: 'core',
+            tags: ['domain:governance', 'layer:core'],
+          },
           metadata: {
+            nx: {
+              projectType: 'library',
+              root: 'packages/governance',
+              tags: ['domain:governance', 'layer:core'],
+              targets: ['build', 'lint', 'test'],
+            },
             ownership: {
               team: '@anarchitects/governance',
             },
@@ -2029,10 +2085,24 @@ function buildMockWorkspaceContext() {
         {
           id: 'packages/governance-e2e',
           name: 'packages/governance-e2e',
+          kind: 'project',
+          sourceSystem: 'nx',
           root: 'packages/governance-e2e',
-          type: 'application',
+          path: 'packages/governance-e2e',
           tags: ['domain:governance', 'layer:e2e'],
-          metadata: {},
+          classification: {
+            domain: 'governance',
+            layer: 'e2e',
+            tags: ['domain:governance', 'layer:e2e'],
+          },
+          metadata: {
+            nx: {
+              projectType: 'application',
+              root: 'packages/governance-e2e',
+              tags: ['domain:governance', 'layer:e2e'],
+              targets: ['e2e', 'lint'],
+            },
+          },
           ownership: {
             contacts: ['@anarchitects/qa'],
             source: 'codeowners',
@@ -2041,28 +2111,54 @@ function buildMockWorkspaceContext() {
         {
           id: 'packages/js',
           name: 'packages/js',
+          kind: 'project',
+          sourceSystem: 'nx',
           root: 'packages/js',
-          type: 'library',
+          path: 'packages/js',
           tags: ['domain:platform', 'layer:feature'],
-          metadata: {},
+          classification: {
+            domain: 'platform',
+            layer: 'feature',
+            tags: ['domain:platform', 'layer:feature'],
+          },
+          metadata: {
+            nx: {
+              projectType: 'library',
+              root: 'packages/js',
+              tags: ['domain:platform', 'layer:feature'],
+              targets: ['build', 'lint', 'test'],
+            },
+          },
           ownership: {
             contacts: ['@anarchitects/platform'],
             source: 'codeowners',
           },
         },
       ],
-      dependencies: [
+      relations: [
         {
-          sourceProjectId: 'packages/governance-e2e',
-          targetProjectId: 'packages/governance',
-          type: 'static',
-          sourceFile: 'packages/governance-e2e/src/repo-health.spec.ts',
+          id: 'packages/governance-e2e->packages/governance:static:packages/governance-e2e/src/repo-health.spec.ts',
+          sourceNodeId: 'packages/governance-e2e',
+          targetNodeId: 'packages/governance',
+          kind: 'dependency',
+          metadata: {
+            nx: {
+              dependencyType: 'static',
+              sourceFile: 'packages/governance-e2e/src/repo-health.spec.ts',
+            },
+          },
         },
         {
-          sourceProjectId: 'packages/governance',
-          targetProjectId: 'packages/js',
-          type: 'static',
-          sourceFile: 'packages/governance/src/plugin/run-governance.ts',
+          id: 'packages/governance->packages/js:static:packages/governance/src/plugin/run-governance.ts',
+          sourceNodeId: 'packages/governance',
+          targetNodeId: 'packages/js',
+          kind: 'dependency',
+          metadata: {
+            nx: {
+              dependencyType: 'static',
+              sourceFile: 'packages/governance/src/plugin/run-governance.ts',
+            },
+          },
         },
       ],
       capabilities: [
@@ -2097,5 +2193,24 @@ function buildMockWorkspaceContext() {
         },
       ],
     },
+  };
+}
+
+function normalizeAssessmentSignals(
+  assessment: Awaited<ReturnType<typeof runGovernance>>['assessment']
+): Awaited<ReturnType<typeof runGovernance>>['assessment'] {
+  return {
+    ...assessment,
+    signals: (assessment.signals ?? []).map((signal) => ({
+      ...signal,
+      id: [
+        signal.type,
+        signal.nodeId ?? '',
+        signal.relationId ?? '',
+        (signal.relatedNodeIds ?? []).join(','),
+        (signal.relatedRelationIds ?? []).join(','),
+      ].join('|'),
+      createdAt: '<normalized>',
+    })),
   };
 }

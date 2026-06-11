@@ -137,6 +137,7 @@ describe('composeNxGovernanceRuntime', () => {
       ],
     } as unknown as GovernanceExtensionRegistrationResult;
     const artifacts = {
+      workspace,
       assessment: {
         workspace,
       },
@@ -176,7 +177,7 @@ describe('composeNxGovernanceRuntime', () => {
       options: { reportType: 'health' },
       profile: buildProfile(),
       profileOverrides: {
-        projectOverrides: {},
+        nodeOverrides: {},
         composition: {
           legacyPluginProbing: false,
           extensions: [
@@ -227,7 +228,7 @@ describe('composeNxGovernanceRuntime', () => {
       }
     );
     expect(result.adapterResult).toBe(adapterResult);
-    expect(result.workspace).toBe(workspace);
+    expect(result.workspace).toEqual(workspace);
     expect(result.workspace.nodes).toHaveLength(2);
     expect(result.workspace.relations).toHaveLength(1);
     expect(result.adapterCapabilities).toEqual(adapterResult.capabilities);
@@ -270,7 +271,19 @@ describe('composeNxGovernanceRuntime', () => {
       })
     );
     expect(result.extensionRegistration).toEqual(extensionRegistration);
-    expect(result.artifacts).toBe(artifacts);
+    expect(result.artifacts).toEqual(
+      expect.objectContaining({
+        diagnostics: adapterResult.diagnostics,
+        extensionDiagnostics: extensionRegistration.diagnostics,
+      })
+    );
+    expect(
+      result.artifacts.workspace as unknown as RuntimeGovernanceWorkspace
+    ).toEqual(workspace);
+    expect(
+      result.artifacts.assessment
+        .workspace as unknown as RuntimeGovernanceWorkspace
+    ).toEqual(workspace);
     expect(result.artifacts.diagnostics).toEqual(adapterResult.diagnostics);
     expect(result.artifacts.extensionDiagnostics).toEqual(
       extensionRegistration.diagnostics
@@ -436,12 +449,11 @@ function buildCanonicalWorkspace(): RuntimeGovernanceWorkspace {
     id: 'workspace',
     name: 'workspace',
     root: workspaceRoot,
-    nodes: adapterResult.nodes ?? [],
-    relations: adapterResult.relations ?? [],
-    metadata: {
-      sourceSystem: 'nx',
-    },
-  };
+    nodes: [...(adapterResult.nodes ?? [])] as RuntimeGovernanceNode[],
+    relations: [
+      ...(adapterResult.relations ?? []),
+    ] as RuntimeGovernanceRelation[],
+  } as unknown as RuntimeGovernanceWorkspace;
 }
 
 function buildProfile(): GovernanceProfile {

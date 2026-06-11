@@ -126,7 +126,7 @@ export async function loadProfileOverrides(
     composition,
     exceptions,
     eslintHelperPath,
-    projectOverrides: raw.projectOverrides ?? {},
+    nodeOverrides: raw.nodeOverrides ?? {},
     runtimeWarnings,
   };
 }
@@ -173,7 +173,7 @@ function buildDefaultResolvedOverrides(
     composition: {},
     exceptions: [],
     eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
-    projectOverrides: {},
+    nodeOverrides: {},
     runtimeWarnings: [],
   };
 }

@@ -239,6 +239,15 @@ function buildFindings(
 }
 
 function mapSignalToFinding(signal: GovernanceSignal): DraftGraphFinding {
+  const projectId = normalizeText(signal.nodeId);
+  const relatedProjectIds = uniqueSorted([
+    projectId,
+    ...(signal.relatedNodeIds ?? []),
+  ]);
+  const targetProjectId =
+    relatedProjectIds.find((candidate) => candidate !== projectId) ??
+    normalizeText(signal.relationId);
+
   return {
     id: signal.id,
     source: mapSignalSource(signal.source),
@@ -247,26 +256,27 @@ function mapSignalToFinding(signal: GovernanceSignal): DraftGraphFinding {
     ...(readRuleId(signal.metadata)
       ? { ruleId: readRuleId(signal.metadata) }
       : {}),
-    ...(signal.sourceProjectId ? { projectId: signal.sourceProjectId } : {}),
-    ...(signal.targetProjectId
-      ? { targetProjectId: signal.targetProjectId }
-      : {}),
+    ...(projectId ? { projectId } : {}),
+    ...(targetProjectId ? { targetProjectId } : {}),
     category: signal.category,
     type: signal.type,
     ...(signal.sourcePluginId ? { sourcePluginId: signal.sourcePluginId } : {}),
-    relatedProjectIds: uniqueSorted([
-      signal.sourceProjectId,
-      signal.targetProjectId,
-      ...signal.relatedProjectIds,
-    ]),
+    relatedProjectIds,
   };
 }
 
 function mapViolationToFinding(violation: Violation): DraftGraphFinding {
-  const projectId = normalizeText(violation.project);
-  const targetProjectId = normalizeText(
-    asString(violation.details?.targetProject)
+  const projectId = normalizeText(
+    violation.subjectId ?? violation.reference?.nodeId
   );
+  const relatedProjectIds = uniqueSorted([
+    projectId,
+    ...(violation.reference?.relatedNodeIds ?? []),
+  ]);
+  const targetProjectId =
+    normalizeText(asString(violation.details?.targetProject)) ??
+    relatedProjectIds.find((candidate) => candidate !== projectId) ??
+    normalizeText(violation.reference?.relationId);
 
   return {
     id: violation.id,
@@ -280,7 +290,7 @@ function mapViolationToFinding(violation: Violation): DraftGraphFinding {
     ...(violation.sourcePluginId
       ? { sourcePluginId: violation.sourcePluginId }
       : {}),
-    relatedProjectIds: uniqueSorted([projectId, targetProjectId]),
+    relatedProjectIds,
   };
 }
 
@@ -480,10 +490,21 @@ function compareHealth(
 }
 
 function compareViolations(left: Violation, right: Violation): number {
+  const leftProjectId =
+    left.subjectId ??
+    left.reference?.nodeId ??
+    left.reference?.relationId ??
+    '';
+  const rightProjectId =
+    right.subjectId ??
+    right.reference?.nodeId ??
+    right.reference?.relationId ??
+    '';
+
   return (
     compareFindingSeverity(left.severity, right.severity) ||
     left.ruleId.localeCompare(right.ruleId) ||
-    left.project.localeCompare(right.project) ||
+    leftProjectId.localeCompare(rightProjectId) ||
     left.message.localeCompare(right.message) ||
     left.id.localeCompare(right.id)
   );

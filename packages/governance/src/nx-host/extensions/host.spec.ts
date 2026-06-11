@@ -30,8 +30,8 @@ describe('registerGovernanceExtensions', () => {
       id: 'workspace',
       name: 'workspace',
       root: '/repo',
-      projects: [],
-      dependencies: [],
+      nodes: [],
+      relations: [],
     },
     capabilities: new DefaultGovernanceCapabilityRegistry([
       {
@@ -650,8 +650,8 @@ describe('governance extension contribution ordering', () => {
       id: 'workspace',
       name: 'workspace',
       root: '/repo',
-      projects: [],
-      dependencies: [],
+      nodes: [],
+      relations: [],
     },
     capabilities: new DefaultGovernanceCapabilityRegistry([
       {
@@ -806,7 +806,7 @@ describe('governance extension contribution ordering', () => {
                   message: 'A',
                   source: 'extension' as const,
                   createdAt: '2026-01-01T00:00:00.000Z',
-                  relatedProjectIds: [],
+                  relatedNodeIds: [],
                 },
               ] satisfies GovernanceSignal[];
             },
@@ -826,7 +826,7 @@ describe('governance extension contribution ordering', () => {
                   message: 'B',
                   source: 'extension' as const,
                   createdAt: '2026-01-01T00:00:00.000Z',
-                  relatedProjectIds: [],
+                  relatedNodeIds: [],
                 },
               ] satisfies GovernanceSignal[];
             },
@@ -931,8 +931,8 @@ describe('registerGovernanceExtensionsWithDiagnostics', () => {
       id: 'workspace',
       name: 'workspace',
       root: '/repo',
-      projects: [],
-      dependencies: [],
+      nodes: [],
+      relations: [],
     },
     capabilities: new DefaultGovernanceCapabilityRegistry([
       {

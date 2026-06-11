@@ -85,7 +85,7 @@ describe('governance preset registry', () => {
         documentationCompletenessWeight: 0.2,
         layerIntegrityWeight: 0.2,
       },
-      projectOverrides: {},
+      nodeOverrides: {},
     });
     expect(createFrontendLayeredStarterProfile()).toEqual(
       createLayeredWorkspaceStarterProfile()

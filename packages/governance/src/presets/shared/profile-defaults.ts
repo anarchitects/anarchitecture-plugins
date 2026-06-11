@@ -90,6 +90,6 @@ export function createBuiltInStarterProfile(
       documentationCompletenessWeight: 0.2,
       layerIntegrityWeight: 0.2,
     },
-    projectOverrides: {},
+    nodeOverrides: {},
   };
 }
