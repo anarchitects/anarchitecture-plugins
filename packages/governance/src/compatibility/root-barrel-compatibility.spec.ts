@@ -16,7 +16,7 @@ import {
   GOVERNANCE_GENERATOR_IDS,
 } from './public-workflows.js';
 
-describe('nx-governance root barrel compatibility shell', () => {
+describe('nx-governance root package entrypoint compatibility shell', () => {
   const governanceRootPath = path.resolve(__dirname, '..', '..');
   const sourceRoot = path.join(governanceRootPath, 'src');
 
@@ -71,7 +71,7 @@ describe('nx-governance root barrel compatibility shell', () => {
     ]);
   });
 
-  it('reduces the root barrel to the intended compatibility shell', () => {
+  it('reduces the root barrel to the intended package entrypoint compatibility shell', () => {
     expect(collectExportSources(path.join(sourceRoot, 'index.ts'))).toEqual([
       ...ROOT_COMPATIBILITY_SHELL_EXPORT_SOURCES,
     ]);
@@ -115,14 +115,14 @@ describe('nx-governance root barrel compatibility shell', () => {
     );
   });
 
-  it('stops exporting monolithic internals from the root compatibility shell', () => {
+  it('stops exporting monolithic internals from the root package entrypoint compatibility shell', () => {
     expect('runGovernance' in governanceRoot).toBe(false);
     expect('runGovernanceSnapshot' in governanceRoot).toBe(false);
     expect('runAgovCheck' in governanceRoot).toBe(false);
     expect('detectTypeScriptWorkspace' in governanceRoot).toBe(false);
   });
 
-  it('keeps host implementation source free of root compatibility shell imports', () => {
+  it('keeps host implementation source free of root package entrypoint compatibility shell imports', () => {
     const implementationFiles = collectImplementationFiles(sourceRoot);
     const disallowedImports = new Set([
       '@anarchitects/nx-governance',

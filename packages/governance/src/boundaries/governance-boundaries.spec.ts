@@ -194,7 +194,7 @@ describe('governance boundary enforcement', () => {
       },
       {
         kind: 'import',
-        rule: 'Host-owned runtime must not import the root compatibility shell.',
+        rule: 'Host-owned runtime must not import the root package entrypoint compatibility shell.',
         matches: (specifier) =>
           specifier === '@anarchitects/nx-governance' ||
           specifier === '../index.js' ||

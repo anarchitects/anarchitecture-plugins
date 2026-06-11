@@ -1,9 +1,11 @@
+// This inventory tracks root package entrypoint compatibility only.
+// It does not represent legacy governance model compatibility.
 export type RootBarrelExportCategory =
   | 'host-owned-public-api'
   | 'adapter-owned-public-api'
   | 'community-owned-public-api'
   | 'internal-implementation-detail'
-  | 'legacy-compatibility-export';
+  | 'legacy-package-entrypoint-export';
 
 export interface RootBarrelExportInventoryEntry {
   source: string;
@@ -222,7 +224,7 @@ export const LEGACY_ROOT_BARREL_EXPORT_INVENTORY = [
   },
   {
     source: './conformance-adapter/conformance-adapter.js',
-    category: 'legacy-compatibility-export',
+    category: 'legacy-package-entrypoint-export',
     canonicalEntrypoint: 'none',
     compatibilityStatus: 'removed-from-root-shell',
   },
@@ -264,13 +266,13 @@ export const LEGACY_ROOT_BARREL_EXPORT_INVENTORY = [
   },
   {
     source: './manual-workspace/index.js',
-    category: 'legacy-compatibility-export',
+    category: 'legacy-package-entrypoint-export',
     canonicalEntrypoint: 'none',
     compatibilityStatus: 'removed-from-root-shell',
   },
   {
     source: './profile/load-standalone-profile.js',
-    category: 'legacy-compatibility-export',
+    category: 'legacy-package-entrypoint-export',
     canonicalEntrypoint: 'none',
     compatibilityStatus: 'removed-from-root-shell',
   },
