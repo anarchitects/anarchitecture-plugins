@@ -137,9 +137,9 @@ export async function composeNxGovernanceRuntime(
         profileComposition,
       }
     );
-  const artifacts = await buildCoreGovernanceAssessmentArtifacts({
+  const coreArtifacts = await buildCoreGovernanceAssessmentArtifacts({
     profile: input.profile,
-    workspace: workspace as unknown as GovernanceWorkspace,
+    workspace,
     warnings: input.warnings,
     exceptions: input.exceptions,
     conformanceFindings: input.conformanceFindings ?? [],
@@ -151,6 +151,10 @@ export async function composeNxGovernanceRuntime(
     extensionDiagnostics: extensionRegistration.diagnostics,
     asOf: input.asOf,
   });
+  const artifacts = toRuntimeGovernanceAssessmentArtifacts(
+    coreArtifacts,
+    workspace
+  );
 
   return {
     adapterResult,
@@ -199,10 +203,10 @@ function readCanonicalNodes(
 ): RuntimeGovernanceNode[] {
   const canonicalAdapterResult = adapterResult as CanonicalAdapterResult;
 
-  return (
+  return cloneRuntimeNodes(
     canonicalWorkspace(canonicalAdapterResult)?.nodes ??
-    canonicalAdapterResult.nodes ??
-    []
+      canonicalAdapterResult.nodes ??
+      []
   );
 }
 
@@ -211,10 +215,10 @@ function readCanonicalRelations(
 ): RuntimeGovernanceRelation[] {
   const canonicalAdapterResult = adapterResult as CanonicalAdapterResult;
 
-  return (
+  return cloneRuntimeRelations(
     canonicalWorkspace(canonicalAdapterResult)?.relations ??
-    canonicalAdapterResult.relations ??
-    []
+      canonicalAdapterResult.relations ??
+      []
   );
 }
 
@@ -228,4 +232,86 @@ function countDependencyRelations(
   relations: RuntimeGovernanceRelation[]
 ): number {
   return relations.filter((relation) => relation.kind === 'dependency').length;
+}
+
+function toRuntimeGovernanceAssessmentArtifacts(
+  artifacts: GovernanceAssessmentArtifacts,
+  workspace: RuntimeGovernanceWorkspace
+): GovernanceAssessmentArtifacts {
+  return {
+    ...artifacts,
+    workspace,
+    assessment: {
+      ...artifacts.assessment,
+      workspace,
+    },
+  } as unknown as GovernanceAssessmentArtifacts;
+}
+
+function cloneRuntimeNodes(
+  nodes: RuntimeGovernanceNode[]
+): RuntimeGovernanceNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    ...(node.tags ? { tags: [...node.tags] } : {}),
+    ...(node.classification
+      ? { classification: cloneRecord(node.classification) }
+      : {}),
+    ...(node.ownership ? { ownership: cloneRecord(node.ownership) } : {}),
+    ...(node.metadata ? { metadata: cloneRecord(node.metadata) } : {}),
+  }));
+}
+
+function cloneRuntimeRelations(
+  relations: RuntimeGovernanceRelation[]
+): RuntimeGovernanceRelation[] {
+  return relations.map((relation) =>
+    ensureRuntimeRelationId({
+      ...relation,
+      ...(relation.metadata
+        ? { metadata: cloneRecord(relation.metadata) }
+        : {}),
+    })
+  );
+}
+
+function ensureRuntimeRelationId(
+  relation: RuntimeGovernanceRelation
+): RuntimeGovernanceRelation {
+  if (relation.id) {
+    return relation;
+  }
+
+  const metadata = relation.metadata ?? {};
+  const nxMetadata = asRecord(metadata['nx']);
+  const dependencyType =
+    readString(nxMetadata?.['dependencyType']) ??
+    readString(metadata['dependencyType']) ??
+    relation.kind ??
+    'unknown';
+  const sourceFile =
+    readString(nxMetadata?.['sourceFile']) ??
+    readString(metadata['sourceFile']) ??
+    '';
+
+  return {
+    ...relation,
+    id: `${relation.sourceNodeId}->${relation.targetNodeId}:${dependencyType}:${sourceFile}`,
+  };
+}
+
+function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
+  return { ...value };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return undefined;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
 }

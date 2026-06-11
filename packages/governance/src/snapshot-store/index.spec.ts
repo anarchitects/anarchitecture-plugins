@@ -34,8 +34,8 @@ describe('snapshot-store', () => {
         id: 'workspace',
         name: 'workspace',
         root: workspaceRoot,
-        projects: [],
-        dependencies: [],
+        nodes: [],
+        relations: [],
       },
       profile: 'frontend-layered',
       warnings: [],
@@ -92,7 +92,7 @@ describe('snapshot-store', () => {
           source: 'policy',
           severity: 'warning',
           count: 2,
-          projects: ['libs/orders/data-access'],
+          subjects: ['libs/orders/data-access'],
           message: 'Ownership metadata is missing.',
         },
       ],
@@ -102,7 +102,7 @@ describe('snapshot-store', () => {
         grade: 'B',
         hotspots: [],
         metricHotspots: [],
-        projectHotspots: [],
+        subjectHotspots: [],
         explainability: {
           summary:
             'Overall health is Warning at 80/100. Weakest metrics: Architectural Entropy (80). Dominant issues: none.',

@@ -20,8 +20,10 @@ export const GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS = [
   'eslint.config.js',
 ] as const;
 
-export interface GovernanceProfileFile extends ProfileOverrides {
+export interface GovernanceProfileFile
+  extends Omit<ProfileOverrides, 'nodeOverrides'> {
   boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
+  nodeOverrides?: ProfileOverrides['nodeOverrides'];
   eslint?: {
     helperPath?: string;
   };

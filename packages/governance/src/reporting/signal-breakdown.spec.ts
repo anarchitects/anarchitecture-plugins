@@ -184,9 +184,10 @@ function makeSignal(
   return {
     id: overrides.id,
     type: overrides.type ?? 'conformance-violation',
-    sourceProjectId: overrides.sourceProjectId,
-    targetProjectId: overrides.targetProjectId,
-    relatedProjectIds: overrides.relatedProjectIds ?? [],
+    nodeId: overrides.nodeId,
+    relationId: overrides.relationId,
+    relatedNodeIds: overrides.relatedNodeIds ?? [],
+    relatedRelationIds: overrides.relatedRelationIds,
     severity: overrides.severity ?? 'warning',
     category: overrides.category ?? 'boundary',
     message: overrides.message ?? overrides.id,

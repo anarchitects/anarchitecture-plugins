@@ -1,7 +1,6 @@
 import type {
   GovernanceAssessment,
   GovernanceSignal,
-  GovernanceProject,
   HealthScore,
   Measurement,
   Recommendation,
@@ -15,6 +14,26 @@ import {
   GOVERNANCE_GRAPH_DOCUMENT_SCHEMA_VERSION,
   buildGovernanceGraphDocument,
 } from './index.js';
+
+interface TestProject {
+  id: string;
+  name: string;
+  root: string;
+  type: 'application' | 'library' | 'tool' | 'unknown';
+  tags: string[];
+  ownership?: {
+    team?: string;
+    source?: string;
+  };
+  metadata: Record<string, unknown>;
+}
+
+interface TestDependency {
+  source: string;
+  target: string;
+  type: string;
+  sourceFile?: string;
+}
 
 describe('buildGovernanceGraphDocument', () => {
   it('builds a deterministic empty document from minimal assessment input', () => {
@@ -104,7 +123,7 @@ describe('buildGovernanceGraphDocument', () => {
         {
           id: 'violation-docs',
           ruleId: 'docs-stale',
-          project: 'shared-util',
+          subjectId: 'shared-util',
           severity: 'warning',
           category: 'documentation',
           message: 'Shared util docs are stale.',
@@ -113,12 +132,16 @@ describe('buildGovernanceGraphDocument', () => {
         {
           id: 'violation-dup',
           ruleId: 'domain-boundary',
-          project: 'orders-app',
+          subjectId: 'orders-app',
           severity: 'error',
           category: 'boundary',
           message: 'Orders cannot depend on shared util.',
           details: {
             targetProject: 'shared-util',
+          },
+          reference: {
+            nodeId: 'orders-app',
+            relatedNodeIds: ['orders-app', 'shared-util'],
           },
         },
       ],
@@ -384,7 +407,7 @@ describe('buildGovernanceGraphDocument', () => {
         {
           id: 'violation-a',
           ruleId: 'docs-stale',
-          project: 'a-lib',
+          subjectId: 'a-lib',
           severity: 'warning',
           category: 'documentation',
           message: 'Docs are stale.',
@@ -393,8 +416,8 @@ describe('buildGovernanceGraphDocument', () => {
     });
 
     const reorderedAssessment = createAssessment({
-      workspaceProjects: [...baseAssessment.workspace.projects].reverse(),
-      dependencies: [...baseAssessment.workspace.dependencies].reverse(),
+      workspaceProjects: [...readWorkspaceProjects(baseAssessment)].reverse(),
+      dependencies: [...readWorkspaceDependencies(baseAssessment)].reverse(),
       violations: [...baseAssessment.violations].reverse(),
     });
     const baseSignals = [
@@ -402,9 +425,8 @@ describe('buildGovernanceGraphDocument', () => {
         id: 'signal-b',
         source: 'graph',
         type: 'structural-dependency',
-        sourceProjectId: 'b-app',
-        targetProjectId: 'a-lib',
-        relatedProjectIds: ['a-lib', 'b-app'],
+        nodeId: 'b-app',
+        relatedNodeIds: ['a-lib', 'b-app'],
         severity: 'info',
         category: 'dependency',
         message: 'Dependency: b-app -> a-lib.',
@@ -414,8 +436,8 @@ describe('buildGovernanceGraphDocument', () => {
         id: 'signal-a',
         source: 'graph',
         type: 'missing-domain-context',
-        sourceProjectId: 'a-lib',
-        relatedProjectIds: ['a-lib'],
+        nodeId: 'a-lib',
+        relatedNodeIds: ['a-lib'],
         severity: 'warning',
         category: 'boundary',
         message: 'Missing domain context for a-lib.',
@@ -464,9 +486,8 @@ describe('buildGovernanceGraphDocument', () => {
           id: 'signal-policy',
           source: 'policy',
           type: 'domain-boundary-violation',
-          sourceProjectId: 'orders-app',
-          targetProjectId: 'shared-util',
-          relatedProjectIds: ['orders-app', 'shared-util'],
+          nodeId: 'orders-app',
+          relatedNodeIds: ['orders-app', 'shared-util'],
           severity: 'error',
           category: 'boundary',
           message: 'Orders cannot depend on shared util.',
@@ -524,8 +545,8 @@ describe('buildGovernanceGraphDocument', () => {
 
 function createAssessment(
   input: {
-    workspaceProjects?: GovernanceProject[];
-    dependencies?: GovernanceAssessment['workspace']['dependencies'];
+    workspaceProjects?: TestProject[];
+    dependencies?: TestDependency[];
     violations?: Violation[];
   } = {}
 ): GovernanceAssessment {
@@ -537,8 +558,6 @@ function createAssessment(
       id: 'workspace',
       name: 'workspace',
       root: '.',
-      projects: workspaceProjects,
-      dependencies,
       nodes: workspaceProjects.map((project) => ({
         id: project.id,
         name: project.name,
@@ -567,7 +586,7 @@ function createAssessment(
             : {}),
         },
       })),
-    } as unknown as GovernanceAssessment['workspace'],
+    } as GovernanceAssessment['workspace'],
     profile: 'frontend-layered',
     warnings: [],
     exceptions: {
@@ -631,11 +650,11 @@ function readTagValue(tags: string[], prefix: string): string | undefined {
 
 function createProject(input: {
   id: string;
-  type?: GovernanceProject['type'];
+  type?: TestProject['type'];
   tags?: string[];
   owner?: string;
   metadata?: Record<string, unknown>;
-}): GovernanceProject {
+}): TestProject {
   return {
     id: input.id,
     name: input.id,
@@ -658,9 +677,8 @@ function createSignals(): GovernanceSignal[] {
       id: 'signal-policy',
       source: 'policy',
       type: 'domain-boundary-violation',
-      sourceProjectId: 'orders-app',
-      targetProjectId: 'shared-util',
-      relatedProjectIds: ['shared-util', 'orders-app'],
+      nodeId: 'orders-app',
+      relatedNodeIds: ['shared-util', 'orders-app'],
       severity: 'error',
       category: 'boundary',
       message: 'Orders cannot depend on shared util.',
@@ -673,8 +691,8 @@ function createSignals(): GovernanceSignal[] {
       id: 'signal-ownership',
       source: 'extension',
       type: 'ownership-gap',
-      sourceProjectId: 'shared-util',
-      relatedProjectIds: ['shared-util'],
+      nodeId: 'shared-util',
+      relatedNodeIds: ['shared-util'],
       severity: 'info',
       category: 'ownership',
       message: 'Ownership coverage signal.',
@@ -685,9 +703,8 @@ function createSignals(): GovernanceSignal[] {
       id: 'signal-structural',
       source: 'graph',
       type: 'structural-dependency',
-      sourceProjectId: 'payments-app',
-      targetProjectId: 'shared-util',
-      relatedProjectIds: ['shared-util', 'payments-app'],
+      nodeId: 'payments-app',
+      relatedNodeIds: ['shared-util', 'payments-app'],
       severity: 'info',
       category: 'dependency',
       message: 'Dependency: payments-app -> shared-util.',
@@ -697,9 +714,8 @@ function createSignals(): GovernanceSignal[] {
       id: 'signal-conformance',
       source: 'conformance',
       type: 'conformance-violation',
-      sourceProjectId: 'orders-app',
-      targetProjectId: 'shared-util',
-      relatedProjectIds: ['shared-util'],
+      nodeId: 'orders-app',
+      relatedNodeIds: ['shared-util'],
       severity: 'error',
       category: 'dependency',
       message: 'Orders cannot depend on shared util.',
@@ -712,8 +728,8 @@ function createSignals(): GovernanceSignal[] {
       id: 'signal-missing-domain',
       source: 'graph',
       type: 'missing-domain-context',
-      sourceProjectId: 'shared-util',
-      relatedProjectIds: ['shared-util'],
+      nodeId: 'shared-util',
+      relatedNodeIds: ['shared-util'],
       severity: 'warning',
       category: 'boundary',
       message: 'Shared util is missing domain context.',
@@ -729,7 +745,7 @@ function createHealthScore(): HealthScore {
     grade: 'A',
     hotspots: [],
     metricHotspots: [],
-    projectHotspots: [],
+    subjectHotspots: [],
     explainability: {
       summary: 'Healthy workspace.',
       statusReason: 'No issues.',
@@ -737,6 +753,34 @@ function createHealthScore(): HealthScore {
       dominantIssues: [],
     },
   };
+}
+
+function readWorkspaceProjects(
+  assessment: GovernanceAssessment
+): TestProject[] {
+  return assessment.workspace.nodes.map((node) => ({
+    id: node.id,
+    name: node.name ?? node.id,
+    root: node.root ?? node.path ?? node.id,
+    type:
+      readTagValue(node.tags, 'layer') === 'shared' ? 'library' : 'application',
+    tags: [...node.tags],
+    ...(node.ownership ? { ownership: node.ownership } : {}),
+    metadata: node.metadata,
+  }));
+}
+
+function readWorkspaceDependencies(
+  assessment: GovernanceAssessment
+): TestDependency[] {
+  return assessment.workspace.relations.map((dependency) => ({
+    source: dependency.sourceNodeId,
+    target: dependency.targetNodeId,
+    type:
+      (dependency.metadata?.['dependencyType'] as string | undefined) ??
+      'unknown',
+    sourceFile: dependency.metadata?.['sourceFile'] as string | undefined,
+  }));
 }
 
 function createArtifactsWithCanonicalGraph(

@@ -366,7 +366,7 @@ function makeAssessment(): GovernanceAssessment {
         source: 'policy',
         severity: 'error',
         count: 2,
-        projects: [],
+        subjects: [],
         ruleId: 'domain-boundary',
         message: 'Domain boundary violation',
         reference: {
@@ -401,7 +401,7 @@ function makeAssessment(): GovernanceAssessment {
           score: 33,
         },
       ],
-      projectHotspots: [],
+      subjectHotspots: [],
       explainability: {
         summary:
           'Overall health is Warning at 80/100. Weakest metrics: Documentation Completeness (33), Architectural Entropy (80). Dominant issues: domain-boundary-violation x2, ownership-gap x1.',
@@ -425,7 +425,7 @@ function makeAssessment(): GovernanceAssessment {
             source: 'policy',
             severity: 'error',
             count: 2,
-            projects: [],
+            subjects: [],
             ruleId: 'domain-boundary',
             message: 'Domain boundary violation',
           },
@@ -434,7 +434,7 @@ function makeAssessment(): GovernanceAssessment {
             source: 'policy',
             severity: 'warning',
             count: 1,
-            projects: [],
+            subjects: [],
             ruleId: 'ownership-presence',
             message: 'Ownership gap',
           },

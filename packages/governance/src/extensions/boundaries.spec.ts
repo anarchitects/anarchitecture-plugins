@@ -145,9 +145,6 @@ describe('governance extension architecture boundaries', () => {
       /summarizeDriftInterpretation[\s\S]*from '@anarchitects\/governance-core';/
     );
     expect(runGovernanceSource).toMatch(
-      /resolveAffectedGovernanceProjects[\s\S]*from '@anarchitects\/governance-core';/
-    );
-    expect(runGovernanceSource).toMatch(
       /buildSnapshotDeliveryImpactSummary[\s\S]*from '@anarchitects\/governance-core';/
     );
 
@@ -163,6 +160,10 @@ describe('governance extension architecture boundaries', () => {
     );
     expect(runGovernanceSource).not.toMatch(
       /function summarizeDriftInterpretation|function sliceDependenciesForProjectScope|function buildTruncationMetadata|function sliceTopItems|function compareViolationsForPriority|function asString/
+    );
+    expect(runGovernanceSource).toContain('function collectAffectedNodeIds');
+    expect(runGovernanceSource).toContain(
+      'function collectAffectedRelationIds'
     );
     expect(runGovernanceSource).not.toContain('rootCauseProjectScope');
 

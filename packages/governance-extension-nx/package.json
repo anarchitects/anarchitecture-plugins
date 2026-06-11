@@ -44,7 +44,7 @@
     ]
   },
   "dependencies": {
-    "@anarchitects/governance-core": "0.1.0",
+    "@anarchitects/governance-core": "0.2.0",
     "tslib": "^2.3.0"
   }
 }

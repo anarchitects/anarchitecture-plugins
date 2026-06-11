@@ -1,14 +1,20 @@
-import type { Ownership } from '@anarchitects/governance-core';
 import type {
   GovernanceGraphBadge,
   GovernanceGraphFinding,
   GovernanceGraphHealth,
 } from './contracts.js';
 
+type GovernanceOwnershipSource =
+  | 'project-metadata'
+  | 'codeowners'
+  | 'merged'
+  | 'none'
+  | string;
+
 export interface GovernanceGraphBadgeInput {
   findings: GovernanceGraphFinding[];
   owner?: string;
-  ownershipSource?: Ownership['source'];
+  ownershipSource?: GovernanceOwnershipSource;
   ownershipRequired?: boolean;
   documentation?: string | number | boolean | null;
   documentationRequired?: boolean;
@@ -244,7 +250,7 @@ function compareHealth(
 }
 
 function ownershipMissingMessage(
-  ownershipSource: Ownership['source'] | undefined
+  ownershipSource: GovernanceOwnershipSource | undefined
 ): string {
   if (ownershipSource === 'none') {
     return 'No ownership metadata or CODEOWNERS mapping was found.';

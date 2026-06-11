@@ -130,8 +130,8 @@ describe('loadStandaloneGovernanceProfile', () => {
         },
       },
       exceptions: [],
-      projectOverrides: {},
-      compatibility: {
+      nodeOverrides: {},
+      profileSource: {
         boundaryPolicySource: 'profile',
       },
     });

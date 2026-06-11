@@ -18,7 +18,6 @@ import {
   buildOnboardingContext,
   buildPersistentSmellSignals,
   buildPrImpactContext,
-  resolveAffectedGovernanceProjects,
   buildManagementInsightsAiRequest,
   buildRecommendationsTrendContext,
   buildRefactoringSuggestionsContext,
@@ -36,7 +35,9 @@ import {
   DriftSignal,
   DriftSummary,
   GovernanceAssessment,
+  GovernanceNode,
   GovernanceProfile,
+  GovernanceRelation,
   MetricSnapshot,
   rankTopViolations,
   SnapshotComparison,
@@ -51,7 +52,7 @@ import {
   summarizeSmellClusters,
   summarizeDriftInterpretation,
   summarizeDrift,
-  scopeGovernanceDependencies,
+  scopeGovernanceRelations,
 } from '@anarchitects/governance-core';
 
 import {
@@ -92,9 +93,17 @@ import {
   resolveSnapshotPath,
 } from './snapshot-runtime.js';
 import type { GovernanceAssessmentArtifacts } from './build-assessment-artifacts.js';
-import type { ConformanceSnapshot } from '../conformance-adapter/conformance-adapter.js';
+import type {
+  ConformanceFinding,
+  ConformanceSnapshot,
+} from '../conformance-adapter/conformance-adapter.js';
 import { AI_PAYLOAD_LIMITS } from './ai-payload-limits.js';
-import { composeNxGovernanceRuntime } from './compose-governance-runtime.js';
+import {
+  composeNxGovernanceRuntime,
+  type RuntimeGovernanceNode,
+  type RuntimeGovernanceRelation,
+  type RuntimeGovernanceWorkspace,
+} from './compose-governance-runtime.js';
 
 export interface GovernanceRunOptions {
   profile?: string;
@@ -553,6 +562,8 @@ export async function runGovernanceAiRootCause(
     ...options,
     reportType: 'health',
   });
+  const workspace = readCanonicalWorkspace(assessment);
+  const dependencyRelations = readDependencyRelations(workspace);
 
   const snapshotPaths = await listMetricSnapshots(options.snapshotDir);
   const resolvedSnapshotPath = resolveSnapshotPath(
@@ -578,7 +589,7 @@ export async function runGovernanceAiRootCause(
   const request = buildRootCauseRequest({
     profile: options.profile ?? assessment.profile,
     snapshot,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations,
     metadata: {
       snapshotPath: path.relative(workspaceRoot, snapshotSource),
@@ -592,9 +603,9 @@ export async function runGovernanceAiRootCause(
     payloadScope: rootCausePayloadScope,
   } = buildScopedRootCauseRequest({
     request,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations,
-    dependencyLimit: AI_PAYLOAD_LIMITS.rootCauseDependencies,
+    relationLimit: AI_PAYLOAD_LIMITS.rootCauseDependencies,
     topViolationsLimit: options.topViolations ?? 10,
   });
 
@@ -605,7 +616,7 @@ export async function runGovernanceAiRootCause(
       request: scopedRootCauseRequest,
       analysis,
       payloadScope: {
-        dependencies: rootCausePayloadScope.dependencies,
+        relations: rootCausePayloadScope.relations,
       },
       metadata: {
         snapshotPath: path.relative(workspaceRoot, snapshotSource),
@@ -660,34 +671,40 @@ export async function runGovernanceAiPrImpact(
     ...options,
     reportType: 'health',
   });
+  const workspace = readCanonicalWorkspace(assessment);
+  const projectNodes = readProjectNodes(workspace);
+  const dependencyRelations = readDependencyRelations(workspace);
 
   const baseRef = options.baseRef ?? 'main';
   const headRef = options.headRef ?? 'HEAD';
   const changedFiles = readChangedFiles(baseRef, headRef);
 
-  const affectedProjects = resolveAffectedGovernanceProjects({
-    projects: assessment.workspace.projects,
-    changedFiles,
-  });
-  const affectedProjectSet = new Set(
-    affectedProjects.map((project) => project.name)
+  const affectedNodeIds = collectAffectedNodeIds(projectNodes, changedFiles);
+  const { items: scopedRelations } = scopeGovernanceRelations(
+    dependencyRelations,
+    affectedNodeIds
   );
-  const { items: scopedDependencies } = scopeGovernanceDependencies(
-    assessment.workspace.dependencies,
-    affectedProjectSet
+  const affectedRelationIds = collectAffectedRelationIds(
+    workspace.relations,
+    affectedNodeIds
   );
   const prImpactContext = buildPrImpactContext({
-    affectedProjects,
-    dependencies: assessment.workspace.dependencies,
-    projects: assessment.workspace.projects,
+    affectedNodeIds: [...affectedNodeIds].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+    relations: dependencyRelations,
+    nodes: projectNodes,
     changedFiles,
     changedFilesCount: changedFiles.length,
   });
 
   const request = buildPrImpactRequest({
     profile: options.profile ?? assessment.profile,
-    affectedProjects: affectedProjects.map((project) => project.name),
-    dependencies: scopedDependencies,
+    affectedNodeIds: [...affectedNodeIds].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+    affectedRelationIds,
+    relations: scopedRelations,
     metadata: {
       baseRef,
       headRef,
@@ -697,9 +714,9 @@ export async function runGovernanceAiPrImpact(
   });
 
   const analysis = summarizePrImpact(request);
-  const prImpactDependencySlice = scopeGovernanceDependencies(
-    scopedDependencies,
-    affectedProjectSet,
+  const prImpactRelationSlice = scopeGovernanceRelations(
+    scopedRelations,
+    affectedNodeIds,
     AI_PAYLOAD_LIMITS.prImpactDependencies
   );
 
@@ -707,15 +724,15 @@ export async function runGovernanceAiPrImpact(
     ...request,
     inputs: {
       ...request.inputs,
-      dependencies: prImpactDependencySlice.items,
+      relations: prImpactRelationSlice.items,
       metadata: {
         ...(request.inputs.metadata ?? {}),
         payloadScope: {
-          dependencies: prImpactDependencySlice.truncation,
-          affectedProjects: buildGovernancePayloadTruncationMetadata(
-            affectedProjects.length,
-            affectedProjects.length,
-            affectedProjects.length
+          relations: prImpactRelationSlice.truncation,
+          affectedNodes: buildGovernancePayloadTruncationMetadata(
+            affectedNodeIds.size,
+            affectedNodeIds.size,
+            affectedNodeIds.size
           ),
         },
       },
@@ -729,7 +746,7 @@ export async function runGovernanceAiPrImpact(
       request: scopedPrImpactRequest,
       analysis,
       payloadScope: {
-        dependencies: prImpactDependencySlice.truncation,
+        relations: prImpactRelationSlice.truncation,
       },
     }),
   });
@@ -865,47 +882,61 @@ export async function runGovernanceAiCognitiveLoad(
     ...options,
     reportType: 'health',
   });
+  const workspace = readCanonicalWorkspace(assessment);
+  const projectNodes = readProjectNodes(workspace);
+  const dependencyRelations = readDependencyRelations(workspace);
 
-  const selectedProjects = assessment.workspace.projects
-    .filter((project) => {
+  const selectedNodes = projectNodes
+    .filter((node) => {
       if (options.project) {
-        return project.name === options.project;
+        return (
+          resolveNodeLabel(node) === options.project ||
+          node.id === options.project
+        );
       }
 
       if (options.domain) {
-        return project.domain === options.domain;
+        return readNodeDomain(node, readNodeTags(node)) === options.domain;
       }
 
       return true;
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => resolveNodeLabel(a).localeCompare(resolveNodeLabel(b)));
 
-  const selectedProjectNames = new Set(
-    selectedProjects.map((project) => project.name)
-  );
-  const { items: scopedDependencies } = scopeGovernanceDependencies(
-    assessment.workspace.dependencies,
-    selectedProjectNames
+  const selectedNodeIds = new Set(selectedNodes.map((node) => node.id));
+  const { items: scopedRelations } = scopeGovernanceRelations(
+    dependencyRelations,
+    selectedNodeIds
   );
   const cognitiveLoadContext = buildCognitiveLoadContext({
-    selectedProjects,
-    dependencies: assessment.workspace.dependencies,
-    projects: assessment.workspace.projects,
+    selectedNodeIds: [...selectedNodeIds].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+    relations: dependencyRelations,
+    nodes: projectNodes,
     scope: options.project
       ? 'project'
       : options.domain
       ? 'domain'
       : 'workspace',
-    project: options.project,
+    nodeId: selectedNodes[0]?.id,
     domain: options.domain,
     topProjectsLimit: Math.max(1, options.topProjects ?? 10),
   });
 
   const request = buildCognitiveLoadRequest({
     profile: options.profile ?? assessment.profile,
-    affectedProjects: selectedProjects.map((project) => project.name),
-    dependencies: scopedDependencies,
-    metadata: { ...cognitiveLoadContext },
+    affectedNodeIds: [...selectedNodeIds].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+    affectedRelationIds: collectAffectedRelationIds(
+      workspace.relations,
+      selectedNodeIds
+    ),
+    relations: scopedRelations,
+    metadata: {
+      ...cognitiveLoadContext,
+    },
   });
 
   const analysis = summarizeCognitiveLoad(request);
@@ -938,19 +969,12 @@ export async function runGovernanceAiRecommendations(
     ...options,
     reportType: 'health',
   });
+  const dependencyRelations = readDependencyRelations(
+    readCanonicalWorkspace(assessment)
+  );
 
   const prioritizedViolations = rankTopViolations(
-    assessment.violations.map((violation) => ({
-      type: violation.ruleId,
-      source: violation.project,
-      target:
-        typeof violation.details?.target === 'string'
-          ? violation.details.target
-          : undefined,
-      severity: violation.severity,
-      message: violation.message,
-      ruleId: violation.ruleId,
-    })),
+    assessment.violations.map(toRankedViolationInput),
     options.topViolations ?? 10
   );
 
@@ -976,7 +1000,7 @@ export async function runGovernanceAiRecommendations(
 
   const request = buildArchitectureRecommendationsRequest({
     profile: options.profile ?? assessment.profile,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations: prioritizedViolations,
     comparison,
     metadata: {
@@ -1017,19 +1041,12 @@ export async function runGovernanceAiSmellClusters(
     ...options,
     reportType: 'health',
   });
+  const dependencyRelations = readDependencyRelations(
+    readCanonicalWorkspace(assessment)
+  );
 
   const prioritizedViolations = rankTopViolations(
-    assessment.violations.map((violation) => ({
-      type: violation.ruleId,
-      source: violation.project,
-      target:
-        typeof violation.details?.target === 'string'
-          ? violation.details.target
-          : undefined,
-      severity: violation.severity,
-      message: violation.message,
-      ruleId: violation.ruleId,
-    })),
+    assessment.violations.map(toRankedViolationInput),
     options.topViolations ?? 10
   );
 
@@ -1044,7 +1061,7 @@ export async function runGovernanceAiSmellClusters(
 
   const request = buildSmellClustersRequest({
     profile: options.profile ?? assessment.profile,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations: prioritizedViolations,
     metadata: {
       analyzedViolations: prioritizedViolations.length,
@@ -1085,19 +1102,12 @@ export async function runGovernanceAiRefactoringSuggestions(
     ...options,
     reportType: 'health',
   });
+  const workspace = readCanonicalWorkspace(assessment);
+  const projectNodes = readProjectNodes(workspace);
+  const dependencyRelations = readDependencyRelations(workspace);
 
   const prioritizedViolations = rankTopViolations(
-    assessment.violations.map((violation) => ({
-      type: violation.ruleId,
-      source: violation.project,
-      target:
-        typeof violation.details?.target === 'string'
-          ? violation.details.target
-          : undefined,
-      severity: violation.severity,
-      message: violation.message,
-      ruleId: violation.ruleId,
-    })),
+    assessment.violations.map(toRankedViolationInput),
     options.topViolations ?? 10
   );
 
@@ -1109,15 +1119,15 @@ export async function runGovernanceAiRefactoringSuggestions(
   );
   const refactoringContext = buildRefactoringSuggestionsContext({
     violations: prioritizedViolations,
-    dependencies: assessment.workspace.dependencies,
-    projects: assessment.workspace.projects,
+    relations: dependencyRelations,
+    nodes: projectNodes,
     recentSnapshots,
     topProjectsLimit,
   });
 
   const request = buildRefactoringSuggestionsRequest({
     profile: options.profile ?? assessment.profile,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations: prioritizedViolations,
     metadata: { ...refactoringContext },
   });
@@ -1247,25 +1257,18 @@ export async function runGovernanceAiOnboarding(
     ...options,
     reportType: 'health',
   });
+  const workspace = readCanonicalWorkspace(assessment);
+  const projectNodes = readProjectNodes(workspace);
+  const dependencyRelations = readDependencyRelations(workspace);
 
   const prioritizedViolations = rankTopViolations(
-    assessment.violations.map((violation) => ({
-      type: violation.ruleId,
-      source: violation.project,
-      target:
-        typeof violation.details?.target === 'string'
-          ? violation.details.target
-          : undefined,
-      severity: violation.severity,
-      message: violation.message,
-      ruleId: violation.ruleId,
-    })),
+    assessment.violations.map(toRankedViolationInput),
     options.topViolations ?? 10
   );
 
   const onboardingContext = buildOnboardingContext({
-    projects: assessment.workspace.projects,
-    dependencies: assessment.workspace.dependencies,
+    nodes: projectNodes,
+    relations: dependencyRelations,
     topViolations: prioritizedViolations,
     topProjectsLimit: Math.max(1, options.topProjects ?? 5),
     totalViolationsCount: assessment.violations.length,
@@ -1273,7 +1276,7 @@ export async function runGovernanceAiOnboarding(
 
   const request = buildOnboardingRequest({
     profile: options.profile ?? assessment.profile,
-    dependencies: assessment.workspace.dependencies,
+    relations: dependencyRelations,
     topViolations: prioritizedViolations,
     metadata: { ...onboardingContext },
   });
@@ -1357,7 +1360,8 @@ async function buildAssessmentArtifacts(
     profileOverrides: overrides,
     warnings: overrides.runtimeWarnings,
     exceptions: overrides.exceptions,
-    conformanceFindings: conformanceSnapshot?.findings ?? [],
+    conformanceFindings:
+      conformanceSnapshot?.findings.map(toGovernanceConformanceFinding) ?? [],
     asOf: artifactsOptions.asOf,
   });
 
@@ -1392,6 +1396,217 @@ function resolveProfileConfiguredOutput(
   }
 
   return 'cli';
+}
+
+function readCanonicalWorkspace(
+  assessment: GovernanceAssessment
+): RuntimeGovernanceWorkspace {
+  return assessment.workspace as unknown as RuntimeGovernanceWorkspace;
+}
+
+function readProjectNodes(
+  workspace: RuntimeGovernanceWorkspace
+): GovernanceNode[] {
+  return [...workspace.nodes]
+    .filter((node) => node.kind === 'project')
+    .map(toGovernanceNode)
+    .sort((left, right) =>
+      resolveNodeLabel(left).localeCompare(resolveNodeLabel(right))
+    );
+}
+
+function readDependencyRelations(
+  workspace: RuntimeGovernanceWorkspace
+): GovernanceRelation[] {
+  return [...workspace.relations]
+    .filter((relation) => relation.kind === 'dependency')
+    .map(toGovernanceRelation)
+    .sort((left, right) =>
+      resolveRelationId(left).localeCompare(resolveRelationId(right))
+    );
+}
+
+function collectAffectedNodeIds(
+  nodes: readonly GovernanceNode[],
+  changedFiles: readonly string[]
+): Set<string> {
+  const affectedNodeIds = new Set<string>();
+
+  for (const node of nodes) {
+    const candidateRoots = [node.root, node.path]
+      .filter(
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0
+      )
+      .sort((left, right) => left.localeCompare(right));
+
+    if (
+      candidateRoots.some((root) =>
+        changedFiles.some((changedFile) => isFileWithinRoot(changedFile, root))
+      )
+    ) {
+      affectedNodeIds.add(node.id);
+    }
+  }
+
+  return affectedNodeIds;
+}
+
+function collectAffectedRelationIds(
+  relations: readonly GovernanceRelation[],
+  affectedNodeIds: ReadonlySet<string>
+): string[] {
+  return relations
+    .filter(
+      (relation) =>
+        affectedNodeIds.has(relation.sourceNodeId) ||
+        affectedNodeIds.has(relation.targetNodeId)
+    )
+    .map((relation) => resolveRelationId(relation))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function resolveNodeLabel(node: Pick<GovernanceNode, 'id' | 'name'>): string {
+  return node.name ?? node.id;
+}
+
+function resolveRelationId(relation: RuntimeGovernanceRelation): string {
+  if (relation.id) {
+    return relation.id;
+  }
+
+  const relationMetadata = relation.metadata ?? {};
+  const nxMetadata = asRecord(relationMetadata['nx']);
+  const dependencyType =
+    readString(nxMetadata?.['dependencyType']) ??
+    readString(relationMetadata['dependencyType']) ??
+    relation.kind ??
+    'unknown';
+  const sourceFile =
+    readString(nxMetadata?.['sourceFile']) ??
+    readString(relationMetadata['sourceFile']) ??
+    '';
+
+  return `${relation.sourceNodeId}->${relation.targetNodeId}:${dependencyType}:${sourceFile}`;
+}
+
+function toGovernanceNode(node: RuntimeGovernanceNode): GovernanceNode {
+  return {
+    id: node.id,
+    name: node.name,
+    kind: node.kind ?? 'unknown',
+    technology: node.technology,
+    sourceSystem: node.sourceSystem,
+    root: node.root,
+    path: node.path,
+    tags: [...(node.tags ?? [])],
+    ...(node.classification ? { classification: node.classification } : {}),
+    ...(node.ownership ? { ownership: node.ownership } : {}),
+    metadata: node.metadata ?? {},
+  };
+}
+
+function toGovernanceRelation(
+  relation: RuntimeGovernanceRelation
+): GovernanceRelation {
+  return {
+    id: resolveRelationId(relation),
+    sourceNodeId: relation.sourceNodeId,
+    targetNodeId: relation.targetNodeId,
+    kind: relation.kind ?? 'unknown',
+    metadata: relation.metadata ?? {},
+  };
+}
+
+function readNodeTags(
+  node: Pick<GovernanceNode, 'tags' | 'classification'>
+): string[] {
+  if (Array.isArray(node.tags) && node.tags.length > 0) {
+    return [...node.tags];
+  }
+
+  const classification = asRecord(node.classification);
+  const classificationTags = classification?.['tags'];
+
+  return Array.isArray(classificationTags)
+    ? classificationTags.filter((tag): tag is string => typeof tag === 'string')
+    : [];
+}
+
+function readNodeDomain(
+  node: Pick<GovernanceNode, 'classification'>,
+  tags: readonly string[]
+): string | undefined {
+  const classification = asRecord(node.classification);
+
+  return readString(classification?.['domain']) ?? readTagValue(tags, 'domain');
+}
+
+function isFileWithinRoot(filePath: string, root: string): boolean {
+  return filePath === root || filePath.startsWith(`${root}/`);
+}
+
+function readTagValue(
+  tags: readonly string[],
+  prefix: string
+): string | undefined {
+  const tag = tags.find((entry) => entry.startsWith(`${prefix}:`));
+
+  return tag ? tag.split(':').slice(1).join(':') : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return undefined;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function toRankedViolationInput(
+  violation: GovernanceAssessment['violations'][number]
+): Parameters<typeof rankTopViolations>[0][number] {
+  const source =
+    violation.subjectId ??
+    violation.reference?.nodeId ??
+    violation.reference?.relationId ??
+    'unknown';
+  const target =
+    typeof violation.details?.target === 'string'
+      ? violation.details.target
+      : violation.reference?.relatedNodeIds?.find(
+          (nodeId) => typeof nodeId === 'string' && nodeId !== source
+        );
+
+  return {
+    type: violation.ruleId,
+    source,
+    target,
+    severity: violation.severity,
+    message: violation.message,
+    ruleId: violation.ruleId,
+  };
+}
+
+function toGovernanceConformanceFinding(
+  finding: ConformanceFinding
+): NonNullable<
+  Parameters<typeof composeNxGovernanceRuntime>[0]['conformanceFindings']
+>[number] {
+  return {
+    ruleId: finding.ruleId,
+    nodeId: finding.projectId,
+    relatedNodeIds: [...finding.relatedProjectIds],
+    relatedRelationIds: [],
+    category: finding.category,
+    severity: finding.severity,
+    message: finding.message,
+    ...(finding.metadata ? { metadata: finding.metadata } : {}),
+  };
 }
 
 function normalizeMetricWeights(

@@ -36,7 +36,7 @@ describe('loadProfileOverrides', () => {
       );
 
       expect(result.exceptions).toEqual([]);
-      expect(result.projectOverrides).toEqual({});
+      expect(result.nodeOverrides).toEqual({});
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }
@@ -59,7 +59,7 @@ describe('loadProfileOverrides', () => {
         metrics: {
           architecturalEntropyWeight: 0.4,
         },
-        projectOverrides: {
+        nodeOverrides: {
           'billing-app': {
             documentation: true,
           },
@@ -78,7 +78,7 @@ describe('loadProfileOverrides', () => {
         metadataField: 'ownership',
       });
       expect(result.metrics?.['architectural-entropy']).toBe(0.4);
-      expect(result.projectOverrides).toEqual({
+      expect(result.nodeOverrides).toEqual({
         'billing-app': {
           documentation: true,
         },
@@ -320,7 +320,7 @@ describe('loadProfileOverrides', () => {
         {
           boundaryPolicySource: 'profile',
           layers: ['app', 'feature', 'util'],
-          projectOverrides: {
+          nodeOverrides: {
             checkout: {
               documentation: true,
             },
@@ -335,7 +335,7 @@ describe('loadProfileOverrides', () => {
       );
 
       expect(result.layers).toEqual(['app', 'feature', 'util']);
-      expect(result.projectOverrides).toEqual({
+      expect(result.nodeOverrides).toEqual({
         checkout: {
           documentation: true,
         },
@@ -440,11 +440,7 @@ describe('loadProfileOverrides', () => {
             scope: {
               source: 'conformance',
               ruleId: ' enforce-module-boundaries ',
-              relatedProjectIds: [
-                'payments-lib',
-                'checkout-app',
-                'payments-lib',
-              ],
+              relatedNodeIds: ['payments-lib', 'checkout-app', 'payments-lib'],
             },
             reason: ' Known migration overlap. ',
             owner: ' @org/architecture ',
@@ -458,8 +454,8 @@ describe('loadProfileOverrides', () => {
             scope: {
               source: 'policy',
               ruleId: ' domain-boundary ',
-              projectId: ' billing-feature ',
-              targetProjectId: ' shared-util ',
+              nodeId: ' billing-feature ',
+              relatedNodeIds: [' shared-util '],
             },
             reason: ' Transitional boundary. ',
             owner: ' @org/architecture ',
@@ -482,8 +478,8 @@ describe('loadProfileOverrides', () => {
           scope: {
             source: 'policy',
             ruleId: 'domain-boundary',
-            projectId: 'billing-feature',
-            targetProjectId: 'shared-util',
+            nodeId: 'billing-feature',
+            relatedNodeIds: ['shared-util'],
           },
           reason: 'Transitional boundary.',
           owner: '@org/architecture',
@@ -497,7 +493,7 @@ describe('loadProfileOverrides', () => {
           scope: {
             source: 'conformance',
             ruleId: 'enforce-module-boundaries',
-            relatedProjectIds: ['checkout-app', 'payments-lib'],
+            relatedNodeIds: ['checkout-app', 'payments-lib'],
           },
           reason: 'Known migration overlap.',
           owner: '@org/architecture',
@@ -618,7 +614,7 @@ describe('loadProfileOverrides', () => {
             scope: {
               source: 'policy',
               ruleId: 'domain-boundary',
-              projectId: 'billing-feature',
+              nodeId: 'billing-feature',
             },
             reason: 'Missing review window.',
             owner: '@org/architecture',
@@ -654,7 +650,7 @@ describe('loadProfileOverrides', () => {
             scope: {
               source: 'policy',
               ruleId: 'domain-boundary',
-              projectId: 'billing-feature',
+              nodeId: 'billing-feature',
             },
             reason: 'First exception.',
             owner: '@org/architecture',

@@ -21,8 +21,8 @@ describe('governance extension runtime', () => {
       id: 'workspace',
       name: 'workspace',
       root: '/repo',
-      projects: [],
-      dependencies: [],
+      nodes: [],
+      relations: [],
     },
     capabilities: new DefaultGovernanceCapabilityRegistry([
       {
@@ -165,7 +165,7 @@ describe('governance extension runtime', () => {
               severity: 'warning',
               category: 'ownership',
               message: 'Ownership gap',
-              relatedProjectIds: ['project-a'],
+              relatedNodeIds: ['project-a'],
               createdAt: '2026-05-21T00:00:00.000Z',
             },
           ],

@@ -154,15 +154,40 @@ describe('governance-graph executor', () => {
 });
 
 function createArtifacts(): GovernanceAssessmentArtifacts {
+  const workspace = {
+    id: 'workspace',
+    name: 'workspace',
+    root: '.',
+    nodes: [
+      {
+        id: 'orders-app',
+        name: 'orders-app',
+        kind: 'project',
+        sourceSystem: 'nx',
+        root: 'apps/orders-app',
+        path: 'apps/orders-app',
+        tags: ['domain:orders'],
+      },
+    ],
+    relations: [
+      {
+        id: 'orders-app->shared-data:static:apps/orders-app/src/main.ts',
+        sourceNodeId: 'orders-app',
+        targetNodeId: 'shared-data',
+        kind: 'dependency',
+        metadata: {
+          nx: {
+            dependencyType: 'static',
+            sourceFile: 'apps/orders-app/src/main.ts',
+          },
+        },
+      },
+    ],
+  } as unknown as GovernanceAssessmentArtifacts['assessment']['workspace'];
+
   return {
     assessment: {
-      workspace: {
-        id: 'workspace',
-        name: 'workspace',
-        root: '.',
-        projects: [],
-        dependencies: [],
-      },
+      workspace,
       profile: 'frontend-layered',
       warnings: [],
       exceptions: {
@@ -201,7 +226,7 @@ function createArtifacts(): GovernanceAssessmentArtifacts {
         grade: 'A',
         hotspots: [],
         metricHotspots: [],
-        projectHotspots: [],
+        subjectHotspots: [],
         explainability: {
           summary: 'Healthy workspace.',
           statusReason: 'No issues.',
