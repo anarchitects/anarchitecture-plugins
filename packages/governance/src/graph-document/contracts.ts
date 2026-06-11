@@ -64,8 +64,8 @@ export interface GovernanceGraphFinding {
   severity: GovernanceSignalSeverity;
   message: string;
   ruleId?: string;
-  projectId?: string;
-  targetProjectId?: string;
+  nodeId?: string;
+  targetNodeId?: string;
   category?: string;
   type?: string;
   sourcePluginId?: string;

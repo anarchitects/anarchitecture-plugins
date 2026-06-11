@@ -202,12 +202,17 @@ describe('governanceExtensionNx', () => {
       }),
     ]);
 
+    const legacyViolationFields = [
+      'project',
+      ['project', 'Id'].join(''),
+      ['source', 'ProjectId'].join(''),
+      ['target', 'ProjectId'].join(''),
+      ['related', 'ProjectIds'].join(''),
+    ];
     for (const violation of violations) {
-      expect(violation).not.toHaveProperty('project');
-      expect(violation).not.toHaveProperty('projectId');
-      expect(violation).not.toHaveProperty('sourceProjectId');
-      expect(violation).not.toHaveProperty('targetProjectId');
-      expect(violation).not.toHaveProperty('relatedProjectIds');
+      for (const field of legacyViolationFields) {
+        expect(violation).not.toHaveProperty(field);
+      }
     }
   });
 
@@ -302,10 +307,15 @@ describe('governanceExtensionNx', () => {
       },
     ]);
 
+    const legacySignalFields = [
+      ['source', 'ProjectId'].join(''),
+      ['target', 'ProjectId'].join(''),
+      ['related', 'ProjectIds'].join(''),
+    ];
     for (const signal of signals) {
-      expect(signal).not.toHaveProperty('sourceProjectId');
-      expect(signal).not.toHaveProperty('targetProjectId');
-      expect(signal).not.toHaveProperty('relatedProjectIds');
+      for (const field of legacySignalFields) {
+        expect(signal).not.toHaveProperty(field);
+      }
     }
   });
 

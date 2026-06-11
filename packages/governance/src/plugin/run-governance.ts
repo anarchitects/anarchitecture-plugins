@@ -1599,8 +1599,8 @@ function toGovernanceConformanceFinding(
 >[number] {
   return {
     ruleId: finding.ruleId,
-    nodeId: finding.projectId,
-    relatedNodeIds: [...finding.relatedProjectIds],
+    nodeId: finding.nodeId,
+    relatedNodeIds: [...finding.relatedNodeIds],
     relatedRelationIds: [],
     category: finding.category,
     severity: finding.severity,
