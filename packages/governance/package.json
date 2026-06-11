@@ -1,6 +1,6 @@
 {
   "name": "@anarchitects/nx-governance",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Nx governance plugin for workspace health, boundaries, ownership, and architecture reporting.",
   "type": "module",
   "main": "dist/index.js",
@@ -96,7 +96,7 @@
     ]
   },
   "dependencies": {
-    "@anarchitects/governance-adapter-nx": "0.1.0",
+    "@anarchitects/governance-adapter-nx": "0.2.0",
     "@anarchitects/governance-core": "0.2.0",
     "minimatch": "9.0.5",
     "tslib": "^2.6.2"

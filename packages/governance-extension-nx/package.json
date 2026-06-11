@@ -1,6 +1,6 @@
 {
   "name": "@anarchitects/governance-extension-nx",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Governance Core extension boundary for future Nx-specific governance interpretation.",
   "type": "module",
   "main": "./dist/index.js",
