@@ -309,7 +309,7 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Conformance boundary violation',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );
@@ -413,15 +413,15 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Suppressed conformance boundary violation',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance', 'packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance', 'packages/governance-e2e'],
         },
         {
           id: 'active-finding',
           ruleId: '@nx/conformance/ensure-owners',
           severity: 'warning',
           message: 'Active conformance ownership warning',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );
@@ -632,8 +632,8 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Reactivated conformance boundary violation',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance-e2e'],
         },
       ])
     );
@@ -740,15 +740,15 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Suppressed conformance boundary violation',
-          projectId: 'packages/governance',
-          relatedProjectIds: ['packages/governance', 'packages/governance-e2e'],
+          nodeId: 'packages/governance',
+          relatedNodeIds: ['packages/governance', 'packages/governance-e2e'],
         },
         {
           id: 'stale-owner-finding',
           ruleId: '@nx/conformance/ensure-owners',
           severity: 'warning',
           message: 'Reactivated conformance ownership warning',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );
@@ -969,7 +969,7 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Conformance boundary violation',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );
@@ -1023,7 +1023,7 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Conformance boundary violation',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );
@@ -1460,14 +1460,14 @@ describe('runGovernance', () => {
           ruleId: '@nx/conformance/enforce-project-boundaries',
           severity: 'error',
           message: 'Conformance boundary violation',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
         {
           id: 'finding-ownership',
           ruleId: '@nx/conformance/ensure-owners',
           severity: 'warning',
           message: 'Conformance ownership warning',
-          projectId: 'packages/governance',
+          nodeId: 'packages/governance',
         },
       ])
     );

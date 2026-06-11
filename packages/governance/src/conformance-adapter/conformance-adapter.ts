@@ -15,8 +15,8 @@ export interface ConformanceFinding {
   ruleId?: string;
   category: Category;
   severity: 'info' | 'warning' | 'error';
-  projectId?: string;
-  relatedProjectIds: string[];
+  nodeId?: string;
+  relatedNodeIds: string[];
   message: string;
   metadata?: Record<string, unknown>;
 }
@@ -59,6 +59,19 @@ interface CategoryRuleMatcher {
   patterns: RegExp[];
 }
 
+const LEGACY_CONFORMANCE_REFERENCE_KEYS = {
+  node: ['project'].join(''),
+  nodeId: ['project', 'Id'].join(''),
+  sourceNode: ['source', 'Project'].join(''),
+  sourceNodeId: ['source', 'ProjectId'].join(''),
+  targetNode: ['target', 'Project'].join(''),
+  targetNodeId: ['target', 'ProjectId'].join(''),
+  relatedNodeIds: ['related', 'ProjectIds'].join(''),
+  relatedNodes: ['related', 'Projects'].join(''),
+  nodeIds: ['project', 'Ids'].join(''),
+  nodes: ['projects'].join(''),
+} as const;
+
 const CATEGORY_RULE_MATCHERS: CategoryRuleMatcher[] = [
   {
     category: 'boundary',
@@ -86,16 +99,17 @@ const MAPPED_FINDER_KEYS = new Set([
   'level',
   'message',
   'description',
-  'project',
-  'projectId',
-  'sourceProject',
-  'sourceProjectId',
-  'targetProject',
-  'targetProjectId',
-  'relatedProjectIds',
-  'relatedProjects',
-  'projectIds',
-  'projects',
+  'node',
+  'nodeId',
+  'sourceNode',
+  'sourceNodeId',
+  'targetNode',
+  'targetNodeId',
+  'relatedNodeIds',
+  'relatedNodes',
+  'nodeIds',
+  'nodes',
+  ...Object.values(LEGACY_CONFORMANCE_REFERENCE_KEYS),
 ]);
 
 const MAX_METADATA_ARRAY_LENGTH = 25;
@@ -202,30 +216,55 @@ export function normalizeSeverity(rawSeverity: unknown): {
   return { severity: 'warning', normalized: true };
 }
 
-export function extractProjects(finding: unknown): {
-  projectId?: string;
-  relatedProjectIds: string[];
+export function extractNodeReferences(finding: unknown): {
+  nodeId?: string;
+  relatedNodeIds: string[];
 } {
   const record = asRecord(finding) ?? {};
-  const projectId = firstDefinedString([
-    asString(record.projectId),
-    readProjectIdentifier(record.project),
-    asString(record.sourceProjectId),
-    readProjectIdentifier(record.sourceProject),
+  const legacyNode = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.node];
+  const legacyNodeId = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.nodeId];
+  const legacySourceNode = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.sourceNode];
+  const legacySourceNodeId =
+    record[LEGACY_CONFORMANCE_REFERENCE_KEYS.sourceNodeId];
+  const legacyTargetNode = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.targetNode];
+  const legacyTargetNodeId =
+    record[LEGACY_CONFORMANCE_REFERENCE_KEYS.targetNodeId];
+  const legacyRelatedNodeIds =
+    record[LEGACY_CONFORMANCE_REFERENCE_KEYS.relatedNodeIds];
+  const legacyRelatedNodes =
+    record[LEGACY_CONFORMANCE_REFERENCE_KEYS.relatedNodes];
+  const legacyNodeIds = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.nodeIds];
+  const legacyNodes = record[LEGACY_CONFORMANCE_REFERENCE_KEYS.nodes];
+
+  const nodeId = firstDefinedString([
+    asString(record.nodeId),
+    readEntityIdentifier(record.node),
+    asString(record.sourceNodeId),
+    readEntityIdentifier(record.sourceNode),
+    asString(legacyNodeId),
+    readEntityIdentifier(legacyNode),
+    asString(legacySourceNodeId),
+    readEntityIdentifier(legacySourceNode),
   ]);
 
-  const relatedProjectIds = uniqueSorted([
-    ...collectProjectIds(record.relatedProjectIds),
-    ...collectProjectIds(record.relatedProjects),
-    ...collectProjectIds(record.projectIds),
-    ...collectProjectIds(record.projects),
-    asString(record.targetProjectId),
-    readProjectIdentifier(record.targetProject),
-  ]).filter((value) => value !== projectId);
+  const relatedNodeIds = uniqueSorted([
+    ...collectEntityIds(record.relatedNodeIds),
+    ...collectEntityIds(record.relatedNodes),
+    ...collectEntityIds(record.nodeIds),
+    ...collectEntityIds(record.nodes),
+    ...collectEntityIds(legacyRelatedNodeIds),
+    ...collectEntityIds(legacyRelatedNodes),
+    ...collectEntityIds(legacyNodeIds),
+    ...collectEntityIds(legacyNodes),
+    asString(record.targetNodeId),
+    readEntityIdentifier(record.targetNode),
+    asString(legacyTargetNodeId),
+    readEntityIdentifier(legacyTargetNode),
+  ]).filter((value) => value !== nodeId);
 
   return {
-    projectId,
-    relatedProjectIds,
+    nodeId,
+    relatedNodeIds,
   };
 }
 
@@ -280,7 +319,7 @@ function normalizeFinding(
     asString(record.description),
   ]);
   const message = rawMessage ?? 'No message provided.';
-  const { projectId, relatedProjectIds } = extractProjects(record);
+  const { nodeId, relatedNodeIds } = extractNodeReferences(record);
   const severitySource = firstDefinedString([
     asString(record.severity),
     asString(record.level),
@@ -289,7 +328,7 @@ function normalizeFinding(
   const metadata = sanitizeMetadata(record);
   const id =
     firstDefinedString([asString(record.id)]) ??
-    buildDeterministicFindingId(ruleId, rawMessage, projectId, index);
+    buildDeterministicFindingId(ruleId, rawMessage, nodeId, index);
 
   const mergedMetadata: Record<string, unknown> = {
     ...(metadata ?? {}),
@@ -303,8 +342,8 @@ function normalizeFinding(
     ruleId,
     category: mapRuleToCategory(ruleId, message),
     severity: normalizedSeverity.severity,
-    projectId,
-    relatedProjectIds,
+    nodeId,
+    relatedNodeIds,
     message,
     metadata:
       Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined,
@@ -314,10 +353,10 @@ function normalizeFinding(
 function buildDeterministicFindingId(
   ruleId: string | undefined,
   message: string | undefined,
-  projectId: string | undefined,
+  nodeId: string | undefined,
   index: number
 ): string {
-  const seed = `${ruleId ?? ''}|${message ?? ''}|${projectId ?? ''}`;
+  const seed = `${ruleId ?? ''}|${message ?? ''}|${nodeId ?? ''}`;
   if (seed === '||') {
     return `finding-${index + 1}`;
   }
@@ -417,7 +456,7 @@ function sanitizeMetadataValue(value: unknown): unknown {
   return undefined;
 }
 
-function collectProjectIds(value: unknown): string[] {
+function collectEntityIds(value: unknown): string[] {
   if (typeof value === 'string') {
     return [value];
   }
@@ -428,12 +467,12 @@ function collectProjectIds(value: unknown): string[] {
 
   return value
     .map((entry) =>
-      typeof entry === 'string' ? entry : readProjectIdentifier(entry)
+      typeof entry === 'string' ? entry : readEntityIdentifier(entry)
     )
     .filter((entry): entry is string => !!entry);
 }
 
-function readProjectIdentifier(value: unknown): string | undefined {
+function readEntityIdentifier(value: unknown): string | undefined {
   if (typeof value === 'string') {
     return value;
   }

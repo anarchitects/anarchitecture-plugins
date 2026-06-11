@@ -37,7 +37,7 @@ export interface GovernanceGraphBuilderInput {
 }
 
 interface DraftGraphFinding extends GovernanceGraphFinding {
-  relatedProjectIds: string[];
+  relatedNodeIds: string[];
 }
 
 interface DraftGraphNode {
@@ -159,7 +159,7 @@ export function buildGovernanceGraphDocument(
       const sortedFindings = [...findings].sort(compareFindings);
       const resolvedNode = nodes.find((candidate) => candidate.id === node.id);
       const nodeStatus = deriveGovernanceGraphNodeStatus({
-        findings: sortedFindings.map(stripRelatedProjects),
+        findings: sortedFindings.map(stripRelatedNodeIds),
         owner: node.owner,
         ownershipSource: normalizeOwnershipSource(
           resolvedNode?.ownership?.source
@@ -172,7 +172,7 @@ export function buildGovernanceGraphDocument(
 
       return {
         ...node,
-        findings: sortedFindings.map(stripRelatedProjects),
+        findings: sortedFindings.map(stripRelatedNodeIds),
         badges: nodeStatus.badges,
         health: nodeStatus.health,
         score: nodeStatus.score,
@@ -184,13 +184,13 @@ export function buildGovernanceGraphDocument(
     .map(({ edge, findings }) => {
       const sortedFindings = [...findings].sort(compareFindings);
       const edgeStatus = deriveGovernanceGraphEdgeStatus({
-        findings: sortedFindings.map(stripRelatedProjects),
+        findings: sortedFindings.map(stripRelatedNodeIds),
         isKnown: isKnownEdge(edge),
       });
 
       return {
         ...edge,
-        findings: sortedFindings.map(stripRelatedProjects),
+        findings: sortedFindings.map(stripRelatedNodeIds),
         health: edgeStatus.health,
         score: edgeStatus.score,
       };
@@ -239,13 +239,13 @@ function buildFindings(
 }
 
 function mapSignalToFinding(signal: GovernanceSignal): DraftGraphFinding {
-  const projectId = normalizeText(signal.nodeId);
-  const relatedProjectIds = uniqueSorted([
-    projectId,
+  const nodeId = normalizeText(signal.nodeId);
+  const relatedNodeIds = uniqueSorted([
+    nodeId,
     ...(signal.relatedNodeIds ?? []),
   ]);
-  const targetProjectId =
-    relatedProjectIds.find((candidate) => candidate !== projectId) ??
+  const targetNodeId =
+    relatedNodeIds.find((candidate) => candidate !== nodeId) ??
     normalizeText(signal.relationId);
 
   return {
@@ -256,26 +256,26 @@ function mapSignalToFinding(signal: GovernanceSignal): DraftGraphFinding {
     ...(readRuleId(signal.metadata)
       ? { ruleId: readRuleId(signal.metadata) }
       : {}),
-    ...(projectId ? { projectId } : {}),
-    ...(targetProjectId ? { targetProjectId } : {}),
+    ...(nodeId ? { nodeId } : {}),
+    ...(targetNodeId ? { targetNodeId } : {}),
     category: signal.category,
     type: signal.type,
     ...(signal.sourcePluginId ? { sourcePluginId: signal.sourcePluginId } : {}),
-    relatedProjectIds,
+    relatedNodeIds,
   };
 }
 
 function mapViolationToFinding(violation: Violation): DraftGraphFinding {
-  const projectId = normalizeText(
+  const nodeId = normalizeText(
     violation.subjectId ?? violation.reference?.nodeId
   );
-  const relatedProjectIds = uniqueSorted([
-    projectId,
+  const relatedNodeIds = uniqueSorted([
+    nodeId,
     ...(violation.reference?.relatedNodeIds ?? []),
   ]);
-  const targetProjectId =
+  const targetNodeId =
     normalizeText(asString(violation.details?.targetProject)) ??
-    relatedProjectIds.find((candidate) => candidate !== projectId) ??
+    relatedNodeIds.find((candidate) => candidate !== nodeId) ??
     normalizeText(violation.reference?.relationId);
 
   return {
@@ -284,13 +284,13 @@ function mapViolationToFinding(violation: Violation): DraftGraphFinding {
     severity: violation.severity,
     message: violation.message,
     ruleId: violation.ruleId,
-    ...(projectId ? { projectId } : {}),
-    ...(targetProjectId ? { targetProjectId } : {}),
+    ...(nodeId ? { nodeId } : {}),
+    ...(targetNodeId ? { targetNodeId } : {}),
     category: violation.category,
     ...(violation.sourcePluginId
       ? { sourcePluginId: violation.sourcePluginId }
       : {}),
-    relatedProjectIds,
+    relatedNodeIds,
   };
 }
 
@@ -298,12 +298,12 @@ function resolveEdgeForFinding(
   finding: DraftGraphFinding,
   edgesByPair: Map<string, DraftGraphEdge[]>
 ): DraftGraphEdge | undefined {
-  if (!finding.projectId || !finding.targetProjectId) {
+  if (!finding.nodeId || !finding.targetNodeId) {
     return undefined;
   }
 
   return edgesByPair.get(
-    buildEdgePairKey(finding.projectId, finding.targetProjectId)
+    buildEdgePairKey(finding.nodeId, finding.targetNodeId)
   )?.[0];
 }
 
@@ -312,9 +312,9 @@ function resolveNodeForFinding(
   nodes: Map<string, DraftGraphNode>
 ): DraftGraphNode | undefined {
   const candidates = uniqueSorted([
-    finding.projectId,
-    finding.targetProjectId,
-    ...finding.relatedProjectIds,
+    finding.nodeId,
+    finding.targetNodeId,
+    ...finding.relatedNodeIds,
   ]);
 
   for (const candidate of candidates) {
@@ -435,11 +435,11 @@ function compareFindings(
     compareFindingSeverity(left.severity, right.severity) ||
     compareFindingSources(left.source, right.source) ||
     (left.ruleId ?? '').localeCompare(right.ruleId ?? '') ||
-    (left.projectId ?? '').localeCompare(right.projectId ?? '') ||
-    (left.targetProjectId ?? '').localeCompare(right.targetProjectId ?? '') ||
-    left.relatedProjectIds
+    (left.nodeId ?? '').localeCompare(right.nodeId ?? '') ||
+    (left.targetNodeId ?? '').localeCompare(right.targetNodeId ?? '') ||
+    left.relatedNodeIds
       .join(',')
-      .localeCompare(right.relatedProjectIds.join(',')) ||
+      .localeCompare(right.relatedNodeIds.join(',')) ||
     (left.category ?? '').localeCompare(right.category ?? '') ||
     (left.type ?? '').localeCompare(right.type ?? '') ||
     left.message.localeCompare(right.message) ||
@@ -490,12 +490,12 @@ function compareHealth(
 }
 
 function compareViolations(left: Violation, right: Violation): number {
-  const leftProjectId =
+  const leftSubjectId =
     left.subjectId ??
     left.reference?.nodeId ??
     left.reference?.relationId ??
     '';
-  const rightProjectId =
+  const rightSubjectId =
     right.subjectId ??
     right.reference?.nodeId ??
     right.reference?.relationId ??
@@ -504,7 +504,7 @@ function compareViolations(left: Violation, right: Violation): number {
   return (
     compareFindingSeverity(left.severity, right.severity) ||
     left.ruleId.localeCompare(right.ruleId) ||
-    leftProjectId.localeCompare(rightProjectId) ||
+    leftSubjectId.localeCompare(rightSubjectId) ||
     left.message.localeCompare(right.message) ||
     left.id.localeCompare(right.id)
   );
@@ -527,9 +527,9 @@ function buildFindingIdentity(finding: DraftGraphFinding): string {
     finding.source,
     finding.severity,
     finding.ruleId ?? '',
-    finding.projectId ?? '',
-    finding.targetProjectId ?? '',
-    finding.relatedProjectIds.join(','),
+    finding.nodeId ?? '',
+    finding.targetNodeId ?? '',
+    finding.relatedNodeIds.join(','),
     finding.sourcePluginId ?? '',
     finding.message,
   ].join('|');
@@ -762,7 +762,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function stripRelatedProjects(
+function stripRelatedNodeIds(
   finding: DraftGraphFinding
 ): GovernanceGraphFinding {
   return {
@@ -771,10 +771,8 @@ function stripRelatedProjects(
     severity: finding.severity,
     message: finding.message,
     ...(finding.ruleId ? { ruleId: finding.ruleId } : {}),
-    ...(finding.projectId ? { projectId: finding.projectId } : {}),
-    ...(finding.targetProjectId
-      ? { targetProjectId: finding.targetProjectId }
-      : {}),
+    ...(finding.nodeId ? { nodeId: finding.nodeId } : {}),
+    ...(finding.targetNodeId ? { targetNodeId: finding.targetNodeId } : {}),
     ...(finding.category ? { category: finding.category } : {}),
     ...(finding.type ? { type: finding.type } : {}),
     ...(finding.sourcePluginId

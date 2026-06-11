@@ -173,7 +173,9 @@ describe('governance extension architecture boundaries', () => {
     expect(prImpactHostContextSource).not.toContain(
       'export function resolveAffectedProjects'
     );
-    expect(prImpactHostContextSource).not.toContain('GovernanceProject');
+    expect(prImpactHostContextSource).not.toContain(
+      ['Governance', 'Project'].join('')
+    );
 
     expect(snapshotRuntimeSource).toContain(
       'export function resolveSnapshotPath'

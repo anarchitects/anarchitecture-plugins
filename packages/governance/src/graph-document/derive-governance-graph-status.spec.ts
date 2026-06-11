@@ -219,10 +219,8 @@ function finding(
     severity: overrides.severity ?? 'info',
     message: overrides.message ?? 'Finding message.',
     ...(overrides.ruleId ? { ruleId: overrides.ruleId } : {}),
-    ...(overrides.projectId ? { projectId: overrides.projectId } : {}),
-    ...(overrides.targetProjectId
-      ? { targetProjectId: overrides.targetProjectId }
-      : {}),
+    ...(overrides.nodeId ? { nodeId: overrides.nodeId } : {}),
+    ...(overrides.targetNodeId ? { targetNodeId: overrides.targetNodeId } : {}),
     ...(overrides.category ? { category: overrides.category } : {}),
     ...(overrides.type ? { type: overrides.type } : {}),
     ...(overrides.sourcePluginId

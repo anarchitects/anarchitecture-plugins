@@ -5,7 +5,7 @@ import path from 'node:path';
 import {
   ConformanceAdapter,
   ConformanceAdapterError,
-  extractProjects,
+  extractNodeReferences,
   mapRuleToCategory,
   normalizeSeverity,
   sanitizeMetadata,
@@ -32,8 +32,8 @@ describe('ConformanceAdapter', () => {
         ruleId: 'enforce-project-boundaries',
         category: 'boundary',
         severity: 'error',
-        projectId: undefined,
-        relatedProjectIds: [],
+        nodeId: undefined,
+        relatedNodeIds: [],
         message: 'cross boundary import',
       },
     ]);
@@ -47,7 +47,7 @@ describe('ConformanceAdapter', () => {
           rule: '@nx/conformance/ensure-owners',
           severity: 'warn',
           message: 'missing owner',
-          project: 'libs/shared',
+          node: 'libs/shared',
         },
       ],
     });
@@ -58,8 +58,8 @@ describe('ConformanceAdapter', () => {
       ruleId: '@nx/conformance/ensure-owners',
       category: 'ownership',
       severity: 'warning',
-      projectId: 'libs/shared',
-      relatedProjectIds: [],
+      nodeId: 'libs/shared',
+      relatedNodeIds: [],
       message: 'missing owner',
     });
   });
@@ -73,8 +73,8 @@ describe('ConformanceAdapter', () => {
             {
               severity: 'error',
               message: 'dependency mismatch',
-              projectId: 'a',
-              targetProjectId: 'b',
+              nodeId: 'a',
+              targetNodeId: 'b',
             },
           ],
         },
@@ -87,8 +87,8 @@ describe('ConformanceAdapter', () => {
         ruleId: undefined,
         category: 'dependency',
         severity: 'error',
-        projectId: 'a',
-        relatedProjectIds: ['b'],
+        nodeId: 'a',
+        relatedNodeIds: ['b'],
         message: 'dependency mismatch',
       },
     ]);
@@ -165,10 +165,10 @@ describe('ConformanceAdapter', () => {
 
   it('builds deterministic IDs when missing', () => {
     const first = adapter.readSnapshotFromParsedInput([
-      { ruleId: 'a', message: 'm', projectId: 'p' },
+      { ruleId: 'a', message: 'm', nodeId: 'p' },
     ]);
     const second = adapter.readSnapshotFromParsedInput([
-      { ruleId: 'a', message: 'm', projectId: 'p' },
+      { ruleId: 'a', message: 'm', nodeId: 'p' },
     ]);
 
     expect(first.findings[0].id).toBe(second.findings[0].id);
@@ -185,16 +185,16 @@ describe('ConformanceAdapter', () => {
     expect(snapshot.findings[0].id).toBe('finding-1');
   });
 
-  it('deduplicates and sorts related project ids', () => {
+  it('deduplicates and sorts related node ids', () => {
     const snapshot = adapter.readSnapshotFromParsedInput([
       {
-        projectId: 'a',
-        relatedProjectIds: ['d', 'b', 'd', 'c'],
-        targetProjectId: 'b',
+        nodeId: 'a',
+        relatedNodeIds: ['d', 'b', 'd', 'c'],
+        targetNodeId: 'b',
       },
     ]);
 
-    expect(snapshot.findings[0].relatedProjectIds).toEqual(['b', 'c', 'd']);
+    expect(snapshot.findings[0].relatedNodeIds).toEqual(['b', 'c', 'd']);
   });
 
   it('sanitizes metadata to non-mapped shallow fields only', () => {
@@ -271,21 +271,21 @@ describe('conformance helpers', () => {
     });
   });
 
-  it('extracts project identifiers and always returns related array', () => {
+  it('extracts node identifiers and always returns related array', () => {
     expect(
-      extractProjects({
-        project: { name: 'a' },
-        projectIds: ['c', 'b'],
-        targetProject: { id: 'd' },
+      extractNodeReferences({
+        node: { name: 'a' },
+        nodeIds: ['c', 'b'],
+        targetNode: { id: 'd' },
       })
     ).toEqual({
-      projectId: 'a',
-      relatedProjectIds: ['b', 'c', 'd'],
+      nodeId: 'a',
+      relatedNodeIds: ['b', 'c', 'd'],
     });
 
-    expect(extractProjects({})).toEqual({
-      projectId: undefined,
-      relatedProjectIds: [],
+    expect(extractNodeReferences({})).toEqual({
+      nodeId: undefined,
+      relatedNodeIds: [],
     });
   });
 

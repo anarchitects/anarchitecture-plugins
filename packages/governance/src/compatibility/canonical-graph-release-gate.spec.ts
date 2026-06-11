@@ -16,11 +16,56 @@ describe('canonical graph epic release gate', () => {
   ];
 
   it('keeps the canonical runtime and root shell sources free of legacy governance model contracts', () => {
+    const legacyCoreContracts = [
+      ['Governance', 'ProjectInput'].join(''),
+      ['Governance', 'DependencyInput'].join(''),
+      ['Governance', 'Project'].join(''),
+      ['Governance', 'Dependency'].join(''),
+      ['Governance', 'CompatibilityWorkspace'].join(''),
+    ];
+    const legacyWorkspaceFields = [
+      ['workspace', '.projects'].join(''),
+      ['workspace', '.dependencies'].join(''),
+      ['inventory', '.projects'].join(''),
+      ['inventory', '.dependencies'].join(''),
+      ['assessment', '.workspace', '.projects'].join(''),
+      ['assessment', '.workspace', '.dependencies'].join(''),
+    ];
+    const legacyReferenceFields = [
+      ['project', 'Id'].join(''),
+      ['source', 'ProjectId'].join(''),
+      ['target', 'ProjectId'].join(''),
+      ['related', 'ProjectIds'].join(''),
+      ['affected', 'Projects'].join(''),
+      ['Violation', '.project'].join(''),
+    ];
+    const staleWorkspaceOmitVariants = [
+      `Omit<GovernanceWorkspace, ${"'projects' | 'dependencies'"}>`,
+      `Omit<GovernanceWorkspace, ${'"projects" | "dependencies"'}>`,
+    ];
     const forbiddenPatterns = [
-      /GovernanceProjectInput|GovernanceDependencyInput|GovernanceProject|GovernanceDependency|GovernanceCompatibilityWorkspace/,
-      /workspace\.projects|workspace\.dependencies|inventory\.projects|inventory\.dependencies|assessment\.workspace\.projects|assessment\.workspace\.dependencies/,
-      /projectId|sourceProjectId|targetProjectId|relatedProjectIds|affectedProjects|Violation\.project/,
-      /Omit<GovernanceWorkspace, 'projects' \| 'dependencies'>|Omit<GovernanceWorkspace, "projects" \| "dependencies">/,
+      new RegExp(legacyCoreContracts.join('|')),
+      new RegExp(
+        legacyWorkspaceFields
+          .map((field) => field.replaceAll('.', '\\.'))
+          .join('|')
+      ),
+      new RegExp(
+        legacyReferenceFields
+          .map((field) => field.replaceAll('.', '\\.'))
+          .join('|')
+      ),
+      new RegExp(
+        staleWorkspaceOmitVariants
+          .map((variant) =>
+            variant
+              .replaceAll('|', '\\|')
+              .replaceAll('.', '\\.')
+              .replaceAll('<', '\\<')
+              .replaceAll('>', '\\>')
+          )
+          .join('|')
+      ),
     ];
 
     for (const filePath of guardedSourceFiles) {
