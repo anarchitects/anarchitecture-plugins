@@ -294,6 +294,34 @@ describe('composeNxGovernanceRuntime', () => {
   });
 
   it('summarizes the workspace graph through canonical host adapter output', async () => {
+    mockedBuildGovernanceWorkspace.mockReturnValue({
+      id: 'workspace',
+      name: 'workspace',
+      root: workspaceRoot,
+      nodes: [
+        {
+          id: 'app',
+          kind: 'project',
+          tags: [],
+          metadata: {},
+        },
+        {
+          id: 'shared-data',
+          kind: 'project',
+          tags: [],
+          metadata: {},
+        },
+      ],
+      relations: [
+        {
+          id: 'app->shared-data:dependency:',
+          sourceNodeId: 'app',
+          targetNodeId: 'shared-data',
+          kind: 'dependency',
+          metadata: {},
+        },
+      ],
+    });
     mockedLoadNxGovernanceWorkspaceContext.mockResolvedValue({
       adapterResult: {
         workspaceRoot,
