@@ -1,10 +1,19 @@
 # Nx Governance Ownership Audit
 
+Historical note: this document records the plugins-side ownership cleanup for
+Plugins `#394` and `#402`.
+
+Current boundary guidance is now maintained in:
+
+- [`community-meta-plugin-boundaries.md`](./community-meta-plugin-boundaries.md)
+- [`community-contract-alignment-audit.md`](./community-contract-alignment-audit.md)
+- [`../../packages/governance/ARCHITECTURE.md`](../../packages/governance/ARCHITECTURE.md)
+
 Issue: Plugins #394  
 Related: Community #127  
 Cleanup update: Plugins #402
 
-Community baseline consumed in this pass:
+Community baseline consumed in this historical pass:
 
 - `@anarchitects/governance-core@0.0.4`
 - `@anarchitects/governance-cli@0.0.4`

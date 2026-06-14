@@ -23,6 +23,8 @@ For the manual workspace input schema, see
 [`generic-workspace-schema.md`](./generic-workspace-schema.md).
 For the standalone vs Nx profile compatibility contract, see
 [`standalone-profile-compatibility.md`](./standalone-profile-compatibility.md).
+For the current Meta / Community / Plugins boundary summary, see
+[`community-meta-plugin-boundaries.md`](./community-meta-plugin-boundaries.md).
 For the broader implementation context, see
 [`governance-implementation-epic-alignment.md`](./governance-implementation-epic-alignment.md#220--standalone-governance-cli-mvp).
 
@@ -158,6 +160,11 @@ Those Nx runtime profile files remain part of the Nx integration contract and
 are rejected intentionally by the standalone CLI. See
 [`standalone-profile-compatibility.md`](./standalone-profile-compatibility.md)
 for the exact contract.
+
+In particular, canonical standalone profiles do not carry Nx host runtime
+options such as renderer defaults, extension activation, or Nx-specific
+workspace override behavior. Those concerns remain host-owned in the Nx
+integration.
 
 Example:
 

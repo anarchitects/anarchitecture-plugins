@@ -36,7 +36,11 @@ as:
 - `projectOverrides`
 - `exceptions`
 - `eslint`
+- `runtime`
 - legacy metric weight keys such as `architecturalEntropyWeight`
+
+Older files may also still contain deprecated `composition` fields for runtime
+renderers or settings. Extension activation no longer belongs there.
 
 Those files rely on Nx-side preset resolution and override merging. The
 standalone CLI does not perform that compatibility merge.

@@ -1,5 +1,9 @@
 # Nx Governance Architecture
 
+For the current short boundary reference across Meta, Community, and Plugins,
+see
+[`../../docs/governance/community-meta-plugin-boundaries.md`](../../docs/governance/community-meta-plugin-boundaries.md).
+
 ## 1. Purpose
 
 `@anarchitects/nx-governance` is the Nx host package for Governance in Nx
@@ -16,8 +20,13 @@ It turns workspace structure into:
 The deterministic Governance contracts and analysis live in
 `@anarchitects/governance-core`. Nx workspace extraction lives in
 `@anarchitects/governance-adapter-nx`. Nx-specific interpretation belongs in
-`governance-extension-nx`. This package composes those pieces for Nx executors,
-generators, Project Crystal inference, profiles, artifacts, and output routing.
+`@anarchitects/governance-extension-nx`. This package composes those pieces for
+Nx executors, generators, Project Crystal inference, runtime profiles,
+artifacts, and output routing.
+
+Community Governance owns governance semantics. Meta owns the broader
+cross-repository cooperative enrichment principles. This package does not act
+as a second governance engine.
 
 ## 2. Product model
 
@@ -25,15 +34,44 @@ The intended package architecture is:
 
 - `@anarchitects/nx-governance` as the Nx host/runtime package
 - `@anarchitects/governance-adapter-nx` as the Nx extraction and mapping package
-- `governance-extension-nx` as the Nx interpretation package
+- `@anarchitects/governance-extension-nx` as the Nx interpretation package
 - community-owned packages such as `@anarchitects/governance-core`,
   `@anarchitects/governance-cli`, and
-  `@anarchitects/governance-adapter-typescript` as the owners for portable
-  Core, standalone CLI, and generic TypeScript adapter behavior
+  `@anarchitects/governance-adapter-typescript` /
+  `@anarchitects/governance-extension-typescript` as the owners for portable
+  Core semantics, standalone CLI behavior, and generic TypeScript discovery and
+  interpretation
 
 This keeps the Nx host focused and prevents it from accumulating Core,
 standalone CLI, generic TypeScript adapter, Angular-, React-, JVM-, or
 .NET-specific runtime logic.
+
+## 3. Meta, Community, and Plugin Relationship
+
+Meta owns ecosystem-level cooperative enrichment principles across
+repositories.
+
+Community owns the governance semantics and package boundaries:
+
+- Core owns the canonical model, canonical profile policy, generic semantics,
+  applicability, and capability concepts.
+- adapters own source-system discovery, extraction, parsing, normalization, and
+  projection into extension-owned contracts.
+- extensions own technology-specific interpretation, diagnostics, rules,
+  signals, metrics, recommendations, and extension-owned contracts.
+
+Plugins in this repository own:
+
+- Nx graph and workspace context
+- host-level loading and composition
+- Nx commands, executors, and generators
+- Nx-native rendering and artifact behavior
+
+Cooperative enrichment is desirable, but it must happen through canonical
+facts, extension-owned contracts, declared capabilities, stable package
+exports, and host composition. It must not happen through duplicated
+discovery, private adapter coupling, private extension coupling, or
+undocumented payload assumptions.
 
 ### Generic governance concerns
 
@@ -66,14 +104,15 @@ These belong in extension plugins:
 - rule packs and heuristics
 - extension-specific metrics and signals
 
-## 3. Core vs extension responsibilities
+## 4. Core vs extension responsibilities
 
 Community Core owns:
 
-- shared data contracts
-- scoring and score aggregation
-- deterministic governance analysis
-- portable report/source models
+- the canonical governance model
+- canonical profile policy
+- generic governance semantics
+- applicability and capability semantics
+- portable report/source models and deterministic analysis
 
 Delivery-impact and management-insight contracts also belong here. They are
 deterministic, platform-independent TypeScript contracts derived from shared
@@ -120,11 +159,17 @@ registration, stdout/logging, and artifact behavior remain host concerns.
 External system context such as GitHub, Jira, Linear, CI, or framework-specific
 intelligence belongs in adapters or extensions, not in the delivery-impact core.
 
+Community adapters own discovery, parsing, extraction, normalization, and
+projection into extension-owned contracts.
+
+Community extensions own technology-specific interpretation, diagnostics,
+rules, signals, metrics, recommendations, and extension-owned contracts.
+
 `@anarchitects/nx-governance` owns:
 
 - the Nx execution lifecycle
 - executor/generator entrypoints
-- profile/config resolution
+- runtime profile/config resolution
 - extension loading and ordering in an Nx workspace
 - host-owned rendering and artifact writing
 
@@ -138,9 +183,10 @@ Extensions own:
 
 Extensions contribute intelligence. The core remains the place where that intelligence is collected, scored, and reported.
 
-## 4. Extension model
+## 5. Extension model
 
-Governance-capable Nx plugins are discovered from `nx.json.plugins`.
+The preferred registration model is explicit host config in
+`nx.json.governance.extensions`.
 
 If a plugin wants to extend governance, it should expose:
 
@@ -149,6 +195,9 @@ If a plugin wants to extend governance, it should expose:
 ```
 
 That module must export a named `governanceExtension`.
+
+Legacy probing from `nx.json.plugins` still exists for compatibility, but it is
+host-owned fallback behavior rather than the primary extension model.
 
 The public extension-facing contracts are exported from the package root:
 
@@ -168,7 +217,7 @@ Extensions reuse the shared governance output types:
 
 For the authoring view and example code, see [EXTENSIONS.md](./EXTENSIONS.md).
 
-## 5. Execution flow
+## 6. Execution flow
 
 The Nx host runtime owns the orchestration pipeline:
 
@@ -188,6 +237,10 @@ runGovernance
 This preserves one governance truth while keeping extraction, Core analysis,
 host orchestration, and extension interpretation in separate bounded contexts.
 
+It also means the Nx host must not duplicate TypeScript discovery, adapter
+normalization, or extension interpretation when Community packages already own
+those responsibilities.
+
 Exception-backed findings already have explicit report shapes in the core
 assessment model:
 
@@ -199,7 +252,7 @@ suppressed deviations stay explainable and reactivated findings stay
 visible as governance debt. Graph visualization remains out of scope for
 the current exception implementation.
 
-## 6. Module structure
+## 7. Module structure
 
 The Nx host package lives under:
 
@@ -213,7 +266,7 @@ The main architectural areas are:
 - `executors` for Nx executor entrypoints
 - `generators` for Nx generator entrypoints
 - `nx-host` for Nx extension discovery/loading
-- `profile` and `presets` for profile resolution and scaffolding
+- `profile` and `presets` for Nx runtime profile resolution and scaffolding
 - `reporting`, `snapshot-store`, `ai-handoff`, and `graph-document` for
   host-owned output and artifact concerns
 - `extensions` for portable extension runtime wrappers around Core contracts
@@ -222,7 +275,7 @@ The main architectural areas are:
 Removed plugins-side legacy source trees are documented in
 [`../../docs/governance/source-organization.md`](../../docs/governance/source-organization.md).
 
-## 7. Project Crystal inference
+## 8. Project Crystal inference
 
 Nx Governance now exposes Project Crystal inference through
 `packages/governance/src/plugin/index.ts`.
@@ -246,18 +299,24 @@ This keeps inference convention-based and deterministic while preserving the
 existing executor/runtime model. The stable contract for this behavior lives in
 [`../../docs/governance/project-crystal-target-inference-contract.md`](../../docs/governance/project-crystal-target-inference-contract.md).
 
-## 8. Angular as the reference extension
+## 9. Future Ecosystem Pattern
 
-Angular is the first reference ecosystem engine, but it should not be embedded directly into the core package.
+Future ecosystems should follow the same host/adapter/extension split. Angular
+is the example pattern, not an implemented guarantee in this repository.
 
 The intended package model is:
 
 - `@anarchitects/nx-governance` as the shared platform
-- `@anarchitects/nx-governance-angular` as the Angular extension plugin
+- a future Community-owned Angular adapter/extension pair for Angular-specific
+  discovery and interpretation
+- optional Nx-host composition that consumes those public packages
 
-The Angular plugin should contribute Angular-specific metrics, signals, rule packs, and metadata enrichers through the shared contracts. It should not duplicate the governance model, scoring pipeline, or reporting infrastructure.
+Any future Angular package should contribute Angular-specific interpretation
+through shared contracts. It should not duplicate the governance model,
+scoring pipeline, reporting infrastructure, or Community-owned discovery.
 
-This establishes the reference pattern for future engines such as TypeScript, React, Maven, Gradle, and .NET.
+This establishes the reference pattern for future ecosystems such as Angular,
+TypeScript, React, Maven, Gradle, and .NET.
 
 ## 9. Guiding principles
 
