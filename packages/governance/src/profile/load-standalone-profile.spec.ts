@@ -23,7 +23,6 @@ describe('loadStandaloneGovernanceProfile', () => {
     expect(loaded.profile).toEqual({
       name: 'standalone-demo',
       description: 'Standalone Governance CLI profile fixture',
-      boundaryPolicySource: 'profile',
       layers: ['app', 'domain', 'infra'],
       rules: {
         'missing-domain': {
@@ -50,7 +49,6 @@ describe('loadStandaloneGovernanceProfile', () => {
       },
       ownership: {
         required: true,
-        metadataField: 'ownership',
       },
       health: {
         statusThresholds: {
@@ -93,6 +91,14 @@ describe('loadStandaloneGovernanceProfile', () => {
             usesExplicitDependencies: true,
           },
         },
+        'documentation-gap': {
+          enabled: true,
+          severity: 'warning',
+          options: {
+            metadataKeys: ['documentation'],
+            requireAny: true,
+          },
+        },
         'missing-domain': {
           enabled: true,
           options: {
@@ -104,7 +110,6 @@ describe('loadStandaloneGovernanceProfile', () => {
           severity: 'warning',
           options: {
             required: true,
-            metadataField: 'ownership',
           },
         },
         'project-name-convention': {
@@ -131,9 +136,6 @@ describe('loadStandaloneGovernanceProfile', () => {
       },
       exceptions: [],
       nodeOverrides: {},
-      profileSource: {
-        boundaryPolicySource: 'profile',
-      },
     });
   });
 
@@ -146,7 +148,6 @@ describe('loadStandaloneGovernanceProfile', () => {
 
     expect(loadStandaloneGovernanceProfileConfig(fixturePath)).toMatchObject({
       name: 'standalone-demo',
-      boundaryPolicySource: 'profile',
       layers: ['app', 'domain', 'infra'],
     });
   });
@@ -190,6 +191,11 @@ describe('loadStandaloneGovernanceProfile', () => {
           code: 'governance.profile.missing_required_field',
           message: 'Profile name is required.',
           path: '/name',
+        },
+        {
+          code: 'governance.profile.unknown_field',
+          message: 'Unknown field "metadataField" is not allowed.',
+          path: '/ownership/metadataField',
         },
       ]);
     }
@@ -356,11 +362,6 @@ describe('loadStandaloneGovernanceProfile', () => {
           path: '/ownership/required',
         },
         {
-          code: 'governance.profile.missing_required_field',
-          message: 'ownership.metadataField is required.',
-          path: '/ownership/metadataField',
-        },
-        {
           code: 'governance.profile.invalid_value',
           message:
             'health.statusThresholds.warningMinScore must be less than or equal to goodMinScore.',
@@ -391,7 +392,6 @@ describe('loadStandaloneGovernanceProfile', () => {
       },
       ownership: {
         required: true,
-        metadataField: ' ownership ',
       },
       health: {
         statusThresholds: {
@@ -417,7 +417,6 @@ describe('loadStandaloneGovernanceProfile', () => {
     expect(profile).toEqual({
       name: 'deterministic-profile',
       description: 'deterministic output fixture',
-      boundaryPolicySource: 'profile',
       layers: ['app', 'domain', 'infra'],
       rules: {
         'project-name-convention': {
@@ -438,7 +437,6 @@ describe('loadStandaloneGovernanceProfile', () => {
       },
       ownership: {
         required: true,
-        metadataField: 'ownership',
       },
       health: {
         statusThresholds: {

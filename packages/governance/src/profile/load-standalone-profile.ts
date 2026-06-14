@@ -8,6 +8,7 @@ import type {
   NormalizedGovernanceProfile,
 } from '@anarchitects/governance-core';
 import { normalizeGovernanceProfile } from '@anarchitects/governance-core';
+import type { GovernanceBoundaryPolicySource } from './runtime-profile.js';
 
 const PROFILE_TOP_LEVEL_FIELDS = new Set([
   'name',
@@ -34,7 +35,7 @@ const NX_RUNTIME_PROFILE_LEGACY_METRIC_FIELDS = new Set([
   'documentationCompletenessWeight',
   'layerIntegrityWeight',
 ]);
-const OWNERSHIP_FIELDS = new Set(['required', 'metadataField']);
+const OWNERSHIP_FIELDS = new Set(['required']);
 const HEALTH_FIELDS = new Set(['statusThresholds']);
 const HEALTH_STATUS_THRESHOLD_FIELDS = new Set([
   'goodMinScore',
@@ -189,7 +190,6 @@ export function validateStandaloneGovernanceProfile(
   return {
     name,
     ...(description ? { description } : {}),
-    boundaryPolicySource,
     layers,
     ...(rules ? { rules } : {}),
     ...(allowedLayerDependencies ? { allowedLayerDependencies } : {}),
@@ -251,7 +251,7 @@ function validateBoundaryPolicySource(
   value: unknown,
   pointer: string,
   issues: StandaloneGovernanceProfileValidationIssue[]
-): GovernanceProfile['boundaryPolicySource'] | undefined {
+): GovernanceBoundaryPolicySource | undefined {
   if (value === undefined) {
     issues.push(
       missingRequiredField(pointer, 'boundaryPolicySource is required.')
@@ -613,20 +613,12 @@ function validateOwnership(
     );
   }
 
-  const metadataField = validateRequiredTrimmedString(
-    record.metadataField,
-    `${pointer}/metadataField`,
-    issues,
-    'ownership.metadataField'
-  );
-
-  if (typeof required !== 'boolean' || !metadataField) {
+  if (typeof required !== 'boolean') {
     return undefined;
   }
 
   return {
     required,
-    metadataField,
   };
 }
 

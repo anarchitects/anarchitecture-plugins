@@ -37,7 +37,6 @@ export const BASE_PROFILE_METRICS: Record<Measurement['id'], number> = {
 
 export const BASE_PROFILE_OWNERSHIP: GovernanceProfile['ownership'] = {
   required: true,
-  metadataField: 'ownership',
 };
 
 export const BASE_PROFILE_ALLOWED_DOMAIN_DEPENDENCIES: Record<
@@ -57,7 +56,6 @@ export function createBuiltInProfile(
   return {
     name,
     description,
-    boundaryPolicySource: 'profile',
     layers: [...layers],
     allowedDomainDependencies: BASE_PROFILE_ALLOWED_DOMAIN_DEPENDENCIES,
     ownership: BASE_PROFILE_OWNERSHIP,
