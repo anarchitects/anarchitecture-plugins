@@ -416,7 +416,8 @@ function createGraphDocument(
             label: 'Missing owner',
             kind: 'ownership',
             status: 'critical',
-            message: 'No ownership metadata or CODEOWNERS mapping was found.',
+            message:
+              'Canonical ownership is required but was not found in the active ownership inputs.',
           },
         ],
         findings: [

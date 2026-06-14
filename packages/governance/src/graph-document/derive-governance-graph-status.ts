@@ -252,11 +252,19 @@ function compareHealth(
 function ownershipMissingMessage(
   ownershipSource: GovernanceOwnershipSource | undefined
 ): string {
-  if (ownershipSource === 'none') {
-    return 'No ownership metadata or CODEOWNERS mapping was found.';
+  if (ownershipSource === 'codeowners') {
+    return 'Canonical ownership is required but no CODEOWNERS-derived owner was found.';
   }
 
-  return 'Required ownership metadata is missing.';
+  if (ownershipSource === 'merged') {
+    return 'Canonical ownership is required but no owner was found in the active ownership inputs, including CODEOWNERS-derived ownership.';
+  }
+
+  if (ownershipSource === 'project-metadata') {
+    return 'Canonical ownership is required but was not found in the configured project ownership input.';
+  }
+
+  return 'Canonical ownership is required but was not found in the active ownership inputs.';
 }
 
 function readDocumentationState(
