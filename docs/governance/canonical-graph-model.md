@@ -2,7 +2,7 @@
 
 This is the active plugin-side governance model for the Nx Governance packages.
 
-The canonical workspace shape comes from `@anarchitects/governance-core@0.2.0`:
+The canonical workspace shape comes from `@anarchitects/governance-core@0.4.1`:
 
 ```ts
 interface GovernanceWorkspace {

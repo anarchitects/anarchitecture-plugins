@@ -1,9 +1,6 @@
 import { dirname, join, posix } from 'node:path';
 
-import type {
-  GovernanceProfile,
-  ProfileOverrides,
-} from '@anarchitects/governance-core';
+import type { ProfileOverrides } from '@anarchitects/governance-core';
 
 // Profiles are user-owned runtime governance configuration files. Presets may
 // seed these files during init, but executors always resolve runtime behavior
@@ -20,9 +17,11 @@ export const GOVERNANCE_SUPPORTED_FLAT_ESLINT_CONFIG_PATHS = [
   'eslint.config.js',
 ] as const;
 
+export type GovernanceBoundaryPolicySource = 'profile' | 'eslint';
+
 export interface GovernanceProfileFile
   extends Omit<ProfileOverrides, 'nodeOverrides'> {
-  boundaryPolicySource?: GovernanceProfile['boundaryPolicySource'];
+  boundaryPolicySource?: GovernanceBoundaryPolicySource;
   nodeOverrides?: ProfileOverrides['nodeOverrides'];
   eslint?: {
     helperPath?: string;

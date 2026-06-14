@@ -81,8 +81,7 @@ export async function composeNxGovernanceRuntime(
 ): Promise<ComposeNxGovernanceRuntimeResult> {
   const { adapterResult } = await loadNxGovernanceWorkspaceContext();
   const workspace = buildGovernanceWorkspace(
-    adapterResult,
-    input.profileOverrides
+    adapterResult
   ) as unknown as RuntimeGovernanceWorkspace;
 
   const profileComposition = input.profileOverrides.composition ?? {};

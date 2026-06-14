@@ -190,12 +190,10 @@ describe('governance extension runtime', () => {
       workspace: baseContext.inventory,
       profile: {
         name: 'frontend-layered',
-        boundaryPolicySource: 'profile',
         layers: [],
         allowedDomainDependencies: {},
         ownership: {
           required: false,
-          metadataField: 'ownership',
         },
         health: {
           statusThresholds: {
@@ -213,12 +211,10 @@ describe('governance extension runtime', () => {
       workspace: baseContext.inventory,
       profile: {
         name: 'frontend-layered',
-        boundaryPolicySource: 'profile',
         layers: [],
         allowedDomainDependencies: {},
         ownership: {
           required: false,
-          metadataField: 'ownership',
         },
         health: {
           statusThresholds: {

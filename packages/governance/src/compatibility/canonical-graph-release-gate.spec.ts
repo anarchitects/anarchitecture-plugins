@@ -95,7 +95,7 @@ describe('canonical graph epic release gate', () => {
       };
 
       expect(manifest.dependencies?.['@anarchitects/governance-core']).toBe(
-        '0.2.0'
+        '0.4.1'
       );
     }
   });

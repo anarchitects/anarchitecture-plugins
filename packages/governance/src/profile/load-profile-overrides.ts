@@ -13,6 +13,7 @@ import {
   normalizeGovernanceException,
 } from '@anarchitects/governance-core';
 import {
+  GovernanceBoundaryPolicySource,
   GovernanceProfileFile,
   GovernanceProfileComposition,
   GovernanceProfileRendererId,
@@ -40,8 +41,11 @@ const SUPPORTED_PROFILE_RENDERERS = [
   'ai-handoff',
 ] as const satisfies GovernanceProfileRendererId[];
 
+const DEFAULT_BOUNDARY_POLICY_SOURCE: GovernanceBoundaryPolicySource =
+  'profile';
+
 export interface ResolvedProfileOverrides extends ProfileOverrides {
-  boundaryPolicySource: GovernanceProfile['boundaryPolicySource'];
+  boundaryPolicySource: GovernanceBoundaryPolicySource;
   composition: GovernanceProfileComposition;
   exceptions: GovernanceException[];
   eslintHelperPath: string;
@@ -72,7 +76,7 @@ export async function loadProfileOverrides(
     raw.layers && raw.layers.length > 0 ? raw.layers : builtInProfile.layers;
 
   const boundaryPolicySource =
-    raw.boundaryPolicySource ?? builtInProfile.boundaryPolicySource;
+    raw.boundaryPolicySource ?? DEFAULT_BOUNDARY_POLICY_SOURCE;
   const eslintHelperPath =
     raw.eslint?.helperPath ?? GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH;
 
@@ -162,7 +166,7 @@ function buildDefaultResolvedOverrides(
   profile: GovernanceProfile
 ): ResolvedProfileOverrides {
   return {
-    boundaryPolicySource: profile.boundaryPolicySource,
+    boundaryPolicySource: DEFAULT_BOUNDARY_POLICY_SOURCE,
     layers: profile.layers,
     allowedLayerDependencies: profile.allowedLayerDependencies,
     allowedDomainDependencies: profile.allowedDomainDependencies,

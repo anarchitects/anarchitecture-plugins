@@ -69,7 +69,6 @@ describe('governance preset registry', () => {
       },
       ownership: {
         required: true,
-        metadataField: 'ownership',
       },
       health: {
         statusThresholds: {

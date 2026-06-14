@@ -19,7 +19,7 @@ payloads that intentionally describe the upstream Nx project graph.
 - no legacy Core project/dependency contracts in the canonical runtime or root shell sources
 - no `workspace.projects` / `workspace.dependencies` or `inventory.projects` / `inventory.dependencies` in those sources
 - no stale `Omit<GovernanceWorkspace, 'projects' | 'dependencies'>` typing
-- all plugin-side packages depending on `@anarchitects/governance-core` are pinned to `0.2.0`
+- all plugin-side packages depending on `@anarchitects/governance-core` are pinned to `0.4.1`
 
 ## Raw Audit Scans
 
@@ -30,7 +30,7 @@ rg "GovernanceProjectInput|GovernanceDependencyInput|GovernanceProject|Governanc
 rg "workspace\\.projects|workspace\\.dependencies|inventory\\.projects|inventory\\.dependencies|assessment\\.workspace\\.projects|assessment\\.workspace\\.dependencies" packages --glob '!**/*.md'
 rg "projectId|sourceProjectId|targetProjectId|relatedProjectIds|affectedProjects|Violation\\.project" packages --glob '!**/*.md'
 rg "Omit<GovernanceWorkspace, 'projects' \\| 'dependencies'>|Omit<GovernanceWorkspace, \\\"projects\\\" \\| \\\"dependencies\\\">" packages --glob '!**/*.md'
-rg '"@anarchitects/governance-core": "0.2.0"' packages/*/package.json
+rg '"@anarchitects/governance-core": "0.4.1"' packages/*/package.json
 ```
 
 ## Expected Interpretation

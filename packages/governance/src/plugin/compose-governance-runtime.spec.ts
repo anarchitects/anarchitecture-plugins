@@ -487,7 +487,6 @@ function buildCanonicalWorkspace(): RuntimeGovernanceWorkspace {
 function buildProfile(): GovernanceProfile {
   return {
     name: 'test-profile',
-    boundaryPolicySource: 'profile',
     layers: ['app', 'data'],
     allowedLayerDependencies: {
       app: ['app', 'data'],
@@ -499,7 +498,6 @@ function buildProfile(): GovernanceProfile {
     },
     ownership: {
       required: false,
-      metadataField: 'ownership',
     },
     health: {
       statusThresholds: {
