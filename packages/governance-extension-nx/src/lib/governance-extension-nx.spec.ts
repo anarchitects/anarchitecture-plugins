@@ -160,6 +160,109 @@ describe('governanceExtensionNx', () => {
     expect(enriched).not.toHaveProperty('dependencies');
   });
 
+  it('does not reclassify non-project Nx subjects into project-like governance nodes', () => {
+    const host = createHost({
+      inventory: {
+        ...baseCanonicalWorkspace(),
+        nodes: [
+          ...baseCanonicalWorkspace().nodes,
+          {
+            id: 'infra/env',
+            name: 'infra/env',
+            kind: 'asset',
+            sourceSystem: 'nx',
+            metadata: {
+              nx: {
+                root: 'infra/env',
+                tags: ['layer:infrastructure'],
+              },
+            },
+          },
+        ],
+      },
+    });
+    governanceExtensionNx.register(host);
+
+    const enricher = firstRegisteredContribution<GovernanceWorkspaceEnricher>(
+      host.registerEnricher
+    );
+    const enriched = enricher.enrichWorkspace({
+      workspace: host.context.inventory,
+      profile: baseProfile(),
+      context: host.context,
+    }) as unknown as CanonicalWorkspace;
+
+    expect(
+      enriched.nodes.find((node) => node.id === 'infra/env')
+    ).toMatchObject({
+      id: 'infra/env',
+      kind: 'asset',
+      sourceSystem: 'nx',
+      metadata: {
+        nx: {
+          root: 'infra/env',
+          tags: ['layer:infrastructure'],
+        },
+      },
+    });
+    expect(
+      enriched.nodes.find((node) => node.id === 'infra/env')
+    ).not.toHaveProperty('classification');
+  });
+
+  it('does not infer project kind for untyped Nx-tagged nodes during enrichment', () => {
+    const host = createHost({
+      inventory: {
+        ...baseCanonicalWorkspace(),
+        nodes: [
+          ...baseCanonicalWorkspace().nodes,
+          {
+            id: 'infra/runtime-config',
+            name: 'infra/runtime-config',
+            sourceSystem: 'nx',
+            metadata: {
+              nx: {
+                root: 'infra/runtime-config',
+                tags: ['layer:infrastructure'],
+              },
+            },
+          },
+        ],
+      },
+    });
+    governanceExtensionNx.register(host);
+
+    const enricher = firstRegisteredContribution<GovernanceWorkspaceEnricher>(
+      host.registerEnricher
+    );
+    const enriched = enricher.enrichWorkspace({
+      workspace: host.context.inventory,
+      profile: baseProfile(),
+      context: host.context,
+    }) as unknown as CanonicalWorkspace;
+    const node = enriched.nodes.find(
+      (candidate) => candidate.id === 'infra/runtime-config'
+    );
+
+    expect(node).toBeDefined();
+    expect(node).not.toHaveProperty('kind');
+    expect(node).toMatchObject({
+      id: 'infra/runtime-config',
+      sourceSystem: 'nx',
+      tags: ['layer:infrastructure'],
+      classification: {
+        layer: 'infrastructure',
+        tags: ['layer:infrastructure'],
+      },
+      metadata: {
+        nx: {
+          root: 'infra/runtime-config',
+          tags: ['layer:infrastructure'],
+        },
+      },
+    });
+  });
+
   it('emits canonical relation violations without legacy project references', () => {
     const host = createHost();
     governanceExtensionNx.register(host);

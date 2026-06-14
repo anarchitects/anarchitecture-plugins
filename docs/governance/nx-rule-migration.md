@@ -22,8 +22,8 @@ The current built-in rule implementations live in
 | `ownership-presence`      | Generic        | Governance Core compatibility | Evaluates generic ownership metadata or CODEOWNERS-derived ownership already present on projects. It does not perform Nx-specific ownership interpretation.        |
 | `project-name-convention` | Generic        | Governance Core compatibility | Evaluates configured project naming conventions with a regular expression. The rule is generic even when Nx supplies project names.                                |
 | `tag-convention`          | Generic        | Governance Core compatibility | Evaluates generic tag prefixes and values. It does not interpret Nx tags beyond the normalized tag strings already present on projects.                            |
-| `missing-domain`          | Generic        | Governance Core compatibility | Evaluates whether generic domain metadata is present when configured.                                                                                              |
-| `missing-layer`           | Generic        | Governance Core compatibility | Evaluates whether generic layer metadata is present when configured.                                                                                               |
+| `missing-domain`          | Generic        | Governance Core compatibility | Evaluates whether generic domain metadata is present when configured and when the active Community applicability rules treat the subject as in scope.              |
+| `missing-layer`           | Generic        | Governance Core compatibility | Evaluates whether generic layer metadata is present when configured and when the active Community applicability rules treat the subject as in scope.               |
 
 ## Nx-Specific Rules Found
 

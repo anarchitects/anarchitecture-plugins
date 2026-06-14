@@ -541,6 +541,100 @@ describe('buildGovernanceGraphDocument', () => {
       findingCount: 1,
     });
   });
+
+  it('does not recreate missing-domain or missing-layer findings for infrastructure-like non-project nodes', () => {
+    const assessment = createAssessment();
+    const artifacts = {
+      assessment: {
+        ...assessment,
+        workspace: {
+          id: 'workspace',
+          name: 'workspace',
+          root: '.',
+          nodes: [
+            {
+              id: 'infra/runtime-config',
+              name: 'Runtime Config',
+              kind: 'asset',
+              sourceSystem: 'nx',
+              root: 'infra/runtime-config',
+              path: 'infra/runtime-config',
+              tags: ['layer:infrastructure'],
+              metadata: {
+                nx: {
+                  projectType: 'tool',
+                  root: 'infra/runtime-config',
+                  tags: ['layer:infrastructure'],
+                },
+              },
+            },
+          ],
+          relations: [],
+        },
+      } as GovernanceAssessment,
+      signals: [],
+      exceptionApplication: {
+        declaredExceptions: [],
+        exceptionStatuses: {},
+        policyViolations: [],
+        conformanceFindings: [],
+        activePolicyViolations: [],
+        suppressedPolicyViolations: [],
+        reactivatedPolicyViolations: [],
+        activeConformanceFindings: [],
+        suppressedConformanceFindings: [],
+        reactivatedConformanceFindings: [],
+      },
+      extensionDiagnostics: [],
+      adapterResult: {
+        workspaceRoot: '.',
+        nodes: [
+          {
+            id: 'infra/runtime-config',
+            name: 'Runtime Config',
+            kind: 'asset',
+            sourceSystem: 'nx',
+            root: 'infra/runtime-config',
+            path: 'infra/runtime-config',
+            tags: ['layer:infrastructure'],
+            classification: {
+              layer: 'infrastructure',
+              tags: ['layer:infrastructure'],
+            },
+            metadata: {
+              nx: {
+                projectType: 'tool',
+                root: 'infra/runtime-config',
+                tags: ['layer:infrastructure'],
+              },
+            },
+          },
+        ],
+        relations: [],
+      } as GovernanceAssessmentArtifacts['adapterResult'],
+    } satisfies GovernanceAssessmentArtifacts;
+
+    const document = buildGovernanceGraphDocument({
+      assessment: artifacts.assessment,
+      artifacts,
+      signals: [],
+    });
+
+    expect(document.nodes).toEqual([
+      expect.objectContaining({
+        id: 'infra/runtime-config',
+        findings: [],
+      }),
+    ]);
+    expect(document.facets.ruleIds).toEqual([]);
+    expect(document.nodes[0]?.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ruleId: 'missing-domain' }),
+        expect.objectContaining({ ruleId: 'missing-layer' }),
+        expect.objectContaining({ type: 'missing-domain-context' }),
+      ])
+    );
+  });
 });
 
 function createAssessment(

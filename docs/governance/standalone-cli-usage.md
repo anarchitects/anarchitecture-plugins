@@ -132,6 +132,10 @@ dependencies:
 }
 ```
 
+The `missing-domain` rule remains subject to Community-owned applicability.
+Configuring it does not imply that infrastructure-like nodes or other
+non-project subjects are automatically in scope.
+
 These files are only the CLI input format. During execution they are normalized
 into the canonical Governance Core workspace model.
 
