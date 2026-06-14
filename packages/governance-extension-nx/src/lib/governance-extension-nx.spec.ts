@@ -160,7 +160,7 @@ describe('governanceExtensionNx', () => {
     expect(enriched).not.toHaveProperty('dependencies');
   });
 
-  it('emits canonical node and relation violations without legacy project references', () => {
+  it('emits canonical relation violations without legacy project references', () => {
     const host = createHost();
     governanceExtensionNx.register(host);
 
@@ -179,16 +179,6 @@ describe('governanceExtensionNx', () => {
     });
 
     expect(violations).toEqual([
-      expect.objectContaining({
-        id: 'nx:node:libs/shared-ui:ownership',
-        ruleId: 'nx.node.ownership',
-        reference: {
-          nodeId: 'libs/shared-ui',
-        },
-        subjectId: 'libs/shared-ui',
-        recommendation:
-          'Add CODEOWNERS coverage or ownership metadata for node "libs/shared-ui".',
-      }),
       expect.objectContaining({
         id: 'nx:relation:nx:apps/store->libs/shared-ui:static::source-trace',
         ruleId: 'nx.relation.source-trace',
@@ -216,6 +206,29 @@ describe('governanceExtensionNx', () => {
     }
   });
 
+  it('does not emit plugin-owned ownership violations', () => {
+    const host = createHost();
+    governanceExtensionNx.register(host);
+
+    const rulePack = firstRegisteredContribution<{
+      evaluate(input: {
+        workspace: GovernanceWorkspace;
+        profile: ReturnType<typeof baseProfile>;
+        context: GovernanceExtensionHostContext;
+      }): unknown[];
+    }>(host.registerRulePack);
+
+    const violations = rulePack.evaluate({
+      workspace: host.context.inventory,
+      profile: baseProfile(),
+      context: host.context,
+    }) as Array<Record<string, unknown>>;
+
+    expect(
+      violations.some((violation) => violation.ruleId === 'nx.node.ownership')
+    ).toBe(false);
+  });
+
   it('emits canonical signals with node and relation references only', async () => {
     const host = createHost();
     governanceExtensionNx.register(host);
@@ -229,16 +242,6 @@ describe('governanceExtensionNx', () => {
       profile: baseProfile(),
       context: host.context,
       violations: [
-        {
-          id: 'nx:node:libs/shared-ui:ownership',
-          ruleId: 'nx.node.ownership',
-          severity: 'warning',
-          category: 'ownership',
-          message: 'Ownership gap',
-          reference: {
-            nodeId: 'libs/shared-ui',
-          },
-        },
         {
           id: 'nx:relation:nx:apps/store->libs/shared-ui:static::source-trace',
           ruleId: 'nx.relation.source-trace',
@@ -255,29 +258,6 @@ describe('governanceExtensionNx', () => {
     })) as unknown as CanonicalSignal[];
 
     expect(signals).toEqual([
-      {
-        id: 'nx:signal:nx:node:libs/shared-ui:ownership',
-        type: 'ownership-gap',
-        severity: 'warning',
-        category: 'ownership',
-        message: 'Ownership gap',
-        nodeId: 'libs/shared-ui',
-        findingIds: ['nx:node:libs/shared-ui:ownership'],
-        metadata: {
-          extensionId: 'governance-extension-nx',
-          ruleId: 'nx.node.ownership',
-          priorSignalCount: 0,
-        },
-        source: 'extension',
-        sourceRef: {
-          id: 'governance-extension-nx',
-          name: 'Nx Governance Extension',
-          type: 'governance-extension',
-        },
-        authority: 'inferred',
-        confidence: 0.95,
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
       {
         id: 'nx:signal:nx:relation:nx:apps/store->libs/shared-ui:static::source-trace',
         type: 'structural-dependency',
@@ -333,34 +313,10 @@ describe('governanceExtensionNx', () => {
       context: host.context,
       violations: [],
       measurements: [],
-      signals: [
-        {
-          id: 'nx:signal:nx:node:libs/shared-ui:ownership',
-          type: 'ownership-gap',
-          severity: 'warning',
-          category: 'ownership',
-          message: 'Ownership gap',
-          source: 'extension',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          metadata: {
-            ruleId: 'nx.node.ownership',
-          },
-        },
-      ] as unknown as never[],
+      signals: [],
     });
 
     expect(measurements).toEqual([
-      expect.objectContaining({
-        id: 'nx-node-ownership-coverage',
-        value: 0.5,
-        score: 50,
-        maxScore: 100,
-        unit: 'ratio',
-        metadata: {
-          nodeCount: 2,
-          ownedNodeCount: 1,
-        },
-      }),
       expect.objectContaining({
         id: 'nx-relation-source-trace-coverage',
         value: 0.5,
@@ -456,13 +412,14 @@ describe('governanceExtensionNx', () => {
       context: host.context,
       violations: [
         {
-          id: 'nx:node:libs/shared-ui:ownership',
-          ruleId: 'nx.node.ownership',
-          severity: 'warning',
-          category: 'ownership',
-          message: 'Ownership gap',
+          id: 'nx:relation:nx:apps/store->libs/shared-ui:static::source-trace',
+          ruleId: 'nx.relation.source-trace',
+          severity: 'info',
+          category: 'dependency',
+          message: 'Missing source trace',
           reference: {
-            nodeId: 'libs/shared-ui',
+            relationId: 'nx:apps/store->libs/shared-ui:static:',
+            relatedNodeIds: ['apps/store', 'libs/shared-ui'],
           },
         },
       ] as unknown as never[],
@@ -474,13 +431,14 @@ describe('governanceExtensionNx', () => {
       context: host.context,
       violations: [
         {
-          id: 'nx:node:libs/shared-ui:ownership',
-          ruleId: 'nx.node.ownership',
-          severity: 'warning',
-          category: 'ownership',
-          message: 'Ownership gap',
+          id: 'nx:relation:nx:apps/store->libs/shared-ui:static::source-trace',
+          ruleId: 'nx.relation.source-trace',
+          severity: 'info',
+          category: 'dependency',
+          message: 'Missing source trace',
           reference: {
-            nodeId: 'libs/shared-ui',
+            relationId: 'nx:apps/store->libs/shared-ui:static:',
+            relatedNodeIds: ['apps/store', 'libs/shared-ui'],
           },
         },
       ] as unknown as never[],
@@ -594,6 +552,11 @@ function baseCanonicalWorkspace(): CanonicalWorkspace {
         name: 'apps/store',
         kind: 'project',
         sourceSystem: 'nx',
+        ownership: {
+          team: '@anarchitects/commerce',
+          contacts: ['commerce-team@anarchitects.dev'],
+          source: 'project-metadata',
+        },
         metadata: {
           nx: {
             projectType: 'application',
@@ -682,12 +645,10 @@ function reverseCanonicalWorkspace(
 function baseProfile() {
   return {
     name: 'frontend-layered',
-    boundaryPolicySource: 'profile' as const,
     layers: [],
     allowedDomainDependencies: {},
     ownership: {
       required: false,
-      metadataField: 'ownership',
     },
     health: {
       statusThresholds: {

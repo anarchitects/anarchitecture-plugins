@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { buildGovernanceWorkspace } from '@anarchitects/governance-core';
+import {
+  buildGovernanceWorkspace,
+  evaluateGovernancePolicies,
+} from '@anarchitects/governance-core';
 import {
   createNxCapability,
   createNxWorkspaceAdapterResult,
@@ -97,6 +100,7 @@ describe('host -> adapter -> core compatibility flow', () => {
     );
     expect(adapterResult.capabilities?.map((c) => c.id)).toEqual([
       'capability:nx',
+      'capability:ownership',
       'nx.dependency-graph',
       'nx.inferred-targets',
       'nx.ownership-evidence',
@@ -141,5 +145,67 @@ describe('host -> adapter -> core compatibility flow', () => {
         layer: 'domain',
       },
     });
+  });
+
+  it('leaves loose owner metadata as evidence only when Community ownership is required', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'orders-domain',
+          root: 'libs/orders/domain',
+          type: 'library',
+          tags: ['scope:orders', 'layer:domain'],
+          targets: [],
+          metadata: {
+            owner: '@orders',
+          },
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const adapterResult = createNxWorkspaceAdapterResult(snapshot);
+    const workspace = buildGovernanceWorkspace(adapterResult);
+    const violations = evaluateGovernancePolicies(workspace, {
+      name: 'ownership-required',
+      layers: ['domain'],
+      allowedDomainDependencies: {},
+      ownership: {
+        required: true,
+      },
+      health: {
+        statusThresholds: {
+          goodMinScore: 85,
+          warningMinScore: 70,
+        },
+      },
+      metrics: {},
+    });
+
+    expect(adapterResult.nodes?.[0]).not.toHaveProperty('ownership');
+    expect(adapterResult.nodes?.[0].metadata).toEqual({
+      nx: {
+        projectType: 'library',
+        root: 'libs/orders/domain',
+        tags: ['scope:orders', 'layer:domain'],
+        targets: [],
+        projectMetadata: {
+          owner: '@orders',
+        },
+      },
+    });
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: 'ownership-presence',
+          subjectId: 'orders-domain',
+          reference: {
+            nodeId: 'orders-domain',
+          },
+        }),
+      ])
+    );
   });
 });

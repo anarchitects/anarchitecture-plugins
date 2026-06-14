@@ -339,6 +339,10 @@ describe('createNxCapability', () => {
       profileCount: 1,
       profiles: ['tools/governance/profiles/frontend-layered.json'],
     });
+    expect(capabilityData(capabilities, 'capability:ownership')).toEqual({
+      source: 'codeowners',
+      sources: ['codeowners', 'project-metadata'],
+    });
     expect(capabilityData(capabilities, 'nx.ownership-evidence')).toEqual({
       projectCount: 1,
       projects: [
@@ -374,6 +378,11 @@ describe('createNxCapability', () => {
     ).toBe(false);
     expect(
       capabilities.some((capability) => capability.id === 'nx.project-tags')
+    ).toBe(false);
+    expect(
+      capabilities.some(
+        (capability) => capability.id === 'capability:ownership'
+      )
     ).toBe(false);
     expect(capabilityData(capabilities, 'nx.inferred-targets')).toEqual({
       available: false,

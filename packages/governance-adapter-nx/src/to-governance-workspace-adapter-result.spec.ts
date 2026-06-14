@@ -93,7 +93,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           ownership: {
             team: 'booking-team',
             contacts: ['@booking-team'],
-            source: 'codeowners',
+            source: 'merged',
           },
         },
         {
@@ -211,6 +211,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
     expect(result).not.toHaveProperty('dependencies');
     expect(result.capabilities?.map((capability) => capability.id)).toEqual([
       'capability:nx',
+      'capability:ownership',
       'nx.dependency-graph',
       'nx.inferred-targets',
       'nx.ownership-evidence',
@@ -256,6 +257,88 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
         },
       }),
     ]);
+  });
+
+  it('maps the full canonical ownership shape from project metadata', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'platform-domain',
+          root: 'libs/platform/domain',
+          type: 'library',
+          tags: ['scope:platform', 'layer:domain'],
+          targets: [],
+          metadata: {
+            ownership: {
+              stewards: ['@platform-stewards'],
+              productOwner: '@platform-product',
+              technicalOwner: '@platform-tech',
+              businessOwner: '@platform-business',
+              metadata: {
+                evidence: 'project-json',
+              },
+            },
+          },
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        id: 'platform-domain',
+        ownership: {
+          stewards: ['@platform-stewards'],
+          productOwner: '@platform-product',
+          technicalOwner: '@platform-tech',
+          businessOwner: '@platform-business',
+          source: 'project-metadata',
+          metadata: {
+            evidence: 'project-json',
+          },
+        },
+      }),
+    ]);
+  });
+
+  it('does not treat loose owner metadata as canonical ownership', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'orders-domain',
+          root: 'libs/orders/domain',
+          type: 'library',
+          tags: ['scope:orders', 'layer:domain'],
+          targets: [],
+          metadata: {
+            owner: '@orders',
+          },
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        id: 'orders-domain',
+        metadata: {
+          nx: expect.objectContaining({
+            projectMetadata: {
+              owner: '@orders',
+            },
+          }),
+        },
+      }),
+    ]);
+    expect(result.nodes?.[0]).not.toHaveProperty('ownership');
   });
 
   it('normalizes classification tag values while preserving raw tags', () => {

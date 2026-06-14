@@ -281,7 +281,6 @@ describe('eslintIntegrationGenerator', () => {
           },
           ownership: {
             required: false,
-            metadataField: 'ownership',
           },
         },
         null,
@@ -300,7 +299,6 @@ describe('eslintIntegrationGenerator', () => {
       },
       ownership: {
         required: false,
-        metadataField: 'ownership',
       },
     });
   });

@@ -83,12 +83,10 @@ const EXTENSION_CONFIDENCE = 0.95 satisfies GovernanceConfidence;
 const DETERMINISTIC_SIGNAL_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
 const RULE_IDS = {
-  ownership: 'nx.node.ownership',
   dependencyTrace: 'nx.relation.source-trace',
 } as const;
 
 const METRIC_IDS = {
-  ownershipCoverage: 'nx-node-ownership-coverage',
   dependencyTraceCoverage: 'nx-relation-source-trace-coverage',
 } as const;
 
@@ -278,51 +276,27 @@ function createNxRulePack() {
           findNodeById(workspace, relation.targetNodeId) !== undefined
       );
 
-      const violations: CanonicalViolation[] = [
-        ...nodes
-          .filter((node) => !hasOwnership(node))
-          .map((node) => ({
-            id: `nx:node:${node.id}:ownership`,
-            ruleId: RULE_IDS.ownership,
-            severity: 'warning' as const,
-            category: 'ownership' as const,
-            message: `Nx node "${
-              node.name ?? node.id
-            }" is missing canonical ownership.`,
-            recommendation: `Add CODEOWNERS coverage or ownership metadata for node "${node.id}".`,
-            reference: toNodeReference(node),
-            subjectId: node.id,
-            source: EXTENSION_SOURCE,
-            evidence: buildNodeEvidence(node),
-            authority: EXTENSION_AUTHORITY,
-            confidence: EXTENSION_CONFIDENCE,
-            metadata: {
-              nodeId: node.id,
-              nodeKind: node.kind ?? 'project',
-            },
-          })),
-        ...relations
-          .filter((relation) => shouldReportMissingSourceTrace(relation))
-          .map((relation) => ({
-            id: `nx:relation:${relation.id}:source-trace`,
-            ruleId: RULE_IDS.dependencyTrace,
-            severity: 'info' as const,
-            category: 'dependency' as const,
-            message: `Nx relation "${relation.id}" is missing source-file trace metadata.`,
-            recommendation: `Preserve source-file details for relation "${relation.id}" between "${relation.sourceNodeId}" and "${relation.targetNodeId}".`,
-            reference: toRelationReference(relation),
-            subjectId: relation.id,
-            source: EXTENSION_SOURCE,
-            evidence: buildRelationEvidence(relation),
-            authority: EXTENSION_AUTHORITY,
-            confidence: EXTENSION_CONFIDENCE,
-            metadata: {
-              relationId: relation.id,
-              dependencyType:
-                getNxRelationMetadata(relation)?.dependencyType ?? 'unknown',
-            },
-          })),
-      ];
+      const violations: CanonicalViolation[] = relations
+        .filter((relation) => shouldReportMissingSourceTrace(relation))
+        .map((relation) => ({
+          id: `nx:relation:${relation.id}:source-trace`,
+          ruleId: RULE_IDS.dependencyTrace,
+          severity: 'info' as const,
+          category: 'dependency' as const,
+          message: `Nx relation "${relation.id}" is missing source-file trace metadata.`,
+          recommendation: `Preserve source-file details for relation "${relation.id}" between "${relation.sourceNodeId}" and "${relation.targetNodeId}".`,
+          reference: toRelationReference(relation),
+          subjectId: relation.id,
+          source: EXTENSION_SOURCE,
+          evidence: buildRelationEvidence(relation),
+          authority: EXTENSION_AUTHORITY,
+          confidence: EXTENSION_CONFIDENCE,
+          metadata: {
+            relationId: relation.id,
+            dependencyType:
+              getNxRelationMetadata(relation)?.dependencyType ?? 'unknown',
+          },
+        }));
 
       return violations as unknown as Violation[];
     },
@@ -350,8 +324,11 @@ function createNxMetricProvider(): GovernanceMetricProvider {
   return {
     provideMetrics(input: GovernanceMetricProviderInput): Measurement[] {
       const workspace = asCanonicalWorkspace(input.workspace);
-      const nodes = readCanonicalNodes(workspace).filter(isNxNode);
-      const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+      const nodeMap = new Map(
+        readCanonicalNodes(workspace)
+          .filter(isNxNode)
+          .map((node) => [node.id, node])
+      );
       const relations = readCanonicalRelations(workspace).filter(
         (relation) =>
           isNxRelation(relation, nodeMap) &&
@@ -359,26 +336,13 @@ function createNxMetricProvider(): GovernanceMetricProvider {
           findNodeById(workspace, relation.targetNodeId) !== undefined
       );
 
-      if (nodes.length === 0 && relations.length === 0) {
+      if (relations.length === 0) {
         return [];
       }
 
-      const ownedNodeCount = nodes.filter(hasOwnership).length;
       const tracedRelationCount = relations.filter(hasSourceTrace).length;
 
       return [
-        buildRatioMeasurement({
-          id: METRIC_IDS.ownershipCoverage,
-          name: 'Nx Node Ownership Coverage',
-          family: 'ownership',
-          numerator: ownedNodeCount,
-          denominator: nodes.length,
-          signalIds: collectSignalIds(input.signals, RULE_IDS.ownership),
-          metadata: {
-            nodeCount: nodes.length,
-            ownedNodeCount,
-          },
-        }),
         buildRatioMeasurement({
           id: METRIC_IDS.dependencyTraceCoverage,
           name: 'Nx Relation Source Trace Coverage',
@@ -526,14 +490,6 @@ function findNodeById(
   return readCanonicalNodes(workspace).find((node) => node.id === nodeId);
 }
 
-function toNodeReference(
-  node: CanonicalWorkspaceNode
-): CanonicalRuntimeReference {
-  return {
-    nodeId: node.id,
-  };
-}
-
 function toRelationReference(
   relation: CanonicalWorkspaceRelation
 ): CanonicalRuntimeReference {
@@ -558,7 +514,6 @@ function enrichNxNode(
     ...(capabilityProject?.targets ?? []),
   ]);
   const classification = mergeClassification(node.classification, tags);
-  const ownership = node.ownership ?? ownershipFromNxMetadata(metadata);
 
   return {
     ...node,
@@ -566,7 +521,6 @@ function enrichNxNode(
     sourceSystem: 'nx',
     ...(tags.length > 0 ? { tags } : {}),
     ...(classification ? { classification } : {}),
-    ...(ownership ? { ownership } : {}),
     source: node.source ?? EXTENSION_SOURCE,
     evidence: mergeEvidence(node.evidence, buildNodeEvidence(node)),
     authority: node.authority ?? EXTENSION_AUTHORITY,
@@ -640,26 +594,6 @@ function mergeClassification(
   };
 }
 
-function ownershipFromNxMetadata(
-  metadata: NxNodeMetadata
-): CanonicalOwnership | undefined {
-  const projectMetadata = asRecord(metadata.projectMetadata);
-  const rawOwnership = asRecord(projectMetadata?.ownership);
-  const team = asString(rawOwnership?.team);
-  const contacts = uniqueSorted(stringArray(rawOwnership?.contacts));
-  const source = asString(rawOwnership?.source) ?? 'project-metadata';
-
-  if (!team && contacts.length === 0) {
-    return undefined;
-  }
-
-  return {
-    ...(team ? { team } : {}),
-    ...(contacts.length > 0 ? { contacts } : {}),
-    source,
-  };
-}
-
 function buildNodeEvidence(node: CanonicalWorkspaceNode): GovernanceEvidence[] {
   const metadata = getNxNodeMetadata(node);
 
@@ -706,16 +640,6 @@ function mergeEvidence(
 
   return [...merged.values()].sort((left, right) =>
     left.id.localeCompare(right.id)
-  );
-}
-
-function hasOwnership(node: CanonicalWorkspaceNode): boolean {
-  const ownership =
-    node.ownership ?? ownershipFromNxMetadata(getNxNodeMetadata(node) ?? {});
-
-  return Boolean(
-    ownership?.team ||
-      (Array.isArray(ownership?.contacts) && ownership.contacts.length > 0)
   );
 }
 
@@ -905,14 +829,6 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
-}
-
-function stringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
 export default governanceExtensionNx;
