@@ -233,6 +233,7 @@ describe('read-workspace adapter compatibility', () => {
       typedResult.capabilities?.map((capability) => capability.id)
     ).toEqual([
       'capability:nx',
+      'capability:ownership',
       'nx.dependency-graph',
       'nx.inferred-targets',
       'nx.ownership-evidence',
@@ -241,6 +242,20 @@ describe('read-workspace adapter compatibility', () => {
       'nx.project-tags',
       'nx.targets',
     ]);
+    expect(
+      typedResult.capabilities?.find(
+        (capability) => capability.id === 'capability:ownership'
+      )
+    ).toEqual({
+      id: 'capability:ownership',
+      source: 'governance-adapter-nx',
+      data: {
+        source: 'codeowners',
+      },
+      metadata: {
+        sourceSystem: 'nx',
+      },
+    });
   });
 
   it('discovers governance profile files without requiring host composition', () => {

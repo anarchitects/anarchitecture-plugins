@@ -54,7 +54,6 @@ describe('loadProfileOverrides', () => {
         },
         ownership: {
           required: false,
-          metadataField: 'ownership',
         },
         metrics: {
           architecturalEntropyWeight: 0.4,
@@ -75,7 +74,6 @@ describe('loadProfileOverrides', () => {
       expect(result.layers).toEqual(['app', 'feature', 'util']);
       expect(result.ownership).toEqual({
         required: false,
-        metadataField: 'ownership',
       });
       expect(result.metrics?.['architectural-entropy']).toBe(0.4);
       expect(result.nodeOverrides).toEqual({

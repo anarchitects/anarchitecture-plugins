@@ -1,5 +1,9 @@
 import type { GovernanceCapability } from '@anarchitects/governance-core';
 
+import {
+  hasCanonicalOwnershipData,
+  readCanonicalOwnershipFromProjectMetadata,
+} from './ownership.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
 export interface GovernanceNxCapabilityProject {
@@ -88,6 +92,11 @@ export function createNxCanonicalCapabilities(input: {
     createGovernanceProfilesCapability(input);
   if (governanceProfilesCapability) {
     capabilities.push(governanceProfilesCapability);
+  }
+
+  const ownershipCapability = createOwnershipCapability(input);
+  if (ownershipCapability) {
+    capabilities.push(ownershipCapability);
   }
 
   const ownershipEvidenceCapability = createOwnershipEvidenceCapability(input);
@@ -287,6 +296,50 @@ function createGovernanceProfilesCapability(input: {
     metadata: {
       sourceSystem: 'nx',
       profileGlob: 'tools/governance/profiles/*.json',
+    },
+  };
+}
+
+function createOwnershipCapability(input: {
+  snapshot: AdapterWorkspaceSnapshot;
+}): GovernanceCapability | null {
+  const sources = new Set<string>();
+
+  if (
+    input.snapshot.projects.some((project) =>
+      hasCanonicalOwnershipData(
+        readCanonicalOwnershipFromProjectMetadata(project.metadata)
+      )
+    )
+  ) {
+    sources.add('project-metadata');
+  }
+
+  if (
+    Object.values(input.snapshot.codeownersByProject).some(
+      (contacts) => contacts.length > 0
+    )
+  ) {
+    sources.add('codeowners');
+  }
+
+  const normalizedSources = [...sources].sort((left, right) =>
+    left.localeCompare(right)
+  );
+
+  if (normalizedSources.length === 0) {
+    return null;
+  }
+
+  return {
+    id: 'capability:ownership',
+    source: 'governance-adapter-nx',
+    data: {
+      source: normalizedSources[0],
+      ...(normalizedSources.length > 1 ? { sources: normalizedSources } : {}),
+    },
+    metadata: {
+      sourceSystem: 'nx',
     },
   };
 }

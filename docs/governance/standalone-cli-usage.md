@@ -180,8 +180,7 @@ Example:
     "*": ["shared"]
   },
   "ownership": {
-    "required": true,
-    "metadataField": "ownership"
+    "required": true
   },
   "health": {
     "statusThresholds": {

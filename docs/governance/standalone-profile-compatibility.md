@@ -57,8 +57,7 @@ Minimal example:
     "*": ["shared"]
   },
   "ownership": {
-    "required": true,
-    "metadataField": "ownership"
+    "required": true
   },
   "health": {
     "statusThresholds": {
@@ -118,6 +117,10 @@ Use standalone profiles when:
 - you are running `agov` outside Nx
 - you want an explicit full-profile document
 - you are using the generic manual workspace input flow
+
+Canonical ownership semantics are owned by Community Governance. Nx Governance
+may surface Nx ownership evidence such as CODEOWNERS, but it does not define a
+plugin-specific canonical ownership field contract.
 
 Use Nx Governance runtime profiles when:
 

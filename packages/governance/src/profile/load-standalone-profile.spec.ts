@@ -192,11 +192,6 @@ describe('loadStandaloneGovernanceProfile', () => {
           message: 'Profile name is required.',
           path: '/name',
         },
-        {
-          code: 'governance.profile.unknown_field',
-          message: 'Unknown field "metadataField" is not allowed.',
-          path: '/ownership/metadataField',
-        },
       ]);
     }
   });

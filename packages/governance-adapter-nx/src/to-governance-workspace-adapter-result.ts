@@ -5,6 +5,10 @@ import type {
 } from '@anarchitects/governance-core';
 
 import { createNxCapabilities } from './capability.js';
+import {
+  hasCanonicalOwnershipData,
+  readCanonicalOwnershipFromProjectMetadata,
+} from './ownership.js';
 import { readTagValue } from './tag-parsing.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
@@ -148,43 +152,34 @@ function projectOwnershipFromSnapshot(
   project: AdapterWorkspaceSnapshot['projects'][number],
   snapshot: AdapterWorkspaceSnapshot
 ): GovernanceNodeInput['ownership'] {
-  const metadataOwnership = asRecord(project.metadata.ownership);
+  const metadataOwnership = readCanonicalOwnershipFromProjectMetadata(
+    project.metadata
+  );
+  const codeownersContacts = uniqueStrings(
+    snapshot.codeownersByProject[project.name] ?? []
+  );
   const contacts = uniqueStrings([
-    ...(snapshot.codeownersByProject[project.name] ?? []),
-    ...toStringArray(metadataOwnership?.contacts),
+    ...codeownersContacts,
+    ...(metadataOwnership?.contacts ?? []),
   ]);
-  const team = asString(metadataOwnership?.team);
+  const ownership: GovernanceNodeInput['ownership'] = {
+    ...(metadataOwnership ?? {}),
+    ...(contacts.length > 0 ? { contacts } : {}),
+  };
 
-  if (contacts.length === 0 && !team) {
+  if (!hasCanonicalOwnershipData(ownership)) {
     return undefined;
   }
 
   return {
-    ...(team ? { team } : {}),
-    ...(contacts.length > 0 ? { contacts } : {}),
+    ...ownership,
     source:
-      (snapshot.codeownersByProject[project.name] ?? []).length > 0
+      codeownersContacts.length > 0 && metadataOwnership
+        ? 'merged'
+        : codeownersContacts.length > 0
         ? 'codeowners'
-        : asString(metadataOwnership?.source) ?? 'project-metadata',
+        : metadataOwnership?.source ?? 'project-metadata',
   };
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === 'object'
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function toStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
 function uniqueStrings(values: string[]): string[] {
