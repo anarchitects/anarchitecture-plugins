@@ -55,7 +55,7 @@ describe('governance report rendering', () => {
     );
     expect(rendered).toContain('Violation Details:');
     expect(rendered).toContain(
-      '- [warning] ownership :: ownership-presence :: scope=node=Shared Util [shared-util] :: Shared Util is missing ownership metadata.'
+      '- [warning] ownership :: ownership-presence :: scope=node=Shared Util [shared-util] :: Ownership is missing.'
     );
     expect(rendered).toContain('Recommendations:');
     expect(rendered).toContain(
@@ -291,7 +291,7 @@ function makeAssessment(): GovernanceAssessment {
         project: 'unused-compat-field',
         severity: 'warning',
         category: 'ownership',
-        message: 'Shared Util is missing ownership metadata.',
+        message: 'Ownership is missing.',
         reference: {
           nodeId: 'shared-util',
         },

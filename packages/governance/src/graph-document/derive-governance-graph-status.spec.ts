@@ -140,8 +140,38 @@ describe('governance graph status derivation', () => {
       label: 'Missing owner',
       kind: 'ownership',
       status: 'warning',
-      message: 'No ownership metadata or CODEOWNERS mapping was found.',
+      message:
+        'Canonical ownership is required but was not found in the active ownership inputs.',
     });
+  });
+
+  it('does not mention CODEOWNERS when the active ownership flow is not CODEOWNERS-capable', () => {
+    const badge = deriveGovernanceGraphBadges({
+      findings: [],
+      ownershipRequired: true,
+      ownershipSource: 'none',
+      documentation: true,
+      documentationRequired: true,
+    }).find((candidate) => candidate.id === 'ownership:missing');
+
+    expect(badge?.message).toBe(
+      'Canonical ownership is required but was not found in the active ownership inputs.'
+    );
+    expect(badge?.message).not.toContain('CODEOWNERS');
+  });
+
+  it('mentions CODEOWNERS only when CODEOWNERS-derived ownership is active', () => {
+    const badge = deriveGovernanceGraphBadges({
+      findings: [],
+      ownershipRequired: true,
+      ownershipSource: 'codeowners',
+      documentation: true,
+      documentationRequired: true,
+    }).find((candidate) => candidate.id === 'ownership:missing');
+
+    expect(badge?.message).toBe(
+      'Canonical ownership is required but no CODEOWNERS-derived owner was found.'
+    );
   });
 
   it('escalates ownership missing to critical when an ownership error finding exists', () => {
