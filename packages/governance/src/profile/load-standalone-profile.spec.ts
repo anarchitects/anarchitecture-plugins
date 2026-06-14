@@ -22,7 +22,8 @@ describe('loadStandaloneGovernanceProfile', () => {
 
     expect(loaded.profile).toEqual({
       name: 'standalone-demo',
-      description: 'Standalone Governance CLI profile fixture',
+      description:
+        'Standalone Governance CLI profile fixture; Community applicability still determines which subjects missing-domain applies to.',
       layers: ['app', 'domain', 'infra'],
       rules: {
         'missing-domain': {
@@ -67,7 +68,8 @@ describe('loadStandaloneGovernanceProfile', () => {
     });
     expect(loaded.normalizedProfile).toEqual({
       name: 'standalone-demo',
-      description: 'Standalone Governance CLI profile fixture',
+      description:
+        'Standalone Governance CLI profile fixture; Community applicability still determines which subjects missing-domain applies to.',
       rules: {
         'domain-boundary': {
           enabled: true,

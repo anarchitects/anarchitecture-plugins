@@ -32,35 +32,35 @@ Governance Core must not import Nx, CLI, framework, package-manager, or source-c
 
 ## Core Contract Layers
 
-| Layer | Responsibility | Stability target |
-|---|---|---|
-| Domain model | Workspace, project, dependency, ownership, metadata, classification. | Stable public API after #218. |
-| Rule model | Rule, rule pack, context, result, configuration. | Stable public API after #218/#227 validation. |
-| Finding model | Violations, signals, measurements, diagnostics. | Stable public API after #218. |
-| Assessment model | Aggregated governance assessment, reports, health, recommendations. | Stable public API after #218. |
-| Snapshot/drift model | Metric snapshots, comparisons, drift signals. | Stable public API after #218. |
-| Extension model | Contribution points for enrichers, rules, signals, metrics, presets. | Defined here; finalized with #229. |
-| Adapter touchpoints | Workspace adapter contract and capabilities. | Defined here at high level; finalized with #228. |
+| Layer                | Responsibility                                                       | Stability target                                 |
+| -------------------- | -------------------------------------------------------------------- | ------------------------------------------------ |
+| Domain model         | Workspace, project, dependency, ownership, metadata, classification. | Stable public API after #218.                    |
+| Rule model           | Rule, rule pack, context, result, configuration.                     | Stable public API after #218/#227 validation.    |
+| Finding model        | Violations, signals, measurements, diagnostics.                      | Stable public API after #218.                    |
+| Assessment model     | Aggregated governance assessment, reports, health, recommendations.  | Stable public API after #218.                    |
+| Snapshot/drift model | Metric snapshots, comparisons, drift signals.                        | Stable public API after #218.                    |
+| Extension model      | Contribution points for enrichers, rules, signals, metrics, presets. | Defined here; finalized with #229.               |
+| Adapter touchpoints  | Workspace adapter contract and capabilities.                         | Defined here at high level; finalized with #228. |
 
 ## Current Model Classification
 
-| Current concept | Proposed status | Notes |
-|---|---|---|
-| `GovernanceWorkspace` | Stable candidate | Needs real workspace identity beyond hardcoded `workspace`. |
-| `GovernanceProject` | Stable candidate | Should remain platform-independent and metadata-extensible. |
-| `GovernanceDependency` | Stable candidate | Should support source/target project ids and optional source file. |
-| `Ownership` | Stable candidate | Ownership source should remain adapter/enricher-provided. |
-| `GovernanceProfile` | Redesign candidate | Existing profile shape should be compatibility-mapped to rule config. |
-| `Violation` | Redesign candidate | Should become richer around source/target/related project ids. |
-| `Measurement` | Stable candidate | Should remain deterministic and report-friendly. |
-| `HealthScore` | Stable candidate | Should remain core-owned and configurable through scoring profile. |
-| `GovernanceAssessment` | Stable candidate | Should become canonical run result. |
-| `MetricSnapshot` | Stable candidate | Core-owned contract; storage is host-owned. |
-| `SnapshotComparison` | Stable candidate | Core-owned drift comparison contract. |
-| `DriftSignal` | Stable candidate | Core-owned signal derived from snapshot comparison. |
-| `AiAnalysisRequest` | Stable/experimental | Contract can remain core-owned; builders may become AI package later. |
-| `AiAnalysisResult` | Stable/experimental | Contract can remain core-owned; host artifact writing stays outside core. |
-| Signal types currently in `signal-engine` | Move to Core | Avoid `core -> signal-engine` dependency direction. |
+| Current concept                           | Proposed status     | Notes                                                                     |
+| ----------------------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| `GovernanceWorkspace`                     | Stable candidate    | Needs real workspace identity beyond hardcoded `workspace`.               |
+| `GovernanceProject`                       | Stable candidate    | Should remain platform-independent and metadata-extensible.               |
+| `GovernanceDependency`                    | Stable candidate    | Should support source/target project ids and optional source file.        |
+| `Ownership`                               | Stable candidate    | Ownership source should remain adapter/enricher-provided.                 |
+| `GovernanceProfile`                       | Redesign candidate  | Existing profile shape should be compatibility-mapped to rule config.     |
+| `Violation`                               | Redesign candidate  | Should become richer around source/target/related project ids.            |
+| `Measurement`                             | Stable candidate    | Should remain deterministic and report-friendly.                          |
+| `HealthScore`                             | Stable candidate    | Should remain core-owned and configurable through scoring profile.        |
+| `GovernanceAssessment`                    | Stable candidate    | Should become canonical run result.                                       |
+| `MetricSnapshot`                          | Stable candidate    | Core-owned contract; storage is host-owned.                               |
+| `SnapshotComparison`                      | Stable candidate    | Core-owned drift comparison contract.                                     |
+| `DriftSignal`                             | Stable candidate    | Core-owned signal derived from snapshot comparison.                       |
+| `AiAnalysisRequest`                       | Stable/experimental | Contract can remain core-owned; builders may become AI package later.     |
+| `AiAnalysisResult`                        | Stable/experimental | Contract can remain core-owned; host artifact writing stays outside core. |
+| Signal types currently in `signal-engine` | Move to Core        | Avoid `core -> signal-engine` dependency direction.                       |
 
 ## Workspace Model
 
@@ -196,22 +196,22 @@ Core should provide a small built-in generic rule pack. Profiles decide which ru
 
 Initial built-in candidates:
 
-| Rule id | Initial status | Purpose |
-|---|---|---|
-| `domain-boundary` | Initial | Enforce allowed dependencies between domains. |
-| `layer-boundary` | Initial | Enforce allowed dependencies between layers. |
+| Rule id           | Initial status | Purpose                                       |
+| ----------------- | -------------- | --------------------------------------------- |
+| `domain-boundary` | Initial        | Enforce allowed dependencies between domains. |
+| `layer-boundary`  | Initial        | Enforce allowed dependencies between layers.  |
 
 ### Convention Governance
 
 Naming and convention governance is a generic Core capability because it can be evaluated against project names, roots, tags, domains, layers, and metadata.
 
-| Rule id | Initial status | Purpose |
-|---|---|---|
-| `project-name-convention` | Initial | Enforce project name pattern. |
-| `project-root-convention` | Initial | Enforce project root/path convention where root exists. |
-| `tag-convention` | Initial | Enforce allowed/required tag prefixes and tag value patterns. |
-| `domain-name-convention` | Deferred | Enforce domain naming where domain taxonomy becomes explicit. |
-| `layer-name-convention` | Deferred | Enforce layer naming where layer taxonomy becomes explicit. |
+| Rule id                   | Initial status | Purpose                                                       |
+| ------------------------- | -------------- | ------------------------------------------------------------- |
+| `project-name-convention` | Initial        | Enforce project name pattern.                                 |
+| `project-root-convention` | Initial        | Enforce project root/path convention where root exists.       |
+| `tag-convention`          | Initial        | Enforce allowed/required tag prefixes and tag value patterns. |
+| `domain-name-convention`  | Deferred       | Enforce domain naming where domain taxonomy becomes explicit. |
+| `layer-name-convention`   | Deferred       | Enforce layer naming where layer taxonomy becomes explicit.   |
 
 ### Core vs Extension-Specific Naming Conventions
 
@@ -228,37 +228,37 @@ Technology-specific naming conventions must be contributed by adapters or extens
 
 Examples of extension-owned naming rules:
 
-| Extension / adapter | Example rule ids | Examples |
-|---|---|---|
-| Maven / Java extension | `maven-group-id-convention`, `java-package-name-convention`, `java-class-name-convention` | groupId format, Java package naming, class/interface naming. |
-| Angular extension | `angular-component-name-convention`, `angular-service-name-convention`, `angular-selector-convention` | component class suffixes, service suffixes, selector prefixes. |
-| TypeScript extension | `typescript-file-name-convention`, `typescript-symbol-name-convention`, `typescript-barrel-name-convention` | file naming, exported symbol naming, barrel file conventions. |
-| NestJS extension | `nestjs-controller-name-convention`, `nestjs-provider-name-convention`, `nestjs-module-name-convention` | controller/service/module suffixes. |
-| Nx adapter or Nx-specific extension | `nx-target-name-convention`, `nx-project-tag-convention` | target naming and Nx-specific tag semantics. |
+| Extension / adapter                 | Example rule ids                                                                                            | Examples                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Maven / Java extension              | `maven-group-id-convention`, `java-package-name-convention`, `java-class-name-convention`                   | groupId format, Java package naming, class/interface naming.   |
+| Angular extension                   | `angular-component-name-convention`, `angular-service-name-convention`, `angular-selector-convention`       | component class suffixes, service suffixes, selector prefixes. |
+| TypeScript extension                | `typescript-file-name-convention`, `typescript-symbol-name-convention`, `typescript-barrel-name-convention` | file naming, exported symbol naming, barrel file conventions.  |
+| NestJS extension                    | `nestjs-controller-name-convention`, `nestjs-provider-name-convention`, `nestjs-module-name-convention`     | controller/service/module suffixes.                            |
+| Nx adapter or Nx-specific extension | `nx-target-name-convention`, `nx-project-tag-convention`                                                    | target naming and Nx-specific tag semantics.                   |
 
 These rules should use the same `GovernanceRule`, `GovernanceViolation`, and profile configuration contracts as Core rules. Profiles may enable, disable, configure, and override extension naming rules in exactly the same way as Core rules.
 
 ### Ownership Governance
 
-| Rule id | Initial status | Purpose |
-|---|---|---|
-| `ownership-presence` | Initial | Require ownership facts for projects. |
+| Rule id              | Initial status | Purpose                               |
+| -------------------- | -------------- | ------------------------------------- |
+| `ownership-presence` | Initial        | Require ownership facts for projects. |
 
 ### Documentation / Metadata Governance
 
-| Rule id | Initial status | Purpose |
-|---|---|---|
-| `documentation-presence` | Initial | Require documentation marker or metadata. |
-| `missing-domain` | Initial | Require domain classification where configured. |
-| `missing-layer` | Initial | Require layer classification where configured. |
-| `missing-classification` | Deferred | Generalized classification completeness rule. |
+| Rule id                  | Initial status | Purpose                                                                                                                          |
+| ------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `documentation-presence` | Initial        | Require documentation marker or metadata.                                                                                        |
+| `missing-domain`         | Initial        | Require domain classification where configured for subjects that remain in scope under the active Community applicability rules. |
+| `missing-layer`          | Initial        | Require layer classification where configured for subjects that remain in scope under the active Community applicability rules.  |
+| `missing-classification` | Deferred       | Generalized classification completeness rule.                                                                                    |
 
 ### Structural Governance
 
-| Rule id | Initial status | Purpose |
-|---|---|---|
-| `circular-dependency` | Deferred | Detect cycles in project dependency graph. |
-| `forbidden-dependency-type` | Initial | Enforce allowed dependency types. |
+| Rule id                     | Initial status | Purpose                                    |
+| --------------------------- | -------------- | ------------------------------------------ |
+| `circular-dependency`       | Deferred       | Detect cycles in project dependency graph. |
+| `forbidden-dependency-type` | Initial        | Enforce allowed dependency types.          |
 
 ### Snapshot / Drift Governance
 
@@ -307,11 +307,11 @@ Requirements:
 
 Core must distinguish three concepts.
 
-| Concept | Meaning | Example |
-|---|---|---|
-| Violation | A concrete breach of an enabled rule. | `project-a` depends on forbidden domain `billing`. |
-| Signal | An observation that may influence scoring, AI, drift, or reporting. | Cross-domain dependency observed. |
-| Measurement | A calculated metric/score derived from workspace, signals, and violations. | Domain integrity score is 72. |
+| Concept     | Meaning                                                                    | Example                                            |
+| ----------- | -------------------------------------------------------------------------- | -------------------------------------------------- |
+| Violation   | A concrete breach of an enabled rule.                                      | `project-a` depends on forbidden domain `billing`. |
+| Signal      | An observation that may influence scoring, AI, drift, or reporting.        | Cross-domain dependency observed.                  |
+| Measurement | A calculated metric/score derived from workspace, signals, and violations. | Domain integrity score is 72.                      |
 
 Not every signal is a violation. Not every measurement comes directly from violations. This separation is important for AI, drift, cognitive load, and conformance imports.
 
@@ -419,16 +419,16 @@ Current Nx Governance profiles should keep working during #218.
 
 The implementation can map the existing profile shape into the future rule configuration model internally.
 
-| Current profile concept | Future rule config mapping |
-|---|---|
-| `allowedDomainDependencies` | `rules['domain-boundary'].options.allowedDependencies` |
-| `layers` / layer dependency config | `rules['layer-boundary'].options.allowedDependencies` |
-| ownership config | `rules['ownership-presence'].options` |
-| health thresholds | `scoring.thresholds` |
-| metric weights | `scoring.metricWeights` |
-| project overrides | `projectOverrides` |
-| exceptions | `exceptions` |
-| `boundaryPolicySource` | compatibility field or host-side migration concern, not a long-term Core primitive |
+| Current profile concept            | Future rule config mapping                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `allowedDomainDependencies`        | `rules['domain-boundary'].options.allowedDependencies`                             |
+| `layers` / layer dependency config | `rules['layer-boundary'].options.allowedDependencies`                              |
+| ownership config                   | `rules['ownership-presence'].options`                                              |
+| health thresholds                  | `scoring.thresholds`                                                               |
+| metric weights                     | `scoring.metricWeights`                                                            |
+| project overrides                  | `projectOverrides`                                                                 |
+| exceptions                         | `exceptions`                                                                       |
+| `boundaryPolicySource`             | compatibility field or host-side migration concern, not a long-term Core primitive |
 
 Existing users should not need to rewrite profiles as part of #218.
 

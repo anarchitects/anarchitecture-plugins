@@ -1,6 +1,6 @@
 {
   "name": "standalone-demo",
-  "description": "Standalone Governance CLI profile fixture",
+  "description": "Standalone Governance CLI profile fixture; Community applicability still determines which subjects missing-domain applies to.",
   "boundaryPolicySource": "profile",
   "layers": ["app", "domain", "infra"],
   "rules": {

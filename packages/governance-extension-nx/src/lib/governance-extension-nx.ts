@@ -517,7 +517,7 @@ function enrichNxNode(
 
   return {
     ...node,
-    kind: node.kind ?? 'project',
+    ...(node.kind ? { kind: node.kind } : {}),
     sourceSystem: 'nx',
     ...(tags.length > 0 ? { tags } : {}),
     ...(classification ? { classification } : {}),
