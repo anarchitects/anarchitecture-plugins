@@ -26,10 +26,18 @@ export interface GovernanceProfileFile
   eslint?: {
     helperPath?: string;
   };
-  composition?: GovernanceProfileComposition;
+  runtime?: GovernanceProfileRuntimeConfig;
+  composition?: GovernanceLegacyProfileComposition;
 }
 
-export interface GovernanceProfileComposition {
+export interface GovernanceProfileRuntimeConfig {
+  renderers?: GovernanceProfileRendererRegistration[];
+  settings?: Record<string, unknown>;
+}
+
+// Deprecated compatibility shape for legacy runtime profile files. Extension
+// activation now belongs under nx.json.governance rather than profile policy.
+export interface GovernanceLegacyProfileComposition {
   extensions?: GovernanceProfileExtensionRegistration[];
   renderers?: GovernanceProfileRendererRegistration[];
   settings?: Record<string, unknown>;

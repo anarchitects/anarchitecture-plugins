@@ -15,7 +15,8 @@ import {
 import {
   GovernanceBoundaryPolicySource,
   GovernanceProfileFile,
-  GovernanceProfileComposition,
+  GovernanceLegacyProfileComposition,
+  GovernanceProfileRuntimeConfig,
   GovernanceProfileRendererId,
   GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
   GOVERNANCE_DEFAULT_PROFILE_NAME,
@@ -46,7 +47,7 @@ const DEFAULT_BOUNDARY_POLICY_SOURCE: GovernanceBoundaryPolicySource =
 
 export interface ResolvedProfileOverrides extends ProfileOverrides {
   boundaryPolicySource: GovernanceBoundaryPolicySource;
-  composition: GovernanceProfileComposition;
+  runtimeConfig: GovernanceProfileRuntimeConfig;
   exceptions: GovernanceException[];
   eslintHelperPath: string;
   runtimeWarnings: string[];
@@ -96,7 +97,11 @@ export async function loadProfileOverrides(
       : [];
 
   const exceptions = normalizeProfileExceptions(raw.exceptions, filePath);
-  const composition = normalizeProfileComposition(raw.composition, filePath);
+  const runtimeConfig = normalizeProfileRuntimeConfig(
+    raw.runtime,
+    raw.composition,
+    filePath
+  );
   const allowedLayerDependencies = normalizeAllowedLayerDependencies(
     raw.allowedLayerDependencies,
     layers,
@@ -127,11 +132,11 @@ export async function loadProfileOverrides(
       ...builtInProfile.metrics,
       ...normalizeMetricWeights(raw.metrics),
     },
-    composition,
+    runtimeConfig: runtimeConfig.config,
     exceptions,
     eslintHelperPath,
     nodeOverrides: raw.nodeOverrides ?? {},
-    runtimeWarnings,
+    runtimeWarnings: [...runtimeWarnings, ...runtimeConfig.warnings],
   };
 }
 
@@ -174,7 +179,7 @@ function buildDefaultResolvedOverrides(
     rules: profile.rules,
     health: profile.health,
     metrics: profile.metrics,
-    composition: {},
+    runtimeConfig: {},
     exceptions: [],
     eslintHelperPath: GOVERNANCE_DEFAULT_ESLINT_HELPER_PATH,
     nodeOverrides: {},
@@ -182,44 +187,100 @@ function buildDefaultResolvedOverrides(
   };
 }
 
-function normalizeProfileComposition(
-  raw: unknown,
+function normalizeProfileRuntimeConfig(
+  rawRuntime: unknown,
+  rawComposition: unknown,
   filePath: string
-): GovernanceProfileComposition {
-  if (raw === undefined) {
-    return {};
+): {
+  config: GovernanceProfileRuntimeConfig;
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  const runtimeConfig =
+    rawRuntime === undefined
+      ? {}
+      : normalizeRuntimeConfigObject(rawRuntime, filePath, 'runtime');
+
+  if (rawComposition === undefined) {
+    return {
+      config: runtimeConfig,
+      warnings,
+    };
   }
 
+  const legacyComposition = normalizeLegacyProfileComposition(
+    rawComposition,
+    filePath
+  );
+
+  if (
+    legacyComposition.extensions !== undefined ||
+    legacyComposition.legacyPluginProbing !== undefined
+  ) {
+    warnings.push(
+      `Governance profile at ${filePath} contains deprecated composition-based extension activation. Move extensions and legacyPluginProbing into nx.json.governance; profile-level extension loading is ignored.`
+    );
+  }
+
+  if (
+    runtimeConfig.renderers === undefined &&
+    legacyComposition.renderers !== undefined
+  ) {
+    runtimeConfig.renderers = legacyComposition.renderers;
+    warnings.push(
+      `Governance profile at ${filePath} uses deprecated composition.renderers. Move renderer defaults under runtime.renderers.`
+    );
+  } else if (
+    rawRuntime !== undefined &&
+    legacyComposition.renderers !== undefined
+  ) {
+    warnings.push(
+      `Governance profile at ${filePath} defines both runtime.renderers and deprecated composition.renderers. runtime.renderers takes precedence.`
+    );
+  }
+
+  if (
+    runtimeConfig.settings === undefined &&
+    legacyComposition.settings !== undefined
+  ) {
+    runtimeConfig.settings = legacyComposition.settings;
+    warnings.push(
+      `Governance profile at ${filePath} uses deprecated composition.settings. Move host runtime settings under runtime.settings.`
+    );
+  } else if (
+    rawRuntime !== undefined &&
+    legacyComposition.settings !== undefined
+  ) {
+    warnings.push(
+      `Governance profile at ${filePath} defines both runtime.settings and deprecated composition.settings. runtime.settings takes precedence.`
+    );
+  }
+
+  return {
+    config: runtimeConfig,
+    warnings,
+  };
+}
+
+function normalizeRuntimeConfigObject(
+  raw: unknown,
+  filePath: string,
+  pathLabel: 'runtime' | 'composition'
+): GovernanceProfileRuntimeConfig {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error(
-      `Governance profile at ${filePath} has invalid composition: expected an object.`
+      `Governance profile at ${filePath} has invalid ${pathLabel}: expected an object.`
     );
   }
 
   const candidate = raw as Record<string, unknown>;
-  const composition: GovernanceProfileComposition = {};
-
-  if (candidate.legacyPluginProbing !== undefined) {
-    if (typeof candidate.legacyPluginProbing !== 'boolean') {
-      throw new Error(
-        `Governance profile at ${filePath} has invalid composition.legacyPluginProbing: expected a boolean.`
-      );
-    }
-
-    composition.legacyPluginProbing = candidate.legacyPluginProbing;
-  }
-
-  if (candidate.extensions !== undefined) {
-    composition.extensions = normalizeProfileCompositionExtensions(
-      candidate.extensions,
-      filePath
-    );
-  }
+  const runtimeConfig: GovernanceProfileRuntimeConfig = {};
 
   if (candidate.renderers !== undefined) {
-    composition.renderers = normalizeProfileCompositionRenderers(
+    runtimeConfig.renderers = normalizeProfileRuntimeRenderers(
       candidate.renderers,
-      filePath
+      filePath,
+      pathLabel
     );
   }
 
@@ -230,22 +291,53 @@ function normalizeProfileComposition(
       Array.isArray(candidate.settings)
     ) {
       throw new Error(
-        `Governance profile at ${filePath} has invalid composition.settings: expected an object.`
+        `Governance profile at ${filePath} has invalid ${pathLabel}.settings: expected an object.`
       );
     }
 
-    composition.settings = {
+    runtimeConfig.settings = {
       ...(candidate.settings as Record<string, unknown>),
     };
   }
 
-  return composition;
+  return runtimeConfig;
+}
+
+function normalizeLegacyProfileComposition(
+  raw: unknown,
+  filePath: string
+): GovernanceLegacyProfileComposition {
+  const candidate = raw as Record<string, unknown>;
+  const legacyComposition = normalizeRuntimeConfigObject(
+    raw,
+    filePath,
+    'composition'
+  ) as GovernanceLegacyProfileComposition;
+
+  if (candidate.legacyPluginProbing !== undefined) {
+    if (typeof candidate.legacyPluginProbing !== 'boolean') {
+      throw new Error(
+        `Governance profile at ${filePath} has invalid composition.legacyPluginProbing: expected a boolean.`
+      );
+    }
+
+    legacyComposition.legacyPluginProbing = candidate.legacyPluginProbing;
+  }
+
+  if (candidate.extensions !== undefined) {
+    legacyComposition.extensions = normalizeProfileCompositionExtensions(
+      candidate.extensions,
+      filePath
+    );
+  }
+
+  return legacyComposition;
 }
 
 function normalizeProfileCompositionExtensions(
   raw: unknown,
   filePath: string
-): GovernanceProfileComposition['extensions'] {
+): GovernanceLegacyProfileComposition['extensions'] {
   if (!Array.isArray(raw)) {
     throw new Error(
       `Governance profile at ${filePath} has invalid composition.extensions: expected an array.`
@@ -302,13 +394,14 @@ function normalizeProfileCompositionExtensions(
   });
 }
 
-function normalizeProfileCompositionRenderers(
+function normalizeProfileRuntimeRenderers(
   raw: unknown,
-  filePath: string
-): GovernanceProfileComposition['renderers'] {
+  filePath: string,
+  pathLabel: 'runtime' | 'composition'
+): GovernanceProfileRuntimeConfig['renderers'] {
   if (!Array.isArray(raw)) {
     throw new Error(
-      `Governance profile at ${filePath} has invalid composition.renderers: expected an array.`
+      `Governance profile at ${filePath} has invalid ${pathLabel}.renderers: expected an array.`
     );
   }
 
@@ -318,7 +411,7 @@ function normalizeProfileCompositionRenderers(
   return raw.map((entry, index) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
       throw new Error(
-        `Governance profile at ${filePath} has invalid composition.renderers[${index}]: expected an object.`
+        `Governance profile at ${filePath} has invalid ${pathLabel}.renderers[${index}]: expected an object.`
       );
     }
 
@@ -326,19 +419,19 @@ function normalizeProfileCompositionRenderers(
     const id = candidate.id;
     if (typeof id !== 'string' || id.trim().length === 0) {
       throw new Error(
-        `Governance profile at ${filePath} has invalid composition.renderers[${index}].id: expected a non-empty string.`
+        `Governance profile at ${filePath} has invalid ${pathLabel}.renderers[${index}].id: expected a non-empty string.`
       );
     }
 
     if (!supportedRenderers.has(id)) {
       throw new Error(
-        `Governance profile at ${filePath} has unknown composition renderer "${id}".`
+        `Governance profile at ${filePath} has unknown ${pathLabel} renderer "${id}".`
       );
     }
 
     if (seenRenderers.has(id)) {
       throw new Error(
-        `Governance profile at ${filePath} has duplicate composition renderer "${id}".`
+        `Governance profile at ${filePath} has duplicate ${pathLabel} renderer "${id}".`
       );
     }
     seenRenderers.add(id);
@@ -346,7 +439,7 @@ function normalizeProfileCompositionRenderers(
     const enabled = candidate.enabled;
     if (enabled !== undefined && typeof enabled !== 'boolean') {
       throw new Error(
-        `Governance profile at ${filePath} has invalid composition.renderers[${index}].enabled: expected a boolean.`
+        `Governance profile at ${filePath} has invalid ${pathLabel}.renderers[${index}].enabled: expected a boolean.`
       );
     }
 
@@ -356,7 +449,7 @@ function normalizeProfileCompositionRenderers(
       (!options || typeof options !== 'object' || Array.isArray(options))
     ) {
       throw new Error(
-        `Governance profile at ${filePath} has invalid composition.renderers[${index}].options: expected an object.`
+        `Governance profile at ${filePath} has invalid ${pathLabel}.renderers[${index}].options: expected an object.`
       );
     }
 

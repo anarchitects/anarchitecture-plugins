@@ -177,47 +177,6 @@ describe('registerGovernanceExtensions', () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it('activates extensions from profile composition through the same registration flow', async () => {
-    const loadedSpecifiers: string[] = [];
-
-    const registry = await registerGovernanceExtensions(baseContext, {
-      profileComposition: {
-        legacyPluginProbing: false,
-        extensions: [
-          {
-            package: '@anarchitects/governance-extension-nx',
-            options: {
-              rulePacks: ['default'],
-            },
-          },
-        ],
-      },
-      nxJson: {
-        plugins: ['plugin-b'],
-      },
-      moduleLoader: async (specifier) => {
-        loadedSpecifiers.push(specifier);
-
-        if (specifier === '@anarchitects/governance-extension-nx') {
-          return createGovernanceExtension('nx-extension', (host) => {
-            host.registerRulePack('rule-pack-nx');
-          });
-        }
-
-        throw new Error(`Unexpected specifier ${specifier}`);
-      },
-    });
-
-    expect(loadedSpecifiers).toEqual(['@anarchitects/governance-extension-nx']);
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(registry.rulePacks).toEqual([
-      {
-        pluginId: 'nx-extension',
-        contribution: 'rule-pack-nx',
-      },
-    ]);
-  });
-
   it('discovers extensions from string and object plugin entries and registers them in nx.json order', async () => {
     const registrationOrder: string[] = [];
 

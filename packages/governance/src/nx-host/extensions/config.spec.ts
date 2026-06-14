@@ -31,53 +31,7 @@ describe('governance extension config loader', () => {
     });
   });
 
-  it('merges profile composition extensions before nx.json extensions', () => {
-    expect(
-      loadGovernanceExtensionConfig({
-        profileComposition: {
-          legacyPluginProbing: false,
-          extensions: [
-            {
-              package: '@anarchitects/governance-extension-nx',
-              options: {
-                rules: true,
-              },
-            },
-          ],
-        },
-        nxJson: {
-          governance: {
-            legacyPluginProbing: true,
-            extensions: [
-              {
-                package: '@anarchitects/governance-extension-nx',
-              },
-              {
-                package: '@anarchitects/governance-extension-angular',
-                optional: true,
-              },
-            ],
-          },
-        },
-      })
-    ).toEqual({
-      legacyPluginProbing: false,
-      extensions: [
-        {
-          package: '@anarchitects/governance-extension-nx',
-          options: {
-            rules: true,
-          },
-        },
-        {
-          package: '@anarchitects/governance-extension-angular',
-          optional: true,
-        },
-      ],
-    });
-  });
-
-  it('keeps existing nx.json extension config when profiles omit composition', () => {
+  it('reads extension activation only from nx.json.governance', () => {
     expect(
       loadGovernanceExtensionConfig({
         nxJson: {

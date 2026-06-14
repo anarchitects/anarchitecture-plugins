@@ -1368,7 +1368,7 @@ async function buildAssessmentArtifacts(
   return {
     ...artifacts,
     adapterResult,
-    profileComposition: overrides.composition,
+    runtimeConfig: overrides.runtimeConfig,
     assessment: buildGovernanceAssessment({
       workspace: artifacts.workspace,
       profile: profileName,
@@ -1387,7 +1387,7 @@ async function buildAssessmentArtifacts(
 function resolveProfileConfiguredOutput(
   artifacts: GovernanceAssessmentArtifacts
 ): GovernanceRunOptions['output'] {
-  const renderers = artifacts.profileComposition?.renderers ?? [];
+  const renderers = artifacts.runtimeConfig?.renderers ?? [];
   const cliRenderer = renderers.find((renderer) => renderer.id === 'cli');
   const jsonRenderer = renderers.find((renderer) => renderer.id === 'json');
 

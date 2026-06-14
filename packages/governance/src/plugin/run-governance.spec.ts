@@ -239,7 +239,7 @@ describe('runGovernance', () => {
     expect(health.assessment.topIssues.length).toBeGreaterThan(0);
   });
 
-  it('uses profile renderer composition as the default output only when no explicit output is provided', async () => {
+  it('uses host runtime renderer config as the default output only when no explicit output is provided', async () => {
     const loggerInfo = jest
       .spyOn(logger, 'info')
       .mockImplementation(() => undefined);
@@ -253,7 +253,7 @@ describe('runGovernance', () => {
 
     mockedLoadProfileOverrides.mockResolvedValue({
       ...overrides,
-      composition: {
+      runtimeConfig: {
         renderers: [
           {
             id: 'cli',
@@ -1401,7 +1401,7 @@ describe('runGovernance', () => {
     ).toBe(false);
     expect(receivedContext?.options).toEqual({
       reportType: 'health',
-      profileComposition: {},
+      runtimeConfig: {},
     });
     expect(receivedContext?.capabilities.has('capability:nx')).toBe(true);
     expect(
