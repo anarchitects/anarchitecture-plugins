@@ -9,7 +9,6 @@ import {
   registerLoadedGovernanceExtensionsWithDiagnostics,
 } from '../../extensions/runtime.js';
 import type { GovernanceExtensionConfig } from '../../extensions/config.js';
-import type { GovernanceProfileComposition } from '../../profile/runtime-profile.js';
 import {
   type GovernanceExtensionLoadRequest,
   type GovernanceExtensionModuleLoader,
@@ -35,7 +34,6 @@ export interface DiscoverGovernanceExtensionsOptions {
   workspaceRoot?: string;
   nxJson?: NxJsonShape;
   moduleLoader?: GovernanceExtensionModuleLoader;
-  profileComposition?: GovernanceProfileComposition;
 }
 
 export type RegisterGovernanceExtensionsOptions =
@@ -58,10 +56,7 @@ export async function registerNxGovernanceExtensionsWithDiagnostics(
   options: RegisterGovernanceExtensionsOptions = {}
 ): Promise<GovernanceExtensionRegistrationResult> {
   const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
-  const governanceExtensionConfig = loadGovernanceExtensionConfig({
-    nxJson,
-    profileComposition: options.profileComposition,
-  });
+  const governanceExtensionConfig = loadGovernanceExtensionConfig({ nxJson });
   const loadRequests = buildGovernanceExtensionLoadRequests(
     nxJson,
     governanceExtensionConfig
@@ -91,10 +86,7 @@ export async function discoverNxGovernanceExtensionLoadRequests(
   options: DiscoverGovernanceExtensionsOptions = {}
 ): Promise<GovernanceExtensionLoadRequest[]> {
   const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
-  const governanceExtensionConfig = loadGovernanceExtensionConfig({
-    nxJson,
-    profileComposition: options.profileComposition,
-  });
+  const governanceExtensionConfig = loadGovernanceExtensionConfig({ nxJson });
 
   return buildGovernanceExtensionLoadRequests(
     nxJson,

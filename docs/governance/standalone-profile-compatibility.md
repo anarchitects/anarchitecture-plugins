@@ -41,6 +41,10 @@ as:
 Those files rely on Nx-side preset resolution and override merging. The
 standalone CLI does not perform that compatibility merge.
 
+Governance extension activation is not part of the canonical or standalone
+profile contract. Nx hosts extension loading through `nx.json.governance`
+rather than through runtime profile policy.
+
 ## Supported Standalone Profile Format
 
 Use the standalone profile contract documented in

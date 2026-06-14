@@ -80,7 +80,7 @@ describe('composeNxGovernanceRuntime', () => {
     jest.resetAllMocks();
   });
 
-  it('composes canonical workspace inventory, capabilities, diagnostics, profile composition, and extension registration', async () => {
+  it('composes canonical workspace inventory, capabilities, host runtime config, and extension registration', async () => {
     let receivedContext: RuntimeGovernanceExtensionContext | undefined;
     const adapterResult = buildAdapterResult();
     const workspace = buildCanonicalWorkspace();
@@ -178,13 +178,7 @@ describe('composeNxGovernanceRuntime', () => {
       profile: buildProfile(),
       profileOverrides: {
         nodeOverrides: {},
-        composition: {
-          legacyPluginProbing: false,
-          extensions: [
-            {
-              package: '@anarchitects/governance-extension-nx',
-            },
-          ],
+        runtimeConfig: {
           renderers: [
             {
               id: 'cli',
@@ -208,23 +202,6 @@ describe('composeNxGovernanceRuntime', () => {
       expect.objectContaining({ profileName: 'test-profile' }),
       {
         workspaceRoot,
-        profileComposition: {
-          legacyPluginProbing: false,
-          extensions: [
-            {
-              package: '@anarchitects/governance-extension-nx',
-            },
-          ],
-          renderers: [
-            {
-              id: 'cli',
-              enabled: true,
-            },
-          ],
-          settings: {
-            severityThreshold: 'warning',
-          },
-        },
       }
     );
     expect(result.adapterResult).toBe(adapterResult);
@@ -240,13 +217,7 @@ describe('composeNxGovernanceRuntime', () => {
     expect(receivedContext?.capabilities.get('capability:nx')).toEqual(
       adapterResult.capabilities?.[0]
     );
-    expect(receivedContext?.options.profileComposition).toEqual({
-      legacyPluginProbing: false,
-      extensions: [
-        {
-          package: '@anarchitects/governance-extension-nx',
-        },
-      ],
+    expect(receivedContext?.options.runtimeConfig).toEqual({
       renderers: [
         {
           id: 'cli',

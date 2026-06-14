@@ -7,7 +7,6 @@ import {
   type GovernanceExtensionConfig,
   type GovernanceExtensionConfigInput,
 } from '../../extensions/config.js';
-import type { GovernanceProfileComposition } from '../../profile/runtime-profile.js';
 
 interface NxJsonShape {
   governance?: GovernanceExtensionConfigInput;
@@ -16,39 +15,13 @@ interface NxJsonShape {
 export interface LoadGovernanceExtensionConfigOptions {
   workspaceRoot?: string;
   nxJson?: NxJsonShape;
-  profileComposition?: GovernanceProfileComposition;
 }
 
 export function loadGovernanceExtensionConfig(
   options: LoadGovernanceExtensionConfigOptions = {}
 ): GovernanceExtensionConfig {
   const nxJson = options.nxJson ?? readNxJson(options.workspaceRoot);
-  const nxConfig = parseGovernanceExtensionConfig(nxJson.governance);
-
-  return mergeProfileAndNxExtensionConfig(options.profileComposition, nxConfig);
-}
-
-function mergeProfileAndNxExtensionConfig(
-  profileComposition: GovernanceProfileComposition | undefined,
-  nxConfig: GovernanceExtensionConfig
-): GovernanceExtensionConfig {
-  const profileExtensions = profileComposition?.extensions ?? [];
-  const extensions = [
-    ...profileExtensions,
-    ...nxConfig.extensions.filter(
-      (nxExtension) =>
-        !profileExtensions.some(
-          (profileExtension) => profileExtension.package === nxExtension.package
-        )
-    ),
-  ];
-  const legacyPluginProbing =
-    profileComposition?.legacyPluginProbing ?? nxConfig.legacyPluginProbing;
-
-  return {
-    extensions,
-    ...(legacyPluginProbing !== undefined ? { legacyPluginProbing } : {}),
-  };
+  return parseGovernanceExtensionConfig(nxJson.governance);
 }
 
 function readNxJson(workspaceRoot = defaultWorkspaceRoot): NxJsonShape {

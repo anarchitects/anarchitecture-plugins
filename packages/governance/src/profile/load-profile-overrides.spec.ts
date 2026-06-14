@@ -86,22 +86,12 @@ describe('loadProfileOverrides', () => {
     }
   });
 
-  it('loads declarative composition for extensions, renderers, and settings', async () => {
+  it('loads host runtime renderer and settings config separately from canonical profile overrides', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 
     try {
       writeProfile(workspaceRoot, {
-        composition: {
-          legacyPluginProbing: false,
-          extensions: [
-            {
-              package: '@anarchitects/governance-extension-nx',
-              optional: false,
-              options: {
-                rulePacks: ['default'],
-              },
-            },
-          ],
+        runtime: {
           renderers: [
             {
               id: 'cli',
@@ -126,17 +116,7 @@ describe('loadProfileOverrides', () => {
         'frontend-layered'
       );
 
-      expect(result.composition).toEqual({
-        legacyPluginProbing: false,
-        extensions: [
-          {
-            package: '@anarchitects/governance-extension-nx',
-            optional: false,
-            options: {
-              rulePacks: ['default'],
-            },
-          },
-        ],
+      expect(result.runtimeConfig).toEqual({
         renderers: [
           {
             id: 'cli',
@@ -154,17 +134,78 @@ describe('loadProfileOverrides', () => {
           severityThreshold: 'warning',
         },
       });
+      expect(result.runtimeWarnings).toEqual([]);
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);
     }
   });
 
-  it('rejects unknown renderer ids in profile composition', async () => {
+  it('normalizes deprecated composition renderers/settings but ignores extension activation there', async () => {
     const workspaceRoot = mkTempWorkspaceRoot();
 
     try {
       writeProfile(workspaceRoot, {
         composition: {
+          legacyPluginProbing: false,
+          extensions: [
+            {
+              package: '@anarchitects/governance-extension-nx',
+              optional: false,
+            },
+          ],
+          renderers: [
+            {
+              id: 'json',
+              enabled: true,
+            },
+          ],
+          settings: {
+            severityThreshold: 'warning',
+          },
+        },
+      });
+
+      const result = await loadProfileOverrides(
+        workspaceRoot,
+        'frontend-layered'
+      );
+
+      expect(result.runtimeConfig).toEqual({
+        renderers: [
+          {
+            id: 'json',
+            enabled: true,
+          },
+        ],
+        settings: {
+          severityThreshold: 'warning',
+        },
+      });
+      expect(result.runtimeWarnings).toEqual([
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} contains deprecated composition-based extension activation. Move extensions and legacyPluginProbing into nx.json.governance; profile-level extension loading is ignored.`,
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} uses deprecated composition.renderers. Move renderer defaults under runtime.renderers.`,
+        `Governance profile at ${path.join(
+          workspaceRoot,
+          'tools/governance/profiles/frontend-layered.json'
+        )} uses deprecated composition.settings. Move host runtime settings under runtime.settings.`,
+      ]);
+    } finally {
+      cleanupTempWorkspaceRoot(workspaceRoot);
+    }
+  });
+
+  it('rejects unknown renderer ids in runtime config', async () => {
+    const workspaceRoot = mkTempWorkspaceRoot();
+
+    try {
+      writeProfile(workspaceRoot, {
+        runtime: {
           renderers: [
             {
               id: 'unknown-renderer',
@@ -179,7 +220,7 @@ describe('loadProfileOverrides', () => {
         `Governance profile at ${path.join(
           workspaceRoot,
           'tools/governance/profiles/frontend-layered.json'
-        )} has unknown composition renderer "unknown-renderer".`
+        )} has unknown runtime renderer "unknown-renderer".`
       );
     } finally {
       cleanupTempWorkspaceRoot(workspaceRoot);

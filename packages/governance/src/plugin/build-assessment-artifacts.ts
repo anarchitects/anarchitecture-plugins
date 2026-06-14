@@ -7,7 +7,7 @@ import type {
   GovernanceWorkspaceAdapterResult,
 } from '@anarchitects/governance-core';
 import type { GovernanceExtensionDiagnostic } from '../extensions/diagnostics.js';
-import type { GovernanceProfileComposition } from '../profile/runtime-profile.js';
+import type { GovernanceProfileRuntimeConfig } from '../profile/runtime-profile.js';
 
 export interface GovernanceAssessmentArtifacts {
   assessment: GovernanceAssessment;
@@ -17,5 +17,5 @@ export interface GovernanceAssessmentArtifacts {
   adapterResult?: GovernanceWorkspaceAdapterResult;
   capabilities?: GovernanceCapability[];
   diagnostics?: GovernanceDiagnostic[];
-  profileComposition?: GovernanceProfileComposition;
+  runtimeConfig?: GovernanceProfileRuntimeConfig;
 }

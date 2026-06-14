@@ -20,12 +20,11 @@ import {
   type GraphAdapterOptions,
 } from '@anarchitects/governance-adapter-nx';
 
-import { loadGovernanceExtensionConfig } from '../nx-host/extensions/config.js';
 import { registerNxGovernanceExtensionsWithDiagnostics } from '../nx-host/extensions/host.js';
-import type { GovernanceProfileComposition } from '../profile/runtime-profile.js';
+import type { GovernanceProfileRuntimeConfig } from '../profile/runtime-profile.js';
 
 interface NxGovernanceProfileOverrides extends ProfileOverrides {
-  composition?: GovernanceProfileComposition;
+  runtimeConfig?: GovernanceProfileRuntimeConfig;
 }
 
 export type RuntimeGovernanceNode = GovernanceNode;
@@ -84,11 +83,7 @@ export async function composeNxGovernanceRuntime(
     adapterResult
   ) as unknown as RuntimeGovernanceWorkspace;
 
-  const profileComposition = input.profileOverrides.composition ?? {};
-  loadGovernanceExtensionConfig({
-    workspaceRoot: input.workspaceRoot,
-    profileComposition,
-  });
+  const runtimeConfig = input.profileOverrides.runtimeConfig ?? {};
 
   const adapterCapabilities = adapterResult.capabilities ?? [];
   const extensionContext: RuntimeGovernanceExtensionContext = {
@@ -96,7 +91,7 @@ export async function composeNxGovernanceRuntime(
     profileName: input.profileName,
     options: {
       ...input.options,
-      profileComposition,
+      runtimeConfig,
     },
     inventory: workspace,
     capabilities: new DefaultGovernanceCapabilityRegistry(adapterCapabilities),
@@ -106,7 +101,6 @@ export async function composeNxGovernanceRuntime(
       extensionContext as unknown as GovernanceExtensionHostContext,
       {
         workspaceRoot: input.workspaceRoot,
-        profileComposition,
       }
     );
   const coreArtifacts = await buildCoreGovernanceAssessmentArtifacts({

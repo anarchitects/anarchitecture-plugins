@@ -114,6 +114,8 @@ describe('governance extension architecture boundaries', () => {
     expect(compositionSource).not.toContain(
       "from '@anarchitects/governance-extension-typescript';"
     );
+    expect(compositionSource).not.toContain('profileComposition');
+    expect(compositionSource).toContain('runtimeConfig');
     expect(compositionSource).toContain(
       'const adapterCapabilities = adapterResult.capabilities ?? [];'
     );
@@ -240,6 +242,8 @@ describe('governance extension architecture boundaries', () => {
     expect(nxHostExtensionHostSource).toMatch(/@nx\/devkit/);
     expect(nxHostExtensionConfigSource).toContain('nx.json');
     expect(nxHostExtensionHostSource).toContain('nx.json');
+    expect(nxHostExtensionConfigSource).not.toContain('profileComposition');
+    expect(nxHostExtensionHostSource).not.toContain('profileComposition');
     expect(nxHostExtensionLoaderSource).toContain('import(specifier)');
   });
 });
