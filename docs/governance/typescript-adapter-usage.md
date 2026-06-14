@@ -16,6 +16,9 @@ compose with those packages. Do not treat it as the source of truth for
 TypeScript adapter internals, `tsconfig` parsing rules, import-graph rules, or
 TypeScript extension semantics.
 
+For the broader Meta / Community / Plugins boundary model, see
+[`community-meta-plugin-boundaries.md`](./community-meta-plugin-boundaries.md).
+
 ## Ownership Boundaries
 
 Nx plugin packages own:
@@ -87,6 +90,8 @@ This means:
 - TypeScript facts come from the Community TypeScript adapter output.
 - TypeScript interpretation is loaded through the Community TypeScript
   extension, not through plugin-local helper logic.
+- The same host-composition rule should apply to future ecosystems such as
+  Angular, dbt, or repository adapters when those Community packages exist.
 
 ## Current Plugin-Side Expectations
 

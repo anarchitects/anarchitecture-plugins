@@ -6,6 +6,9 @@
 
 Use this package when you need programmatic access to canonical Nx governance inputs, capabilities, and adapter results.
 
+For the current repository-level boundary model, see
+[`../../docs/governance/community-meta-plugin-boundaries.md`](../../docs/governance/community-meta-plugin-boundaries.md).
+
 ## Key Concepts
 
 - Adapter snapshot: normalized Nx projects, dependencies, ownership evidence, and profile discovery.
@@ -63,6 +66,9 @@ This package owns:
 
 This package does not own:
 
+- canonical governance semantics
+- canonical ownership-gap semantics
+- applicability semantics for generic metadata rules
 - Governance rule evaluation
 - recommendation generation
 - Nx host orchestration
@@ -120,6 +126,8 @@ const capabilities = createNxCanonicalCapabilities({
 - Discovers governance profiles under tools/governance/profiles/\*.json.
 - Supports JSON graph fallback input when consuming exported Nx graph JSON.
 - Treats TypeScript source discovery as an external Community-owned concern.
+- Surfaces Nx ownership evidence, including adapter-local CODEOWNERS mapping
+  where supported, but does not decide canonical ownership semantics itself.
 
 ## Related Packages
 
@@ -148,6 +156,12 @@ No. It extracts and maps Nx data; rule and metric evaluation belongs to Governan
 
 No. Those responsibilities belong to the Community TypeScript adapter. This
 package only extracts Nx-owned workspace and graph context.
+
+### Does this package make every Nx node a project-like governance subject?
+
+No. Community contracts own generic applicability. The adapter supplies Nx facts
+and canonical mapping, but missing-domain and missing-layer applicability
+remain Community-owned.
 
 ## License
 

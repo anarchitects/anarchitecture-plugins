@@ -1,5 +1,12 @@
 # Canonical Graph Epic Release Gate
 
+Historical note: this document records the close-out gate for epic `#427`.
+Current boundary and ownership guidance now lives primarily in:
+
+- [`community-meta-plugin-boundaries.md`](./community-meta-plugin-boundaries.md)
+- [`source-organization.md`](./source-organization.md)
+- [`community-contract-alignment-audit.md`](./community-contract-alignment-audit.md)
+
 This note is the pre-close release gate for Governance canonical graph epic `#427`.
 
 It covers plugin-side cleanup only:

@@ -1,6 +1,11 @@
 # Canonical Governance Graph Model
 
-This is the active plugin-side governance model for the Nx Governance packages.
+This document describes the plugin-side consumption view of the canonical
+Governance graph model.
+
+Community Governance owns the canonical model itself. Nx plugin packages in
+this repository consume that model and compose Nx facts into it through public
+Community contracts.
 
 The canonical workspace shape comes from `@anarchitects/governance-core@0.4.1`:
 
@@ -23,6 +28,8 @@ interface GovernanceWorkspace {
 - `relations` are the canonical relationships between those nodes.
 - Governance Core is platform-independent. It does not expose Nx-specific
   `projects` or `dependencies` workspace fields.
+- Canonical profile policy, ownership semantics, and applicability semantics
+  remain Community-owned.
 
 ## Nx Mapping
 
@@ -33,8 +40,14 @@ interface GovernanceWorkspace {
 - Nx dependency relation kind -> `kind: 'dependency'`
 - Nx project metadata -> `node.metadata.nx`
 - Nx dependency metadata -> `relation.metadata.nx`
-- Nx ownership facts -> canonical `node.ownership`
+- Nx ownership evidence may contribute to canonical `node.ownership` through
+  Community-owned ownership contracts
 - Nx graph availability and adapter-specific facts -> `capability:nx`
+
+Not every Nx-tagged subject is automatically project-like. Infrastructure,
+runtime, config, or asset-like subjects may remain non-project nodes, and
+Community-owned applicability decides whether generic domain/layer findings are
+in scope for them.
 
 ## Example
 
@@ -61,7 +74,7 @@ const workspace = {
       ownership: {
         team: '@anarchitects/commerce',
         contacts: ['commerce-team@anarchitects.dev'],
-        source: 'codeowners',
+        source: 'project-metadata',
       },
     },
   ],
@@ -95,6 +108,18 @@ Canonical findings, signals, recommendations, and summaries should use:
 They should not use project/dependency compatibility fields such as
 `projectId`, `sourceProjectId`, `targetProjectId`, `relatedProjectIds`, or
 `affectedProjects`.
+
+## Cooperative Enrichment
+
+Nx graph facts may enrich other Community facts, but only through:
+
+- canonical nodes and relations
+- declared capabilities
+- extension-owned contracts
+- host-level composition
+
+The Nx host must not duplicate Community adapter discovery or Community
+extension interpretation to achieve that enrichment.
 
 ## Root Package Compatibility
 
