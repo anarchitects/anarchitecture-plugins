@@ -59,6 +59,7 @@ This package owns:
 - capabilities
 - ownership evidence mapping
 - Governance Core adapter mapping
+- Nx graph JSON fallback handling
 
 This package does not own:
 
@@ -67,6 +68,11 @@ This package does not own:
 - Nx host orchestration
 - Nx generators and executors
 - report rendering
+- TypeScript workspace discovery
+- `tsconfig` parsing
+- TypeScript path-alias or import-graph analysis
+- TypeScript-specific diagnostics, signals, metrics, or recommendations
+- Community TypeScript adapter or extension semantics
 
 ## Public API
 
@@ -113,12 +119,15 @@ const capabilities = createNxCanonicalCapabilities({
 - Reads workspace data through Nx APIs.
 - Discovers governance profiles under tools/governance/profiles/\*.json.
 - Supports JSON graph fallback input when consuming exported Nx graph JSON.
+- Treats TypeScript source discovery as an external Community-owned concern.
 
 ## Related Packages
 
 - @anarchitects/nx-governance: composes this adapter into Nx executors and generators.
 - @anarchitects/governance-core: target contract model and deterministic governance logic.
 - @anarchitects/governance-extension-nx: consumes adapter capabilities for Nx-specific governance interpretation.
+- @anarchitects/governance-adapter-typescript: Community-owned TypeScript discovery and normalization.
+- @anarchitects/governance-extension-typescript: Community-owned TypeScript interpretation.
 
 ## Compatibility
 
@@ -134,6 +143,11 @@ Usually no. Nx users typically interact with @anarchitects/nx-governance command
 ### Does this package evaluate governance rules?
 
 No. It extracts and maps Nx data; rule and metric evaluation belongs to Governance Core and extension packages.
+
+### Does this package parse tsconfig files or build a TypeScript import graph?
+
+No. Those responsibilities belong to the Community TypeScript adapter. This
+package only extracts Nx-owned workspace and graph context.
 
 ## License
 

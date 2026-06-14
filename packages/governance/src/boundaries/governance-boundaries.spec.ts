@@ -187,10 +187,17 @@ describe('governance boundary enforcement', () => {
       },
       {
         kind: 'import',
-        rule: 'Host-owned runtime must not import Governance CLI or TypeScript adapter packages.',
+        rule: 'Host-owned runtime must not import Governance CLI, TypeScript adapter, or TypeScript extension packages directly.',
         matches: (specifier) =>
           specifier === '@anarchitects/governance-cli' ||
-          specifier === '@anarchitects/governance-adapter-typescript',
+          specifier === '@anarchitects/governance-adapter-typescript' ||
+          specifier.startsWith(
+            '@anarchitects/governance-adapter-typescript/'
+          ) ||
+          specifier === '@anarchitects/governance-extension-typescript' ||
+          specifier.startsWith(
+            '@anarchitects/governance-extension-typescript/'
+          ),
       },
       {
         kind: 'import',
