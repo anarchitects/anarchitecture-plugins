@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   buildGovernanceWorkspace,
   evaluateGovernancePolicies,
+  type GovernanceWorkspaceAdapterResult,
 } from '@anarchitects/governance-core';
 import {
   createNxCapability,
@@ -33,6 +34,12 @@ describe('host -> adapter -> core compatibility flow', () => {
     );
     expect(compositionSource).toContain(
       "from '@anarchitects/governance-adapter-nx';"
+    );
+    expect(compositionSource).not.toContain(
+      "from '@anarchitects/governance-adapter-typescript';"
+    );
+    expect(compositionSource).not.toContain(
+      "from '@anarchitects/governance-extension-typescript';"
     );
     expect(runGovernanceSource).not.toMatch(
       /from '\.\.\/core\/index\.js'|from '\.\.\/core\/models\.js'/
@@ -207,5 +214,81 @@ describe('host -> adapter -> core compatibility flow', () => {
         }),
       ])
     );
+  });
+
+  it('preserves opaque Community-owned TypeScript expansions through public adapter contracts', () => {
+    const adapterResult: GovernanceWorkspaceAdapterResult = {
+      workspaceRoot: '/workspace',
+      nodes: [
+        {
+          id: 'orders-app',
+          kind: 'project',
+          sourceSystem: 'nx',
+          tags: ['scope:orders', 'layer:app'],
+          extensions: {
+            'governance-extension-typescript': {
+              extensionId: 'governance-extension-typescript',
+              contractVersion: '1',
+              data: {
+                entrypoints: ['apps/orders/src/main.ts'],
+                projectRoot: 'apps/orders',
+              },
+            },
+          },
+        },
+      ],
+      relations: [
+        {
+          sourceNodeId: 'orders-app',
+          targetNodeId: 'orders-app',
+          kind: 'dependency',
+          extensions: {
+            'governance-extension-typescript': {
+              extensionId: 'governance-extension-typescript',
+              contractVersion: '1',
+              data: {
+                sourceFile: 'apps/orders/src/main.ts',
+              },
+            },
+          },
+        },
+      ],
+      capabilities: [
+        {
+          id: 'capability:typescript',
+          source: 'governance-adapter-typescript',
+        },
+      ],
+    };
+
+    const workspace = buildGovernanceWorkspace(adapterResult);
+
+    expect(workspace.capabilities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'capability:typescript',
+          source: 'governance-adapter-typescript',
+        }),
+      ])
+    );
+    expect(
+      workspace.nodes[0].extensions?.['governance-extension-typescript']
+    ).toEqual({
+      extensionId: 'governance-extension-typescript',
+      contractVersion: '1',
+      data: {
+        entrypoints: ['apps/orders/src/main.ts'],
+        projectRoot: 'apps/orders',
+      },
+    });
+    expect(
+      workspace.relations[0].extensions?.['governance-extension-typescript']
+    ).toEqual({
+      extensionId: 'governance-extension-typescript',
+      contractVersion: '1',
+      data: {
+        sourceFile: 'apps/orders/src/main.ts',
+      },
+    });
   });
 });

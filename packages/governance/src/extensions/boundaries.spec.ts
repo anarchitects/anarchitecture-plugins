@@ -108,6 +108,12 @@ describe('governance extension architecture boundaries', () => {
     expect(compositionSource).toContain(
       "from '@anarchitects/governance-core';"
     );
+    expect(compositionSource).not.toContain(
+      "from '@anarchitects/governance-adapter-typescript';"
+    );
+    expect(compositionSource).not.toContain(
+      "from '@anarchitects/governance-extension-typescript';"
+    );
     expect(compositionSource).toContain(
       'const adapterCapabilities = adapterResult.capabilities ?? [];'
     );
