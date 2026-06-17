@@ -6,6 +6,7 @@ export interface AdapterProject {
   sourceRoot?: string;
   type: string;
   tags?: string[];
+  nxTags?: string[];
   targets?: string[];
   implicitDependencies?: string[];
   metadata: Record<string, unknown>;

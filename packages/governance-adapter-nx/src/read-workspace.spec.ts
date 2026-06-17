@@ -138,6 +138,7 @@ describe('read-workspace adapter compatibility', () => {
           sourceRoot: 'libs/booking/ui/src',
           type: 'library',
           tags: ['scope:booking', 'layer:ui'],
+          nxTags: ['scope:booking', 'layer:ui', 'type:ui'],
           targets: ['build', 'test'],
           implicitDependencies: ['shared'],
           metadata: {
@@ -178,7 +179,7 @@ describe('read-workspace adapter compatibility', () => {
             projectType: 'library',
             root: 'libs/booking/ui',
             sourceRoot: 'libs/booking/ui/src',
-            tags: ['scope:booking', 'layer:ui'],
+            tags: ['scope:booking', 'layer:ui', 'type:ui'],
             targets: ['build', 'test'],
             implicitDependencies: ['shared'],
             projectMetadata: {
@@ -204,7 +205,7 @@ describe('read-workspace adapter compatibility', () => {
                 name: 'booking-ui',
                 root: 'libs/booking/ui',
                 type: 'library',
-                tags: ['scope:booking', 'layer:ui'],
+                tags: ['scope:booking', 'layer:ui', 'type:ui'],
                 targets: ['build', 'test'],
               },
             ],
@@ -258,6 +259,48 @@ describe('read-workspace adapter compatibility', () => {
         sourceSystem: 'nx',
       },
     });
+  });
+
+  it('splits canonical governance tags from raw Nx tags during snapshot normalization', () => {
+    const snapshot = createNxWorkspaceSnapshotFromProjectGraph(
+      {
+        nodes: {
+          booking: {
+            type: 'lib',
+            name: 'booking',
+            data: {
+              root: 'libs/booking',
+              sourceRoot: 'libs/booking/src',
+              projectType: 'library',
+              tags: ['domain:booking', 'npm:private', 'type: api'],
+              targets: {
+                test: {},
+              },
+            },
+          },
+        },
+        dependencies: {
+          booking: [],
+        },
+      } as unknown as Awaited<
+        ReturnType<typeof nxDevkit.createProjectGraphAsync>
+      >,
+      testRoot
+    );
+
+    expect(snapshot.projects).toEqual([
+      {
+        name: 'booking',
+        root: 'libs/booking',
+        sourceRoot: 'libs/booking/src',
+        type: 'library',
+        tags: ['domain:booking', 'type: api'],
+        nxTags: ['domain:booking', 'npm:private', 'type: api'],
+        targets: ['test'],
+        implicitDependencies: [],
+        metadata: {},
+      },
+    ]);
   });
 
   it('excludes the default workspace root task container from snapshot projects, relations, and capabilities', () => {

@@ -18,6 +18,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           sourceRoot: 'libs/booking/ui/src',
           type: 'library',
           tags: ['scope:booking', 'layer:ui', 'type:ui'],
+          nxTags: ['scope:booking', 'layer:ui', 'type:ui'],
           targets: ['test', 'build'],
           implicitDependencies: ['booking-domain'],
           metadata: {
@@ -30,6 +31,7 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
           sourceRoot: 'libs/booking/domain/src',
           type: 'library',
           tags: ['scope:booking', 'layer:domain', 'type:domain'],
+          nxTags: ['scope:booking', 'layer:domain', 'type:domain'],
           targets: ['lint'],
           metadata: {
             ownership: {
@@ -220,6 +222,80 @@ describe('toGovernanceWorkspaceAdapterResult', () => {
       'nx.project-tags',
       'nx.targets',
     ]);
+  });
+
+  it('keeps inferred npm tags out of canonical node tags while preserving them in Nx metadata', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'booking-app',
+          root: 'apps/booking',
+          type: 'application',
+          tags: ['domain:booking', 'layer:application'],
+          nxTags: ['domain:booking', 'layer:application', 'npm:private'],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        id: 'booking-app',
+        tags: ['domain:booking', 'layer:application'],
+        classification: {
+          domain: 'booking',
+          layer: 'application',
+          tags: ['domain:booking', 'layer:application'],
+        },
+        metadata: {
+          nx: expect.objectContaining({
+            tags: ['domain:booking', 'layer:application', 'npm:private'],
+          }),
+        },
+      }),
+    ]);
+  });
+
+  it('keeps generic tags canonical while not deriving classification from them alone', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'api',
+          root: 'apps/api',
+          type: 'application',
+          tags: ['type: api'],
+          nxTags: ['type: api'],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const result = toGovernanceWorkspaceAdapterResult(snapshot);
+
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        id: 'api',
+        tags: ['type: api'],
+        metadata: {
+          nx: expect.objectContaining({
+            tags: ['type: api'],
+          }),
+        },
+      }),
+    ]);
+    expect(result.nodes?.[0]?.classification).toEqual({
+      tags: ['type: api'],
+    });
   });
 
   it('uses project metadata ownership when CODEOWNERS ownership is absent', () => {

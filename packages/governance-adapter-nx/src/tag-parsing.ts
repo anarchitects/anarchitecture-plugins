@@ -17,3 +17,19 @@ export function readTagValue(
     .trim();
   return value.length > 0 ? value : undefined;
 }
+
+export function isDefaultExcludedNxTag(tag: string): boolean {
+  const normalizedTag = tag.trim();
+
+  return normalizedTag.startsWith('npm:');
+}
+
+export function splitNxTags(tags: string[]): {
+  governanceTags: string[];
+  rawTags: string[];
+} {
+  return {
+    governanceTags: tags.filter((tag) => !isDefaultExcludedNxTag(tag)),
+    rawTags: [...tags],
+  };
+}

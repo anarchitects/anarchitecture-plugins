@@ -46,6 +46,7 @@ describe('createNxCapability', () => {
           root: 'libs/booking/ui',
           type: 'library',
           tags: ['scope:booking', 'layer:ui'],
+          nxTags: ['scope:booking', 'layer:ui', 'npm:private'],
           targets: ['test', 'build'],
           metadata: {
             documentation: true,
@@ -73,7 +74,7 @@ describe('createNxCapability', () => {
             name: 'booking-ui',
             root: 'libs/booking/ui',
             type: 'library',
-            tags: ['scope:booking', 'layer:ui'],
+            tags: ['scope:booking', 'layer:ui', 'npm:private'],
             targets: ['build', 'test'],
           },
         ],
@@ -288,6 +289,7 @@ describe('createNxCapability', () => {
             root: 'libs/booking/ui',
             type: 'library',
             tags: ['scope:booking', 'layer:ui'],
+            nxTags: ['scope:booking', 'layer:ui', 'npm:private'],
             targets: ['test', 'build'],
             metadata: {
               documentation: true,
@@ -321,7 +323,7 @@ describe('createNxCapability', () => {
       projects: [
         {
           id: 'booking-ui',
-          tags: ['scope:booking', 'layer:ui'],
+          tags: ['scope:booking', 'layer:ui', 'npm:private'],
         },
       ],
     });
@@ -350,6 +352,54 @@ describe('createNxCapability', () => {
           id: 'booking-ui',
           contacts: ['@booking-team'],
           source: 'codeowners',
+        },
+      ],
+    });
+  });
+
+  it('keeps raw Nx tags visible in capabilities even when canonical tags are narrower', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'booking-app',
+          root: 'apps/booking',
+          type: 'application',
+          tags: ['domain:booking', 'type: api'],
+          nxTags: ['domain:booking', 'type: api', 'npm:public'],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    expect(
+      createNxCapability({
+        workspaceRoot: '/workspace',
+        snapshot,
+      }).data?.projects
+    ).toEqual([
+      {
+        name: 'booking-app',
+        root: 'apps/booking',
+        type: 'application',
+        tags: ['domain:booking', 'type: api', 'npm:public'],
+        targets: [],
+      },
+    ]);
+    expect(
+      capabilityData(
+        createNxCapabilities({ workspaceRoot: '/workspace', snapshot }),
+        'nx.project-tags'
+      )
+    ).toEqual({
+      projectCount: 1,
+      projects: [
+        {
+          id: 'booking-app',
+          tags: ['domain:booking', 'type: api', 'npm:public'],
         },
       ],
     });

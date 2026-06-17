@@ -42,7 +42,7 @@ export function createNxCapability(input: {
       name: project.name,
       root: project.root,
       ...(project.type ? { type: project.type } : {}),
-      tags: [...(project.tags ?? [])],
+      tags: [...readNxProjectTags(project)],
       targets: [...(project.targets ?? [])].sort((a, b) => a.localeCompare(b)),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -198,7 +198,7 @@ function createProjectTagsCapability(input: {
   const projects = input.snapshot.projects
     .map((project) => ({
       id: project.name,
-      tags: [...(project.tags ?? [])],
+      tags: [...readNxProjectTags(project)],
     }))
     .filter((project) => project.tags.length > 0)
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -372,4 +372,10 @@ function createOwnershipEvidenceCapability(input: {
       evidenceSource: 'codeowners',
     },
   };
+}
+
+function readNxProjectTags(
+  project: AdapterWorkspaceSnapshot['projects'][number]
+): string[] {
+  return [...(project.nxTags ?? project.tags ?? [])];
 }
