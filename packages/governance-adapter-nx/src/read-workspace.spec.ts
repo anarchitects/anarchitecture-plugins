@@ -6,8 +6,10 @@ import { tmpdir } from 'node:os';
 import type { GovernanceWorkspaceAdapterResult } from '@anarchitects/governance-core';
 
 import {
+  createNxWorkspaceSnapshotFromProjectGraph,
   createNxWorkspaceAdapterResult,
   discoverGovernanceProfileFiles,
+  isDefaultWorkspaceRootTaskContainerProject,
   readNxWorkspaceSnapshot,
   resolveProjectTagsAndMetadata,
 } from './read-workspace.js';
@@ -256,6 +258,161 @@ describe('read-workspace adapter compatibility', () => {
         sourceSystem: 'nx',
       },
     });
+  });
+
+  it('excludes the default workspace root task container from snapshot projects, relations, and capabilities', () => {
+    const snapshot = createNxWorkspaceSnapshotFromProjectGraph(
+      {
+        nodes: {
+          source: {
+            type: 'lib',
+            name: 'source',
+            data: {
+              root: '.',
+              projectType: 'unknown',
+              targets: {
+                'repo-health': {},
+                'workspace-graph': {},
+              },
+              metadata: {
+                js: {
+                  isInPackageManagerWorkspaces: true,
+                  packageName: '@nx-workspace/source',
+                  packageVersion: '0.0.0',
+                },
+                targetGroups: {},
+              },
+            },
+          },
+          orders: {
+            type: 'lib',
+            name: 'orders',
+            data: {
+              root: 'libs/orders',
+              sourceRoot: 'libs/orders/src',
+              projectType: 'library',
+              tags: ['domain:orders', 'layer:feature'],
+              targets: {
+                build: {},
+                test: {},
+              },
+              metadata: {
+                documentation: true,
+              },
+            },
+          },
+          shared: {
+            type: 'lib',
+            name: 'shared',
+            data: {
+              root: 'libs/shared',
+              sourceRoot: 'libs/shared/src',
+              projectType: 'library',
+              tags: ['domain:shared', 'layer:util'],
+              targets: {
+                lint: {},
+              },
+              metadata: {
+                ownership: {
+                  team: '@org/shared',
+                },
+              },
+            },
+          },
+        },
+        dependencies: {
+          source: [{ target: 'orders', type: 'implicit' }],
+          orders: [{ target: 'shared', type: 'static' }],
+          shared: [{ target: 'source', type: 'dynamic' }],
+        },
+      } as unknown as Awaited<
+        ReturnType<typeof nxDevkit.createProjectGraphAsync>
+      >,
+      testRoot
+    );
+
+    expect(snapshot.projects.map((project) => project.name)).toEqual([
+      'orders',
+      'shared',
+    ]);
+    expect(snapshot.dependencies).toEqual([
+      {
+        source: 'orders',
+        target: 'shared',
+        type: 'static',
+      },
+    ]);
+    expect(Object.keys(snapshot.codeownersByProject)).toEqual([
+      'orders',
+      'shared',
+    ]);
+
+    const result = createNxWorkspaceAdapterResult(snapshot);
+    const capabilityIds = [
+      'capability:nx',
+      'nx.project-graph',
+      'nx.project-metadata',
+      'nx.project-tags',
+      'nx.targets',
+    ];
+
+    expect(result.nodes?.map((node) => node.id)).toEqual(['orders', 'shared']);
+    expect(result.relations?.map((relation) => relation.sourceNodeId)).toEqual([
+      'orders',
+    ]);
+    for (const capabilityId of capabilityIds) {
+      const projects = (
+        result.capabilities?.find(
+          (capability) => capability.id === capabilityId
+        )?.data as
+          | {
+              projects?: Array<{ id?: string; name?: string }>;
+            }
+          | undefined
+      )?.projects;
+      expect(
+        projects?.some(
+          (project) => project.id === 'source' || project.name === 'source'
+        ) ?? false
+      ).toBe(false);
+    }
+  });
+
+  it('keeps an explicitly governed root project when governance tags or metadata are present', () => {
+    expect(
+      isDefaultWorkspaceRootTaskContainerProject({
+        name: 'workspace',
+        root: '.',
+        type: 'unknown',
+        tags: ['domain:workspace', 'layer:tooling'],
+        targets: ['repo-health'],
+        metadata: {
+          js: {
+            isInPackageManagerWorkspaces: true,
+            packageName: '@nx-workspace/source',
+          },
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      isDefaultWorkspaceRootTaskContainerProject({
+        name: 'workspace',
+        root: '.',
+        type: 'unknown',
+        targets: ['repo-health'],
+        metadata: {
+          js: {
+            isInPackageManagerWorkspaces: true,
+            packageName: '@nx-workspace/source',
+          },
+          ownership: {
+            team: '@org/platform',
+          },
+          documentation: false,
+        },
+      })
+    ).toBe(false);
   });
 
   it('discovers governance profile files without requiring host composition', () => {

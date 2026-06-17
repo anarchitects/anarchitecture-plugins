@@ -8,6 +8,11 @@ import type {
 } from '@anarchitects/governance-core';
 
 import { ownersForProjectRoot, readCodeowners } from './codeowners.js';
+import {
+  hasCanonicalOwnershipData,
+  readCanonicalOwnershipFromProjectMetadata,
+} from './ownership.js';
+import { hasTagWithPrefix } from './tag-parsing.js';
 import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
@@ -18,43 +23,15 @@ export interface NxGovernanceWorkspaceContext {
 
 export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapshot> {
   const graph = await createProjectGraphAsync();
-  const codeownersEntries = readCodeowners(workspaceRoot);
+  return createNxWorkspaceSnapshotFromProjectGraph(graph, workspaceRoot);
+}
 
-  const projects = Object.values(graph.nodes)
-    .map((node) => {
-      const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
-      const targets =
-        node.data.targets && typeof node.data.targets === 'object'
-          ? sortedStrings(Object.keys(node.data.targets))
-          : [];
-      const graphMetadata =
-        node.data.metadata && typeof node.data.metadata === 'object'
-          ? (node.data.metadata as Record<string, unknown>)
-          : {};
-      const { tags, metadata } = resolveProjectTagsAndMetadata(
-        node.data.root,
-        workspaceRoot,
-        graphTags,
-        graphMetadata
-      );
-
-      return {
-        name: node.name,
-        root: node.data.root,
-        ...(asString(node.data.sourceRoot)
-          ? { sourceRoot: asString(node.data.sourceRoot) }
-          : {}),
-        type: node.data.projectType ?? 'unknown',
-        tags,
-        targets,
-        implicitDependencies: sortedStrings(
-          toStringArray(node.data.implicitDependencies)
-        ),
-        metadata,
-      };
-    })
-    .sort((left, right) => left.name.localeCompare(right.name));
-
+export function createNxWorkspaceSnapshotFromProjectGraph(
+  graph: Awaited<ReturnType<typeof createProjectGraphAsync>>,
+  rootPath: string
+): AdapterWorkspaceSnapshot {
+  const codeownersEntries = readCodeowners(rootPath);
+  const projects = normalizeNxProjectGraphNodes(graph.nodes, rootPath);
   const projectNames = new Set(projects.map((project) => project.name));
   const diagnostics: GovernanceDiagnostic[] = [];
 
@@ -128,16 +105,61 @@ export async function readNxWorkspaceSnapshot(): Promise<AdapterWorkspaceSnapsho
       ownersForProjectRoot(project.root, codeownersEntries),
     ])
   );
-  const governanceProfileFiles = discoverGovernanceProfileFiles(workspaceRoot);
+  const governanceProfileFiles = discoverGovernanceProfileFiles(rootPath);
 
   return {
-    root: workspaceRoot,
+    root: rootPath,
     projects,
     dependencies,
     codeownersByProject,
     ...(governanceProfileFiles.length > 0 ? { governanceProfileFiles } : {}),
     ...(diagnostics.length > 0 ? { diagnostics } : {}),
   };
+}
+
+type NxProjectGraphNode = Awaited<
+  ReturnType<typeof createProjectGraphAsync>
+>['nodes'][string];
+
+export function normalizeNxProjectGraphNodes(
+  nodes: Record<string, NxProjectGraphNode>,
+  rootPath: string
+): AdapterWorkspaceSnapshot['projects'] {
+  return Object.values(nodes)
+    .map((node) => {
+      const graphTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+      const targets =
+        node.data.targets && typeof node.data.targets === 'object'
+          ? sortedStrings(Object.keys(node.data.targets))
+          : [];
+      const graphMetadata =
+        node.data.metadata && typeof node.data.metadata === 'object'
+          ? (node.data.metadata as Record<string, unknown>)
+          : {};
+      const { tags, metadata } = resolveProjectTagsAndMetadata(
+        node.data.root,
+        rootPath,
+        graphTags,
+        graphMetadata
+      );
+
+      return {
+        name: node.name,
+        root: node.data.root,
+        ...(asString(node.data.sourceRoot)
+          ? { sourceRoot: asString(node.data.sourceRoot) }
+          : {}),
+        type: node.data.projectType ?? 'unknown',
+        tags,
+        targets,
+        implicitDependencies: sortedStrings(
+          toStringArray(node.data.implicitDependencies)
+        ),
+        metadata,
+      };
+    })
+    .filter((project) => !isDefaultWorkspaceRootTaskContainerProject(project))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export function createNxWorkspaceAdapterResult(
@@ -209,6 +231,42 @@ export function discoverGovernanceProfileFiles(rootPath: string): string[] {
   }
 }
 
+export function isDefaultWorkspaceRootTaskContainerProject(
+  projectLike: Partial<AdapterWorkspaceSnapshot['projects'][number]>
+): boolean {
+  if (projectLike.root !== '.' || projectLike.type !== 'unknown') {
+    return false;
+  }
+
+  if (asString(projectLike.sourceRoot)) {
+    return false;
+  }
+
+  const metadata = asRecord(projectLike.metadata) ?? {};
+  const jsMetadata = asRecord(metadata.js);
+  const tags = toStringArray(projectLike.tags);
+
+  if (jsMetadata?.isInPackageManagerWorkspaces !== true) {
+    return false;
+  }
+
+  if (!asString(jsMetadata.packageName)) {
+    return false;
+  }
+
+  if (
+    hasArchitecturalGovernanceClassification(tags) ||
+    hasCanonicalOwnershipData(
+      readCanonicalOwnershipFromProjectMetadata(metadata)
+    ) ||
+    hasCanonicalDocumentationMetadata(metadata)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function nxDependencyMetadata(edge: unknown): Record<string, unknown> {
   const record = asRecord(edge);
   if (!record) {
@@ -221,6 +279,21 @@ function nxDependencyMetadata(edge: unknown): Record<string, unknown> {
         !['source', 'target', 'type', 'sourceFile'].includes(key) &&
         value !== undefined
     )
+  );
+}
+
+function hasArchitecturalGovernanceClassification(tags: string[]): boolean {
+  return ['domain', 'layer', 'scope'].some((prefix) =>
+    hasTagWithPrefix(tags, prefix)
+  );
+}
+
+function hasCanonicalDocumentationMetadata(
+  metadata: Record<string, unknown>
+): boolean {
+  return (
+    Object.prototype.hasOwnProperty.call(metadata, 'documentation') ||
+    Object.prototype.hasOwnProperty.call(metadata, 'documented')
   );
 }
 
