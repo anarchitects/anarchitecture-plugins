@@ -58,6 +58,7 @@ describe('host -> adapter -> core compatibility flow', () => {
           root: 'libs/booking/ui',
           type: 'library',
           tags: ['scope:booking', 'layer:ui', 'type:ui'],
+          nxTags: ['scope:booking', 'layer:ui', 'type:ui'],
           targets: ['build', 'test'],
           metadata: {
             documentation: true,
@@ -68,6 +69,7 @@ describe('host -> adapter -> core compatibility flow', () => {
           root: 'libs/booking/domain',
           type: 'library',
           tags: ['scope:booking', 'layer:domain', 'type:domain'],
+          nxTags: ['scope:booking', 'layer:domain', 'type:domain'],
           targets: ['lint'],
           metadata: {
             ownership: {
@@ -139,6 +141,12 @@ describe('host -> adapter -> core compatibility flow', () => {
     expect(bookingUiNode).toMatchObject({
       id: 'booking-ui',
       root: 'libs/booking/ui',
+      tags: ['scope:booking', 'layer:ui', 'type:ui'],
+      metadata: {
+        nx: {
+          tags: ['scope:booking', 'layer:ui', 'type:ui'],
+        },
+      },
       classification: {
         scope: 'booking',
         layer: 'ui',
@@ -147,11 +155,110 @@ describe('host -> adapter -> core compatibility flow', () => {
     expect(bookingDomainNode).toMatchObject({
       id: 'booking-domain',
       root: 'libs/booking/domain',
+      tags: ['scope:booking', 'layer:domain', 'type:domain'],
+      metadata: {
+        nx: {
+          tags: ['scope:booking', 'layer:domain', 'type:domain'],
+        },
+      },
       classification: {
         scope: 'booking',
         layer: 'domain',
       },
     });
+  });
+
+  it('filters inferred npm tags while leaving profile-defined tags canonical', () => {
+    const snapshot: AdapterWorkspaceSnapshot = {
+      root: '/workspace',
+      projects: [
+        {
+          name: 'booking-app',
+          root: 'apps/booking',
+          type: 'application',
+          tags: ['domain:booking', 'layer:application'],
+          nxTags: ['domain:booking', 'layer:application', 'npm:private'],
+          targets: [],
+          metadata: {},
+        },
+        {
+          name: 'api',
+          root: 'apps/api',
+          type: 'application',
+          tags: ['type: api'],
+          nxTags: ['type: api'],
+          targets: [],
+          metadata: {},
+        },
+      ],
+      dependencies: [],
+      codeownersByProject: {},
+    };
+
+    const adapterResult = createNxWorkspaceAdapterResult(snapshot);
+    const workspace = buildGovernanceWorkspace(adapterResult);
+    const violations = evaluateGovernancePolicies(workspace, {
+      name: 'tag-prefix-profile',
+      layers: ['application', 'domain'],
+      allowedDomainDependencies: {},
+      ownership: {
+        required: false,
+      },
+      health: {
+        statusThresholds: {
+          goodMinScore: 85,
+          warningMinScore: 70,
+        },
+      },
+      metrics: {},
+      rules: {
+        'tag-convention': {
+          enabled: true,
+          severity: 'warning',
+          options: {
+            allowedPrefixes: ['domain', 'layer'],
+          },
+        },
+      },
+    });
+
+    expect(adapterResult.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'booking-app',
+          tags: ['domain:booking', 'layer:application'],
+          metadata: {
+            nx: expect.objectContaining({
+              tags: ['domain:booking', 'layer:application', 'npm:private'],
+            }),
+          },
+        }),
+        expect.objectContaining({
+          id: 'api',
+          tags: ['type: api'],
+          metadata: {
+            nx: expect.objectContaining({
+              tags: ['type: api'],
+            }),
+          },
+        }),
+      ])
+    );
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: 'tag-convention',
+          subjectId: 'api',
+        }),
+      ])
+    );
+    expect(
+      violations.some(
+        (violation) =>
+          violation.ruleId === 'tag-convention' &&
+          violation.subjectId === 'booking-app'
+      )
+    ).toBe(false);
   });
 
   it('leaves loose owner metadata as evidence only when Community ownership is required', () => {

@@ -121,7 +121,7 @@ export function nxNodeMetadata(
       projectType: project.type,
       root: project.root,
       ...(project.sourceRoot ? { sourceRoot: project.sourceRoot } : {}),
-      tags: [...(project.tags ?? [])],
+      tags: [...readNxProjectTags(project)],
       targets: [...(project.targets ?? [])],
       ...(project.implicitDependencies &&
       project.implicitDependencies.length > 0
@@ -134,6 +134,12 @@ export function nxNodeMetadata(
         : {}),
     },
   };
+}
+
+function readNxProjectTags(
+  project: AdapterWorkspaceSnapshot['projects'][number]
+): string[] {
+  return [...(project.nxTags ?? project.tags ?? [])];
 }
 
 export function nxRelationMetadata(

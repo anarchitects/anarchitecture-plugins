@@ -12,7 +12,7 @@ import {
   hasCanonicalOwnershipData,
   readCanonicalOwnershipFromProjectMetadata,
 } from './ownership.js';
-import { hasTagWithPrefix } from './tag-parsing.js';
+import { hasTagWithPrefix, splitNxTags } from './tag-parsing.js';
 import { toGovernanceWorkspaceAdapterResult } from './to-governance-workspace-adapter-result.js';
 import type { AdapterWorkspaceSnapshot } from './types.js';
 
@@ -142,6 +142,7 @@ export function normalizeNxProjectGraphNodes(
         graphTags,
         graphMetadata
       );
+      const { governanceTags, rawTags } = splitNxTags(tags);
 
       return {
         name: node.name,
@@ -150,7 +151,8 @@ export function normalizeNxProjectGraphNodes(
           ? { sourceRoot: asString(node.data.sourceRoot) }
           : {}),
         type: node.data.projectType ?? 'unknown',
-        tags,
+        tags: governanceTags,
+        nxTags: rawTags,
         targets,
         implicitDependencies: sortedStrings(
           toStringArray(node.data.implicitDependencies)
