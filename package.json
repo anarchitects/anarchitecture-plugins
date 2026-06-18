@@ -50,7 +50,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "packageManager": "yarn@4.14.1",
+  "packageManager": "yarn@4.17.0",
   "dependencies": {
     "@nestjs/typeorm": "^11.0.0",
     "@nx/devkit": "23.0.0",
