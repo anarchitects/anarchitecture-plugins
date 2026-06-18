@@ -54,3 +54,4 @@ vite.config.*.timestamp*
 .yarn/install-state.gz
 
 /.governance-metrics
+.nx/migrate-runs

@@ -1,13 +1,13 @@
-import type { CreateNodesContextV2, CreateNodesResultV2 } from '@nx/devkit';
+import type { CreateNodesContext, CreateNodesResultArray } from '@nx/devkit';
 
 import { GOVERNANCE_INFERRED_TARGET_NAMES } from '../compatibility/public-workflows.js';
 import { createNodesV2 } from './index.js';
 
 describe('governance plugin createNodesV2', () => {
   const createNodes = createNodesV2[1];
-  const context: CreateNodesContextV2 = {
+  const context: CreateNodesContext = {
     workspaceRoot: '/workspace',
-    nxJsonConfiguration: {} as CreateNodesContextV2['nxJsonConfiguration'],
+    nxJsonConfiguration: {} as CreateNodesContext['nxJsonConfiguration'],
   };
 
   it('returns no inferred targets when no governance profile files are discovered', async () => {
@@ -294,7 +294,7 @@ describe('governance plugin createNodesV2', () => {
 });
 
 function collectTargets(
-  results: CreateNodesResultV2
+  results: CreateNodesResultArray
 ): Record<string, Record<string, unknown>> {
   const collected: Record<string, Record<string, unknown>> = {};
 
@@ -309,7 +309,7 @@ function collectTargets(
   return collected;
 }
 
-function collectProjectRoots(results: CreateNodesResultV2): string[] {
+function collectProjectRoots(results: CreateNodesResultArray): string[] {
   const roots = new Set<string>();
 
   for (const [, result] of results) {

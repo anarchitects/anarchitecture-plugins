@@ -1,19 +1,19 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { CreateNodesContextV2, CreateNodesResult } from '@nx/devkit';
+import type { CreateNodesContext, CreateNodesResult } from '@nx/devkit';
 import { createNodesV2 } from './index.js';
 
 describe('typeorm plugin inference', () => {
   let workspaceRoot: string;
-  let context: CreateNodesContextV2;
+  let context: CreateNodesContext;
 
   beforeEach(() => {
     workspaceRoot = mkdtempSync(join(tmpdir(), 'nx-typeorm-plugin-'));
     context = {
       workspaceRoot,
       nxJsonConfiguration: {},
-    } as CreateNodesContextV2;
+    } as CreateNodesContext;
   });
 
   afterEach(() => {
