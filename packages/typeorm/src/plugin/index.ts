@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { CreateNodesContext, CreateNodesResultArray, CreateNodes, TargetConfiguration } from '@nx/devkit';
+import type {
+  CreateNodesContext,
+  CreateNodesResultArray,
+  CreateNodes,
+  TargetConfiguration,
+} from '@nx/devkit';
 import { createNodesFromFiles } from '@nx/devkit';
 import {
   defaultMigrationsDirectory,
@@ -282,10 +287,7 @@ function createTargets(
   return targets;
 }
 
-async function createNodesInternal(
-  file: string,
-  context: CreateNodesContext
-) {
+async function createNodesInternal(file: string, context: CreateNodesContext) {
   if (!isRelevantFile(file)) {
     return { projects: {} };
   }

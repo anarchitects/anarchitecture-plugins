@@ -98,11 +98,8 @@
   "dependencies": {
     "@anarchitects/governance-adapter-nx": "0.2.2",
     "@anarchitects/governance-core": "0.4.1",
+    "@nx/devkit": ">=19 <24",
     "minimatch": "9.0.5",
     "tslib": "^2.6.2"
-  },
-  "peerDependencies": {
-    "@nx/devkit": ">=19 <23",
-    "nx": ">=19 <23"
   }
 }

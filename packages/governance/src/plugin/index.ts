@@ -1,4 +1,8 @@
-import { createNodesFromFiles, type CreateNodesResult, type CreateNodes } from '@nx/devkit';
+import {
+  createNodesFromFiles,
+  type CreateNodesResult,
+  type CreateNodes,
+} from '@nx/devkit';
 import { minimatch } from 'minimatch';
 import { posix } from 'node:path';
 
