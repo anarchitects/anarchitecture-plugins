@@ -1,7 +1,7 @@
 import {
   createNodesFromFiles,
   type CreateNodesResult,
-  type CreateNodesV2,
+  type CreateNodes,
 } from '@nx/devkit';
 import { minimatch } from 'minimatch';
 import { posix } from 'node:path';
@@ -24,7 +24,7 @@ export interface GovernancePluginOptions {
   profileGlob?: string;
 }
 
-export const createNodesV2: CreateNodesV2<GovernancePluginOptions> = [
+export const createNodesV2: CreateNodes<GovernancePluginOptions> = [
   DEFAULT_PROFILE_GLOB,
   async (profileFiles, options, context) => {
     const filteredProfileFiles = filterProfileFiles(profileFiles, options);

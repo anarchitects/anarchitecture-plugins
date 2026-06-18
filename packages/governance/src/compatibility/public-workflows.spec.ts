@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import type { CreateNodesContextV2, CreateNodesResultV2 } from '@nx/devkit';
+import type { CreateNodesContext, CreateNodesResultArray } from '@nx/devkit';
 
 import { exportAiHandoffArtifacts } from '../ai-handoff/index.js';
 import { createNodesV2 } from '../plugin/index.js';
@@ -183,9 +183,9 @@ describe('governance public workflow compatibility inventory', () => {
 
   it('keeps Project Crystal profile discovery and inferred target names stable', async () => {
     const createNodes = createNodesV2[1];
-    const context: CreateNodesContextV2 = {
+    const context: CreateNodesContext = {
       workspaceRoot: '/workspace',
-      nxJsonConfiguration: {} as CreateNodesContextV2['nxJsonConfiguration'],
+      nxJsonConfiguration: {} as CreateNodesContext['nxJsonConfiguration'],
     };
 
     expect(createNodesV2[0]).toBe(GOVERNANCE_DEFAULT_PROFILE_GLOB);
@@ -280,7 +280,7 @@ function readJson(filePath: string): unknown {
 }
 
 function collectTargets(
-  results: CreateNodesResultV2
+  results: CreateNodesResultArray
 ): Record<string, Record<string, unknown>> {
   const collected: Record<string, Record<string, unknown>> = {};
 

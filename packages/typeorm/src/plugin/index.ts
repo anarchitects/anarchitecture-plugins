@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type {
-  CreateNodesContextV2,
-  CreateNodesResultV2,
-  CreateNodesV2,
+  CreateNodesContext,
+  CreateNodesResultArray,
+  CreateNodes,
   TargetConfiguration,
 } from '@nx/devkit';
 import { createNodesFromFiles } from '@nx/devkit';
@@ -287,10 +287,7 @@ function createTargets(
   return targets;
 }
 
-async function createNodesInternal(
-  file: string,
-  context: CreateNodesContextV2
-) {
+async function createNodesInternal(file: string, context: CreateNodesContext) {
   if (!isRelevantFile(file)) {
     return { projects: {} };
   }
@@ -328,13 +325,13 @@ async function createNodesInternal(
   };
 }
 
-export const createNodesV2: CreateNodesV2 = [
+export const createNodesV2: CreateNodes = [
   FILE_PATTERN,
   async (
     configFiles: readonly string[],
     _options,
     context
-  ): Promise<CreateNodesResultV2> => {
+  ): Promise<CreateNodesResultArray> => {
     const results = await createNodesFromFiles(
       (file) => createNodesInternal(file, context),
       configFiles,
@@ -342,7 +339,7 @@ export const createNodesV2: CreateNodesV2 = [
       context
     );
 
-    return results as CreateNodesResultV2;
+    return results as CreateNodesResultArray;
   },
 ];
 
