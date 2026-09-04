@@ -7,7 +7,6 @@ export interface BootstrapGeneratorSchema {
     | 'postgresql'
     | 'mysql'
     | 'mariadb'
-    | 'sqlite'
     | 'better-sqlite3'
     | 'mssql';
   withCompose?: boolean;

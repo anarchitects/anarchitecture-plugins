@@ -33,7 +33,7 @@ describe('initGenerator', () => {
     );
 
     const packageJson = readJson(tree, 'package.json');
-    expect(packageJson.dependencies.typeorm).toBe('^0.3.28');
+    expect(packageJson.dependencies.typeorm).toBe('^1.0.0');
     expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.devDependencies?.typeorm).toBeUndefined();
     expect(packageJson.devDependencies?.['reflect-metadata']).toBeUndefined();

@@ -63,7 +63,7 @@
   },
   "peerDependencies": {
     "ts-node": "^10.9.1",
-    "typeorm": "^0.3.28"
+    "typeorm": "^1.0.0"
   },
   "dependencies": {
     "@nx/devkit": ">= 19 <24",

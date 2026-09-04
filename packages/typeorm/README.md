@@ -29,8 +29,8 @@ nx g @anarchitects/nx-typeorm:init
 
 ## Generators
 
-Compatibility: supports Nx `>=19 <24`, including Nx 23, and TypeScript 5.9.x
-and 6.x. See the [plugin support matrix](../../docs/support-matrix.md).
+Compatibility: supports Nx `>=19 <24`, including Nx 23, TypeScript 5.9.x and
+6.x, and TypeORM 1.x. See the [plugin support matrix](../../docs/support-matrix.md).
 
 ### `init`
 
@@ -68,12 +68,12 @@ For libraries:
 - patches project metadata (`metadata.typeorm`) with schema/domain and paths.
 
 Additional bootstrap dependencies are installed during bootstrap:
-`ts-node`, `typeorm-ts-node-commonjs`, `typeorm-ts-node-esm`,
-DB driver package for selected `--db`, and `@nestjs/typeorm` only for Nest
-applications.
+`ts-node`, the DB driver package for selected `--db`, and `@nestjs/typeorm`
+only for Nest applications. TypeORM 1.x provides the
+`typeorm-ts-node-commonjs` and `typeorm-ts-node-esm` CLI binaries directly.
 
 Supported `--db` values: `postgres`, `postgresql` (normalized to `postgres`),
-`mysql`, `mariadb`, `sqlite`, `better-sqlite3`, `mssql`.
+`mysql`, `mariadb`, `better-sqlite3`, `mssql`.
 
 Generated app datasources support two connection modes:
 

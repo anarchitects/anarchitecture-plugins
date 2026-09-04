@@ -24,7 +24,7 @@ export default async function initGenerator(
   const dependencyTask = addDependenciesToPackageJson(
     tree,
     {
-      typeorm: '^0.3.28',
+      typeorm: '^1.0.0',
       'reflect-metadata': '^0.2.2',
     },
     {}

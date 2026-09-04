@@ -106,15 +106,17 @@ export async function bootstrap() {
     );
 
     const packageJson = readJson(tree, 'package.json');
-    expect(packageJson.dependencies['typeorm']).toBe('^0.3.28');
+    expect(packageJson.dependencies['typeorm']).toBe('^1.0.0');
     expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.dependencies['pg']).toBe('^8.20.0');
-    expect(packageJson.dependencies['@nestjs/typeorm']).toBe('^11.0.0');
-    expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
-    expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBe(
-      '^0.3.20'
+    expect(packageJson.dependencies['@nestjs/typeorm']).toBe(
+      '^11.0.1 || ^12.0.1'
     );
-    expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBe('^0.3.20');
+    expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
+    expect(
+      packageJson.devDependencies['typeorm-ts-node-commonjs']
+    ).toBeUndefined();
+    expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBeUndefined();
     expect(packageJson.devDependencies.typeorm).toBeUndefined();
     expect(packageJson.devDependencies['reflect-metadata']).toBeUndefined();
     expect(packageJson.devDependencies.pg).toBeUndefined();
@@ -212,14 +214,14 @@ export async function bootstrap() {
     );
 
     const packageJson = readJson(tree, 'package.json');
-    expect(packageJson.dependencies['typeorm']).toBe('^0.3.28');
+    expect(packageJson.dependencies['typeorm']).toBe('^1.0.0');
     expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.dependencies['@nestjs/typeorm']).toBeUndefined();
     expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
-    expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBe(
-      '^0.3.20'
-    );
-    expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBe('^0.3.20');
+    expect(
+      packageJson.devDependencies['typeorm-ts-node-commonjs']
+    ).toBeUndefined();
+    expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBeUndefined();
   });
 
   it('fails for Nest applications that are missing app.module.ts', async () => {
@@ -429,12 +431,6 @@ export class AppModule {}
       envSnippet: 'TYPEORM_CHARSET=utf8mb4',
     },
     {
-      db: 'sqlite',
-      expectedType: "type: 'sqlite'",
-      helperSnippet: 'busyTimeout',
-      envSnippet: 'TYPEORM_BUSY_TIMEOUT=5000',
-    },
-    {
       db: 'better-sqlite3',
       expectedType: "type: 'better-sqlite3'",
       helperSnippet: 'statementCacheSize',
@@ -459,7 +455,6 @@ export class AppModule {}
         | 'postgresql'
         | 'mysql'
         | 'mariadb'
-        | 'sqlite'
         | 'better-sqlite3'
         | 'mssql';
       expectedType: string;
@@ -505,7 +500,7 @@ export class AppModule {}
         skipInstall: true,
       })
     ).rejects.toThrow(
-      'Unsupported database "oracle". Supported values: postgres, mysql, mariadb, sqlite, better-sqlite3, mssql, postgresql.'
+      'Unsupported database "oracle". Supported values: postgres, mysql, mariadb, better-sqlite3, mssql, postgresql.'
     );
   });
 
