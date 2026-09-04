@@ -22,7 +22,8 @@ yarn add -D @anarchitects/nx-js
 npm install -D @anarchitects/nx-js
 ```
 
-Compatibility: supports Nx `>=21.6.4 <23`.
+Compatibility: supports Nx `>=21.6.4 <24`, including Nx 23, and TypeScript
+5.9.x and 6.x. See the [plugin support matrix](../../docs/support-matrix.md).
 
 ---
 

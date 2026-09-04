@@ -128,7 +128,8 @@ yarn nx g @anarchitects/nx-governance:add-extension
 
 ## Compatibility
 
-- Peer dependencies: Nx >=19 and <23.
+- Supported toolchain: Nx >=19 and <24, including Nx 23; TypeScript 5.9.x and
+  6.x. See the [plugin support matrix](../../docs/support-matrix.md).
 - Designed for Nx workspaces that want governance checks integrated into normal Nx workflows.
 
 ## FAQ

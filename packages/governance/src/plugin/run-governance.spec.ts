@@ -567,7 +567,7 @@ describe('runGovernance', () => {
           reason: 'Reserved for future migration.',
           owner: '@org/architecture',
           review: {
-            expiresAt: '2026-08-01',
+            expiresAt: '2030-01-01',
           },
         },
       ],
@@ -596,7 +596,7 @@ describe('runGovernance', () => {
         reason: 'Reserved for future migration.',
         owner: '@org/architecture',
         review: {
-          expiresAt: '2026-08-01',
+          expiresAt: '2030-01-01',
         },
         matchCount: 0,
       },

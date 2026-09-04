@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "emitDeclarationOnly": false,
+    "ignoreDeprecations": "5.0",
+    "noEmit": true,
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "packages/governance-adapter-nx/src/**/*.ts",
+    "packages/governance-extension-nx/src/**/*.ts",
+    "packages/governance/src/**/*.ts",
+    "packages/js/src/**/*.ts",
+    "packages/typeorm/src/**/*.ts"
+  ],
+  "exclude": ["packages/*/src/**/*.spec.ts", "packages/*/src/**/*.test.ts"]
+}

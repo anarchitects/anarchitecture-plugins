@@ -36,5 +36,6 @@ jobs:
       - uses: nrwl/nx-set-shas@v5
       - run: yarn nx-cloud record -- yarn nx format:check
       - run: yarn nx affected -t lint test build typecheck e2e-ci
+      - run: yarn dlx -q -p typescript@5.9.3 tsc --project tsconfig.ts5.json --pretty false
       - run: yarn nx fix-ci
         if: always()
