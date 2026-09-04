@@ -517,7 +517,10 @@ function patchAppModule(
     return;
   }
 
-  const runtimeDataSourcePath = joinPathFragments(resolvedSourceRoot, 'data-source.ts');
+  const runtimeDataSourcePath = joinPathFragments(
+    resolvedSourceRoot,
+    'data-source.ts'
+  );
   const runtimeImportPath = importPathFrom(modulePath, runtimeDataSourcePath);
 
   const project = new Project({

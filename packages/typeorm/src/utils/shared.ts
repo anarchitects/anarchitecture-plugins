@@ -344,7 +344,9 @@ function assertRunnerInstalled(
   workspaceRoot: string
 ) {
   try {
-    requireFromExecutor.resolve('typeorm/package.json', { paths: [workspaceRoot] });
+    requireFromExecutor.resolve('typeorm/package.json', {
+      paths: [workspaceRoot],
+    });
   } catch {
     try {
       requireFromExecutor.resolve(`${runner}/package.json`, {

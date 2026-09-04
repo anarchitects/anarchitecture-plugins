@@ -113,7 +113,9 @@ export async function bootstrap() {
       '^11.0.1 || ^12.0.1'
     );
     expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
-    expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBeUndefined();
+    expect(
+      packageJson.devDependencies['typeorm-ts-node-commonjs']
+    ).toBeUndefined();
     expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBeUndefined();
     expect(packageJson.devDependencies.typeorm).toBeUndefined();
     expect(packageJson.devDependencies['reflect-metadata']).toBeUndefined();
@@ -216,7 +218,9 @@ export async function bootstrap() {
     expect(packageJson.dependencies['reflect-metadata']).toBe('^0.2.2');
     expect(packageJson.dependencies['@nestjs/typeorm']).toBeUndefined();
     expect(packageJson.devDependencies['ts-node']).toBe('^10.9.2');
-    expect(packageJson.devDependencies['typeorm-ts-node-commonjs']).toBeUndefined();
+    expect(
+      packageJson.devDependencies['typeorm-ts-node-commonjs']
+    ).toBeUndefined();
     expect(packageJson.devDependencies['typeorm-ts-node-esm']).toBeUndefined();
   });
 
