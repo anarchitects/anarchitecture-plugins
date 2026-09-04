@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+const { readFileSync } = require('fs');
 
 const swcJestConfig = JSON.parse(
   readFileSync(`${__dirname}/.spec.swcrc`, 'utf-8')
@@ -6,7 +6,7 @@ const swcJestConfig = JSON.parse(
 
 swcJestConfig.swcrc = false;
 
-export default {
+module.exports = {
   displayName: 'nx-governance',
   preset: '../../jest.preset.cjs',
   testEnvironment: 'node',

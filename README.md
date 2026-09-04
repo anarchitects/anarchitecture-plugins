@@ -29,6 +29,9 @@ The workspace is organized as independent plugin packages under `packages/`.
 - TypeORM plugin: [packages/typeorm/README.md](packages/typeorm/README.md)
 - JS plugin: [packages/js/README.md](packages/js/README.md)
 
+See the [plugin support matrix](docs/support-matrix.md) for supported Nx and
+TypeScript versions.
+
 ## Install a Plugin
 
 Use `nx add` as the preferred Nx-native installation path.
