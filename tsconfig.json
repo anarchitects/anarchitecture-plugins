@@ -27,5 +27,8 @@
     {
       "path": "./packages/governance-extension-nx"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0"
+  }
 }
