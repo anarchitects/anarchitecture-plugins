@@ -15,8 +15,5 @@
     "packages/js/src/**/*.ts",
     "packages/typeorm/src/**/*.ts"
   ],
-  "exclude": [
-    "packages/*/src/**/*.spec.ts",
-    "packages/*/src/**/*.test.ts"
-  ]
+  "exclude": ["packages/*/src/**/*.spec.ts", "packages/*/src/**/*.test.ts"]
 }
