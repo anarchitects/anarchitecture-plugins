@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./out-tsc/jest",
     "types": ["jest", "node"],
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "rootDir": "."
   },
   "include": [

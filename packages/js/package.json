@@ -81,7 +81,6 @@
   "dependencies": {
     "@nx/devkit": ">=21.6.4 <24",
     "@nx/js": ">=21.6.4 <24",
-    "tslib": "^2.3.0",
-    "typescript": "~5.9.2"
+    "tslib": "^2.3.0"
   }
 }

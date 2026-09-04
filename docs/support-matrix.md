@@ -21,6 +21,11 @@ The repository may use different compiler versions for individual package
 build and spec projects when required by their toolchain. That does not
 change the published support policy above.
 
+TypeScript 6 is the repository default for local development and the primary
+CI build, test, and typecheck lane. CI also runs a dedicated TypeScript 5.9
+compatibility typecheck using `tsconfig.ts5.json`; this compatibility lane is
+temporary and will be removed when TypeScript 5 support is deprecated.
+
 ## Nx policy
 
 The `<24` upper bound is intentional. Nx 24 support is not implied by support
