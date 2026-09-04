@@ -61,7 +61,6 @@ export default async function ensureSchema(
         ]);
         logger.info(`Ensured database "${schemaName}" exists.`);
       } else if (
-        dataSource.options.type === 'sqlite' ||
         dataSource.options.type === 'better-sqlite3'
       ) {
         logger.info(

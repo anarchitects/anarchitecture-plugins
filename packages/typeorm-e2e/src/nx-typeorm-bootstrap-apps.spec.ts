@@ -85,7 +85,7 @@ export class AppModule {}
       `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${nestProjectName} --skipInstall --no-interactive`
     );
     runNx(
-      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${plainProjectName} --db=sqlite --skipInstall --no-interactive`
+      `yarn nx g @anarchitects/nx-typeorm:bootstrap --project=${plainProjectName} --db=better-sqlite3 --skipInstall --no-interactive`
     );
 
     const nestModule = readProjectFile(nestProjectRoot, 'src/app.module.ts');
@@ -113,7 +113,7 @@ export class AppModule {}
       plainProjectRoot,
       'src/data-source.ts'
     );
-    expect(plainDataSource).toContain("type: 'sqlite'");
+    expect(plainDataSource).toContain("type: 'better-sqlite3'");
     expect(plainDataSource).toContain('process.env.TYPEORM_DATABASE');
     expect(plainDataSource).toContain(
       './tmp/typeorm_e2e_temp_plain_api.sqlite'

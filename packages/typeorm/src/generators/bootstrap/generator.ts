@@ -48,7 +48,6 @@ const SUPPORTED_DATABASES = [
   'postgres',
   'mysql',
   'mariadb',
-  'sqlite',
   'better-sqlite3',
   'mssql',
 ] as const;
@@ -75,7 +74,6 @@ const DRIVER_DEPENDENCIES: Record<
   postgres: { packageName: 'pg', version: '^8.20.0' },
   mysql: { packageName: 'mysql2', version: '^3.20.0' },
   mariadb: { packageName: 'mariadb', version: '^3.5.2' },
-  sqlite: { packageName: 'sqlite3', version: '^6.0.1' },
   'better-sqlite3': { packageName: 'better-sqlite3', version: '^12.8.0' },
   mssql: { packageName: 'mssql', version: '^12.2.1' },
 };
@@ -133,7 +131,7 @@ function buildRuntimeDependencies(
   isNestApplication: boolean
 ) {
   const dependencies: Record<string, string> = {
-    typeorm: '^0.3.28',
+    typeorm: '^1.0.0',
     'reflect-metadata': '^0.2.2',
   };
 
@@ -141,7 +139,7 @@ function buildRuntimeDependencies(
   dependencies[driverDependency.packageName] = driverDependency.version;
 
   if (isNestApplication) {
-    dependencies['@nestjs/typeorm'] = '^11.0.0';
+    dependencies['@nestjs/typeorm'] = '^11.0.1 || ^12.0.1';
   }
 
   return dependencies;
@@ -150,8 +148,6 @@ function buildRuntimeDependencies(
 function buildToolDependencies() {
   return {
     'ts-node': '^10.9.2',
-    'typeorm-ts-node-commonjs': '^0.3.20',
-    'typeorm-ts-node-esm': '^0.3.20',
   };
 }
 

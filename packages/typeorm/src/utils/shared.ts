@@ -344,13 +344,17 @@ function assertRunnerInstalled(
   workspaceRoot: string
 ) {
   try {
-    requireFromExecutor.resolve(`${runner}/package.json`, {
-      paths: [workspaceRoot],
-    });
+    requireFromExecutor.resolve('typeorm/package.json', { paths: [workspaceRoot] });
   } catch {
-    throw new Error(
-      `TypeORM CLI runner "${runner}" is not installed. Install "${runner}" (or run @anarchitects/nx-typeorm:bootstrap) or set moduleSystem to a compatible value.`
-    );
+    try {
+      requireFromExecutor.resolve(`${runner}/package.json`, {
+        paths: [workspaceRoot],
+      });
+    } catch {
+      throw new Error(
+        `TypeORM CLI runner "${runner}" is unavailable because TypeORM is not installed. Install "typeorm" (or run @anarchitects/nx-typeorm:bootstrap) or set moduleSystem to a compatible value.`
+      );
+    }
   }
 }
 

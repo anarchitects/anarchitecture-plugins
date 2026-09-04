@@ -38,9 +38,7 @@
     "ts-morph": "^22.0.0",
     "ts-node": "^10.9.2",
     "tslib": "^2.3.0",
-    "typeorm": "^0.3.28",
-    "typeorm-ts-node-commonjs": "^0.3.20",
-    "typeorm-ts-node-esm": "^0.3.20",
+    "typeorm": "^1.0.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.69.0",
     "verdaccio": "6.6.2",
@@ -52,10 +50,10 @@
   ],
   "packageManager": "yarn@4.17.0",
   "dependencies": {
-    "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/typeorm": "^12.0.1",
     "@nx/devkit": "23.2.0",
-    "reflect-metadata": "^0.2.2",
-    "sqlite3": "^6.0.1"
+    "better-sqlite3": "^12.8.0",
+    "reflect-metadata": "^0.2.2"
   },
   "nx": {
     "includedScripts": [],
