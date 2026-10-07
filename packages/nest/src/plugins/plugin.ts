@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-import { createNodesFromFiles, type CreateNodesV2 } from '@nx/devkit';
+import { createNodesFromFiles, type CreateNodes } from '@nx/devkit';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { createNestBuildTarget } from '../utils/build-target';
+import { readNamedInputs } from '../utils/named-inputs';
 import {
   getNestProjectRoot,
   hasProjectManifest,
@@ -10,7 +12,11 @@ import {
 
 export const name = '@anarchitects/nest/plugin';
 
-export const createNodesV2: CreateNodesV2 = [
+export interface NestPluginOptions {
+  buildTargetName?: string;
+}
+
+export const createNodes: CreateNodes<NestPluginOptions> = [
   '**/nest-cli.json',
   async (configFiles, options, context) => {
     const projectConfigFiles = configFiles
@@ -34,10 +40,17 @@ export const createNodesV2: CreateNodesV2 = [
       (configFile) => {
         const projectRoot = getNestProjectRoot(configFile);
         if (projectRoot === undefined) return {};
+        const buildTargetName = options?.buildTargetName ?? 'build';
+        const buildTarget = createNestBuildTarget(
+          projectRoot,
+          readNamedInputs(projectRoot, context),
+          buildTargetName
+        );
         return {
           projects: {
             [projectRoot]: {
               root: projectRoot,
+              targets: { [buildTargetName]: buildTarget },
               // Names and explicit configuration are merged by Nx's built-in plugins.
               metadata: { technologies: ['nest'] },
             },
@@ -51,4 +64,4 @@ export const createNodesV2: CreateNodesV2 = [
   },
 ];
 
-export const createNodes = createNodesV2;
+export const createNodesV2 = createNodes;
