@@ -2,7 +2,17 @@
 
 ## Status
 
-Proposed
+Historical proposal; not the implemented contract for the revived plugin.
+
+For the stable Nest v12 core implemented under
+[epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478),
+use the [package README](../../packages/nest/README.md) and its contributor
+constraints. The current package provides discovery, build/start inference, and
+an idempotent `init` generator. The application/library/resource generators,
+generation adapter, prerelease package guidance, and paths proposed below are
+historical plans, not available features or current installation instructions.
+Current inference uses `CreateNodes` and `CreateNodesContext`; the V2 types are
+deprecated, while `createNodesV2` remains a runtime export alias.
 
 ## Context
 
@@ -196,6 +206,7 @@ To avoid scattering version/package assumptions across the plugin, package ident
 
 ```text
 packages/nest/src/utils/nest-version.ts
+```
 
 ## Related issues
 
@@ -207,4 +218,3 @@ packages/nest/src/utils/nest-version.ts
 - #120 — EPIC: Optional schema-first validation support
 - #121 — EPIC: Migration engine
 - #122 — EPIC: Developer experience and polish
-```
