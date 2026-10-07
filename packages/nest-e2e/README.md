@@ -6,6 +6,8 @@ install:
 
 ```sh
 yarn nx e2e nx-nest-e2e
+# Force the outer suite to rerun while preserving nested cache assertions:
+NX_DAEMON=false NX_NO_CLOUD=true yarn nx run nx-nest-e2e:e2e --skipNxCache --output-style=static
 yarn nx run-many -t lint typecheck -p nx-nest-e2e
 ```
 
@@ -141,12 +143,34 @@ replacements. The existing CJS and build/start regressions remain in the suite.
 
 ## CI
 
-The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud. This
-project is included in the Jest E2E inference plugin and depends on `nx-nest`, so
-plugin changes affect the suite. Its `e2e-ci` dependency explicitly points to the
-inferred test-file task because workspace `targetDefaults.e2e-ci.dependsOn`
-overrides the inferred aggregate dependencies. That test-file task depends on
-the plugin build before packing it.
+The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud.
+The Jest plugin atomizes the 15 spec files in `src/nest-scenarios/` into separate
+cacheable tasks for Nx distributed execution. The original 21 consumer scenarios
+remain covered, alongside a child-environment regression. Real-install Rspack,
+lint, member-generation, and multi-owner scenarios split ESM and CJS into separate
+files; shorter discovery/configuration/Standard Schema cases remain grouped.
 
-Use `e2e` locally: the atomized `e2e-ci` target requires Nx Cloud. The fixture suite
-and assertions are identical in both paths.
+Each file packs its own tarball and creates a unique temporary workspace, so
+agents share no fixture state. Local `e2e` runs use two Jest workers to bound
+concurrent installs; CI schedules the inferred file tasks independently.
+
+The project depends on `nx-nest`, so plugin changes affect every scenario.
+The aggregate `e2e-ci` target depends on `e2e-ci--src/nest-scenarios/*.spec.ts`:
+this overrides the workspace's aggregate build-only default while automatically
+including new files. A scoped wildcard in `nx.json` gives each inferred file task
+`dependsOn: ["^build"]`, so the plugin is built before that agent packs it.
+
+Inspect the distribution without running Nx Cloud tasks:
+
+```sh
+yarn nx show project nx-nest-e2e --json
+yarn nx run nx-nest-e2e:e2e-ci --graph=/tmp/nest-e2e-task-graph.json
+```
+
+Use `e2e` locally: the atomized `e2e-ci` target requires Nx Cloud. Both paths run
+the same specs. Consumer subprocesses get their own Nx environment: outer
+`NX_*` settings (including `NX_SKIP_NX_CACHE` and task identity), debugger
+`NODE_OPTIONS`/`VSCODE_INSPECTOR_OPTIONS`, and Jest/ts-node overrides are removed.
+This lets an uncached outer run still verify inner cache restoration, and avoids
+editor auto-attach keeping consumer commands alive. Explicit consumer runtime
+options, such as CJS Jest's VM-modules flag, are applied after isolation.

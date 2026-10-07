@@ -8,6 +8,8 @@ module.exports = {
   displayName: 'nx-nest-e2e',
   preset: '../../jest.preset.cjs',
   testEnvironment: 'node',
+  // Nx distributes individual files in CI; limit local consumer installs.
+  maxWorkers: 2,
   transform: { '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig] },
   moduleFileExtensions: ['ts', 'js'],
   coverageDirectory: 'test-output/jest/coverage',
