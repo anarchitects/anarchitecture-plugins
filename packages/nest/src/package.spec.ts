@@ -129,9 +129,13 @@ describe('published Nest plugin', () => {
     const collection = JSON.parse(
       readFileSync(join(installedPackage, manifest.generators), 'utf8')
     );
-    const init = collection.generators.init;
-    expect(existsSync(join(installedPackage, `${init.factory}.js`))).toBe(true);
-    expect(existsSync(join(installedPackage, init.schema))).toBe(true);
+    for (const name of ['init', 'application']) {
+      const generator = collection.generators[name];
+      expect(
+        existsSync(join(installedPackage, `${generator.factory}.js`))
+      ).toBe(true);
+      expect(existsSync(join(installedPackage, generator.schema))).toBe(true);
+    }
     expect(readFileSync(join(installedPackage, 'LICENSE'), 'utf8')).toContain(
       'MIT License'
     );
@@ -144,6 +148,120 @@ describe('published Nest plugin', () => {
       )
     ).toBe(false);
   });
+
+  it.each(['esm', 'cjs'])(
+    'generates and discovers a native %s application through the packed Nx generator',
+    (type) => {
+      const workspace = mkdtempSync(join(tmpdir(), 'nx-nest-application-'));
+      try {
+        symlinkSync(
+          join(consumerRoot, 'node_modules'),
+          join(workspace, 'node_modules'),
+          'junction'
+        );
+        const rootManifest = JSON.stringify({
+          name: 'consumer',
+          private: true,
+        });
+        writeFileSync(join(workspace, 'package.json'), rootManifest);
+        writeFileSync(join(workspace, 'nx.json'), '{}');
+        writeFileSync(join(workspace, '.gitignore'), 'node_modules\n.nx\n');
+        const nx = (...args: string[]) =>
+          execFileSync(
+            process.execPath,
+            [require.resolve('nx/bin/nx.js'), ...args],
+            {
+              cwd: workspace,
+              encoding: 'utf8',
+              timeout: 30_000,
+              env: {
+                ...process.env,
+                NODE_OPTIONS: '',
+                NX_DAEMON: 'false',
+                NX_ISOLATE_PLUGINS: 'false',
+                NX_NO_CLOUD: 'true',
+              },
+              stdio: 'pipe',
+            }
+          );
+        const args = [
+          'generate',
+          '@anarchitects/nest:application',
+          'api',
+          '--directory=apps/api',
+          `--type=${type}`,
+          '--no-interactive',
+        ];
+        nx(...args, '--dry-run');
+        expect(existsSync(join(workspace, 'apps'))).toBe(false);
+        expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe('{}');
+        nx(...args);
+        expect(readFileSync(join(workspace, 'package.json'), 'utf8')).toBe(
+          rootManifest
+        );
+        for (const file of [
+          'yarn.lock',
+          'package-lock.json',
+          'pnpm-lock.yaml',
+          '.git',
+        ]) {
+          expect(existsSync(join(workspace, file))).toBe(false);
+        }
+        const native = JSON.parse(
+          readFileSync(join(workspace, 'apps/api/package.json'), 'utf8')
+        );
+        expect(native.type).toBe(type === 'esm' ? 'module' : undefined);
+        expect(native.scripts.test).toContain(
+          type === 'esm' ? 'vitest' : 'jest'
+        );
+        const project = JSON.parse(nx('show', 'project', 'api', '--json'));
+        expect(project).toMatchObject({
+          name: 'api',
+          root: 'apps/api',
+          projectType: 'application',
+          sourceRoot: 'apps/api/src',
+        });
+        // Native package scripts intentionally retain Nx's normal precedence.
+        expect(project.targets.build).toMatchObject({
+          executor: 'nx:run-script',
+          options: { script: 'build' },
+        });
+        expect(project.targets.start).toMatchObject({
+          executor: 'nx:run-script',
+          options: { script: 'start' },
+        });
+        expect(project.metadata.technologies).toContain('nest');
+        // Distinct names expose the inferred targets alongside native scripts.
+        writeFileSync(
+          join(workspace, 'nx.json'),
+          JSON.stringify({
+            plugins: [
+              {
+                plugin: '@anarchitects/nest/plugin',
+                options: {
+                  buildTargetName: 'compile',
+                  startTargetName: 'serve',
+                },
+              },
+            ],
+          })
+        );
+        const renamed = JSON.parse(nx('show', 'project', 'api', '--json'));
+        expect(renamed.targets.compile).toMatchObject({
+          options: { command: 'nest build', cwd: 'apps/api' },
+          cache: true,
+        });
+        expect(renamed.targets.serve).toMatchObject({
+          options: { command: 'nest start', cwd: 'apps/api' },
+          cache: false,
+          continuous: true,
+        });
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    },
+    90_000
+  );
 
   it.each(['commonjs', 'module'])(
     'loads public exports from a standalone %s consumer',

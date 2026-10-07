@@ -42,8 +42,14 @@ export async function runNestSchematic(
       `Unsupported native Nest generation schematic: ${options.schematic}`
     );
   const before = snapshotNxTree(tree);
-  const input = new schematics.HostTree();
-  for (const [path, content] of before) input.create(path, content);
+  // Existing Nx files are the base filesystem, not schematic create actions.
+  // Native format rules inspect actions and must not format unrelated files.
+  const hostFiles = new core.virtualFs.SimpleMemoryHost();
+  const syncHost = new core.virtualFs.SyncDelegateHost(hostFiles);
+  for (const [path, content] of before) {
+    syncHost.write(core.normalize(path), Uint8Array.from(content).buffer);
+  }
+  const input = new schematics.HostTree(hostFiles);
   const registry = new core.schema.CoreSchemaRegistry(
     schematics.formats.standardFormats
   );
