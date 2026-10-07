@@ -617,6 +617,44 @@ Resource and artifact generators share context/default resolution before
 invoking the adapter. The adapter itself does not emulate the entire CLI
 configuration lookup.
 
+### Nest v12 compatibility matrix (0.0.2 development)
+
+Compatibility tests retain the pinned native schematics as the source of truth.
+The application matrix generates an application, native sub-app and library,
+REST resource, and all structural/cross-cutting/transport artifacts in sequence.
+After every step it compares native files byte-for-byte, excluding only Nx
+registration and project metadata.
+
+| Contract           | Automated coverage                                                                                                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module system      | Omitted `type` selects native ESM; explicit CJS, package metadata, NodeNext compiler options, and relative `.js` imports are checked.                                                                                         |
+| Test tooling       | ESM retains Vitest and its path-alias config; CJS retains Jest/ts-jest and its native VM-modules scripts.                                                                                                                     |
+| Lint and build     | Native oxlint configuration/dependencies remain intact; native monorepo conversion retains the Rspack builder and library aliases.                                                                                            |
+| Observe            | Both module systems run with `observe` enabled and disabled; native dependency and instrumentation output are preserved.                                                                                                      |
+| HTTP validation    | Generated ESM/CJS apps with native REST resources compile and run with `StandardSchemaValidationPipe`, asynchronous body validation, and transforming route/query parameter schemas. Invalid input never reaches the handler. |
+| Message validation | Native microservice resources coexist with TCP handlers using Standard Schema `@Payload` validation and RPC errors for invalid input.                                                                                         |
+| Serialization      | `StandardSchemaSerializerInterceptor` strips private response fields over HTTP and TCP; invalid HTTP responses are rejected.                                                                                                  |
+| OpenAPI            | Swagger derives request/parameter schemas from Standard Schema metadata and response schemas from `standardSchema`; input/output JSON Schema conversion is asserted.                                                          |
+
+The runtime fixture adds consumer-owned integration code beside unchanged native
+application/resource sources. It exercises generated services and verifies native
+HTTP and message handlers remain reachable. A separate fixture TypeScript config
+compiles this integration without rewriting generated toolchain configuration.
+
+The private `nx-nest-e2e` project pins `@nestjs/swagger` 12.0.2,
+`@nestjs/microservices` 12.1.2, `@nestjs/mapped-types` 12.0.0, and Standard Schema
+interface types 1.1.0. A minimal schema object implements the standard in the
+test fixture; the generator core gains no schema vendor or transport dependency.
+Tooling and Observe checks verify native generation contracts; they do not
+contact an Observe service or run the generated Vitest/Jest/oxlint toolchains.
+
+Run the matrix with the plugin's regular Nx test and e2e targets:
+
+```sh
+yarn nx run-many -t build test lint typecheck -p nx-nest nx-nest-e2e
+yarn nx run nx-nest-e2e:e2e
+```
+
 ### Nx API compatibility boundary
 
 The #484 audit found no handwritten private Nx imports, but TypeScript inferred
