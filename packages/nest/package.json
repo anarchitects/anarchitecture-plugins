@@ -62,7 +62,7 @@
     "nestjs-v12"
   ],
   "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
   },
   "publishConfig": {
     "access": "public"
@@ -77,9 +77,13 @@
     "@types/semver": "^7.7.0"
   },
   "dependencies": {
+    "@angular-devkit/core": "22.2.0",
+    "@angular-devkit/schematics": "22.2.0",
+    "@nestjs/schematics": "12.0.6",
+    "rxjs": "7.8.2",
     "semver": "^7.7.2",
     "tslib": "^2.3.0",
-    "typescript": ">=5.9.0 <7"
+    "typescript": ">=6.0.0 <7"
   },
   "generators": "./generators.json"
 }

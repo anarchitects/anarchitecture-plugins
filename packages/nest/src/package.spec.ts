@@ -80,6 +80,38 @@ describe('published Nest plugin', () => {
     expect(version.trim()).toBe('12.0.0');
   });
 
+  it('aligns the Node contract with its stable schematic runtime', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(packageRoot, 'package.json'), 'utf8')
+    );
+    const native = require('@nestjs/schematics/package.json');
+    expect(native.version).toBe('12.0.6');
+    expect(native.type).toBe('module');
+    expect(manifest.engines.node).toBe(native.engines.node);
+    expect(manifest.dependencies['@nestjs/schematics']).toBe(native.version);
+    expect(manifest.dependencies.typescript).toBe('>=6.0.0 <7');
+  });
+
+  it('runs the compiled generation adapter from the packed artifact', () => {
+    const result = execFileSync(
+      process.execPath,
+      [
+        '-e',
+        `
+      const { createTreeWithEmptyWorkspace } = require('@nx/devkit/testing');
+      const { runNestSchematic } = require('./node_modules/@anarchitects/nest/dist/generation-adapter/run-nest-schematic.js');
+      (async () => {
+        const tree = createTreeWithEmptyWorkspace();
+        await runNestSchematic(tree, { schematic: 'class', options: { name: 'packed', sourceRoot: 'src', spec: false } });
+        console.log(tree.read('src/packed.ts', 'utf8'));
+      })().catch(error => { console.error(error); process.exitCode = 1; });
+    `,
+      ],
+      { cwd: consumerRoot, encoding: 'utf8', timeout: 30_000 }
+    );
+    expect(result.trim()).toBe('export class Packed {}');
+  });
+
   it('ships every public runtime and type export, documentation, and MIT license', () => {
     const manifest = JSON.parse(
       readFileSync(join(installedPackage, 'package.json'), 'utf8')

@@ -16,10 +16,18 @@ TypeScript `>=5.9.0 <7`, and Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`.
 The broader Nx ranges above do not apply to it. See the
 [release notes and verification record](releases/nest-0.0.1.md).
 
+The upcoming Nest **0.0.2** development line adds the stable schematic runtime
+and requires Node.js `^22.22.3 || ^24.15.0 || >=26.0.0` and TypeScript
+`>=6.0.0 <7`. Upgrade those tools before adopting 0.0.2. These requirements
+follow `@nestjs/schematics` 12.0.6 and its Angular DevKit 22.2.0 dependencies;
+the released 0.0.1 contract above remains unchanged.
+
 ## TypeScript 5 policy
 
 TypeScript 5 remains supported for the current plugin release line while it
 is supported by the TypeScript ecosystem. TypeScript 6 is supported now.
+The upcoming Nest 0.0.2 runtime is an exception: its native schematic dependency
+requires TypeScript 6, so it is excluded from the TypeScript 5 compatibility lane.
 TypeScript 5 support will be deprecated in a future plugin release after the
 relevant TypeScript 5 support window ends; that change will be documented in
 the release notes and reflected here.
