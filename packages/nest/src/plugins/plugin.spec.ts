@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { CreateNodesContextV2 } from '@nx/devkit';
+import type { CreateNodesContext } from '@nx/devkit';
 import * as childProcess from 'node:child_process';
 import {
   mkdirSync,
@@ -15,7 +15,7 @@ import { createNodes, createNodesV2 } from './plugin';
 
 describe('Nest project discovery', () => {
   let workspaceRoot: string;
-  let context: CreateNodesContextV2;
+  let context: CreateNodesContext;
 
   beforeEach(() => {
     workspaceRoot = mkdtempSync(join(tmpdir(), 'nest-discovery-'));

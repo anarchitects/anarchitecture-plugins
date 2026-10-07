@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import { createNodesFromFiles, type CreateNodesV2 } from '@nx/devkit';
+import { createNodesFromFiles, type CreateNodes } from '@nx/devkit';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createNestBuildTarget } from '../utils/build-target';
@@ -16,7 +16,7 @@ export interface NestPluginOptions {
   buildTargetName?: string;
 }
 
-export const createNodesV2: CreateNodesV2<NestPluginOptions> = [
+export const createNodes: CreateNodes<NestPluginOptions> = [
   '**/nest-cli.json',
   async (configFiles, options, context) => {
     const projectConfigFiles = configFiles
@@ -64,4 +64,4 @@ export const createNodesV2: CreateNodesV2<NestPluginOptions> = [
   },
 ];
 
-export const createNodes = createNodesV2;
+export const createNodesV2 = createNodes;
