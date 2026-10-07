@@ -7,6 +7,7 @@ import { createNestBuildTarget } from '../utils/build-target';
 import { readNamedInputs } from '../utils/named-inputs';
 import { readBuildOutputs } from '../utils/read-build-outputs';
 import { createNestStartTarget } from '../utils/start-target';
+import { nativeMemberProjects } from '../utils/native-member-projects';
 import {
   getNestProjectRoot,
   hasProjectManifest,
@@ -57,8 +58,24 @@ export const createNodes: CreateNodes<NestPluginOptions> = [
           buildTargetName,
           readBuildOutputs(context.workspaceRoot, projectRoot)
         );
+        const members = nativeMemberProjects(
+          projectRoot,
+          context,
+          buildTargetName,
+          startTargetName
+        );
+        if (Object.keys(members).length) {
+          // Separate Nx member roots must not disappear from the owner's
+          // default native build hash after converting to a Nest monorepo.
+          buildTarget.inputs!.push(
+            projectRoot === '.'
+              ? '{workspaceRoot}/**/*'
+              : `{workspaceRoot}/${projectRoot}/**/*`
+          );
+        }
         return {
           projects: {
+            ...members,
             [projectRoot]: {
               root: projectRoot,
               targets: {

@@ -13,8 +13,8 @@ The E2E target builds `nx-nest` first. It packs that package into a temporary
 directory, extracts it into each consumer workspace, and links the exact
 dependencies from the repository's locked install. Each consumer receives the
 same Yarn lockfile so Nx can hash external dependencies. No registry server,
-runtime dependency download, source export condition, or generated Nest template
-is needed. The lockfile is an explicit input to the E2E project.
+runtime dependency download or source export condition is needed. The lockfile
+is an explicit input to the E2E project.
 
 The baseline is Nest CLI **12.0.0**, Nest common/core/platform-express **12.1.2**,
 Rspack **2.1.10**, TypeScript **6.0.3**, and Nx **23.2.0**. The suite checks the
@@ -27,6 +27,7 @@ installed Nest versions against the exact manifest pins and rejects prereleases.
 | `nested-solution-custom-output`      | Nested project, solution references, explicit `tsConfigPath` taking precedence over builder options, shared inherited output outside the project, custom `compile`/`serve` names |
 | `monorepo-tsc`                       | Nest application and shared library compiled with tsc; one Nx project per CLI config                                                                                             |
 | `monorepo-rspack`                    | ESM Nest monorepo and shared library bundled with Rspack; explicit Rspack config file                                                                                            |
+| `generated-esm` / `generated-cjs`    | Native application, sub-app conversion, and library generated through the packed Nx plugin; separate member discovery and real default Rspack builds                             |
 
 Each fixture runs the packed `init` generator twice through Nx, checks repeat
 safety and unchanged package/Nest configs, then checks discovery, build/start command and metadata, cache and
@@ -40,6 +41,11 @@ Linux.
 
 A negative adoption case rejects an incompatible framework declaration without
 partially registering the plugin.
+
+Generated-member cases preserve native source/config output and link dependencies
+at the selected Nest package root for default Rspack externals discovery. Both
+the sub-app and library build through their inferred named targets. Generation
+runtime dependencies are resolved from the plugin package's stable install.
 
 The Rspack fixture explicitly sets the bundle filename to `main.js` while retaining
 the default `dist` directory. It does not claim automatic inference of arbitrary

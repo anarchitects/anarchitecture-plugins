@@ -129,7 +129,7 @@ describe('published Nest plugin', () => {
     const collection = JSON.parse(
       readFileSync(join(installedPackage, manifest.generators), 'utf8')
     );
-    for (const name of ['init', 'application']) {
+    for (const name of ['init', 'application', 'sub-app', 'library']) {
       const generator = collection.generators[name];
       expect(
         existsSync(join(installedPackage, `${generator.factory}.js`))
@@ -256,6 +256,77 @@ describe('published Nest plugin', () => {
           cache: false,
           continuous: true,
         });
+        const configPath = join(workspace, 'apps/api/nest-cli.json');
+        const beforeMember = readFileSync(configPath, 'utf8');
+        const subApp = [
+          'generate',
+          '@anarchitects/nest:app',
+          'worker',
+          '--project=api',
+          '--no-interactive',
+        ];
+        nx(...subApp, '--dry-run');
+        expect(readFileSync(configPath, 'utf8')).toBe(beforeMember);
+        expect(existsSync(join(workspace, 'apps/api/apps'))).toBe(false);
+        nx(...subApp);
+        nx(
+          'generate',
+          '@anarchitects/nest:lib',
+          'shared',
+          '--project=api',
+          '--prefix=@domain',
+          '--no-interactive'
+        );
+        expect(
+          JSON.parse(nx('show', 'project', 'api', '--json')).targets.compile
+            .inputs
+        ).toContain('{workspaceRoot}/apps/api/**/*');
+        for (const [name, root, kind] of [
+          ['api-api', 'apps/api/apps/api', 'application'],
+          ['api-worker', 'apps/api/apps/worker', 'application'],
+          ['api-shared', 'apps/api/libs/shared', 'library'],
+        ]) {
+          const member = JSON.parse(nx('show', 'project', name, '--json'));
+          expect(member).toMatchObject({
+            name,
+            root,
+            projectType: kind,
+            sourceRoot: `${root}/src`,
+          });
+          expect(member.targets.compile).toMatchObject({
+            options: {
+              command: `nest build '${name.slice(4)}'`,
+              cwd: 'apps/api',
+            },
+            cache: true,
+            outputs: [
+              `{workspaceRoot}/apps/api/dist/${
+                kind === 'library' ? 'libs' : 'apps'
+              }/${name.slice(4)}`,
+            ],
+          });
+          if (kind === 'library') expect(member.targets.serve).toBeUndefined();
+          else
+            expect(member.targets.serve).toMatchObject({
+              options: {
+                command: `nest start '${name.slice(4)}'`,
+                cwd: 'apps/api',
+              },
+              continuous: true,
+            });
+          expect(member.targets.build).toBeUndefined();
+        }
+        // Explicit Nx overrides continue to win over native-member inference.
+        const memberPath = join(workspace, 'apps/api/apps/worker/project.json');
+        const memberConfig = JSON.parse(readFileSync(memberPath, 'utf8'));
+        memberConfig.targets = {
+          compile: { command: 'echo custom', cache: false },
+        };
+        writeFileSync(memberPath, JSON.stringify(memberConfig));
+        expect(
+          JSON.parse(nx('show', 'project', 'api-worker', '--json')).targets
+            .compile
+        ).toMatchObject({ options: { command: 'echo custom' }, cache: false });
       } finally {
         rmSync(workspace, { recursive: true, force: true });
       }

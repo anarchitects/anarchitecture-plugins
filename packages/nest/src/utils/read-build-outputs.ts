@@ -20,7 +20,8 @@ export interface NestBuildOutputs {
 /** Read configuration only: no CLI execution, compiler emit, or filesystem writes. */
 export function readBuildOutputs(
   workspaceRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  nativeProjectName?: string
 ): NestBuildOutputs {
   // TypeScript resolves package-based extends through real paths. Use the same
   // workspace identity even when the checkout itself is reached via a symlink.
@@ -32,7 +33,15 @@ export function readBuildOutputs(
   const configPath = resolve(
     absoluteRoot,
     selectTsConfigPath(
-      nestConfig,
+      nativeProjectName
+        ? {
+            ...nestConfig,
+            compilerOptions: {
+              ...nestConfig.compilerOptions,
+              ...nestConfig.projects?.[nativeProjectName]?.compilerOptions,
+            },
+          }
+        : nestConfig,
       existsSync(join(absoluteRoot, 'tsconfig.build.json'))
     )
   );

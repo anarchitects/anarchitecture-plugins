@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 import { basename } from 'node:path';
+import { parseJson } from '@nx/devkit';
 import { treePath, type TreeSnapshot } from './tree-snapshot';
 
 export interface AdditiveTransform {
+  /** Read a detached JSON value for deriving additive Nx metadata. */
+  readJson<T extends object>(path: string): T;
   /** Create a missing file; existing bytes can only be retained identically. */
   createFile(path: string, content: string | Buffer): void;
   /** Add missing keys to Nx metadata, preserving all existing values. */
@@ -36,6 +39,11 @@ function mergeAdditions(
 /** No raw Tree access: post-processing cannot patch or delete Nest's templates. */
 export function additiveTransform(snapshot: TreeSnapshot): AdditiveTransform {
   return {
+    readJson<T extends object>(path: string): T {
+      const content = snapshot.get(treePath(path));
+      if (!content) throw new Error(`Cannot read generated JSON: ${path}`);
+      return parseJson<T>(content.toString('utf8'));
+    },
     createFile(path, content) {
       path = treePath(path);
       const next = Buffer.from(content);

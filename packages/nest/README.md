@@ -69,7 +69,7 @@ a Nest HTTP application using the packed plugin and pinned stable dependencies.
 | Standalone ESM / NodeNext               | Root project with `tsconfig.build.json` fallback                                   | Uses the tsc builder.                                                                                                    |
 | Standalone CommonJS                     | tsc builder `configPath` selection                                                 | Does not change the application's module system.                                                                         |
 | Nested project in a TypeScript solution | Explicit `tsConfigPath`, inherited output outside the project, custom target names | Solution references do not create extra Nx nodes or output entries.                                                      |
-| Nest monorepo with tsc                  | Application plus shared library, real build and startup                            | One Nx project per `nest-cli.json`, not one per Nest `projects` entry.                                                   |
+| Nest monorepo with tsc                  | Application plus shared library, real build and startup                            | Existing members remain within the owner; members with Nx `project.json` also get named targets.                         |
 | Nest monorepo with Rspack               | ESM application plus shared library, real bundle and startup                       | Tested with an explicit bundler config retaining `dist`; arbitrary bundler output overrides require explicit Nx outputs. |
 
 The fixture baseline is Nest CLI 12.0.0, Nest common/core/platform-express 12.1.2,
@@ -139,9 +139,11 @@ project names and explicit configuration from the manifests.
 Discovery uses filenames only. Build inference reads the Nest config, project
 manifests, and TypeScript configuration but never executes the Nest CLI, changes
 the working directory, emits compiler output, or writes a plugin cache.
-Nest `sourceRoot`, `root`, and `projects` fields do not relocate the Nx project
-or create separate child nodes. In Nest monorepo mode, this stage discovers the
-directory containing `nest-cli.json`.
+Nest `sourceRoot` and `root` fields do not relocate the owning Nx project.
+Existing Nest monorepos remain one Nx project per `nest-cli.json` unless members
+also have Nx `project.json` metadata. The sub-app/library generators add that
+metadata, enabling separate child nodes and native named-project targets.
+Members with their own `nest-cli.json` retain their independent inference.
 
 ## Inferred build target
 
@@ -267,7 +269,8 @@ work with ordinary Nest projects and retain the ownership boundaries above.
   `src/utils/` modules. Inference must not launch processes or write files.
 - Keep `src/generators/init/` limited to validation and minimal Nx registration.
   Preserve user configuration and repeat safety. The application generator
-  delegates to native schematics and adds only Nx metadata; library and resource
+  delegates to native schematics and adds only Nx metadata. Sub-app and library
+  wrappers preserve native workspace updates and add member metadata; resource
   wrappers follow in later issues.
 - Delegate framework behavior to Nest. Do not copy templates, choose a compiler
   or platform for the user, or rebuild CLI behavior in custom executors.
@@ -332,16 +335,66 @@ package-manager configuration. Choose a directory covered by your workspace
 globs (or add it yourself), then install the generated application's dependencies
 with your package manager before running it. `packageManager` is passed to Nest
 as native generation metadata; it does not select or run an installer. Use the
-full `application` generator name; the native `app` sub-application schematic is
-a separate upcoming wrapper. These features are part of development toward
+full `application` generator name; `app` aliases the separate native `sub-app`
+wrapper. These features are part of development toward
 0.0.2 and are not available in the published 0.0.1 package.
+
+### Sub-apps and libraries (0.0.2 development)
+
+Use an existing Nx project containing `nest-cli.json`, `package.json`, and
+`tsconfig.json` as the Nest workspace owner:
+
+```sh
+yarn nx g @anarchitects/nest:sub-app worker --project=api --dry-run
+yarn nx g @anarchitects/nest:app worker --project=api
+yarn nx g @anarchitects/nest:library shared --project=api --prefix=@domain
+yarn nx g @anarchitects/nest:lib utilities --project=api --rootDir=modules
+```
+
+`--project` selects the owning Nx project, not a Nest member. When omitted,
+the root Nest workspace takes precedence, otherwise the single Nest owner is
+selected. Multiple nested owners require an explicit selection. Root and nested
+TypeScript Nest workspaces are covered, including standalone-to-monorepo
+conversion and adding members to an existing monorepo.
+
+Nest owns the layout: destinations are `<rootDir>/<path>/<normalized-name>`,
+relative to the selected owner, with native `apps`/`libs` defaults. `prefix`
+defaults come from the selected Tree's `defaultLibraryPrefix`, then Nest's
+`@app` fallback. Native language, spec suffix, and formatting options are
+forwarded. Native path validation and template limitations still apply; for
+example, the pinned templates use `../../tsconfig.json`, so adding extra path
+depth may require project-owned TypeScript configuration afterward.
+
+Sub-app conversion preserves Nest's Rspack configuration and its package,
+TypeScript, test, and source updates. The wrapper copies no templates and adds
+no framework patches. It adds Nx metadata for each native workspace member,
+including the converted original application. New Nx names are
+`<owner-name>-<native-name>` (for example, `api-worker` and `api-shared`);
+existing names at the same root are preserved. Matching owner `sourceRoot`
+metadata is migrated to the converted native source location. Other custom
+metadata remains unchanged.
+
+Project Crystal infers `nest build '<native-name>'` from the owning directory;
+applications also get `nest start '<native-name>'`, while libraries get no start
+target. Existing target names/scopes and explicit overrides retain precedence.
+Member builds hash the owner's files conservatively and resolve outputs from
+the member's TypeScript config. Existing members without Nx metadata retain
+their previous owner-only behavior. Custom bundler output overrides still
+require explicit Nx output configuration.
+
+Duplicate native names and conflicting Nx metadata fail without applying partial
+generation. Repeating a member name produces Nest's existing-project error;
+it does not rewrite that member. Dry-run, generation, and native cwd lookups use
+the pending Tree. No dependency installation, git initialization, or process cwd
+change occurs. Install dependencies for the selected native package before
+building; Nest's default Rspack externals discovery uses its `node_modules`.
 
 ### Native generation adapter (0.0.2 development)
 
 `src/generation-adapter/run-nest-schematic.ts` is internal infrastructure for
 [epic #498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
-`init` and `application` are registered publicly; library/resource and other
-native wrappers arrive in later sub-issues. This change is not a 0.0.2 publication.
+`init`, `application`, `sub-app` (`app`), and `library` (`lib`) are registered
+publicly; resource and other wrappers arrive later. This is not a 0.0.2 publication.
 
 The adapter runs the pinned stable `@nestjs/schematics` 12.0.6 collection with
 Angular DevKit 22.2.0. Native ESM factories are imported asynchronously before
@@ -372,10 +425,17 @@ Optional Nx post-processing receives an additive API, not a writable Tree:
 source files and Nest/TypeScript configuration are protected from patching.
 A failed transform discards the entire staged generation result.
 
-Project selection, Nest CLI `generateOptions` merging, and native options whose
-defaults consult cwd (such as a library's prefix) belong to the later wrappers.
-Those wrappers must resolve their context from the Nx Tree and pass explicit
-native options; the adapter does not emulate `nest generate` configuration lookup.
+`readJson` returns detached JSON for deriving metadata, without providing write
+access to native files. `workingDirectory` scopes native paths to a selected
+owner. The member wrappers isolate native host reads in a worker thread: the
+sub-app package-name lookup and library config lookup read the scoped Tree.
+Only those exact paths are bridged; runtime modules/templates use normal reads.
+The parent filesystem APIs and cwd are untouched, including concurrent calls.
+The worker uses production generation semantics because Nest skips source
+conversion when `NODE_ENV=test`.
+
+Nest CLI `generateOptions` merging for element generators belongs to the later
+wrappers; the adapter does not emulate the entire CLI configuration lookup.
 
 ### Nx API compatibility boundary
 

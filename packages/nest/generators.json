@@ -9,6 +9,18 @@
       "factory": "./dist/generators/application/generator",
       "schema": "./schemas/application.json",
       "description": "Generate an application using the native stable Nest v12 schematic."
+    },
+    "sub-app": {
+      "factory": "./dist/generators/sub-app/generator",
+      "schema": "./schemas/sub-app.json",
+      "aliases": ["app"],
+      "description": "Generate a native Nest sub-app in an existing Nest workspace."
+    },
+    "library": {
+      "factory": "./dist/generators/library/generator",
+      "schema": "./schemas/library.json",
+      "aliases": ["lib"],
+      "description": "Generate a native Nest library in an existing Nest workspace."
     }
   }
 }

@@ -2,6 +2,7 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 export interface NestCliConfig {
+  projects?: Record<string, NestCliConfig>;
   compilerOptions?: {
     tsConfigPath?: string;
     builder?: string | { type?: string; options?: { configPath?: string } };
