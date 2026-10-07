@@ -47,4 +47,23 @@ describe('Nest build target', () => {
       'buildTargetName must be a non-empty string'
     );
   });
+
+  it('uses resolved outputs and config inputs, hashing all dependencies for package configs', () => {
+    const target = createNestBuildTarget('apps/api', {}, 'build', {
+      outputs: ['{workspaceRoot}/dist/api'],
+      configInputs: [
+        '{workspaceRoot}/tsconfig.base.json',
+        '{workspaceRoot}/config/shared.json',
+      ],
+      usesPackageConfigs: true,
+    });
+    expect(target.outputs).toEqual(['{workspaceRoot}/dist/api']);
+    expect(target.inputs).toEqual([
+      'default',
+      '^default',
+      '{workspaceRoot}/tsconfig.json',
+      '{workspaceRoot}/tsconfig.base.json',
+      '{workspaceRoot}/config/shared.json',
+    ]);
+  });
 });

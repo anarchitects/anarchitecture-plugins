@@ -165,8 +165,18 @@ describe('published Nest plugin', () => {
           },
         },
         'nest-cli.json': { sourceRoot: 'src' },
+        'tsconfig.json': { files: [], references: [{ path: './apps/api' }] },
         'apps/api/package.json': { name: '@consumer/api' },
-        'apps/api/nest-cli.json': { sourceRoot: 'src' },
+        'apps/api/nest-cli.json': {
+          sourceRoot: 'src',
+          compilerOptions: { tsConfigPath: 'configs/build.json' },
+        },
+        'apps/api/configs/build.json': {
+          extends: '../../../config/build-base.json',
+        },
+        'config/build-base.json': {
+          compilerOptions: { outDir: '../build/api' },
+        },
         'services/worker/project.json': {
           name: 'worker',
           targets: {
@@ -225,20 +235,31 @@ describe('published Nest plugin', () => {
           options: { command: 'nest build', cwd: nodes[name].data.root },
           cache: true,
           dependsOn: [`^${buildTargetName}`],
-          inputs: [
+          inputs: expect.arrayContaining([
             'production',
             '^production',
             { externalDependencies: ['@nestjs/cli'] },
             '{workspaceRoot}/tsconfig.json',
             '{workspaceRoot}/tsconfig.base.json',
-          ],
-          outputs: ['{projectRoot}/dist'],
+          ]),
+          outputs:
+            name === 'consumer'
+              ? ['{projectRoot}/dist']
+              : ['{workspaceRoot}/build/api'],
           metadata: {
             description: 'Workspace build default',
             technologies: ['nest'],
           },
         });
       }
+      expect(
+        nodes['@consumer/api'].data.targets[buildTargetName].inputs
+      ).toEqual(
+        expect.arrayContaining([
+          '{workspaceRoot}/apps/api/configs/build.json',
+          '{workspaceRoot}/config/build-base.json',
+        ])
+      );
       expect(nodes.worker.data.targets[buildTargetName]).toMatchObject({
         options: { command: 'echo custom build' },
         cache: false,
@@ -258,4 +279,62 @@ describe('published Nest plugin', () => {
     },
     30_000
   );
+
+  it('matches the directory emitted by stable Nest CLI for an inherited external outDir', () => {
+    const fixtureFiles = {
+      'demo/package.json': { name: 'demo' },
+      'demo/nest-cli.json': {
+        sourceRoot: 'src',
+        compilerOptions: {
+          builder: 'tsc',
+          tsConfigPath: 'config/tsconfig.build.json',
+        },
+      },
+      'demo/config/tsconfig.build.json': {
+        extends: '../../shared-config.json',
+        compilerOptions: { rootDir: '../src' },
+        include: ['../src/**/*.ts'],
+      },
+      'shared-config.json': {
+        compilerOptions: {
+          outDir: './build/demo',
+          module: 'NodeNext',
+          moduleResolution: 'NodeNext',
+          target: 'ES2022',
+          types: [],
+          skipLibCheck: true,
+        },
+      },
+    };
+    for (const [path, value] of Object.entries(fixtureFiles)) {
+      mkdirSync(dirname(join(consumerRoot, path)), { recursive: true });
+      writeFileSync(join(consumerRoot, path), JSON.stringify(value));
+    }
+    mkdirSync(join(consumerRoot, 'demo/src'));
+    writeFileSync(
+      join(consumerRoot, 'demo/src/main.ts'),
+      'export const answer = 42;\n'
+    );
+    const inferred = execFileSync(
+      process.execPath,
+      [
+        '-e',
+        `
+      const { createNodes } = require('@anarchitects/nest/plugin');
+      createNodes[1](['demo/nest-cli.json'], undefined, { workspaceRoot: process.cwd(), nxJsonConfiguration: {} })
+        .then(result => console.log(JSON.stringify(result[0][1].projects.demo.targets.build.outputs)));
+    `,
+      ],
+      { cwd: consumerRoot, encoding: 'utf8' }
+    );
+    expect(JSON.parse(inferred)).toEqual(['{workspaceRoot}/build/demo']);
+    execFileSync(
+      process.execPath,
+      [require.resolve('@nestjs/cli/bin/nest.js'), 'build'],
+      { cwd: join(consumerRoot, 'demo'), encoding: 'utf8', stdio: 'pipe' }
+    );
+    expect(
+      readFileSync(join(consumerRoot, 'build/demo/main.js'), 'utf8')
+    ).toContain('42');
+  }, 30_000);
 });

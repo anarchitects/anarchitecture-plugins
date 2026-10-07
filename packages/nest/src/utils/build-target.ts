@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 import type { NxJsonConfiguration, TargetConfiguration } from '@nx/devkit';
+import type { NestBuildOutputs } from './read-build-outputs';
 
 /** Build inference uses public target configuration rather than a custom executor. */
 export function createNestBuildTarget(
   projectRoot: string,
   namedInputs: NxJsonConfiguration['namedInputs'],
-  buildTargetName = 'build'
+  buildTargetName = 'build',
+  buildOutputs: NestBuildOutputs = {
+    outputs: ['{projectRoot}/dist'],
+    configInputs: [],
+  }
 ): TargetConfiguration {
   if (typeof buildTargetName !== 'string' || buildTargetName.trim() === '') {
     throw new Error('Nest plugin buildTargetName must be a non-empty string.');
@@ -26,13 +31,19 @@ export function createNestBuildTarget(
     inputs: [
       inputName,
       `^${inputName}`,
-      { externalDependencies: ['@nestjs/cli'] },
+      // Without an explicit filter Nx hashes all external dependencies, including
+      // installed tsconfig packages and their transitive base configurations.
+      ...(buildOutputs.usesPackageConfigs
+        ? []
+        : [{ externalDependencies: ['@nestjs/cli'] }]),
       // Hash shared TypeScript settings without depending on private Nx helpers.
-      '{workspaceRoot}/tsconfig.json',
-      '{workspaceRoot}/tsconfig.base.json',
+      ...new Set([
+        '{workspaceRoot}/tsconfig.json',
+        '{workspaceRoot}/tsconfig.base.json',
+        ...buildOutputs.configInputs,
+      ]),
     ],
-    // Effective tsconfig/output resolution follows in #482.
-    outputs: ['{projectRoot}/dist'],
+    outputs: buildOutputs.outputs,
     metadata: {
       technologies: ['nest'],
       description: 'Build the Nest project.',
