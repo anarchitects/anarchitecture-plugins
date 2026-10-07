@@ -4,6 +4,11 @@
       "factory": "./dist/generators/init/generator",
       "schema": "./schemas/init.json",
       "description": "Register Nest inference and validate stable Nest v12 dependencies."
+    },
+    "application": {
+      "factory": "./dist/generators/application/generator",
+      "schema": "./schemas/application.json",
+      "description": "Generate an application using the native stable Nest v12 schematic."
     }
   }
 }

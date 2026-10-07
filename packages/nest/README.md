@@ -24,14 +24,14 @@ bundler, asset handling, and startup behavior with Nest instead of duplicating
 them in an executor. Framework scaffolding belongs to the official Nest CLI
 and schematics, which avoids maintaining copies of Nest templates.
 
-| Concern                                                                               | Owner                                                       | Plugin boundary                                                                                        |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution to Nest. Only an Nx `init` generator is provided. |
-| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                                                |
-| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.                      |
-| Jest and Vitest targets/configuration                                                 | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | No test target inference, runner selection, or test configuration changes.                             |
-| ESLint and Oxlint targets/configuration                                               | `@nx/eslint` and the workspace's chosen Oxlint integration  | No lint target inference or linter selection.                                                          |
-| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                                   |
+| Concern                                                                               | Owner                                                       | Plugin boundary                                                                          |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution and application generation to Nest. |
+| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                                  |
+| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.        |
+| Jest and Vitest targets/configuration                                                 | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | No test target inference, runner selection, or test configuration changes.               |
+| ESLint and Oxlint targets/configuration                                               | `@nx/eslint` and the workspace's chosen Oxlint integration  | No lint target inference or linter selection.                                            |
+| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                     |
 
 Register test and lint integrations separately, according to the tools used by
 the workspace. The presence of Jest, Vitest, ESLint, or Oxlint configuration does
@@ -266,8 +266,9 @@ work with ordinary Nest projects and retain the ownership boundaries above.
   output resolution, named-input merging, and target construction in reusable
   `src/utils/` modules. Inference must not launch processes or write files.
 - Keep `src/generators/init/` limited to validation and minimal Nx registration.
-  Preserve user configuration and repeat safety. Application, library, and
-  resource generators are not part of the implemented core.
+  Preserve user configuration and repeat safety. The application generator
+  delegates to native schematics and adds only Nx metadata; library and resource
+  wrappers follow in later issues.
 - Delegate framework behavior to Nest. Do not copy templates, choose a compiler
   or platform for the user, or rebuild CLI behavior in custom executors.
 - Keep organizational layouts, tags, boundary rules, Fastify preferences, and
@@ -288,13 +289,59 @@ The earlier
 is historical proposal context. Its prerelease guidance and proposed generators
 do not describe the stable v12 core implemented under epic #478.
 
+### Application generation (0.0.2 development)
+
+After installing with `yarn nx add @anarchitects/nest`, generate an application
+inside an existing Nx workspace:
+
+```sh
+yarn nx g @anarchitects/nest:application api --directory=apps/api --dry-run
+yarn nx g @anarchitects/nest:application api --directory=apps/api
+yarn nx g @anarchitects/nest:application worker --directory=apps/worker --type=cjs --observe
+```
+
+`directory` is the exact workspace-relative destination. When omitted, Nest's
+normalized name supplies the directory (`MyApi` becomes `my-api`). Scoped and
+numeric names retain native behavior. Generation into the workspace root or
+outside the workspace is rejected, as are conflicting project names and files.
+Repeating generation with identical options is safe.
+
+The wrapper forwards the stable native application's full option surface,
+including `strict`, `type`, `packageManager`, `spec`, `specFileSuffix`, `format`,
+and `observe`. Native defaults remain ESM, Vitest, strict TypeScript, and Oxlint;
+`--type=cjs` retains the native CommonJS/Jest output. Nest owns NodeNext settings,
+compiler/bundler configuration, package scripts, dependencies, and observe
+instrumentation. Framework files are not patched. Explicit `--format` uses Nest's
+formatter and leaves unrelated workspace source files untouched.
+
+Only `project.json` metadata (`name`, `projectType`, and `sourceRoot`) and the
+`@anarchitects/nest/plugin` registration are added for Nx. Existing plugin options
+and include/exclude scopes remain in effect. No explicit targets are written.
+Nx discovers the project even outside package-manager workspace globs.
+
+Native package scripts keep Nx's normal precedence over inferred targets with
+the same name. Consequently, the generated `build` and `start` scripts appear
+as script targets, without the inference plugin's cache/continuous settings.
+To expose those inferred settings alongside the native scripts, configure the
+plugin with distinct names such as `buildTargetName: "compile"` and
+`startTargetName: "serve"`. The generator preserves existing target-name choices;
+it does not remove scripts or change target precedence.
+
+Generation does not install dependencies, initialize git, or edit workspace
+package-manager configuration. Choose a directory covered by your workspace
+globs (or add it yourself), then install the generated application's dependencies
+with your package manager before running it. `packageManager` is passed to Nest
+as native generation metadata; it does not select or run an installer. Use the
+full `application` generator name; the native `app` sub-application schematic is
+a separate upcoming wrapper. These features are part of development toward
+0.0.2 and are not available in the published 0.0.1 package.
+
 ### Native generation adapter (0.0.2 development)
 
 `src/generation-adapter/run-nest-schematic.ts` is internal infrastructure for
 [epic #498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
-Only `init` is registered publicly at this stage; application/library/resource
-and other native wrappers arrive in later sub-issues. This change is not a
-0.0.2 publication.
+`init` and `application` are registered publicly; library/resource and other
+native wrappers arrive in later sub-issues. This change is not a 0.0.2 publication.
 
 The adapter runs the pinned stable `@nestjs/schematics` 12.0.6 collection with
 Angular DevKit 22.2.0. Native ESM factories are imported asynchronously before
@@ -346,8 +393,9 @@ declarations is now public `@nx/devkit`:
 | `CreateNodesContext`, `ProjectConfiguration` | Named-input reader's public context/configuration types                                               |
 | `NxJsonConfiguration`, `TargetConfiguration` | Pure build/start target construction types                                                            |
 
-Init additionally uses public `readJson`, `writeJson`, `readNxJson`, `updateNxJson`,
-`visitNotIgnoredFiles`, and `Tree` for validation and configuration edits.
+Generators additionally use public `readJson`, `writeJson`, `readNxJson`,
+`updateNxJson`, `getProjects`, `visitNotIgnoredFiles`, and `Tree` for validation
+and configuration edits.
 
 `CreateNodes` and `CreateNodesContext` are the current types for the supported
 Nx baseline. The `createNodesV2` runtime export remains an alias of `createNodes`;
