@@ -5,6 +5,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createNestBuildTarget } from '../utils/build-target';
 import { readNamedInputs } from '../utils/named-inputs';
+import { readBuildOutputs } from '../utils/read-build-outputs';
 import {
   getNestProjectRoot,
   hasProjectManifest,
@@ -44,7 +45,8 @@ export const createNodes: CreateNodes<NestPluginOptions> = [
         const buildTarget = createNestBuildTarget(
           projectRoot,
           readNamedInputs(projectRoot, context),
-          buildTargetName
+          buildTargetName,
+          readBuildOutputs(context.workspaceRoot, projectRoot)
         );
         return {
           projects: {

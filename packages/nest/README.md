@@ -6,8 +6,8 @@ intended for eventual contribution to `@nx/nest`, rather than a permanent fork.
 ## Status
 
 This package discovers Nest projects and infers a cacheable build target through
-the `@anarchitects/nest/plugin` entrypoint. Start inference, effective tsconfig
-output resolution, and generators remain tracked in
+the `@anarchitects/nest/plugin` entrypoint, with outputs resolved from the effective
+Nest TypeScript configuration. Start inference and generators remain tracked in
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
 ## Compatibility
@@ -26,7 +26,7 @@ Application dependencies remain owned by the Nest project.
 
 These ranges establish the package contract. Full Nest v12 project-shape
 validation is planned in #485; current coverage validates packaging, loading,
-project discovery, and build target configuration.
+project discovery, build target configuration, and effective build outputs.
 
 ## Installation and registration
 
@@ -52,9 +52,9 @@ The config's directory becomes the Nx project root (`.` at the workspace root).
 The plugin adds `nest` technology metadata and lets Nx's built-in plugins merge
 project names and explicit configuration from the manifests.
 
-Discovery uses filenames only; it does not parse or validate Nest config
-contents. Inference reads project manifests for named inputs but never executes
-the Nest CLI, changes the working directory, or writes a plugin cache.
+Discovery uses filenames only. Build inference reads the Nest config, project
+manifests, and TypeScript configuration but never executes the Nest CLI, changes
+the working directory, emits compiler output, or writes a plugin cache.
 Nest `sourceRoot`, `root`, and `projects` fields do not relocate the Nx project
 or create separate child nodes. In Nest monorepo mode, this stage discovers the
 directory containing `nest-cli.json`.
@@ -89,12 +89,44 @@ definitions taking precedence. The Nest CLI external dependency and both root
 whole-file tsconfig inputs conservatively invalidate the cache when shared
 settings or solution references change, using public Nx input configuration.
 
-For this stage, outputs default to `['{projectRoot}/dist']`. Resolving custom and
-inherited tsconfig output directories is tracked in #482. Until then, projects
-with another output directory must set the target's `outputs` explicitly.
 Nx applies `targetDefaults` over inferred configuration and explicit project
 target settings over those defaults. Explicit commands, inputs, outputs, and
 cache settings therefore remain authoritative.
+
+### Effective TypeScript configuration and outputs
+
+For the inferred `nest build` command (without a named application argument),
+the tsconfig is selected relative to the directory containing `nest-cli.json`:
+
+1. `compilerOptions.tsConfigPath`, when set.
+2. `compilerOptions.builder.options.configPath` for a builder of type `tsc`.
+3. `tsconfig.build.json`, when present.
+4. `tsconfig.json` otherwise.
+
+TypeScript's public configuration parser resolves `extends`, including package
+and multiple-base forms, JSON comments, and trailing commas. An inherited
+`outDir` is relative to the config that declares it; a child override is relative
+to the child's config. Solution-style `files: []` and `references` are accepted.
+References do not select a different build config or infer additional outputs.
+
+Outputs inside the project use `{projectRoot}`. Outputs outside the project use
+`{workspaceRoot}` with the corresponding relative path. Absolute `outDir` values
+and workspace symlinks are normalized to these same tokens. Existing local
+tsconfig files read during resolution are added to build inputs, including shared
+base configs outside the project. When installed package configs are read, the
+target uses Nx's default hashing of all external dependencies instead of narrowing
+the dependency input to Nest CLI. This conservatively invalidates the build when
+a package-based config or its transitive bases change.
+
+If the selected config is missing or has no `outDir`, inference retains the
+`{projectRoot}/dist` fallback. A missing explicit config does not switch to a
+different config; Nest CLI reports the missing file when building. Invalid
+existing configs and unresolved `extends` produce a configuration error during
+inference rather than guessing an output directory.
+
+This resolves the selected tsconfig's output directory. Custom bundler output
+overrides or separately configured asset destinations still require explicit Nx
+`outputs` settings.
 
 No `start`, `test`, or `lint` target is inferred.
 Jest, Vitest, ESLint, and Oxlint remain the responsibility of their respective
