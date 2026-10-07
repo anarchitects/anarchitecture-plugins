@@ -5,9 +5,10 @@ intended for eventual contribution to `@nx/nest`, rather than a permanent fork.
 
 ## Status
 
-This package discovers Nest projects and infers a cacheable build target through
-the `@anarchitects/nest/plugin` entrypoint, with outputs resolved from the effective
-Nest TypeScript configuration. Start inference and generators remain tracked in
+This package discovers Nest projects and infers cacheable build and continuous
+start targets through the `@anarchitects/nest/plugin` entrypoint. Build outputs
+are resolved from the effective Nest TypeScript configuration. Further validation
+and generators remain tracked in
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
 ## Compatibility
@@ -26,7 +27,7 @@ Application dependencies remain owned by the Nest project.
 
 These ranges establish the package contract. Full Nest v12 project-shape
 validation is planned in #485; current coverage validates packaging, loading,
-project discovery, build target configuration, and effective build outputs.
+project discovery, build and start target configuration, and effective build outputs.
 
 ## Installation and registration
 
@@ -128,7 +129,39 @@ This resolves the selected tsconfig's output directory. Custom bundler output
 overrides or separately configured asset destinations still require explicit Nx
 `outputs` settings.
 
-No `start`, `test`, or `lint` target is inferred.
+## Inferred start target
+
+The default `start` target runs `nest start` from the directory containing
+`nest-cli.json`. It has `continuous: true`, `cache: false`, and Nest technology
+metadata. Nx can run dependent tasks alongside this long-running command.
+Nest CLI owns compilation and startup; the target adds no build dependency,
+cache inputs, or outputs. Watch mode is opt-in through Nest CLI arguments, for
+example `yarn nx start api --watch`.
+
+To use a name such as `serve`, configure `startTargetName`:
+
+```json
+{
+  "plugins": [
+    {
+      "plugin": "@anarchitects/nest/plugin",
+      "options": {
+        "buildTargetName": "compile",
+        "startTargetName": "serve"
+      }
+    }
+  ]
+}
+```
+
+Each option defaults independently to `build` or `start`. Renaming replaces the
+default target name; no compatibility alias is added. Both names must be non-empty
+and different. If an existing configuration uses `buildTargetName: "start"`, set
+a distinct `startTargetName` to keep that build name. Nx `targetDefaults` and
+explicit project targets can override the inferred runtime settings, using the
+same precedence as build targets.
+
+No `test` or `lint` target is inferred.
 Jest, Vitest, ESLint, and Oxlint remain the responsibility of their respective
 Nx integrations.
 
@@ -148,7 +181,7 @@ yarn nx release --projects nx-nest --first-release --dry-run
 The TypeScript, Jest, ESLint, and publish targets are inferred by the workspace's
 existing Nx plugins. Tests depend on the build to verify the actual packed
 artifact, including both entrypoints, the shipped declarations and license,
-and build inference through Nx's project graph in a temporary consumer workspace.
+and build/start inference through Nx's project graph in a temporary consumer workspace.
 
 The Nx project is `nx-nest`; the npm package is `@anarchitects/nest`. The existing
 independent release configuration can version just this project. The manual

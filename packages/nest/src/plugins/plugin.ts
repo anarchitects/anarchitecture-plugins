@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createNestBuildTarget } from '../utils/build-target';
 import { readNamedInputs } from '../utils/named-inputs';
 import { readBuildOutputs } from '../utils/read-build-outputs';
+import { createNestStartTarget } from '../utils/start-target';
 import {
   getNestProjectRoot,
   hasProjectManifest,
@@ -15,6 +16,7 @@ export const name = '@anarchitects/nest/plugin';
 
 export interface NestPluginOptions {
   buildTargetName?: string;
+  startTargetName?: string;
 }
 
 export const createNodes: CreateNodes<NestPluginOptions> = [
@@ -42,6 +44,13 @@ export const createNodes: CreateNodes<NestPluginOptions> = [
         const projectRoot = getNestProjectRoot(configFile);
         if (projectRoot === undefined) return {};
         const buildTargetName = options?.buildTargetName ?? 'build';
+        const startTargetName = options?.startTargetName ?? 'start';
+        const startTarget = createNestStartTarget(projectRoot, startTargetName);
+        if (buildTargetName === startTargetName) {
+          throw new Error(
+            'Nest plugin buildTargetName and startTargetName must be different.'
+          );
+        }
         const buildTarget = createNestBuildTarget(
           projectRoot,
           readNamedInputs(projectRoot, context),
@@ -52,7 +61,10 @@ export const createNodes: CreateNodes<NestPluginOptions> = [
           projects: {
             [projectRoot]: {
               root: projectRoot,
-              targets: { [buildTargetName]: buildTarget },
+              targets: {
+                [buildTargetName]: buildTarget,
+                [startTargetName]: startTarget,
+              },
               // Names and explicit configuration are merged by Nx's built-in plugins.
               metadata: { technologies: ['nest'] },
             },

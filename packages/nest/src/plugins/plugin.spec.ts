@@ -43,6 +43,16 @@ describe('Nest project discovery', () => {
           root,
           metadata: { technologies: ['nest'] },
           targets: {
+            start: {
+              command: 'nest start',
+              options: { cwd: root },
+              continuous: true,
+              cache: false,
+              metadata: {
+                technologies: ['nest'],
+                description: 'Start the Nest project.',
+              },
+            },
             build: {
               command: 'nest build',
               options: { cwd: root },
@@ -131,7 +141,10 @@ describe('Nest project discovery', () => {
       name: 'api',
       nx: { namedInputs: { production: ['default'] } },
     });
-    const options = Object.freeze({ buildTargetName: 'compile' });
+    const options = Object.freeze({
+      buildTargetName: 'compile',
+      startTargetName: 'serve',
+    });
 
     const result = await createNodesV2[1](
       ['apps/api/nest-cli.json'],
@@ -139,7 +152,10 @@ describe('Nest project discovery', () => {
       context
     );
     const targets = result[0][1].projects?.['apps/api'].targets;
-    expect(Object.keys(targets ?? {})).toEqual(['compile']);
+    expect(Object.keys(targets ?? {})).toEqual(['compile', 'serve']);
+    expect(targets?.serve).toEqual(
+      expectedProject('apps/api').projects['apps/api'].targets.start
+    );
     expect(targets?.compile).toMatchObject({
       command: 'nest build',
       options: { cwd: 'apps/api' },
@@ -153,8 +169,69 @@ describe('Nest project discovery', () => {
         '{workspaceRoot}/tsconfig.base.json',
       ],
     });
-    expect(options).toEqual({ buildTargetName: 'compile' });
+    expect(options).toEqual({
+      buildTargetName: 'compile',
+      startTargetName: 'serve',
+    });
   });
+
+  it.each([
+    [{ startTargetName: 'serve' }, ['build', 'serve']],
+    [{ buildTargetName: 'compile' }, ['compile', 'start']],
+  ] as const)(
+    'defaults target names independently with %j',
+    async (options, names) => {
+      write('nest-cli.json');
+      write('package.json', { name: 'api' });
+      const result = await createNodes[1](['nest-cli.json'], options, context);
+      expect(Object.keys(result[0][1].projects?.['.'].targets ?? {})).toEqual(
+        names
+      );
+    }
+  );
+
+  it.each([
+    { buildTargetName: 'start' },
+    { startTargetName: 'build' },
+    { buildTargetName: 'run', startTargetName: 'run' },
+  ])('rejects colliding target names %j', async (options) => {
+    write('nest-cli.json');
+    write('package.json', { name: 'api' });
+    await expect(
+      createNodes[1](['nest-cli.json'], options, context)
+    ).rejects.toMatchObject({
+      errors: [
+        [
+          'nest-cli.json',
+          expect.objectContaining({
+            message:
+              'Nest plugin buildTargetName and startTargetName must be different.',
+          }),
+        ],
+      ],
+    });
+  });
+
+  it.each(['', '  '])(
+    'rejects an invalid startTargetName %j during inference',
+    async (startTargetName) => {
+      write('nest-cli.json');
+      write('package.json', { name: 'api' });
+      await expect(
+        createNodes[1](['nest-cli.json'], { startTargetName }, context)
+      ).rejects.toMatchObject({
+        errors: [
+          [
+            'nest-cli.json',
+            expect.objectContaining({
+              message:
+                'Nest plugin startTargetName must be a non-empty string.',
+            }),
+          ],
+        ],
+      });
+    }
+  );
 
   it('ignores non-Nest files and an empty discovery list', async () => {
     write('apps/web/package.json', { name: 'web' });
