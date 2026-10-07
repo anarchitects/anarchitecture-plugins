@@ -13,7 +13,8 @@ The E2E target builds `nx-nest` first. It packs that package into a temporary
 directory, extracts it into each consumer workspace, and links the exact
 dependencies from the repository's locked install. Each consumer receives the
 same Yarn lockfile so Nx can hash external dependencies. No registry server,
-runtime dependency download or source export condition is needed. The lockfile
+runtime dependency download or source export condition is needed for those
+linked fixtures. The lockfile
 is an explicit input to the E2E project.
 
 The baseline is Nest CLI **12.0.0**, Nest common/core/platform-express **12.1.2**,
@@ -77,6 +78,31 @@ are documented in the [plugin README](../nest/README.md).
 The Rspack fixture explicitly sets the bundle filename to `main.js` while retaining
 the default `dist` directory. It does not claim automatic inference of arbitrary
 bundler output overrides; those remain an explicit Nx configuration concern.
+
+## Real-install CJS consumer
+
+The `cjs-yarn-consumer` regression packs the same plugin but installs it and the
+generated application's dependencies using real Yarn installs in an isolated
+temporary workspace. It uses the repository's Yarn version, the node-modules
+linker, default hoisting, and disabled install scripts, matching the relevant
+empty Nx workspace settings. This case requires registry access (or a populated
+Yarn cache); unlike the linked fixtures it resolves the native application's
+dependency ranges on each uncached run and does not use an immutable fixture
+lockfile. It has a six-minute test timeout and bounded child-command timeouts.
+
+The test reproduces the pinned native CJS Jest scripts' local-path failure, then
+runs unit, HTTP integration, and coverage suites through `nx exec` with Yarn's
+binary resolution and VM modules enabled. It also verifies the optional
+application-scoped `installConfig.hoistingLimits` setting, executing the original
+`test`, `test:e2e`, and `test:cov` targets through Nx. Native scripts and selected
+source/test/configuration files remain unchanged. The root hoisting policy is
+never changed. Generation and dry-run leave the dependency lockfile unchanged;
+only explicit consumer installs update it.
+
+This catches the dependency-layout failure tracked by
+[#533](https://github.com/anarchitects/anarchitecture-plugins/issues/533), which
+linked dependencies and template parity alone cannot detect. It does not test
+interactive watch/debug sessions, converted-monorepo Vitest, or Oxlint.
 
 ## CI
 

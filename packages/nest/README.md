@@ -416,6 +416,65 @@ full `application` generator name; `app` aliases the separate native `sub-app`
 wrapper. These features are part of development toward
 0.0.2 and are not available in the published 0.0.1 package.
 
+#### CJS tests in Yarn package workspaces
+
+The pinned Nest 12.0.6 CJS template invokes Jest through
+`./node_modules/jest/bin/jest.js`. This comes from the
+[official Nest application template](https://github.com/nestjs/schematics/blob/master/src/lib/application/files/ts/package.json).
+With Yarn's default `node-modules` hoisting, Jest can instead live at the Nx
+workspace root. The generated `test` and `test:e2e` scripts then fail with
+`Cannot find module .../node_modules/jest/bin/jest.js`.
+The plugin preserves these native scripts; it does not infer Jest targets or
+silently change dependency placement. This limitation and its verified consumer
+configurations are tracked in [#533](https://github.com/anarchitects/anarchitecture-plugins/issues/533).
+
+To keep default hoisting, invoke Yarn's Jest binary resolution through Nx from
+the workspace root. Replace `legacy-api` with your Nx project name. These shell
+examples use POSIX environment assignment:
+
+```sh
+NODE_OPTIONS=--experimental-vm-modules yarn nx exec --projects=legacy-api -- yarn jest --runInBand
+NODE_OPTIONS=--experimental-vm-modules yarn nx exec --projects=legacy-api -- yarn jest --config ./test/jest-e2e.json --runInBand
+NODE_OPTIONS=--experimental-vm-modules yarn nx exec --projects=legacy-api -- yarn jest --coverage --runInBand
+```
+
+Nx runs each command from the selected project's directory, so the native Jest
+and TypeScript configurations remain in use. Keep the VM-modules flag: native
+CJS tests can load ESM dependencies. These are explicit consumer commands, not
+additional targets inferred by the Nest plugin. For persistent test-target
+integration, configure the workspace's Jest integration separately.
+
+Alternatively, to use the original generated scripts, merge the following
+consumer-owned setting into **the generated application's** `package.json`,
+then run `yarn install` from the workspace root:
+
+```json
+{
+  "installConfig": {
+    "hoistingLimits": "workspaces"
+  }
+}
+```
+
+This Yarn setting keeps that application's dependencies within its workspace.
+It can increase installation size, but leaves the root hoisting policy and
+other workspaces' policies unchanged. It is optional and is never added by a
+generator. The original tasks can then run normally:
+
+```sh
+yarn nx run legacy-api:test
+yarn nx run legacy-api:test:e2e
+yarn nx run legacy-api:test:cov
+```
+
+The native `test:watch`, `test:cov`, and `test:debug` scripts also assume local
+Jest paths. With default hoisting, use the explicit command above with
+`--watch` for watch mode or `--coverage` for coverage. For the unchanged native
+debug script (which uses `node_modules/.bin/jest` and `--inspect-brk`), use the
+package-scoped hoisting setting before starting it. Unit, HTTP integration,
+and coverage runs are exercised in the real-install regression; interactive
+watch sessions and debugger attachment are not automated by that test.
+
 ### Sub-apps and libraries (0.0.2 development)
 
 Use an existing Nx project containing `nest-cli.json`, `package.json`, and
@@ -723,6 +782,9 @@ interface types 1.1.0. A minimal schema object implements the standard in the
 test fixture; the generator core gains no schema vendor or transport dependency.
 Tooling and Observe checks verify native generation contracts; they do not
 contact an Observe service or run the generated Vitest/Jest/oxlint toolchains.
+A separate real-install CJS consumer regression runs the native Jest unit,
+HTTP integration, and coverage suites under the supported Yarn configurations
+described above. It does not extend that claim to Vitest or Oxlint.
 
 Run the matrix with the plugin's regular Nx test and e2e targets:
 
