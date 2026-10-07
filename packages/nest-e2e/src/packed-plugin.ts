@@ -70,7 +70,8 @@ export function nx(root: string, args: string[]) {
   // exercise the default installation callback through their own Yarn runner.
   if (
     ['g', 'generate'].includes(args[0]) &&
-    /^@anarchitects\/nest:(sub-app|app|library|lib)$/.test(args[1])
+    args[1]?.startsWith('@anarchitects/nest:') &&
+    !['init', 'configuration', 'config'].includes(args[1].split(':')[1])
   ) {
     args = [...args, '--skipInstall'];
   }

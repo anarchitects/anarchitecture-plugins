@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 import {
   addDependenciesToPackageJson,
-  installPackagesTask,
   readJson,
   writeJson,
-  type GeneratorCallback,
   type Tree,
 } from '@nx/devkit';
 import { posix } from 'node:path';
+import { dependencyState } from './dependency-install';
 
 interface CompilerConfig {
   compilerOptions?: {
@@ -23,11 +22,8 @@ const compilerDependencies = {
 };
 
 /** Complete native Rspack setup while keeping Nest CLI in charge of compilation. */
-export function setupRspack(
-  tree: Tree,
-  ownerRoot: string,
-  skipInstall = false
-): GeneratorCallback | undefined {
+export function setupRspack(tree: Tree, ownerRoot: string): boolean {
+  const before = dependencyState(tree, ['', ownerRoot]);
   const at = (path: string) => posix.join(ownerRoot, path);
   const config = readJson<CompilerConfig>(tree, at('nest-cli.json'));
   const rspackConfigs = [
@@ -37,7 +33,7 @@ export function setupRspack(
     const builder = compilerOptions?.builder;
     return (typeof builder === 'string' ? builder : builder?.type) === 'rspack';
   });
-  if (!rspackConfigs.length) return undefined;
+  if (!rspackConfigs.length) return false;
 
   const manifest = readJson(tree, at('package.json'));
   const declared = {
@@ -80,9 +76,7 @@ export function setupRspack(
     writeJson(tree, at('nest-cli.json'), config);
   }
 
-  // The dependency helper's callback only detects changes to the root manifest.
-  // Native owners can be nested packages, so explicitly ensure a workspace install.
-  return skipInstall ? undefined : () => installPackagesTask(tree, true);
+  return before !== dependencyState(tree, ['', ownerRoot]);
 }
 
 function workspaceRspackConfig(levels: number): string {

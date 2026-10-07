@@ -86,8 +86,10 @@ describe('native Nest resource generator', () => {
     );
     for (const name of ['spec', 'flat', 'specFileSuffix'])
       delete native.properties[name].default;
-    const { project, nestProject, ...properties } = wrapper.properties;
+    const { project, nestProject, skipInstall, ...properties } =
+      wrapper.properties;
     expect(properties).toEqual(native.properties);
+    expect(skipInstall.type).toBe('boolean');
     expect(wrapper.required).toEqual(native.required);
     expect(project.type).toBe('string');
     expect(nestProject.type).toBe('string');
@@ -108,7 +110,8 @@ describe('native Nest resource generator', () => {
           const options={name:'users',type,crud};
           const native=await runNestSchematic(expected,{schematic:'resource',workingDirectory:'apps/api',options:{...options,sourceRoot:'src'}});
           const original=structuredClone(options);
-          await resourceGenerator(actual,{...options,project:'api'});
+          const callback=await resourceGenerator(actual,{...options,project:'api'});
+          assert.equal(typeof callback,type==='graphql-code-first'?'undefined':'function');
           assert.deepEqual(options,original);
           assert.deepEqual(snapshotNxTree(actual),snapshotNxTree(expected));
           const root='apps/api/src/users/';
@@ -139,6 +142,15 @@ describe('native Nest resource generator', () => {
       `);
     }
   );
+
+  it('installs only newly introduced resource dependencies and honors skipInstall', () => {
+    runResource(String.raw`
+      await applicationGenerator(tree,{name:'api',directory:'apps/api'});
+      assert.equal(await resourceGenerator(tree,{name:'users',project:'api',type:'rest',crud:true,skipInstall:true}),undefined);
+      assert.equal(JSON.parse(tree.read('apps/api/package.json','utf8')).dependencies['@nestjs/mapped-types'],'*');
+      assert.equal(await resourceGenerator(tree,{name:'posts',project:'api',type:'rest',crud:true}),undefined);
+    `);
+  });
 
   it('imports into the selected native app/library and preserves sibling modules', () => {
     runResource(String.raw`

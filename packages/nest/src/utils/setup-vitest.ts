@@ -1,31 +1,27 @@
 // SPDX-License-Identifier: MIT
 import {
   addDependenciesToPackageJson,
-  installPackagesTask,
   logger,
   NX_VERSION,
   readJson,
   readNxJson,
   updateNxJson,
   writeJson,
-  type GeneratorCallback,
   type Tree,
 } from '@nx/devkit';
 import { posix } from 'node:path';
+import { dependencyState } from './dependency-install';
 import * as ts from 'typescript';
 import { includeNestOwnerFiles } from './include-nest-owner-files';
 
 /** Use Nest's documented SWC integration and delegate task inference to Nx. */
-export function setupVitest(
-  tree: Tree,
-  ownerRoot: string,
-  skipInstall = false
-): GeneratorCallback | undefined {
+export function setupVitest(tree: Tree, ownerRoot: string): boolean {
+  const before = dependencyState(tree, ['', ownerRoot]);
   const at = (file: string) => posix.join(ownerRoot, file);
   const configs = ['vitest.config.ts', 'vitest.config.e2e.ts'].filter((file) =>
     tree.exists(at(file))
   );
-  if (!configs.length) return undefined;
+  if (!configs.length) return false;
   // A converted Nest root is a TS solution (files: [], app references only).
   // Give path resolution a test-wide config that also includes library specs.
   if (!tree.exists(at('tsconfig.spec.json'))) {
@@ -88,7 +84,7 @@ export function setupVitest(
     });
     updateNxJson(tree, nxJson);
   }
-  return skipInstall ? undefined : () => installPackagesTask(tree, true);
+  return before !== dependencyState(tree, ['', ownerRoot]);
 }
 
 /** Edit only a statically identifiable plugins array; preserve custom settings. */

@@ -12,6 +12,11 @@ import { posix } from 'node:path';
 import { runNestSchematic } from '../generation-adapter/run-nest-schematic';
 import { treePath } from '../generation-adapter/tree-snapshot';
 import { registerNestPlugin } from './plugin-registration';
+import {
+  dependencyState,
+  installAfterGeneration,
+  nativeInstallRequired,
+} from './dependency-install';
 import { setupLint } from './setup-lint';
 import { setupRspack } from './setup-rspack';
 import { setupVitest } from './setup-vitest';
@@ -91,7 +96,8 @@ export async function generateNestMember(
   const previousConfig = readJson<NestWorkspace>(tree, at('nest-cli.json'));
   let nextSourceRoot: string | undefined;
   const { project: _project, skipInstall, ...nativeOptions } = options;
-  await runNestSchematic(tree, {
+  const before = dependencyState(tree, ['', ownerRoot]);
+  const result = await runNestSchematic(tree, {
     schematic,
     options: nativeOptions,
     workingDirectory: ownerRoot,
@@ -157,8 +163,16 @@ export async function generateNestMember(
   if (JSON.stringify(nxJson.plugins) !== JSON.stringify(plugins))
     updateNxJson(tree, { ...nxJson, plugins });
   setupLint(tree, ownerRoot);
-  const rspackInstall = setupRspack(tree, ownerRoot, skipInstall);
-  const vitestInstall = setupVitest(tree, ownerRoot, skipInstall);
-  // Both integrations stage changes in this Tree; one workspace install covers all.
-  return rspackInstall ?? vitestInstall;
+  const nativeDependenciesChanged =
+    before !== dependencyState(tree, ['', ownerRoot]);
+  const rspackInstall = setupRspack(tree, ownerRoot);
+  const vitestInstall = setupVitest(tree, ownerRoot);
+  return installAfterGeneration(
+    tree,
+    skipInstall,
+    nativeInstallRequired(result),
+    nativeDependenciesChanged,
+    rspackInstall,
+    vitestInstall
+  );
 }

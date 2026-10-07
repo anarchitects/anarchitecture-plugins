@@ -24,7 +24,7 @@ describe('native Rspack workspace setup', () => {
   }
 
   it.each(['', 'packages/api'])(
-    'declares prerequisites and defers a workspace install for owner %j',
+    'declares prerequisites and reports required installation for owner %j',
     async (root) => {
       const { tree, at } = fixture(root);
       const install = setupRspack(tree, root);
@@ -34,9 +34,7 @@ describe('native Rspack workspace setup', () => {
         'tsconfig-paths-webpack-plugin': '^4.2.0',
       });
       expect(installPackagesTask).not.toHaveBeenCalled();
-      expect(install).toBeDefined();
-      await install?.();
-      expect(installPackagesTask).toHaveBeenCalledWith(tree, true);
+      expect(install).toBe(true);
       expect(
         readJson(tree, at('nest-cli.json')).compilerOptions.builder
       ).toEqual({
@@ -44,12 +42,12 @@ describe('native Rspack workspace setup', () => {
         options: { configPath: 'rspack.config.cjs' },
       });
       const before = tree.listChanges();
-      setupRspack(tree, root);
+      expect(setupRspack(tree, root)).toBe(false);
       expect(tree.listChanges()).toEqual(before);
     }
   );
 
-  it('preserves dependency versions and custom manifest fields with skipInstall', () => {
+  it('preserves dependency versions and custom manifest fields without requesting an unnecessary install', () => {
     const { tree, at } = fixture();
     const manifest = {
       name: 'api',
@@ -60,7 +58,7 @@ describe('native Rspack workspace setup', () => {
       scripts: { build: 'custom build' },
     };
     writeJson(tree, at('package.json'), manifest);
-    expect(setupRspack(tree, 'packages/api', true)).toBeUndefined();
+    expect(setupRspack(tree, 'packages/api')).toBe(false);
     expect(readJson(tree, at('package.json'))).toEqual(manifest);
     expect(installPackagesTask).not.toHaveBeenCalled();
     expect(tree.exists(at('rspack.config.cjs'))).toBe(true);
@@ -127,7 +125,7 @@ describe('native Rspack workspace setup', () => {
     (builder) => {
       const { tree } = fixture('packages/api', builder ?? 'tsc');
       const before = tree.listChanges();
-      expect(setupRspack(tree, 'packages/api')).toBeUndefined();
+      expect(setupRspack(tree, 'packages/api')).toBe(false);
       expect(tree.listChanges()).toEqual(before);
     }
   );

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 export interface ModuleGeneratorSchema {
+  skipInstall?: boolean;
   name: string;
   path?: string;
   module?: string;

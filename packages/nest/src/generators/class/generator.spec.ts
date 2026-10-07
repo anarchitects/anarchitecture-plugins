@@ -134,11 +134,13 @@ describe('native Nest artifact generators', () => {
       for (const property of ['flat', 'spec', 'specFileSuffix'])
         if (native.properties[property])
           delete native.properties[property].default;
-      const { project, nestProject, ...properties } = wrapper.properties;
+      const { project, nestProject, skipInstall, ...properties } =
+        wrapper.properties;
       if (['service', 'provider', 'gateway', 'resolver'].includes(name)) {
         expect(properties.skipImport.type).toBe('boolean');
         delete properties.skipImport;
       }
+      expect(skipInstall.type).toBe('boolean');
       expect(properties).toEqual(native.properties);
       expect(wrapper.required).toEqual(native.required);
       expect(project.type).toBe('string');

@@ -49,7 +49,7 @@ describe('Nest Vitest setup', () => {
   });
 
   it.each(['', 'services/api'])(
-    'sets up owner %j with deferred installation and repeat safety',
+    'sets up owner %j with installation requirements and repeat safety',
     async (root) => {
       const tree = createTreeWithEmptyWorkspace();
       const at = (file: string) => (root ? `${root}/${file}` : file);
@@ -71,9 +71,7 @@ describe('Nest Vitest setup', () => {
       );
       const install = setupVitest(tree, root);
       expect(installPackagesTask).not.toHaveBeenCalled();
-      expect(install).toBeDefined();
-      await install?.();
-      expect(installPackagesTask).toHaveBeenCalledWith(tree, true);
+      expect(install).toBe(true);
       expect(
         readJson(tree, at('package.json')).devDependencies['@swc/core']
       ).toBe('1.16.13');
@@ -89,7 +87,7 @@ describe('Nest Vitest setup', () => {
         root ? `{workspaceRoot}/${root}/**/*` : '{workspaceRoot}/**/*',
       ]);
       const before = tree.listChanges();
-      expect(setupVitest(tree, root, true)).toBeUndefined();
+      expect(setupVitest(tree, root)).toBe(false);
       expect(tree.listChanges()).toEqual(before);
     }
   );
@@ -113,7 +111,7 @@ describe('Nest Vitest setup', () => {
       devDependencies: { '@nx/vitest': '23.2.0', vite: '^7', vitest: '^4' },
     });
     tree.write('vitest.config.ts', config);
-    setupVitest(tree, '', true);
+    setupVitest(tree, '');
     expect(readJson(tree, 'nx.json').plugins).toEqual([registration]);
     expect(readJson(tree, 'package.json').devDependencies).toMatchObject({
       vite: '^7',
@@ -128,7 +126,7 @@ describe('Nest Vitest setup', () => {
   it('leaves non-Vitest owners unchanged', () => {
     const tree = createTreeWithEmptyWorkspace();
     const before = tree.listChanges();
-    expect(setupVitest(tree, 'api')).toBeUndefined();
+    expect(setupVitest(tree, 'api')).toBe(false);
     expect(tree.listChanges()).toEqual(before);
   });
 });

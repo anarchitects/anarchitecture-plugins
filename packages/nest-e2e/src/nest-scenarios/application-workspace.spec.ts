@@ -18,6 +18,7 @@ it('registers a fresh Yarn application and runs its native package scripts', () 
     'api',
     '--directory=packages/api',
     '--packageManager=yarn',
+    '--skipInstall',
     '--no-interactive',
   ];
   yarn([...generate, '--dry-run']);

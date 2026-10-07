@@ -59,6 +59,11 @@
     "nestProject": {
       "type": "string",
       "description": "Native projects entry within the selected owner; optional for an Nx member project."
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip the workspace dependency install after generation."
     }
   },
   "required": ["name"],

@@ -272,7 +272,17 @@ describe('published Nest plugin', () => {
         const nx = (...args: string[]) =>
           execFileSync(
             process.execPath,
-            [require.resolve('nx/bin/nx.js'), ...args],
+            [
+              require.resolve('nx/bin/nx.js'),
+              ...args,
+              ...(['g', 'generate'].includes(args[0]) &&
+              args[1]?.startsWith('@anarchitects/nest:') &&
+              !['init', 'configuration', 'config'].includes(
+                args[1].split(':')[1]
+              )
+                ? ['--skipInstall=true']
+                : []),
+            ],
             {
               cwd: workspace,
               encoding: 'utf8',
@@ -356,7 +366,17 @@ describe('published Nest plugin', () => {
         const nx = (...args: string[]) =>
           execFileSync(
             process.execPath,
-            [require.resolve('nx/bin/nx.js'), ...args],
+            [
+              require.resolve('nx/bin/nx.js'),
+              ...args,
+              ...(['g', 'generate'].includes(args[0]) &&
+              args[1]?.startsWith('@anarchitects/nest:') &&
+              !['init', 'configuration', 'config'].includes(
+                args[1].split(':')[1]
+              )
+                ? ['--skipInstall=true']
+                : []),
+            ],
             {
               cwd: workspace,
               encoding: 'utf8',
@@ -451,7 +471,6 @@ describe('published Nest plugin', () => {
         const subApp = [
           'generate',
           '@anarchitects/nest:app',
-          '--skipInstall=true',
           'worker',
           '--project=api',
           '--no-interactive',
@@ -463,7 +482,6 @@ describe('published Nest plugin', () => {
         nx(
           'generate',
           '@anarchitects/nest:lib',
-          '--skipInstall=true',
           'shared',
           '--project=api',
           '--prefix=@domain',
@@ -618,7 +636,17 @@ describe('published Nest plugin', () => {
         const nx = (...args: string[]) =>
           execFileSync(
             process.execPath,
-            [require.resolve('nx/bin/nx.js'), ...args],
+            [
+              require.resolve('nx/bin/nx.js'),
+              ...args,
+              ...(['g', 'generate'].includes(args[0]) &&
+              args[1]?.startsWith('@anarchitects/nest:') &&
+              !['init', 'configuration', 'config'].includes(
+                args[1].split(':')[1]
+              )
+                ? ['--skipInstall=true']
+                : []),
+            ],
             {
               cwd: workspace,
               encoding: 'utf8',

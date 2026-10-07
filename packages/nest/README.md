@@ -40,6 +40,15 @@ exposes package scripts, explicit targets, and targets inferred by other plugins
 
 ## Native generators (0.0.2 development)
 
+Application, resource, sub-app, library, and structural artifact generators
+support `--skipInstall` (default `false`). They install once through Nx after
+successful generation when native tasks, dependency changes, or newly registered
+application workspace membership require it. Unchanged dependencies and
+configuration-only edits do not request installation. Dry runs and failed
+generation never install. Dependency ownership and package-manager/hoisting
+settings stay with the existing workspace. This lifecycle addresses
+[#544](https://github.com/anarchitects/anarchitecture-plugins/issues/544).
+
 The complete native generation surface is available in this development branch.
 The published 0.0.1 MVP provides `init` and inference; these generators are part
 of the upcoming 0.0.2 release under [#498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
@@ -409,12 +418,12 @@ plugin with distinct names such as `buildTargetName: "compile"` and
 `startTargetName: "serve"`. The generator preserves existing target-name choices;
 it does not remove scripts or change target precedence.
 
-Generation does not install dependencies or initialize git. After generation,
-run your workspace's normal install before running the application:
+Application generation registers the package, then returns one Nx install callback
+when dependencies or workspace membership change. Nx commits the Tree before
+installing with the containing workspace's package manager:
 
 ```sh
 yarn nx g @anarchitects/nest:application api --directory=packages/api --packageManager=yarn
-yarn install
 yarn nx run-many -t build test test:e2e lint -p api
 ```
 
@@ -429,16 +438,18 @@ workspace configuration only when no existing entry or glob covers it:
 The containing workspace's `packageManager` declaration takes precedence, then
 its lockfile, an existing `pnpm-workspace.yaml`, and `nx.json#cli.packageManager`.
 When none exists, the native `--packageManager` option is the fallback, or npm
-when omitted. The option is still forwarded unchanged to Nest; it never selects
-or runs an installer against an already identified workspace.
+when omitted. The option is still forwarded unchanged to Nest; installation uses Nx's
+workspace package-manager selection.
 
 Unrelated entries, manifest fields, pnpm settings/comments, and hoisting policies
 are preserved. Covered declarations remain byte-for-byte unchanged. Custom
 `--directory` values and repeated registration work the same way. Explicit
 workspace exclusions or malformed configuration fail before native files are
 staged: choose another destination or edit the exclusion yourself. Registration
-is staged in the Nx Tree only after native generation succeeds, so `--dry-run`
-writes no files, changes no lockfile, and installs nothing.
+is staged in the Nx Tree only after native generation succeeds. `--dry-run`
+writes no files, changes no lockfile, and installs nothing. `--skipInstall`
+stages the same native and workspace changes but omits the install callback;
+run your normal workspace install afterward. No generator initializes git.
 
 Existing applications can be registered by repeating the original application
 command with identical options (provided their native files still match), or
@@ -555,7 +566,7 @@ require explicit Nx output configuration.
 Duplicate native names and conflicting Nx metadata fail without applying partial
 generation. Repeating a member name produces Nest's existing-project error;
 it does not rewrite that member. Dry-run, generation, and native cwd lookups use
-the pending Tree. Rspack member generation returns an Nx dependency-install task;
+the pending Tree. Member generation returns an Nx dependency-install task when required;
 `--skipInstall` skips that task, and dry runs never install packages. Generation
 does not initialize git or change the process cwd.
 
@@ -572,7 +583,7 @@ packages. The sub-app/library wrappers complete that setup automatically:
   with external dependency discovery in the owner and ancestor `node_modules`
   directories up to the Nx workspace root. Native sources, scripts, TypeScript
   settings, compiler plugins, and output settings remain Nest-owned.
-- Return an Nx install task using the workspace package manager. Keep the owner
+- Return one Nx install task when dependencies change, using the workspace package manager. Keep the owner
   covered by your package-manager workspace globs. Members share its manifest;
   they do not need separate dependency declarations.
 
@@ -772,8 +783,10 @@ serialization layer is inserted; Nest v12 Standard Schema integration remains
 available to application code.
 
 Native dependency changes are retained, including mapped-types declarations
-and existing Swagger detection. Scheduled package installs are deferred, so
-install dependencies with your package manager afterward. Nest's resource
+and existing Swagger detection. Native package-install requests become one Nx callback after Tree commit.
+A REST resource that adds `@nestjs/mapped-types` is therefore immediately usable
+without a manual install. Use `--skipInstall` to stage changes only; a resource
+whose dependencies are already declared does not trigger an unnecessary install. Nest's resource
 schematic does not install every transport runtime dependency. Nx registration
 and target metadata are unchanged. Dry-runs and failures do not apply partial
 file or module-import changes.
@@ -863,7 +876,7 @@ bind it to a route or application automatically.
 Gateways use native WebSocket templates (`@nestjs/websockets`), and resolvers use
 native GraphQL templates (`@nestjs/graphql`). The selected application must
 provide the corresponding transport dependencies and runtime configuration;
-these artifact generators do not install dependencies or configure transports.
+these native schematics do not declare transport dependencies or configure transports.
 No source templates or explicit Nx targets are added. Native-output parity and
 packed CLI tests cover all eight in ESM/CJS projects and native members; build
 fixtures additionally cover the six cross-cutting artifacts.
@@ -931,7 +944,12 @@ mutating even the supplied Nx Tree; normal Nx CLI dry-run remains safe because
 the adapter only stages Tree changes and never commits to disk.
 
 Native install or other scheduled tasks are returned as `deferredTasks`; the
-adapter never runs them. It does not invoke a package manager, git, change cwd,
+adapter never runs them. Public application/member/artifact wrappers inspect
+`node-package` requests and dependency changes, then return an Nx
+`GeneratorCallback`. Rspack and Vitest helpers report boolean requirements;
+the outer generator coalesces them into one `installPackagesTask(tree, true)`
+callback, including nested owner manifest changes. The install utility is shared
+with future generator modes. Other native tasks are not executed. The adapter does not invoke a package manager, git, change cwd,
 or exit the process. Only the official native generation collection is accepted;
 `upgrade`/`update` and external collections are excluded. This is an adapter for
 trusted Nest code, not a sandbox for arbitrary third-party schematics.

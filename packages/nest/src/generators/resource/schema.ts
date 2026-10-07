@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 export interface ResourceGeneratorSchema {
+  skipInstall?: boolean;
   name: string;
   project?: string;
   nestProject?: string;

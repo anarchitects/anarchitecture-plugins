@@ -22,7 +22,7 @@ export function assertCjsJestConsumer(root: string, tarball: string) {
   expect(existsSync(app)).toBe(false);
   expect(readFileSync(join(root, 'yarn.lock'), 'utf8')).toBe(lock);
   yarn(generate);
-  expect(readFileSync(join(root, 'yarn.lock'), 'utf8')).toBe(lock);
+  expect(readFileSync(join(root, 'yarn.lock'), 'utf8')).not.toBe(lock);
   expect(readFileSync(join(root, '.yarnrc.yml'), 'utf8')).toBe(yarnConfig);
   const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
   const nativeFiles = Object.fromEntries(
@@ -34,7 +34,6 @@ export function assertCjsJestConsumer(root: string, tarball: string) {
       'test/jest-e2e.json',
     ].map((file) => [file, readFileSync(join(app, file), 'utf8')])
   );
-  yarn(['install']);
 
   // The default Yarn layout reproduces #533 using an actual installed tarball.
   expect(existsSync(join(root, 'node_modules/jest/bin/jest.js'))).toBe(true);
