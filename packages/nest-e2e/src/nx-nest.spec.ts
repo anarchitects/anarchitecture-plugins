@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fixtures, type NestFixture } from './fixtures';
 import { standardSchemaFixture } from './standard-schema-fixture';
+import { assertCjsJestConsumer } from './cjs-jest-consumer';
 
 const e2eRoot = resolve(__dirname, '..');
 const pluginRoot = resolve(e2eRoot, '../nest');
@@ -281,6 +282,10 @@ describe('packed Nest plugin with stable v12 applications', () => {
       expect(version).toBe(dependencies[name]);
     }
   });
+
+  it('runs CJS Jest with real Yarn hoisting and explicit consumer configuration', () => {
+    assertCjsJestConsumer(join(suiteRoot, 'cjs-yarn-consumer'), tarball);
+  }, 360_000);
 
   it.each(fixtures)(
     '$name: discovers, builds, restores outputs, and starts',
