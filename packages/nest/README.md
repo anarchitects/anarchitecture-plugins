@@ -394,10 +394,12 @@ compiler/bundler configuration, package scripts, dependencies, and observe
 instrumentation. Framework files are not patched. Explicit `--format` uses Nest's
 formatter and leaves unrelated workspace source files untouched.
 
-Only `project.json` metadata (`name`, `projectType`, and `sourceRoot`) and the
-`@anarchitects/nest/plugin` registration are added for Nx. Existing plugin options
+`project.json` metadata (`name`, `projectType`, and `sourceRoot`), the
+`@anarchitects/nest/plugin` registration, and package-manager workspace membership
+are added for Nx. Existing plugin options
 and include/exclude scopes remain in effect. No explicit targets are written.
-Nx discovers the project even outside package-manager workspace globs.
+The generated package is registered even when its directory is outside existing
+package-manager workspace globs.
 
 Native package scripts keep Nx's normal precedence over inferred targets with
 the same name. Consequently, the generated `build` and `start` scripts appear
@@ -407,14 +409,46 @@ plugin with distinct names such as `buildTargetName: "compile"` and
 `startTargetName: "serve"`. The generator preserves existing target-name choices;
 it does not remove scripts or change target precedence.
 
-Generation does not install dependencies, initialize git, or edit workspace
-package-manager configuration. Choose a directory covered by your workspace
-globs (or add it yourself), then install the generated application's dependencies
-with your package manager before running it. `packageManager` is passed to Nest
-as native generation metadata; it does not select or run an installer. Use the
-full `application` generator name; `app` aliases the separate native `sub-app`
-wrapper. These features are part of development toward
-0.0.2 and are not available in the published 0.0.1 package.
+Generation does not install dependencies or initialize git. After generation,
+run your workspace's normal install before running the application:
+
+```sh
+yarn nx g @anarchitects/nest:application api --directory=packages/api --packageManager=yarn
+yarn install
+yarn nx run-many -t build test test:e2e lint -p api
+```
+
+Application registration adds the exact destination to the surrounding
+workspace configuration only when no existing entry or glob covers it:
+
+| Workspace package manager | Registration location                                                             |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| npm, Yarn, Bun            | Root `package.json#workspaces` (also preserves Yarn's object form and `nohoist`). |
+| pnpm                      | `pnpm-workspace.yaml#packages`, creating the file when needed.                    |
+
+The containing workspace's `packageManager` declaration takes precedence, then
+its lockfile, an existing `pnpm-workspace.yaml`, and `nx.json#cli.packageManager`.
+When none exists, the native `--packageManager` option is the fallback, or npm
+when omitted. The option is still forwarded unchanged to Nest; it never selects
+or runs an installer against an already identified workspace.
+
+Unrelated entries, manifest fields, pnpm settings/comments, and hoisting policies
+are preserved. Covered declarations remain byte-for-byte unchanged. Custom
+`--directory` values and repeated registration work the same way. Explicit
+workspace exclusions or malformed configuration fail before native files are
+staged: choose another destination or edit the exclusion yourself. Registration
+is staged in the Nx Tree only after native generation succeeds, so `--dry-run`
+writes no files, changes no lockfile, and installs nothing.
+
+Existing applications can be registered by repeating the original application
+command with identical options (provided their native files still match), or
+by adding their directory to the corresponding workspace declaration and running
+a normal install. Loading the inference plugin does not edit workspace settings.
+See [#542](https://github.com/anarchitects/anarchitecture-plugins/issues/542).
+
+Use the full `application` generator name; `app` aliases the separate native
+`sub-app` wrapper. These features are part of development toward 0.0.2 and are
+not available in the published 0.0.1 package.
 
 #### CJS tests in Yarn package workspaces
 

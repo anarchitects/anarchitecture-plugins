@@ -6,7 +6,11 @@ import { stripVTControlCharacters } from 'node:util';
 import { consumerEnvironment } from './consumer-environment';
 
 /** Install the packed plugin into a separate, real Yarn consumer. */
-export function createInstalledConsumer(root: string, tarball: string) {
+export function createInstalledConsumer(
+  root: string,
+  tarball: string,
+  options: { workspaces?: string[] } = { workspaces: ['packages/*'] }
+) {
   mkdirSync(root, { recursive: true });
   const repository = resolve(__dirname, '../../..');
   const { packageManager } = JSON.parse(
@@ -45,7 +49,7 @@ export function createInstalledConsumer(root: string, tarball: string) {
       name: 'nest-consumer',
       private: true,
       packageManager,
-      workspaces: ['packages/*'],
+      ...(options.workspaces ? { workspaces: options.workspaces } : {}),
       devDependencies: {
         '@anarchitects/nest': `file:${tarball}`,
         '@nestjs/cli': '12.0.0',

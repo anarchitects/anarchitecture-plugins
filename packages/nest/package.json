@@ -86,10 +86,12 @@
     "@angular-devkit/core": "22.2.0",
     "@angular-devkit/schematics": "22.2.0",
     "@nestjs/schematics": "12.0.6",
+    "minimatch": "9.0.5",
     "rxjs": "7.8.2",
     "semver": "^7.7.2",
     "tslib": "^2.3.0",
-    "typescript": ">=6.0.0 <7"
+    "typescript": ">=6.0.0 <7",
+    "yaml": "2.9.0"
   },
   "generators": "./generators.json"
 }

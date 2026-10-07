@@ -4,6 +4,7 @@ import { posix } from 'node:path';
 import { runNestSchematic } from '../../generation-adapter/run-nest-schematic';
 import { treePath } from '../../generation-adapter/tree-snapshot';
 import { registerNestPlugin } from '../../utils/plugin-registration';
+import { planApplicationWorkspaceRegistration } from '../../utils/register-application-workspace';
 import type { ApplicationGeneratorSchema } from './schema';
 
 function applicationLocation(options: ApplicationGeneratorSchema) {
@@ -43,6 +44,11 @@ export async function applicationGenerator(
   const nxJson = readNxJson(tree)!;
   // Validate registration and project collisions before staging native files.
   const plugins = registerNestPlugin(nxJson.plugins, {});
+  const registerWorkspace = planApplicationWorkspaceRegistration(
+    tree,
+    root,
+    options.packageManager
+  );
   const existing = getProjects(tree).get(name);
   if (existing && existing.root !== root) {
     throw new Error(
@@ -60,6 +66,7 @@ export async function applicationGenerator(
       });
     },
   });
+  registerWorkspace();
   if (JSON.stringify(nxJson.plugins) !== JSON.stringify(plugins)) {
     updateNxJson(tree, { ...nxJson, plugins });
   }

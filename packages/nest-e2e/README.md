@@ -141,12 +141,27 @@ run the same unit suites; changing a library spec must invalidate the owner's
 cached result. This covers #535 without hand-linked dependencies or source-template
 replacements. The existing CJS and build/start regressions remain in the suite.
 
+## Application workspace registration
+
+The `application-workspace` scenario begins with no root workspace declarations.
+It generates the default ESM application through the packed plugin, checks that
+dry-run and generation leave the lockfile untouched, and verifies repeat safety.
+After a normal Yarn install, Nx must report
+`metadata.js.isInPackageManagerWorkspaces: true`; the unchanged native `build`,
+`test`, `test:e2e`, and `lint` scripts must all pass. The root Yarn hoisting
+configuration and generated application manifest stay unchanged. Existing
+consumer scenarios keep their `packages/*` glob to cover the already-included
+case. npm/Bun manifest forms and pnpm YAML registration are also tested through
+the plugin's Tree-based unit suite; this real-install scenario specifically
+validates Yarn with the node-modules linker.
+
 ## CI
 
 The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud.
-The Jest plugin atomizes the 15 spec files in `src/nest-scenarios/` into separate
-cacheable tasks for Nx distributed execution. The original 21 consumer scenarios
-remain covered, alongside a child-environment regression. Real-install Rspack,
+The Jest plugin atomizes the spec files in `src/nest-scenarios/` into separate
+cacheable tasks for Nx distributed execution. The original consumer scenarios
+remain covered, alongside child-environment and fresh workspace-registration
+regressions. Real-install Rspack,
 lint, member-generation, and multi-owner scenarios split ESM and CJS into separate
 files; shorter discovery/configuration/Standard Schema cases remain grouped.
 
