@@ -129,7 +129,13 @@ describe('published Nest plugin', () => {
     const collection = JSON.parse(
       readFileSync(join(installedPackage, manifest.generators), 'utf8')
     );
-    for (const name of ['init', 'application', 'sub-app', 'library']) {
+    for (const name of [
+      'init',
+      'application',
+      'sub-app',
+      'library',
+      'resource',
+    ]) {
       const generator = collection.generators[name];
       expect(
         existsSync(join(installedPackage, `${generator.factory}.js`))
@@ -327,6 +333,79 @@ describe('published Nest plugin', () => {
           JSON.parse(nx('show', 'project', 'api-worker', '--json')).targets
             .compile
         ).toMatchObject({ options: { command: 'echo custom' }, cache: false });
+        const config = JSON.parse(readFileSync(configPath, 'utf8'));
+        config.projects.worker.generateOptions = {
+          spec: { resource: false },
+          flat: true,
+          specFileSuffix: 'check',
+        };
+        writeFileSync(configPath, JSON.stringify(config));
+        const modulePath = join(
+          workspace,
+          'apps/api/apps/worker/src/worker.module.ts'
+        );
+        const ownerManifest = join(workspace, 'apps/api/package.json');
+        const moduleBefore = readFileSync(modulePath, 'utf8');
+        const manifestBefore = readFileSync(ownerManifest, 'utf8');
+        const resourceArgs = [
+          'generate',
+          '@anarchitects/nest:res',
+          'users',
+          '--project=api-worker',
+          '--path=features',
+          '--crud=false',
+          '--no-interactive',
+        ];
+        nx(...resourceArgs, '--dry-run');
+        expect(readFileSync(modulePath, 'utf8')).toBe(moduleBefore);
+        expect(readFileSync(ownerManifest, 'utf8')).toBe(manifestBefore);
+        expect(
+          existsSync(join(workspace, 'apps/api/apps/worker/src/features'))
+        ).toBe(false);
+        nx(...resourceArgs);
+        expect(
+          existsSync(
+            join(
+              workspace,
+              'apps/api/apps/worker/src/features/users.controller.ts'
+            )
+          )
+        ).toBe(true);
+        expect(
+          existsSync(
+            join(
+              workspace,
+              'apps/api/apps/worker/src/features/users.controller.check.ts'
+            )
+          )
+        ).toBe(false);
+        expect(readFileSync(modulePath, 'utf8')).toContain(
+          `./features/users.module${type === 'esm' ? '.js' : ''}`
+        );
+        nx(
+          'generate',
+          '@anarchitects/nest:resource',
+          'orders',
+          '--project=api-worker',
+          '--spec=true',
+          '--specFileSuffix=unit',
+          '--skipImport=true',
+          '--crud=false',
+          '--no-interactive'
+        );
+        expect(
+          existsSync(
+            join(
+              workspace,
+              'apps/api/apps/worker/src/orders.controller.unit.ts'
+            )
+          )
+        ).toBe(true);
+        expect(
+          JSON.parse(readFileSync(ownerManifest, 'utf8')).dependencies[
+            '@nestjs/mapped-types'
+          ]
+        ).toBe('*');
       } finally {
         rmSync(workspace, { recursive: true, force: true });
       }
