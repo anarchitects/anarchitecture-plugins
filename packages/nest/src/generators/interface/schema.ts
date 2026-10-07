@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: MIT
+export interface InterfaceGeneratorSchema {
+  name: string;
+  path?: string;
+  sourceRoot?: string;
+  flat?: boolean;
+  format?: boolean;
+  project?: string;
+  nestProject?: string;
+}

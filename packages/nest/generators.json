@@ -27,6 +27,42 @@
       "schema": "./schemas/resource.json",
       "aliases": ["res"],
       "description": "Generate a native Nest v12 resource in the selected project."
+    },
+    "class": {
+      "factory": "./dist/generators/class/generator",
+      "schema": "./schemas/class.json",
+      "aliases": ["cl"],
+      "description": "Generate a native Nest class in the selected project."
+    },
+    "interface": {
+      "factory": "./dist/generators/interface/generator",
+      "schema": "./schemas/interface.json",
+      "aliases": ["itf"],
+      "description": "Generate a native Nest interface in the selected project."
+    },
+    "module": {
+      "factory": "./dist/generators/module/generator",
+      "schema": "./schemas/module.json",
+      "aliases": ["mo"],
+      "description": "Generate a native Nest module in the selected project."
+    },
+    "provider": {
+      "factory": "./dist/generators/provider/generator",
+      "schema": "./schemas/provider.json",
+      "aliases": ["pr"],
+      "description": "Generate a native Nest provider in the selected project."
+    },
+    "service": {
+      "factory": "./dist/generators/service/generator",
+      "schema": "./schemas/service.json",
+      "aliases": ["s"],
+      "description": "Generate a native Nest service in the selected project."
+    },
+    "controller": {
+      "factory": "./dist/generators/controller/generator",
+      "schema": "./schemas/controller.json",
+      "aliases": ["co"],
+      "description": "Generate a native Nest controller in the selected project."
     }
   }
 }

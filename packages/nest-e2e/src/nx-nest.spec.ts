@@ -358,7 +358,7 @@ describe('packed Nest plugin with stable v12 applications', () => {
   );
 
   it.each(['esm', 'cjs'])(
-    'builds generated native %s members with resources',
+    'builds generated native %s members with resources and structural artifacts',
     (type) => {
       const root = createWorkspace({
         ...fixtures[0],
@@ -399,6 +399,25 @@ describe('packed Nest plugin with stable v12 applications', () => {
             '--spec=false',
             '--no-interactive',
           ]);
+          for (const [schematic, name] of [
+            ['class', 'model'],
+            ['interface', 'contract'],
+            ['module', 'feature'],
+            ['provider', 'cache'],
+            ['service', 'logic'],
+            ['controller', 'health'],
+          ]) {
+            const args = [
+              'generate',
+              `@anarchitects/nest:${schematic}`,
+              name,
+              `--project=backend-${member}`,
+              '--no-interactive',
+            ];
+            if (!['interface', 'module'].includes(schematic))
+              args.push('--spec=false');
+            nx(root, args);
+          }
         }
         // Model dependencies installed for this native Nest package. Its default
         // Rspack externals discovery reads node_modules from the package cwd.

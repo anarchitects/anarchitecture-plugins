@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "NestModule",
+  "title": "Nest Module Options Schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the module.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the module?"
+    },
+    "path": {
+      "type": "string",
+      "format": "path",
+      "description": "The path to create the module."
+    },
+    "module": {
+      "type": "string",
+      "format": "path",
+      "description": "The path to import the module."
+    },
+    "language": {
+      "type": "string",
+      "description": "Nest module language (ts/js)."
+    },
+    "sourceRoot": {
+      "type": "string",
+      "description": "Nest module source root directory."
+    },
+    "skipImport": {
+      "type": "boolean",
+      "description": "Flag to skip the module import.",
+      "default": false
+    },
+    "flat": {
+      "type": "boolean",
+      "description": "Flag to indicate if a directory is created."
+    },
+    "format": {
+      "type": "boolean",
+      "default": false,
+      "description": "Format generated files using Prettier if available."
+    },
+    "project": {
+      "type": "string",
+      "description": "Nx Nest application, library, or workspace owner to generate into."
+    },
+    "nestProject": {
+      "type": "string",
+      "description": "Native projects entry within the selected owner; optional for an Nx member project."
+    }
+  },
+  "required": ["name"],
+  "cli": "nx",
+  "additionalProperties": false
+}
