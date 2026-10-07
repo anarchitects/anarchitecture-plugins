@@ -382,10 +382,13 @@ describe('published Nest plugin', () => {
         nx(...args, '--dry-run');
         expect(existsSync(join(workspace, 'apps'))).toBe(false);
         expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe('{}');
-        nx(...args);
         expect(readFileSync(join(workspace, 'package.json'), 'utf8')).toBe(
           rootManifest
         );
+        nx(...args);
+        expect(
+          JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'))
+        ).toEqual({ ...JSON.parse(rootManifest), workspaces: ['apps/api'] });
         for (const file of [
           'yarn.lock',
           'package-lock.json',

@@ -42,6 +42,7 @@ __metadata:
     "@nx/vitest": "npm:23.2.0"
     "@swc/core": "npm:1.16.13"
     "@types/semver": "npm:^7.7.0"
+    minimatch: "npm:9.0.5"
     rxjs: "npm:7.8.2"
     semver: "npm:^7.7.2"
     tslib: "npm:^2.3.0"
@@ -50,6 +51,7 @@ __metadata:
     vite: "npm:8.0.0"
     vite-tsconfig-paths: "npm:5.1.4"
     vitest: "npm:4.1.11"
+    yaml: "npm:2.9.0"
   peerDependencies:
     "@nestjs/cli": ">=12.0.0 <13"
     "@nx/devkit": ">=23.2.0 <24"

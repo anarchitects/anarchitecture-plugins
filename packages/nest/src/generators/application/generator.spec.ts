@@ -129,10 +129,17 @@ describe('native Nest application generator', () => {
       await applicationGenerator(tree, options);
       assert.deepEqual(options, originalOptions);
       for (const [path, bytes] of snapshotNxTree(expected)) {
-        if (path !== 'nx.json') assert.deepEqual(tree.read(path), bytes, path);
+        if (!['nx.json','package.json'].includes(path)) assert.deepEqual(tree.read(path), bytes, path);
       }
       assert.equal(tree.read('existing/source.ts','utf8'), unrelated);
-      assert.deepEqual(tree.read('package.json'), originalRootManifest);
+      if(options.packageManager==='pnpm') {
+        assert.deepEqual(tree.read('package.json'), originalRootManifest);
+        assert.ok(tree.read('pnpm-workspace.yaml','utf8').includes(${JSON.stringify(
+          root
+        )}));
+      } else assert.deepEqual(JSON.parse(tree.read('package.json','utf8')), {...JSON.parse(originalRootManifest),workspaces:[${JSON.stringify(
+        root
+      )}]});
       const root = ${JSON.stringify(root)};
       assert.deepEqual(JSON.parse(tree.read(root+'/project.json','utf8')), {
         name: ${JSON.stringify(
@@ -203,6 +210,7 @@ describe('native Nest application generator', () => {
           .map(([path,bytes])=>{
             if(path==='apps/api/package.json' || path==='package.json') {
               const json=JSON.parse(bytes);
+              if(path==='package.json') delete json.workspaces;
               if(json.scripts?.lint===local('./dist/utils/setup-lint').nestMemberLintScript) json.scripts.lint='oxlint --type-aware src/ test/';
               for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin','@swc/core','unplugin-swc',...(path==='package.json'?['@nx/vitest','vite','vitest']:[])]) delete json.devDependencies?.[dep];
               if(path==='package.json' && json.dependencies && !Object.keys(json.dependencies).length) delete json.dependencies;
@@ -248,6 +256,15 @@ describe('native Nest application generator', () => {
     `);
     }
   );
+
+  it('does not stage native files when the workspace excludes the requested destination', () => {
+    runApplication(String.raw`
+      tree.write('package.json',JSON.stringify({workspaces:['apps/*','!apps/api']}));
+      const before=snapshotNxTree(tree);
+      await assert.rejects(applicationGenerator(tree,{name:'api',directory:'apps/api'}),/excluded/);
+      assert.deepEqual(snapshotNxTree(tree),before);
+    `);
+  });
 
   it('preserves existing registration options and additive metadata', () => {
     runApplication(String.raw`
