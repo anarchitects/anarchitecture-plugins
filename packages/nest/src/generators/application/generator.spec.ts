@@ -156,6 +156,82 @@ describe('native Nest application generator', () => {
     `);
   });
 
+  it.each(
+    ['esm', 'cjs'].flatMap((mode) =>
+      [false, true].map((observe) => ({ mode, observe }))
+    )
+  )(
+    'retains the native cross-generator tooling contract in $mode (observe=$observe)',
+    ({ mode, observe }) => {
+      runApplication(String.raw`
+      const mode=${JSON.stringify(mode)}, observe=${observe};
+      // Omitting type exercises Nest's ESM default, not our choice of a default.
+      const options={name:'api',directory:'apps/api',observe,...(mode==='cjs'?{type:'cjs'}:{})};
+      const expected=createTreeWithEmptyWorkspace();
+      await runNestSchematic(expected,{schematic:'application',options});
+      await applicationGenerator(tree,options);
+      const json=path=>JSON.parse(tree.read('apps/api/'+path,'utf8'));
+      const manifest=json('package.json');
+      assert.equal(manifest.type,mode==='esm'?'module':undefined);
+      assert.equal(manifest.scripts.lint,'oxlint --type-aware src/ test/');
+      assert.ok(manifest.devDependencies.oxlint);
+      assert.ok(manifest.devDependencies['oxlint-tsgolint']);
+      assert.equal(manifest.devDependencies[mode==='esm'?'jest':'vitest'],undefined);
+      assert.ok(manifest.devDependencies[mode==='esm'?'vitest':'jest']);
+      assert.equal(tree.exists('apps/api/vitest.config.ts'),mode==='esm');
+      assert.equal(tree.exists('apps/api/jest.config.ts'),mode==='cjs');
+      if(mode==='esm') {
+        assert.equal(manifest.scripts.test,'vitest run');
+        assert.match(tree.read('apps/api/vitest.config.ts','utf8'),/vite-tsconfig-paths/);
+        assert.match(tree.read('apps/api/vitest.config.e2e.ts','utf8'),/defineConfig/);
+      } else {
+        assert.match(manifest.scripts.test,/--experimental-vm-modules.*jest/);
+        assert.match(tree.read('apps/api/jest.config.ts','utf8'),/pathsToModuleNameMapper/);
+        assert.ok(manifest.devDependencies['ts-jest']);
+      }
+      assert.equal(json('tsconfig.json').compilerOptions.module,'nodenext');
+      assert.equal(json('tsconfig.json').compilerOptions.moduleResolution,'nodenext');
+      assert.equal(json('tsconfig.json').compilerOptions.resolvePackageJsonExports,true);
+      assert.equal(json('.oxlintrc.json').rules['typescript/no-floating-promises'],'error');
+      assert.equal(Boolean(manifest.dependencies['@nestjs/observe']),observe);
+      for(const file of ['src/main.ts','src/app.module.ts'])
+        assert.equal(/Observe/.test(tree.read('apps/api/'+file,'utf8')),observe);
+
+      const parity=()=>{
+        const filtered=target=>new Map([...snapshotNxTree(target)].filter(([path])=>path!=='nx.json' && !path.endsWith('/project.json')));
+        assert.deepEqual(filtered(tree),filtered(expected));
+      };
+      parity();
+      for(const [schematic,name] of [['sub-app','worker'],['library','shared']]) {
+        await runNestSchematic(expected,{schematic,workingDirectory:'apps/api',isolateHostReads:true,options:{name}});
+        await local('./dist/generators/'+schematic+'/generator.js').default(tree,{name,project:'api'});
+        parity();
+      }
+      assert.equal(json('nest-cli.json').compilerOptions.builder,'rspack');
+      assert.ok(json('tsconfig.json').compilerOptions.paths['@app/shared']);
+      const memberManifest=json('package.json');
+      const resourceOptions={name:'users',type:'rest',crud:true};
+      await runNestSchematic(expected,{schematic:'resource',workingDirectory:'apps/api',options:{...resourceOptions,sourceRoot:'apps/worker/src'}});
+      await local('./dist/generators/resource/generator.js').default(tree,{...resourceOptions,project:'api-worker'});
+      parity();
+      for(const schematic of ['class','interface','module','provider','service','controller','decorator','filter','gateway','guard','interceptor','middleware','pipe','resolver']) {
+        await runNestSchematic(expected,{schematic,workingDirectory:'apps/api',options:{name:'feature-'+schematic,sourceRoot:'apps/worker/src'}});
+        await local('./dist/generators/'+schematic+'/generator.js').default(tree,{name:'feature-'+schematic,project:'api-worker'});
+        parity();
+      }
+      // Later generators must not switch the owning application's toolchain.
+      const after=json('package.json');
+      assert.deepEqual(after.scripts,memberManifest.scripts);
+      assert.deepEqual(after.devDependencies,memberManifest.devDependencies);
+      for(const [path,bytes] of snapshotNxTree(tree)) {
+        if(!path.endsWith('.ts') || !path.includes('/src/')) continue;
+        for(const match of bytes.toString().matchAll(/from ['"](\.[^'"]+)['"]/g))
+          assert.equal(match[1].endsWith('.js'),mode==='esm',path+': '+match[1]);
+      }
+    `);
+    }
+  );
+
   it('preserves existing registration options and additive metadata', () => {
     runApplication(String.raw`
       const plugins = [{plugin:'@anarchitects/nest/plugin',options:{buildTargetName:'compile',startTargetName:'serve'}}];
