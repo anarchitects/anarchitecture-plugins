@@ -41,7 +41,8 @@
       "exclude": [
         "packages/typeorm-e2e/**/*",
         "packages/governance-e2e/**/*",
-        "packages/js-e2e/**/*"
+        "packages/js-e2e/**/*",
+        "packages/nest-e2e/**/*"
       ],
       "options": {
         "targetName": "test"
@@ -52,7 +53,8 @@
       "include": [
         "packages/typeorm-e2e/**/*",
         "packages/governance-e2e/**/*",
-        "packages/js-e2e/**/*"
+        "packages/js-e2e/**/*",
+        "packages/nest-e2e/**/*"
       ],
       "options": {
         "targetName": "e2e",

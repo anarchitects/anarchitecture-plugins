@@ -25,9 +25,11 @@ The CLI peer establishes the framework tooling contract; the plugin does not
 install or import the application's `@nestjs/core` or platform adapter.
 Application dependencies remain owned by the Nest project.
 
-These ranges establish the package contract. Full Nest v12 project-shape
-validation is planned in #485; current coverage validates packaging, loading,
-project discovery, build and start target configuration, and effective build outputs.
+These ranges establish the package contract. The
+[Nest v12 E2E suite](../nest-e2e/README.md) validates standalone ESM/CommonJS,
+nested solution workspaces with inherited outputs, and tsc/Rspack monorepos.
+Each fixture runs real inferred builds, restores outputs from cache, and starts
+a Nest HTTP application using the packed plugin and pinned stable dependencies.
 
 ## Installation and registration
 
@@ -226,6 +228,7 @@ and `@nx/devkit` aligned within the documented peer range.
 
 ```sh
 yarn nx run-many -t build test lint typecheck -p nx-nest
+yarn nx e2e nx-nest-e2e
 yarn nx release --projects nx-nest --first-release --dry-run
 ```
 
