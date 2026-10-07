@@ -270,8 +270,8 @@ work with ordinary Nest projects and retain the ownership boundaries above.
 - Keep `src/generators/init/` limited to validation and minimal Nx registration.
   Preserve user configuration and repeat safety. The application generator
   delegates to native schematics and adds only Nx metadata. Sub-app and library
-  wrappers preserve native workspace updates and add member metadata; resource
-  wrappers follow in later issues.
+  wrappers preserve native workspace updates and add member metadata. Resource
+  generation delegates transport code and module imports to Nest as well.
 - Delegate framework behavior to Nest. Do not copy templates, choose a compiler
   or platform for the user, or rebuild CLI behavior in custom executors.
 - Keep organizational layouts, tags, boundary rules, Fastify preferences, and
@@ -389,12 +389,61 @@ the pending Tree. No dependency installation, git initialization, or process cwd
 change occurs. Install dependencies for the selected native package before
 building; Nest's default Rspack externals discovery uses its `node_modules`.
 
+### Resources (0.0.2 development)
+
+Generate into an Nx application, library, or native workspace member:
+
+```sh
+yarn nx g @anarchitects/nest:resource users --project=api --dry-run
+yarn nx g @anarchitects/nest:res users --project=api --type=rest
+yarn nx g @anarchitects/nest:resource events --project=api-worker --type=microservice --crud=false
+yarn nx g @anarchitects/nest:resource messages --project=api --nestProject=worker --type=ws
+```
+
+`project` selects an Nx project. For a native member, the wrapper finds its
+owning `nest-cli.json` and uses that member's native `sourceRoot`. An owner can
+also select an existing native `projects` entry with `nestProject`, including
+members without separate Nx metadata. Without `project`, the root Nest owner
+takes precedence; otherwise there must be exactly one owner. Selecting an
+owner without `nestProject` uses its default source root.
+
+All native transports are supported: `rest` (default), `graphql-code-first`,
+`graphql-schema-first`, `microservice`, and `ws`. `crud`, `flat`, `spec`,
+`specFileSuffix`, `skipImport`, `format`, and native path-bearing names are
+forwarded. `path` is relative to the resolved source root; an explicit
+`sourceRoot` is relative to the owning Nest directory and overrides the
+configured source root/baseDir. Nest currently supports resource generation in
+TypeScript only; its JavaScript rejection is preserved.
+
+Omitted options follow the pinned Nest CLI's resource defaults: member
+`generateOptions` overrides owner settings for specs, flat layout, and spec
+suffixes. Per-schematic `spec.resource` falls back to the owner's setting when
+absent in a member's map. Explicit `spec` and nonempty `specFileSuffix` take
+precedence. Nest's `flat` semantics are retained: `true` wins, while `false`
+still consults configuration. The owner's `generateOptions.baseDir` is appended
+to the configured source root. `skipImport` and `format` remain native explicit
+options; no implicit formatting or additional config interpretation is added.
+
+Nest chooses the nearest module and writes its imports, preserving `.js`
+relative import extensions for ESM. Native DTOs, entities, resolvers, services,
+controllers, gateways, and GraphQL files remain unchanged. No Zod, Valibot,
+ArkType, or other schema library is selected, and no extra validation or
+serialization layer is inserted; Nest v12 Standard Schema integration remains
+available to application code.
+
+Native dependency changes are retained, including mapped-types declarations
+and existing Swagger detection. Scheduled package installs are deferred, so
+install dependencies with your package manager afterward. Nest's resource
+schematic does not install every transport runtime dependency. Nx registration
+and target metadata are unchanged. Dry-runs and failures do not apply partial
+file or module-import changes.
+
 ### Native generation adapter (0.0.2 development)
 
 `src/generation-adapter/run-nest-schematic.ts` is internal infrastructure for
 [epic #498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
-`init`, `application`, `sub-app` (`app`), and `library` (`lib`) are registered
-publicly; resource and other wrappers arrive later. This is not a 0.0.2 publication.
+`init`, `application`, `sub-app` (`app`), `library` (`lib`), and `resource` (`res`)
+are registered publicly. Other wrappers arrive later. This is not a 0.0.2 publication.
 
 The adapter runs the pinned stable `@nestjs/schematics` 12.0.6 collection with
 Angular DevKit 22.2.0. Native ESM factories are imported asynchronously before
@@ -434,8 +483,8 @@ The parent filesystem APIs and cwd are untouched, including concurrent calls.
 The worker uses production generation semantics because Nest skips source
 conversion when `NODE_ENV=test`.
 
-Nest CLI `generateOptions` merging for element generators belongs to the later
-wrappers; the adapter does not emulate the entire CLI configuration lookup.
+Resource context resolution handles its Nest CLI defaults before invoking the
+adapter. The adapter itself does not emulate the entire CLI configuration lookup.
 
 ### Nx API compatibility boundary
 

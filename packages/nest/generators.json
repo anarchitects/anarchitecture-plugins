@@ -21,6 +21,12 @@
       "schema": "./schemas/library.json",
       "aliases": ["lib"],
       "description": "Generate a native Nest library in an existing Nest workspace."
+    },
+    "resource": {
+      "factory": "./dist/generators/resource/generator",
+      "schema": "./schemas/resource.json",
+      "aliases": ["res"],
+      "description": "Generate a native Nest v12 resource in the selected project."
     }
   }
 }
