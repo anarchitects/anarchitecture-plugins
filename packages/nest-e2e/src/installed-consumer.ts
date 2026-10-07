@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
+import { consumerEnvironment } from './consumer-environment';
 
 /** Install the packed plugin into a separate, real Yarn consumer. */
 export function createInstalledConsumer(root: string, tarball: string) {
@@ -12,27 +13,10 @@ export function createInstalledConsumer(root: string, tarball: string) {
     readFileSync(join(repository, 'package.json'), 'utf8')
   );
   const env: NodeJS.ProcessEnv = {
-    // Start a separate Nx invocation: inherited NX_TASK_* makes `nx exec`
-    // assume it is already inside the outer E2E target and skip project cwd.
-    ...Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => !key.startsWith('NX_'))
-    ),
+    ...consumerEnvironment(root),
     CI: 'true',
-    NX_DAEMON: 'false',
-    NX_ISOLATE_PLUGINS: 'false',
-    NX_NO_CLOUD: 'true',
-    NX_INTERACTIVE: 'false',
-    NX_TUI: 'false',
-    FORCE_COLOR: '0',
     YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
-    NX_WORKSPACE_DATA_DIRECTORY: join(root, '.nx/workspace-data'),
-    NX_CACHE_DIRECTORY: join(root, '.nx/cache'),
   };
-  // The outer Jest target has ts-node settings for its own .cts config. They
-  // must not alter the native consumer's TypeScript/Jest configuration.
-  delete env.TS_NODE_COMPILER_OPTIONS;
-  delete env.NODE_OPTIONS;
-  delete env.NODE_ENV;
 
   function yarn(args: string[], nodeOptions?: string, stdoutOnly = false) {
     const result = spawnSync('yarn', args, {

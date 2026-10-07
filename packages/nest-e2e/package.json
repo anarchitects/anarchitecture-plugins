@@ -18,12 +18,7 @@
     "targets": {
       "e2e-ci": {
         "dependsOn": [
-          "e2e-ci--src/nx-nest.spec.ts"
-        ]
-      },
-      "e2e-ci--src/nx-nest.spec.ts": {
-        "dependsOn": [
-          "^build"
+          "e2e-ci--src/nest-scenarios/*.spec.ts"
         ]
       }
     },
