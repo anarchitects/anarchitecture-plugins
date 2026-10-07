@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 export interface ClassGeneratorSchema {
+  skipInstall?: boolean;
   name: string;
   flat?: boolean;
   spec?: boolean;

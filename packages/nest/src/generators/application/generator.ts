@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: MIT
-import { getProjects, readNxJson, updateNxJson, type Tree } from '@nx/devkit';
+import {
+  getProjects,
+  readNxJson,
+  updateNxJson,
+  type GeneratorCallback,
+  type Tree,
+} from '@nx/devkit';
 import { posix } from 'node:path';
 import { runNestSchematic } from '../../generation-adapter/run-nest-schematic';
 import { treePath } from '../../generation-adapter/tree-snapshot';
 import { registerNestPlugin } from '../../utils/plugin-registration';
 import { planApplicationWorkspaceRegistration } from '../../utils/register-application-workspace';
+import {
+  dependencyState,
+  installAfterGeneration,
+  nativeInstallRequired,
+} from '../../utils/dependency-install';
 import type { ApplicationGeneratorSchema } from './schema';
 
 function applicationLocation(options: ApplicationGeneratorSchema) {
@@ -34,7 +45,7 @@ function applicationLocation(options: ApplicationGeneratorSchema) {
 export async function applicationGenerator(
   tree: Tree,
   options: ApplicationGeneratorSchema
-): Promise<void> {
+): Promise<GeneratorCallback | undefined> {
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error(
       'Generate the Nest application inside an existing Nx workspace.'
@@ -55,9 +66,13 @@ export async function applicationGenerator(
       `Nx project "${name}" already exists at "${existing.root}".`
     );
   }
-  await runNestSchematic(tree, {
+  const before = dependencyState(tree, ['', root]);
+  const beforeWorkspaces = tree.read('package.json', 'utf8');
+  const beforePnpm = tree.read('pnpm-workspace.yaml', 'utf8');
+  const { skipInstall, ...nativeOptions } = options;
+  const result = await runNestSchematic(tree, {
     schematic: 'application',
-    options: { ...options, directory: root },
+    options: { ...nativeOptions, directory: root },
     postTransform: (guard) => {
       guard.addJsonProperties(`${root}/project.json`, {
         name,
@@ -70,6 +85,14 @@ export async function applicationGenerator(
   if (JSON.stringify(nxJson.plugins) !== JSON.stringify(plugins)) {
     updateNxJson(tree, { ...nxJson, plugins });
   }
+  return installAfterGeneration(
+    tree,
+    skipInstall,
+    nativeInstallRequired(result),
+    before !== dependencyState(tree, ['', root]),
+    beforeWorkspaces !== tree.read('package.json', 'utf8') ||
+      beforePnpm !== tree.read('pnpm-workspace.yaml', 'utf8')
+  );
 }
 
 export default applicationGenerator;

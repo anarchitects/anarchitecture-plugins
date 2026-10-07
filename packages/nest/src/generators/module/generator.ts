@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-import type { Tree } from '@nx/devkit';
+import type { GeneratorCallback, Tree } from '@nx/devkit';
 import { generateNestArtifact } from '../../utils/generate-nest-artifact';
 import type { ModuleGeneratorSchema } from './schema';
 export async function moduleGenerator(
   tree: Tree,
   options: ModuleGeneratorSchema
-): Promise<void> {
-  await generateNestArtifact(tree, 'module', options, {
+): Promise<GeneratorCallback | undefined> {
+  return generateNestArtifact(tree, 'module', options, {
     flat: false,
     language: 'ts',
   });

@@ -98,8 +98,9 @@ binary resolution and VM modules enabled. It also verifies the optional
 application-scoped `installConfig.hoistingLimits` setting, executing the original
 `test`, `test:e2e`, and `test:cov` targets through Nx. Native scripts and selected
 source/test/configuration files remain unchanged. The root hoisting policy is
-never changed. Generation and dry-run leave the dependency lockfile unchanged;
-only explicit consumer installs update it.
+never changed. Dry-run leaves the dependency lockfile unchanged; application generation
+installs its declared dependencies through the Nx callback. Explicit consumer
+installs are needed only after changing the optional hoisting configuration.
 
 This catches the dependency-layout failure tracked by
 [#533](https://github.com/anarchitects/anarchitecture-plugins/issues/533), which
@@ -145,7 +146,8 @@ replacements. The existing CJS and build/start regressions remain in the suite.
 
 The `application-workspace` scenario begins with no root workspace declarations.
 It generates the default ESM application through the packed plugin, checks that
-dry-run and generation leave the lockfile untouched, and verifies repeat safety.
+dry-run and `--skipInstall` generation leave the lockfile untouched, and verifies
+repeat safety.
 After a normal Yarn install, Nx must report
 `metadata.js.isInPackageManagerWorkspaces: true`; the unchanged native `build`,
 `test`, `test:e2e`, and `lint` scripts must all pass. The root Yarn hoisting
@@ -154,6 +156,18 @@ consumer scenarios keep their `packages/*` glob to cover the already-included
 case. npm/Bun manifest forms and pnpm YAML registration are also tested through
 the plugin's Tree-based unit suite; this real-install scenario specifically
 validates Yarn with the node-modules linker.
+
+## Automatic dependency installation
+
+The `dependency-installs` scenario starts with an empty Yarn workspace and runs
+application and REST resource generation followed immediately by native build,
+unit tests, HTTP tests, and lint. There is no manual install between generation
+and use. It counts Yarn install invocations: one for new application dependencies,
+one for a new mapped-types dependency, one combined Rspack/Vitest/SWC install,
+and none for existing dependencies or plain service generation. A second owner
+exercises `--skipInstall` for application and resource generation. Both skip and
+dry-run preserve the lockfile and Yarn's node_modules install-state file; root
+hoisting settings remain unchanged. Linked fixtures explicitly skip installation.
 
 ## CI
 

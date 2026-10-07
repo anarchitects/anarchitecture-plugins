@@ -49,7 +49,7 @@
     "skipInstall": {
       "type": "boolean",
       "default": false,
-      "description": "Skip installing dependencies after generation. Dependency and build configuration changes are still generated."
+      "description": "Skip the workspace dependency install after generation."
     }
   },
   "required": ["name"],

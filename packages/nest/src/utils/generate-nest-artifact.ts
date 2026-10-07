@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: MIT
-import type { Tree } from '@nx/devkit';
+import type { GeneratorCallback, Tree } from '@nx/devkit';
+import {
+  dependencyState,
+  installAfterGeneration,
+  nativeInstallRequired,
+} from './dependency-install';
 import type { NativeSchematicName } from '../generation-adapter/nest-schematic-runtime';
 import { runNestSchematic } from '../generation-adapter/run-nest-schematic';
 import { treePath } from '../generation-adapter/tree-snapshot';
@@ -12,6 +17,7 @@ import {
 
 interface ArtifactOptions {
   name: string;
+  skipInstall?: boolean;
   project?: string;
   nestProject?: string;
   path?: string;
@@ -29,7 +35,7 @@ export async function generateNestArtifact(
   schematic: NativeSchematicName,
   options: ArtifactOptions,
   defaults: NativeGenerationDefaults
-): Promise<void> {
+): Promise<GeneratorCallback | undefined> {
   if (typeof options.name !== 'string' || !options.name.trim())
     throw new Error(`A non-empty Nest ${schematic} name is required.`);
   treePath(options.name);
@@ -42,9 +48,11 @@ export async function generateNestArtifact(
   const {
     project: _project,
     nestProject: _nestProject,
+    skipInstall,
     ...nativeOptions
   } = options;
-  await runNestSchematic(tree, {
+  const before = dependencyState(tree, ['', ownerRoot]);
+  const result = await runNestSchematic(tree, {
     schematic,
     workingDirectory: ownerRoot,
     options: {
@@ -52,4 +60,10 @@ export async function generateNestArtifact(
       ...nestGenerationDefaults(config, member, options, schematic, defaults),
     },
   });
+  return installAfterGeneration(
+    tree,
+    skipInstall,
+    nativeInstallRequired(result),
+    before !== dependencyState(tree, ['', ownerRoot])
+  );
 }

@@ -99,6 +99,11 @@
       "type": "boolean",
       "default": false,
       "description": "Preconfigure the application with @nestjs/observe."
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip the workspace dependency install after generation."
     }
   },
   "required": ["name"],

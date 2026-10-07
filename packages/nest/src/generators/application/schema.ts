@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /** Native application options; defaults and validation belong to Nest's schema. */
 export interface ApplicationGeneratorSchema {
+  skipInstall?: boolean;
   name: string | number;
   directory?: string;
   author?: string;

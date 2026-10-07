@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 export interface GatewayGeneratorSchema {
+  skipInstall?: boolean;
   name: string;
   path?: string;
   language?: string;

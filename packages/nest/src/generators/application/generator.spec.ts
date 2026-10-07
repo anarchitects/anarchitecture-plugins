@@ -76,7 +76,9 @@ describe('native Nest application generator', () => {
         'utf8'
       )
     );
-    expect(wrapper.properties).toEqual(native.properties);
+    const { skipInstall, ...properties } = wrapper.properties;
+    expect(skipInstall.type).toBe('boolean');
+    expect(properties).toEqual(native.properties);
     expect(wrapper.required).toEqual(native.required);
   });
 
@@ -126,7 +128,8 @@ describe('native Nest application generator', () => {
       const originalRootManifest = tree.read('package.json');
       const originalOptions = structuredClone(options);
       await runNestSchematic(expected, {schematic:'application', options});
-      await applicationGenerator(tree, options);
+      const callback = await applicationGenerator(tree, options);
+      assert.equal(typeof callback,'function');
       assert.deepEqual(options, originalOptions);
       for (const [path, bytes] of snapshotNxTree(expected)) {
         if (!['nx.json','package.json'].includes(path)) assert.deepEqual(tree.read(path), bytes, path);
@@ -158,7 +161,7 @@ describe('native Nest application generator', () => {
       }
       assert.deepEqual(JSON.parse(tree.read('nx.json','utf8')).plugins, ['@anarchitects/nest/plugin']);
       const beforeRepeat = snapshotNxTree(tree);
-      await applicationGenerator(tree, options);
+      assert.equal(await applicationGenerator(tree, options),undefined);
       assert.deepEqual(snapshotNxTree(tree), beforeRepeat);
     `);
   });
@@ -256,6 +259,14 @@ describe('native Nest application generator', () => {
     `);
     }
   );
+
+  it('stages dependencies and registration with skipInstall without returning a callback', () => {
+    runApplication(String.raw`
+      assert.equal(await applicationGenerator(tree,{name:'api',skipInstall:true}),undefined);
+      assert.ok(JSON.parse(tree.read('api/package.json','utf8')).dependencies['@nestjs/core']);
+      assert.deepEqual(JSON.parse(tree.read('package.json','utf8')).workspaces,['api']);
+    `);
+  });
 
   it('does not stage native files when the workspace excludes the requested destination', () => {
     runApplication(String.raw`

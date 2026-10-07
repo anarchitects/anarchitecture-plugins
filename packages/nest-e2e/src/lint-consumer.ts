@@ -31,7 +31,6 @@ export function assertLintConsumer(
     '--packageManager=yarn',
     `--type=${type}`
   );
-  yarn(['install']);
   const config = readFileSync(join(owner, '.oxlintrc.json'), 'utf8');
   const nxFile = join(root, 'nx.json');
   const nx = JSON.parse(readFileSync(nxFile, 'utf8'));

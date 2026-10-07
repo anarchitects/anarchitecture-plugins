@@ -25,7 +25,6 @@ export function assertVitestConsumer(root: string, tarball: string) {
     '--directory=packages/api',
     '--packageManager=yarn'
   );
-  yarn(['install']);
 
   const run = (target: string, expected: string[]) => {
     const report = `results-${target.replace(/:/g, '-')}.json`;
