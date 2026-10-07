@@ -135,6 +135,12 @@ describe('published Nest plugin', () => {
       'sub-app',
       'library',
       'resource',
+      'class',
+      'interface',
+      'module',
+      'provider',
+      'service',
+      'controller',
     ]) {
       const generator = collection.generators[name];
       expect(
@@ -406,6 +412,138 @@ describe('published Nest plugin', () => {
             '@nestjs/mapped-types'
           ]
         ).toBe('*');
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    },
+    90_000
+  );
+
+  it.each(['esm', 'cjs'])(
+    'runs packed structural generators and aliases in %s',
+    (mode) => {
+      const workspace = mkdtempSync(join(tmpdir(), 'nx-nest-structural-'));
+      try {
+        symlinkSync(
+          join(consumerRoot, 'node_modules'),
+          join(workspace, 'node_modules'),
+          'junction'
+        );
+        writeFileSync(
+          join(workspace, 'package.json'),
+          JSON.stringify({ name: 'consumer', private: true })
+        );
+        writeFileSync(join(workspace, 'nx.json'), '{}');
+        writeFileSync(join(workspace, '.gitignore'), 'node_modules\n.nx\n');
+        const nx = (...args: string[]) =>
+          execFileSync(
+            process.execPath,
+            [require.resolve('nx/bin/nx.js'), ...args],
+            {
+              cwd: workspace,
+              encoding: 'utf8',
+              timeout: 30_000,
+              stdio: 'pipe',
+              env: {
+                ...process.env,
+                NODE_OPTIONS: '',
+                NX_DAEMON: 'false',
+                NX_ISOLATE_PLUGINS: 'false',
+                NX_NO_CLOUD: 'true',
+              },
+            }
+          );
+        nx(
+          'generate',
+          '@anarchitects/nest:application',
+          'api',
+          '--directory=apps/api',
+          `--type=${mode}`,
+          '--no-interactive'
+        );
+        const modulePath = join(workspace, 'apps/api/src/app.module.ts');
+        const beforeModule = readFileSync(modulePath, 'utf8');
+        nx(
+          'generate',
+          '@anarchitects/nest:service',
+          'preview',
+          '--project=api',
+          '--dry-run',
+          '--no-interactive'
+        );
+        expect(readFileSync(modulePath, 'utf8')).toBe(beforeModule);
+        expect(existsSync(join(workspace, 'apps/api/src/preview'))).toBe(false);
+        for (const [name, alias, file] of [
+          ['class', 'cl', 'artifact-class.ts'],
+          ['interface', 'itf', 'artifact-interface.interface.ts'],
+          ['module', 'mo', 'artifact-module/artifact-module.module.ts'],
+          ['provider', 'pr', 'artifact-provider.ts'],
+          ['service', 's', 'artifact-service/artifact-service.service.ts'],
+          [
+            'controller',
+            'co',
+            'artifact-controller/artifact-controller.controller.ts',
+          ],
+        ]) {
+          nx(
+            'generate',
+            `@anarchitects/nest:${mode === 'esm' ? name : alias}`,
+            `artifact-${name}`,
+            '--project=api',
+            '--no-interactive'
+          );
+          expect(existsSync(join(workspace, 'apps/api/src', file))).toBe(true);
+        }
+        for (const name of ['provider', 'service']) {
+          const before = readFileSync(modulePath, 'utf8');
+          nx(
+            'generate',
+            `@anarchitects/nest:${name}`,
+            `isolated-${name}`,
+            '--project=api',
+            '--skipImport=true',
+            '--spec=false',
+            '--no-interactive'
+          );
+          expect(readFileSync(modulePath, 'utf8')).toBe(before);
+        }
+        const configPath = join(workspace, 'apps/api/nest-cli.json');
+        const config = JSON.parse(readFileSync(configPath, 'utf8'));
+        config.generateOptions = {
+          spec: { service: false },
+          flat: true,
+          specFileSuffix: 'check',
+        };
+        writeFileSync(configPath, JSON.stringify(config));
+        nx(
+          'generate',
+          '@anarchitects/nest:s',
+          'configured',
+          '--project=api',
+          '--no-interactive'
+        );
+        expect(
+          existsSync(join(workspace, 'apps/api/src/configured.service.ts'))
+        ).toBe(true);
+        expect(
+          existsSync(
+            join(workspace, 'apps/api/src/configured.service.check.ts')
+          )
+        ).toBe(false);
+        nx(
+          'generate',
+          '@anarchitects/nest:service',
+          'explicit',
+          '--project=api',
+          '--spec=true',
+          '--no-interactive'
+        );
+        expect(
+          existsSync(join(workspace, 'apps/api/src/explicit.service.check.ts'))
+        ).toBe(true);
+        expect(readFileSync(modulePath, 'utf8')).toContain(
+          `./configured.service${mode === 'esm' ? '.js' : ''}`
+        );
       } finally {
         rmSync(workspace, { recursive: true, force: true });
       }

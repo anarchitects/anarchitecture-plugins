@@ -27,7 +27,7 @@ export function resolveNestGenerationContext(
   options: { project?: string; nestProject?: string }
 ) {
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
-    throw new Error('Generate Nest resources inside an existing Nx workspace.');
+    throw new Error('Generate Nest artifacts inside an existing Nx workspace.');
   }
   const projects = getProjects(tree);
   const rootManifest = readJson(tree, 'package.json');
@@ -88,8 +88,15 @@ export function resolveNestGenerationContext(
   return { ownerRoot, config, member };
 }
 
-/** Mirror the pinned Nest CLI's resource defaults without importing CLI internals. */
-export function resourceGenerationDefaults(
+export interface NativeGenerationDefaults {
+  flat: boolean;
+  spec?: boolean;
+  specFileSuffix?: string;
+  language?: string;
+}
+
+/** Apply Nest config precedence, retaining each schematic's own fallback defaults. */
+export function nestGenerationDefaults(
   config: NestGenerationConfig,
   member: NestGenerationConfig | undefined,
   explicit: {
@@ -98,25 +105,29 @@ export function resourceGenerationDefaults(
     specFileSuffix?: string;
     sourceRoot?: string;
     language?: string;
-  }
+  },
+  schematic: string,
+  defaults: NativeGenerationDefaults
 ) {
   const global = config.generateOptions ?? {};
   const local = member?.generateOptions ?? {};
   const configuredSpec = local.spec ?? global.spec;
   const globalSpec =
-    typeof global.spec === 'boolean' ? global.spec : global.spec?.resource;
+    typeof global.spec === 'boolean' ? global.spec : global.spec?.[schematic];
   const spec =
     explicit.spec ??
     (typeof configuredSpec === 'boolean'
       ? configuredSpec
-      : configuredSpec?.resource ?? globalSpec) ??
-    true;
+      : configuredSpec?.[schematic] ?? globalSpec) ??
+    defaults.spec;
   // Nest's --flat=false still consults configuration; only true overrides it.
   const flat =
-    explicit.flat === true ? true : local.flat ?? global.flat ?? false;
+    explicit.flat === true
+      ? true
+      : local.flat ?? global.flat ?? explicit.flat ?? defaults.flat;
   const specFileSuffix =
     explicit.specFileSuffix ||
-    (local.specFileSuffix ?? global.specFileSuffix ?? 'spec');
+    (local.specFileSuffix ?? global.specFileSuffix ?? defaults.specFileSuffix);
   const sourceRoot =
     explicit.sourceRoot !== undefined
       ? nativeRelativePath(explicit.sourceRoot)
@@ -125,10 +136,12 @@ export function resourceGenerationDefaults(
           nativeRelativePath(global.baseDir ?? '')
         );
   return {
-    spec,
+    ...(defaults.spec !== undefined ? { spec } : {}),
     flat,
-    specFileSuffix,
+    ...(defaults.specFileSuffix !== undefined ? { specFileSuffix } : {}),
     sourceRoot,
-    language: explicit.language ?? config.language ?? 'ts',
+    ...(defaults.language !== undefined
+      ? { language: explicit.language ?? config.language ?? defaults.language }
+      : {}),
   };
 }

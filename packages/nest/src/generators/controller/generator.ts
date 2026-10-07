@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 import type { Tree } from '@nx/devkit';
 import { generateNestArtifact } from '../../utils/generate-nest-artifact';
-import type { ResourceGeneratorSchema } from './schema';
-export async function resourceGenerator(
+import type { ControllerGeneratorSchema } from './schema';
+export async function controllerGenerator(
   tree: Tree,
-  options: ResourceGeneratorSchema
+  options: ControllerGeneratorSchema
 ): Promise<void> {
-  await generateNestArtifact(tree, 'resource', options, {
+  await generateNestArtifact(tree, 'controller', options, {
     flat: false,
     spec: true,
     specFileSuffix: 'spec',
     language: 'ts',
   });
 }
-export default resourceGenerator;
+export default controllerGenerator;
