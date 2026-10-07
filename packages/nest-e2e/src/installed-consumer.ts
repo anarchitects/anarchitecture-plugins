@@ -34,7 +34,7 @@ export function createInstalledConsumer(root: string, tarball: string) {
   delete env.NODE_OPTIONS;
   delete env.NODE_ENV;
 
-  function yarn(args: string[], nodeOptions?: string) {
+  function yarn(args: string[], nodeOptions?: string, stdoutOnly = false) {
     const result = spawnSync('yarn', args, {
       cwd: root,
       env: { ...env, ...(nodeOptions ? { NODE_OPTIONS: nodeOptions } : {}) },
@@ -52,7 +52,7 @@ export function createInstalledConsumer(root: string, tarball: string) {
         }\n${output}`
       );
     }
-    return output;
+    return stdoutOnly ? stripVTControlCharacters(result.stdout ?? '') : output;
   }
 
   writeFileSync(

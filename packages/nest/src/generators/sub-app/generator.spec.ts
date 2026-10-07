@@ -58,6 +58,27 @@ function runMembers(assertions: string) {
 }
 
 describe('native Nest workspace members', () => {
+  it('materializes native directory deletions without losing moved files or touching siblings', () => {
+    runMembers(`
+      const tree=createTreeWithEmptyWorkspace();
+      await applicationGenerator(tree,{name:'api',directory:'packages/api'});
+      tree.write('packages/api/src/nested/custom.txt','consumer content');
+      tree.write('packages/api/src-other/keep.txt','sibling content');
+      const originals=[...snapshotNxTree(tree)].filter(([p])=>p.startsWith('packages/api/src/') || p.startsWith('packages/api/test/'));
+      const before=snapshotNxTree(tree);
+      const {runNestSchematic}=local('./dist/generation-adapter/run-nest-schematic');
+      const preview=await runNestSchematic(tree,{schematic:'sub-app',options:{name:'worker'},workingDirectory:'packages/api',isolateHostReads:true,dryRun:true});
+      assert.deepEqual(snapshotNxTree(tree),before);
+      assert.ok(preview.changes.some(c=>c.type==='delete' && c.path==='packages/api/src/app.controller.ts'));
+      await subAppGenerator(tree,{name:'worker',project:'api',skipInstall:true});
+      for(const [path,bytes] of originals) {
+        assert.equal(tree.exists(path),false,path);
+        assert.deepEqual(tree.read(path.replace('packages/api/','packages/api/apps/api/')),bytes,path);
+      }
+      assert.equal(tree.read('packages/api/src-other/keep.txt','utf8'),'sibling content');
+    `);
+  });
+
   it.each(['sub-app', 'library'])(
     'exposes all native %s options plus the Nx owner selector',
     (schematic) => {
@@ -107,7 +128,9 @@ describe('native Nest workspace members', () => {
       for(const [p,b] of expected.after) {
         if(p==='package.json') {
           const actual=JSON.parse(tree.read(prefix+p,'utf8'));
-          for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin']) {
+          for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin',...(${JSON.stringify(
+            type
+          )}==='esm'?['@swc/core','unplugin-swc']:[])]) {
             assert.ok(actual.devDependencies[dep]);
             delete actual.devDependencies[dep];
           }
@@ -117,8 +140,12 @@ describe('native Nest workspace members', () => {
           assert.deepEqual(actual.compilerOptions.builder,{type:'rspack',options:{configPath:'rspack.config.cjs'}});
           actual.compilerOptions.builder='rspack';
           assert.deepEqual(actual,JSON.parse(b));
+        } else if(p.startsWith('vitest.config')) {
+          assert.equal(tree.read(prefix+p,'utf8'),local('./dist/utils/setup-vitest').addNestTransform(b.toString()));
         } else assert.deepEqual(tree.read(prefix+p),b,p);
       }
+      assert.equal(tree.exists(prefix+'src/app.controller.ts'),false);
+      assert.equal(tree.exists(prefix+'test/app.e2e-spec.ts'),false);
       const config=JSON.parse(tree.read(prefix+'nest-cli.json','utf8'));
       assert.equal(config.compilerOptions.builder.type,'rspack');
       assert.ok(config.projects['native-backend']);

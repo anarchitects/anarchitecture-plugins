@@ -123,6 +123,22 @@ setup for [#534](https://github.com/anarchitects/anarchitecture-plugins/issues/5
 not arbitrary externalization overrides or other package managers. Each has a
 six-minute test timeout; installs require registry/cache access as described above.
 
+## Real-install Vitest consumer
+
+The `vitest-yarn-consumer` case installs the packed plugin in an empty Yarn
+workspace with default hoisting. It first runs the standalone application's unit
+and HTTP integration tests, then generates a REST resource, sub-app, and library.
+It verifies that native conversion removes old source/test directories while
+preserving the relocated source bytes.
+
+Both native test targets must pass after conversion. JSON reports assert the
+exact file set and test counts so missing or duplicate discovery cannot produce
+a false pass. A library test checks constructor injection through the generated
+path alias, exercising decorator metadata. The `@nx/vitest` inferred target must
+run the same unit suites; changing a library spec must invalidate the owner's
+cached result. This covers #535 without hand-linked dependencies or source-template
+replacements. The existing CJS and build/start regressions remain in the suite.
+
 ## CI
 
 The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud. This

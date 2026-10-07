@@ -170,7 +170,11 @@ export async function assertRspackConsumer(
   const members = ['api', 'worker', 'shared'];
   for (const member of members) {
     const project = JSON.parse(
-      yarn(['nx', 'show', 'project', `api-${member}`, '--json'])
+      yarn(
+        ['nx', 'show', 'project', `api-${member}`, '--json'],
+        undefined,
+        true
+      )
     );
     expect(project.targets.build.options).toEqual({
       cwd: 'packages/api',

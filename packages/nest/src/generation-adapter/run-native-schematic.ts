@@ -50,9 +50,14 @@ export async function runNativeSchematic(
       logger: new core.logging.Logger('nest-generation'),
     })
   );
+  // Materialize native actions through the public sink, entirely in memory.
+  // Tree.visit() alone still exposes descendants of scheduled directory deletes;
+  // the sink applies them recursively, matching a normal CLI filesystem workflow.
+  await rxjs.lastValueFrom(new schematics.HostSink(hostFiles).commit(output));
+  const committed = new schematics.HostTree(hostFiles);
   const after: TreeSnapshot = new Map();
-  output.visit((path) => {
-    const content = output.read(path);
+  committed.visit((path) => {
+    const content = committed.read(path);
     if (content !== null)
       after.set(treePath(path.replace(/^\//, '')), Buffer.from(content));
   });

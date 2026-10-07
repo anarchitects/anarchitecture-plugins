@@ -17,6 +17,7 @@ import { fixtures, type NestFixture } from './fixtures';
 import { standardSchemaFixture } from './standard-schema-fixture';
 import { assertCjsJestConsumer } from './cjs-jest-consumer';
 import { assertRspackConsumer } from './rspack-consumer';
+import { assertVitestConsumer } from './vitest-consumer';
 
 const e2eRoot = resolve(__dirname, '..');
 const pluginRoot = resolve(e2eRoot, '../nest');
@@ -307,6 +308,10 @@ describe('packed Nest plugin with stable v12 applications', () => {
     },
     360_000
   );
+
+  it('runs standalone and converted Vitest tests with a real Yarn install', () => {
+    assertVitestConsumer(join(suiteRoot, 'vitest-yarn-consumer'), tarball);
+  }, 360_000);
 
   it.each(fixtures)(
     '$name: discovers, builds, restores outputs, and starts',
