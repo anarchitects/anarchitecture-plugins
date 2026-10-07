@@ -7,13 +7,13 @@ import {
   readJson,
   readNxJson,
   updateNxJson,
-  updateJson,
   writeJson,
   type GeneratorCallback,
   type Tree,
 } from '@nx/devkit';
 import { posix } from 'node:path';
 import * as ts from 'typescript';
+import { includeNestOwnerFiles } from './include-nest-owner-files';
 
 /** Use Nest's documented SWC integration and delegate task inference to Nx. */
 export function setupVitest(
@@ -71,22 +71,7 @@ export function setupVitest(
     true
   );
   const nxJson = readNxJson(tree);
-  // The owner runs tests below nested Nx member roots. `projectRoot` inputs
-  // exclude nested projects, so include the owner's subtree explicitly.
-  const projectFile = tree.exists(at('project.json'))
-    ? 'project.json'
-    : 'package.json';
-  updateJson(tree, at(projectFile), (json) => {
-    const project = projectFile === 'package.json' ? (json.nx ??= {}) : json;
-    project.namedInputs ??= {};
-    const defaults = project.namedInputs.default ??
-      nxJson?.namedInputs?.default ?? ['{projectRoot}/**/*'];
-    const ownerFiles = ownerRoot
-      ? `{workspaceRoot}/${ownerRoot}/**/*`
-      : '{workspaceRoot}/**/*';
-    project.namedInputs.default = [...new Set([...defaults, ownerFiles])];
-    return json;
-  });
+  includeNestOwnerFiles(tree, ownerRoot);
   if (
     nxJson &&
     !nxJson.plugins?.some(

@@ -134,6 +134,8 @@ describe('native Nest workspace members', () => {
             assert.ok(actual.devDependencies[dep]);
             delete actual.devDependencies[dep];
           }
+          assert.equal(actual.scripts.lint,local('./dist/utils/setup-lint').nestMemberLintScript);
+          actual.scripts.lint=JSON.parse(b).scripts.lint;
           assert.deepEqual(actual,JSON.parse(b));
         } else if(p==='nest-cli.json') {
           const actual=JSON.parse(tree.read(prefix+p,'utf8'));
