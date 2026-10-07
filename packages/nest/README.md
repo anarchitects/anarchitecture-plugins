@@ -346,9 +346,9 @@ work with ordinary Nest projects and retain the ownership boundaries above.
 - Keep `src/generators/init/` limited to validation and minimal Nx registration.
   Preserve user configuration and repeat safety. The application generator
   delegates to native schematics and adds only Nx metadata. Sub-app and library
-  wrappers preserve native workspace updates and add member metadata. Resource
-  and structural artifact generation delegate code and module imports to Nest
-  as well.
+  wrappers preserve native workspace updates, add member metadata, and complete
+  Rspack dependency/workspace setup. Resource and structural artifact generation
+  delegate code and module imports to Nest as well.
 - Delegate framework behavior to Nest. Do not copy templates, choose a compiler
   or platform for the user, or rebuild CLI behavior in custom executors.
 - Keep organizational layouts, tags, boundary rules, Fastify preferences, and
@@ -501,9 +501,9 @@ forwarded. Native path validation and template limitations still apply; for
 example, the pinned templates use `../../tsconfig.json`, so adding extra path
 depth may require project-owned TypeScript configuration afterward.
 
-Sub-app conversion preserves Nest's Rspack configuration and its package,
-TypeScript, test, and source updates. The wrapper copies no templates and adds
-no framework patches. It adds Nx metadata for each native workspace member,
+Sub-app conversion retains Nest's Rspack builder and its package, TypeScript,
+test, and source updates, then completes the compiler setup described below.
+The wrapper copies no templates and adds no framework patches. It adds Nx metadata for each native workspace member,
 including the converted original application. New Nx names are
 `<owner-name>-<native-name>` (for example, `api-worker` and `api-shared`);
 existing names at the same root are preserved. Matching owner `sourceRoot`
@@ -521,9 +521,66 @@ require explicit Nx output configuration.
 Duplicate native names and conflicting Nx metadata fail without applying partial
 generation. Repeating a member name produces Nest's existing-project error;
 it does not rewrite that member. Dry-run, generation, and native cwd lookups use
-the pending Tree. No dependency installation, git initialization, or process cwd
-change occurs. Install dependencies for the selected native package before
-building; Nest's default Rspack externals discovery uses its `node_modules`.
+the pending Tree. Rspack member generation returns an Nx dependency-install task;
+`--skipInstall` skips that task, and dry runs never install packages. Generation
+does not initialize git or change the process cwd.
+
+#### Rspack setup for native members
+
+The pinned native conversion selects Rspack without declaring its compiler
+packages. The sub-app/library wrappers complete that setup automatically:
+
+- Add missing `@rspack/core` (`^2.1.10`), `webpack-node-externals` (`^3.0.0`),
+  and `tsconfig-paths-webpack-plugin` (`^4.2.0`) dev dependencies to the owning
+  Nest package. Existing dependency versions and sections are preserved.
+- For a default Rspack builder, create `rspack.config.cjs` beside `nest-cli.json`
+  and set the builder's `options.configPath` to it. This extends Nest's defaults
+  with external dependency discovery in the owner and ancestor `node_modules`
+  directories up to the Nx workspace root. Native sources, scripts, TypeScript
+  settings, compiler plugins, and output settings remain Nest-owned.
+- Return an Nx install task using the workspace package manager. Keep the owner
+  covered by your package-manager workspace globs. Members share its manifest;
+  they do not need separate dependency declarations.
+
+For an owner named `api` at `packages/api`:
+
+```sh
+yarn nx g @anarchitects/nest:sub-app worker --project=api
+yarn nx g @anarchitects/nest:library shared --project=api
+yarn nx run-many -t build -p api-api api-worker api-shared --parallel=1
+yarn nx run api-api:start
+# After stopping the first app (both native apps default to port 3000):
+yarn nx run api-worker:start
+```
+
+Use `--skipInstall` to generate the same manifest/configuration changes and run
+`yarn install` yourself later. Dry runs stage changes without writing files or
+running the install callback. The wrappers never change the root hoisting policy
+or add `installConfig.hoistingLimits`; ESM and CJS real-install regressions cover
+all three member builds and both HTTP applications with default Yarn hoisting.
+
+An existing explicit `builder.options.configPath` takes precedence and is
+preserved, as is Nest's implicit `rspack.config.js`. An existing
+`rspack.config.cjs` is reused without overwriting it when no other configuration
+is selected. Custom configurations remain consumer-owned, including their
+externalization rules and any explicit Nx output overrides. Other package
+managers and custom bundler settings require their own dependency-layout
+validation.
+
+Nest CLI still owns compilation through `nest build` and `nest start`.
+`@nx/rspack` is not required for this integration: it supplies a separate Nx
+Rspack build integration, while Nest directly uses `@rspack/core`.
+
+For owners generated before this fix, generating another member applies the
+setup. To update an owner without adding a member, add the three compiler dev
+dependencies to its package using your package manager and provide a Nest Rspack
+configuration that externalizes hoisted dependencies. Existing owners are not
+modified merely by loading the inference plugin.
+
+This workflow addresses [#534](https://github.com/anarchitects/anarchitecture-plugins/issues/534).
+Converted-monorepo Vitest and lint coverage remain separate follow-ups under
+[#535](https://github.com/anarchitects/anarchitecture-plugins/issues/535) and
+[#536](https://github.com/anarchitects/anarchitecture-plugins/issues/536).
 
 ### Resources (0.0.2 development)
 
@@ -757,8 +814,9 @@ configuration lookup.
 Compatibility tests retain the pinned native schematics as the source of truth.
 The application matrix generates an application, native sub-app and library,
 REST resource, and all structural/cross-cutting/transport artifacts in sequence.
-After every step it compares native files byte-for-byte, excluding only Nx
-registration and project metadata.
+After every step it compares native files byte-for-byte, with focused assertions
+for Nx registration/project metadata and the member Rspack dependency and
+configuration additions.
 
 | Contract           | Automated coverage                                                                                                                                                                                                            |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

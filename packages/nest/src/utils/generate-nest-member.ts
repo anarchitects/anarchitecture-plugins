@@ -5,12 +5,14 @@ import {
   readNxJson,
   updateNxJson,
   writeJson,
+  type GeneratorCallback,
   type Tree,
 } from '@nx/devkit';
 import { posix } from 'node:path';
 import { runNestSchematic } from '../generation-adapter/run-nest-schematic';
 import { treePath } from '../generation-adapter/tree-snapshot';
 import { registerNestPlugin } from './plugin-registration';
+import { setupRspack } from './setup-rspack';
 
 export interface NestMemberOptions {
   name: string;
@@ -20,6 +22,7 @@ export interface NestMemberOptions {
   rootDir?: string;
   specFileSuffix?: string;
   format?: boolean;
+  skipInstall?: boolean;
 }
 export interface NativeMember {
   type: 'application' | 'library';
@@ -29,6 +32,9 @@ export interface NativeMember {
 }
 interface NestWorkspace {
   sourceRoot?: string;
+  compilerOptions?: {
+    builder?: string | { type?: string; options?: Record<string, unknown> };
+  };
   projects?: Record<string, NativeMember>;
 }
 
@@ -37,7 +43,7 @@ export async function generateNestMember(
   tree: Tree,
   schematic: 'sub-app' | 'library',
   options: NestMemberOptions
-): Promise<void> {
+): Promise<GeneratorCallback | undefined> {
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error('Generate Nest members inside an existing Nx workspace.');
   }
@@ -82,7 +88,7 @@ export async function generateNestMember(
   const plugins = registerNestPlugin(nxJson.plugins, {});
   const previousConfig = readJson<NestWorkspace>(tree, at('nest-cli.json'));
   let nextSourceRoot: string | undefined;
-  const { project: _project, ...nativeOptions } = options;
+  const { project: _project, skipInstall, ...nativeOptions } = options;
   await runNestSchematic(tree, {
     schematic,
     options: nativeOptions,
@@ -119,6 +125,19 @@ export async function generateNestMember(
       }
     },
   });
+  // Native first-sub-app conversion resets the builder to the string default.
+  // Retain an explicitly configured Rspack builder and its consumer options.
+  const previousBuilder = previousConfig.compilerOptions?.builder;
+  if (
+    typeof previousBuilder === 'object' &&
+    previousBuilder.type === 'rspack'
+  ) {
+    const config = readJson<NestWorkspace>(tree, at('nest-cli.json'));
+    if (config.compilerOptions?.builder === 'rspack') {
+      config.compilerOptions.builder = previousBuilder;
+      writeJson(tree, at('nest-cli.json'), config);
+    }
+  }
   // Native conversion moves the owner's source. Migrate only matching Nx
   // sourceRoot metadata; preserve custom values and every other user setting.
   if (nextSourceRoot && nextSourceRoot !== previousConfig.sourceRoot) {
@@ -135,4 +154,5 @@ export async function generateNestMember(
   }
   if (JSON.stringify(nxJson.plugins) !== JSON.stringify(plugins))
     updateNxJson(tree, { ...nxJson, plugins });
+  return setupRspack(tree, ownerRoot, skipInstall);
 }

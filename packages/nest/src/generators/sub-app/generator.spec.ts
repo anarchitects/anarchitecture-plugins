@@ -76,9 +76,10 @@ describe('native Nest workspace members', () => {
           'utf8'
         )
       );
-      const { project, ...properties } = wrapper.properties;
+      const { project, skipInstall, ...properties } = wrapper.properties;
       expect(properties).toEqual(native.properties);
       expect(project.type).toBe('string');
+      expect(skipInstall.type).toBe('boolean');
       expect(wrapper.required).toEqual(native.required);
     }
   );
@@ -103,9 +104,23 @@ describe('native Nest workspace members', () => {
       await subAppGenerator(tree,{name:'worker',project:'@native/backend'});
       await subAppGenerator(tree,{name:'other',project:'@native/backend'});
       await libraryGenerator(tree,{name:'shared',project:'@native/backend',prefix:'@domain',specFileSuffix:'test'});
-      for(const [p,b] of expected.after) assert.deepEqual(tree.read(prefix+p),b,p);
+      for(const [p,b] of expected.after) {
+        if(p==='package.json') {
+          const actual=JSON.parse(tree.read(prefix+p,'utf8'));
+          for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin']) {
+            assert.ok(actual.devDependencies[dep]);
+            delete actual.devDependencies[dep];
+          }
+          assert.deepEqual(actual,JSON.parse(b));
+        } else if(p==='nest-cli.json') {
+          const actual=JSON.parse(tree.read(prefix+p,'utf8'));
+          assert.deepEqual(actual.compilerOptions.builder,{type:'rspack',options:{configPath:'rspack.config.cjs'}});
+          actual.compilerOptions.builder='rspack';
+          assert.deepEqual(actual,JSON.parse(b));
+        } else assert.deepEqual(tree.read(prefix+p),b,p);
+      }
       const config=JSON.parse(tree.read(prefix+'nest-cli.json','utf8'));
-      assert.equal(config.compilerOptions.builder,'rspack');
+      assert.equal(config.compilerOptions.builder.type,'rspack');
       assert.ok(config.projects['native-backend']);
       for(const [name,member] of Object.entries(config.projects)) {
         assert.deepEqual(JSON.parse(tree.read(prefix+member.root+'/project.json','utf8')),{
@@ -138,6 +153,27 @@ describe('native Nest workspace members', () => {
       tree.write('services/backend/nest-cli.json',JSON.stringify(config));
       await libraryGenerator(tree,{name:'unprefixed',project:'backend'});
       assert.ok(JSON.parse(tree.read('services/backend/tsconfig.json','utf8')).compilerOptions.paths.unprefixed);
+    `);
+  });
+
+  it('preserves an explicit Rspack configuration during first-sub-app conversion', () => {
+    runMembers(`
+      const tree=createTreeWithEmptyWorkspace();
+      await applicationGenerator(tree,{name:'api',directory:'packages/api'});
+      const configPath='packages/api/nest-cli.json';
+      const config=JSON.parse(tree.read(configPath,'utf8'));
+      const builder={type:'rspack',options:{configPath:'custom.cjs',custom:true}};
+      config.compilerOptions.builder=builder;
+      tree.write(configPath,JSON.stringify(config));
+      tree.write('packages/api/custom.cjs','module.exports = {};');
+      const install=await subAppGenerator(tree,{name:'worker',project:'api'});
+      assert.equal(typeof install,'function');
+      assert.deepEqual(JSON.parse(tree.read(configPath,'utf8')).compilerOptions.builder,builder);
+      assert.equal(tree.read('packages/api/custom.cjs','utf8'),'module.exports = {};');
+      assert.equal(tree.exists('packages/api/rspack.config.cjs'),false);
+      const skipped=await libraryGenerator(tree,{name:'shared',project:'api',skipInstall:true});
+      assert.equal(skipped,undefined);
+      assert.deepEqual(JSON.parse(tree.read(configPath,'utf8')).compilerOptions.builder,builder);
     `);
   });
 
