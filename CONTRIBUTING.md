@@ -57,7 +57,7 @@ yarn nx affected -t build,test,lint
 
 ### 1. Prefer Inference (Project Crystal)
 
-- Use `createNodesV2` when targets can be derived from conventions.
+- Use the current `CreateNodes` type and `createNodes` inference export when targets can be derived from conventions; retain a `createNodesV2` runtime alias where compatibility requires it. Avoid the deprecated `CreateNodesV2` type.
 - Avoid generating explicit target config when inference can express behavior.
 - Keep inferred behavior deterministic and documented.
 
@@ -79,6 +79,16 @@ yarn nx affected -t build,test,lint
 - Keep stable executor names and option names when possible.
 - If behavior changes, provide migration support and documentation.
 - Phase in inference before removing explicit target generation.
+
+### 5. Keep the Nest Core Portable
+
+For `@anarchitects/nest`, first read its
+[ownership boundaries](packages/nest/README.md#architecture-and-ownership) and
+[portable-core contributor constraints](packages/nest/README.md#contributor-constraints-for-the-portable-core).
+Nest owns framework behavior, Nx owns orchestration, and test/lint integrations
+own their targets. Keep Anarchitects-specific policies in separate optional
+tooling. The Nest package and its E2E fixtures are MIT-licensed exceptions to the
+repository's Apache-2.0 license, supporting an eventual upstream contribution.
 
 ## Testing Expectations
 

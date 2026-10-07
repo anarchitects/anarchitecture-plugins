@@ -12,6 +12,29 @@ generator validates Nest v12 declarations and registers inference. Remaining
 integration work is tracked in
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
+## Architecture and ownership
+
+Nest owns framework behavior; Nx owns workspace orchestration. This plugin
+connects the two by translating existing Nest configuration into Nx metadata.
+Running the official `nest build` and `nest start` commands keeps compiler,
+bundler, asset handling, and startup behavior with Nest instead of duplicating
+them in an executor. Framework scaffolding belongs to the official Nest CLI
+and schematics, which avoids maintaining copies of Nest templates.
+
+| Concern                                                                               | Owner                                                       | Plugin boundary                                                                                        |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution to Nest. Only an Nx `init` generator is provided. |
+| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                                                |
+| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.                      |
+| Jest and Vitest targets/configuration                                                 | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | No test target inference, runner selection, or test configuration changes.                             |
+| ESLint and Oxlint targets/configuration                                               | `@nx/eslint` and the workspace's chosen Oxlint integration  | No lint target inference or linter selection.                                                          |
+| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                                   |
+
+Register test and lint integrations separately, according to the tools used by
+the workspace. The presence of Jest, Vitest, ESLint, or Oxlint configuration does
+not cause this plugin to add targets. Nx may still expose targets from package
+scripts, explicit project configuration, or other plugins.
+
 ## Compatibility
 
 | Peer          | Supported range | Reason                                                                                              |
@@ -27,10 +50,27 @@ install or import the application's `@nestjs/core` or platform adapter.
 Application dependencies remain owned by the Nest project.
 
 These ranges establish the package contract. The
-[Nest v12 E2E suite](../nest-e2e/README.md) validates standalone ESM/CommonJS,
+[Nest v12 E2E suite](https://github.com/anarchitects/anarchitecture-plugins/blob/main/packages/nest-e2e/README.md) validates standalone ESM/CommonJS,
 nested solution workspaces with inherited outputs, and tsc/Rspack monorepos.
 Each fixture runs real inferred builds, restores outputs from cache, and starts
 a Nest HTTP application using the packed plugin and pinned stable dependencies.
+
+### Tested Nest v12 project shapes
+
+| Shape                                   | Covered behavior                                                                   | Limit                                                                                                                    |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Standalone ESM / NodeNext               | Root project with `tsconfig.build.json` fallback                                   | Uses the tsc builder.                                                                                                    |
+| Standalone CommonJS                     | tsc builder `configPath` selection                                                 | Does not change the application's module system.                                                                         |
+| Nested project in a TypeScript solution | Explicit `tsConfigPath`, inherited output outside the project, custom target names | Solution references do not create extra Nx nodes or output entries.                                                      |
+| Nest monorepo with tsc                  | Application plus shared library, real build and startup                            | One Nx project per `nest-cli.json`, not one per Nest `projects` entry.                                                   |
+| Nest monorepo with Rspack               | ESM application plus shared library, real bundle and startup                       | Tested with an explicit bundler config retaining `dist`; arbitrary bundler output overrides require explicit Nx outputs. |
+
+The fixture baseline is Nest CLI 12.0.0, Nest common/core/platform-express 12.1.2,
+Nx 23.2.0, TypeScript 6.0.3, and Rspack 2.1.10. This is a tested baseline within
+the peer ranges, not validation of every version combination. Other builders,
+platform adapters, and transports are not covered by this matrix. The plugin
+does not select or replace them; execution follows the application's Nest config.
+Nest prereleases and majors other than v12 are outside the supported contract.
 
 ## Installation and registration
 
@@ -209,6 +249,38 @@ private Nx APIs, copied Nest templates, or historical plugin implementation.
 
 ## Development and release
 
+### Contributor constraints for the portable core
+
+Keep changes suitable for contribution to `@nx/nest` without bringing along
+Anarchitects governance or application architecture packages. The core must
+work with ordinary Nest projects and retain the ownership boundaries above.
+
+- Keep `src/plugins/plugin.ts` a discovery adapter. Put configuration reading,
+  output resolution, named-input merging, and target construction in reusable
+  `src/utils/` modules. Inference must not launch processes or write files.
+- Keep `src/generators/init/` limited to validation and minimal Nx registration.
+  Preserve user configuration and repeat safety. Application, library, and
+  resource generators are not part of the implemented core.
+- Delegate framework behavior to Nest. Do not copy templates, choose a compiler
+  or platform for the user, or rebuild CLI behavior in custom executors.
+- Keep organizational layouts, tags, boundary rules, Fastify preferences, and
+  schema-validation policies in separate, optional tooling. The portable core
+  must not import that tooling or change defaults to enable its opinions.
+- Leave test and lint inference to the corresponding tool integrations. New
+  scope requires an explicit design decision, not an incidental addition to
+  Nest discovery.
+- Use public Nx APIs and current `CreateNodes` / `CreateNodesContext` types.
+  Preserve explicit Nx override precedence and cover behavior changes with unit
+  and packed-consumer tests. Follow the compatibility boundary below if a public
+  API cannot express a required operation.
+- Retain the package's MIT license and attribution, and document changes to
+  defaults, support ranges, and migration requirements.
+
+The earlier
+[generation strategy ADR](https://github.com/anarchitects/anarchitecture-plugins/blob/main/docs/adr/adr-nest-generation-strategy.md)
+is historical proposal context. Its prerelease guidance and proposed generators
+do not describe the stable v12 core implemented under epic #478.
+
 ### Nx API compatibility boundary
 
 The #484 audit found no handwritten private Nx imports, but TypeScript inferred
@@ -288,7 +360,20 @@ root Apache-2.0 license. Contributions to this package must retain that license
 and existing attribution so the core can be contributed to the MIT-licensed Nx
 repository without a later relicensing step.
 
-The architectural reference remains
-[Nx PR #35551](https://github.com/nrwl/nx/pull/35551). Discovery follows its
-config-directory and sibling-manifest rules, without its private Nx API or
-target-cache dependencies. The deleted Anarchitects implementation is not restored.
+[Nx issue #35503](https://github.com/nrwl/nx/issues/35503) records the broader
+exploration of a modern Nest v12 integration with Project Crystal and delegation
+to Nest tooling. Its ideas about generators, test/lint targets, and opinionated
+defaults are proposal context, not features promised by this package.
+
+[Nx PR #35551](https://github.com/nrwl/nx/pull/35551) is the concrete architectural
+reference for Nest config discovery and CLI-backed build/start inference,
+including effective TypeScript output resolution. This package follows the
+config-directory and sibling-manifest discovery rules using public Nx APIs and
+local utilities, without private Nx helpers or a plugin target cache. The deleted
+Anarchitects implementation is not restored.
+
+This repository provides an incubator for validating that portable core with
+packed-package consumers before proposing it upstream. Eventual integration
+into `@nx/nest` is the intent; upstream acceptance, timing, and a migration path
+remain subject to upstream review and a future release plan. Optional
+Anarchitects policies must remain separable from any such contribution.
