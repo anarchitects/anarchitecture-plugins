@@ -199,11 +199,12 @@ describe('native Nest application generator', () => {
 
       const parity=()=>{
         const filtered=target=>new Map([...snapshotNxTree(target)]
-          .filter(([path])=>path!=='nx.json' && !path.endsWith('/project.json') && !path.endsWith('/rspack.config.cjs'))
+          .filter(([path])=>path!=='nx.json' && !path.endsWith('/project.json') && !path.endsWith('/rspack.config.cjs') && !path.endsWith('/tsconfig.spec.json'))
           .map(([path,bytes])=>{
-            if(path==='apps/api/package.json') {
+            if(path==='apps/api/package.json' || path==='package.json') {
               const json=JSON.parse(bytes);
-              for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin']) delete json.devDependencies[dep];
+              for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin','@swc/core','unplugin-swc',...(path==='package.json'?['@nx/vitest','vite','vitest']:[])]) delete json.devDependencies?.[dep];
+              if(path==='package.json' && json.dependencies && !Object.keys(json.dependencies).length) delete json.dependencies;
               return [path,json];
             }
             if(path==='apps/api/nest-cli.json') {
@@ -211,6 +212,7 @@ describe('native Nest application generator', () => {
               if(json.compilerOptions?.builder?.type==='rspack') json.compilerOptions.builder='rspack';
               return [path,json];
             }
+            if(path.startsWith('apps/api/vitest.config')) return [path,local('./dist/utils/setup-vitest').addNestTransform(bytes.toString())];
             return [path,bytes];
           }));
         assert.deepEqual(filtered(tree),filtered(expected));

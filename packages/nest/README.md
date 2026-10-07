@@ -24,19 +24,19 @@ bundler, asset handling, and startup behavior with Nest instead of duplicating
 them in an executor. Framework scaffolding belongs to the official Nest CLI
 and schematics, which avoids maintaining copies of Nest templates.
 
-| Concern                                                                               | Owner                                                       | Plugin boundary                                                                     |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution and native generation to Nest. |
-| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                             |
-| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.   |
-| Jest and Vitest task integration                                                      | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | Infer no test targets; preserve Nest-generated runner/configuration choices.        |
-| ESLint and Oxlint task integration                                                    | `@nx/eslint` and the workspace's chosen Oxlint integration  | Infer no lint targets; preserve Nest-generated linter configuration.                |
-| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                |
+| Concern                                                                               | Owner                                                       | Plugin boundary                                                                      |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution and native generation to Nest.  |
+| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                              |
+| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.    |
+| Jest and Vitest task integration                                                      | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | Delegate Vitest inference and configure its Nest transform during member generation. |
+| ESLint and Oxlint task integration                                                    | `@nx/eslint` and the workspace's chosen Oxlint integration  | Infer no lint targets; preserve Nest-generated linter configuration.                 |
+| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                 |
 
-Register test and lint integrations separately, according to the tools used by
-the workspace. The presence of Jest, Vitest, ESLint, or Oxlint configuration does
-not cause this plugin to add targets. Nx may still expose targets from package
-scripts, explicit project configuration, or other plugins.
+ESM member generation configures the Vitest integration described below. For
+other test/lint tools or adoption of existing projects, register their integrations
+separately. Nest inference itself only supplies build/start targets; Nx also
+exposes package scripts, explicit targets, and targets inferred by other plugins.
 
 ## Native generators (0.0.2 development)
 
@@ -347,7 +347,7 @@ work with ordinary Nest projects and retain the ownership boundaries above.
   Preserve user configuration and repeat safety. The application generator
   delegates to native schematics and adds only Nx metadata. Sub-app and library
   wrappers preserve native workspace updates, add member metadata, and complete
-  Rspack dependency/workspace setup. Resource and structural artifact generation
+  Rspack and Vitest workspace setup. Resource and structural artifact generation
   delegate code and module imports to Nest as well.
 - Delegate framework behavior to Nest. Do not copy templates, choose a compiler
   or platform for the user, or rebuild CLI behavior in custom executors.
@@ -578,9 +578,63 @@ configuration that externalizes hoisted dependencies. Existing owners are not
 modified merely by loading the inference plugin.
 
 This workflow addresses [#534](https://github.com/anarchitects/anarchitecture-plugins/issues/534).
-Converted-monorepo Vitest and lint coverage remain separate follow-ups under
-[#535](https://github.com/anarchitects/anarchitecture-plugins/issues/535) and
+Converted-monorepo Vitest setup is described below. Lint setup remains tracked in
 [#536](https://github.com/anarchitects/anarchitecture-plugins/issues/536).
+
+#### Vitest setup for ESM members
+
+The ESM application generator retains Nest's standalone Vitest setup. When you
+add a sub-app or library to an owner with `vitest.config.ts` or
+`vitest.config.e2e.ts`, the member generators complete the converted-workspace
+setup using [Nest's documented SWC integration](https://docs.nestjs.com/recipes/swc#vitest)
+and the [Nx Vitest plugin](https://nx.dev/docs/technologies/test-tools/vitest/introduction):
+
+- Add `@swc/core` and `unplugin-swc` to the owning package, preserving existing
+  versions. Merge a SWC plugin into statically readable Vitest plugin arrays,
+  with explicit legacy decorators, metadata emission, and ESM output. Existing
+  test globs, settings, and other plugins remain intact.
+- Create `tsconfig.spec.json` if absent, extending the owner's TypeScript config
+  and including its app and library files. Point the native zero-argument
+  `vite-tsconfig-paths` call at this config. A converted root is a solution with
+  `files: []` and app references; it does not cover library specs for alias
+  resolution. Existing test tsconfigs and custom path-plugin options are preserved.
+- Declare `@nx/vitest` aligned with Nx, plus its Vite/Vitest peers, in the workspace
+  root. Register the inference plugin only if it is absent; existing plugin
+  scopes, target names, CI settings, and watch/run preferences take precedence.
+- For a new registration, infer the cached `vitest:test` target in single-run
+  mode. Native `test`, `test:e2e`, watch, and coverage scripts remain available.
+  The owner's default named inputs include its entire subtree so changes inside
+  nested Nx members invalidate its test cache.
+
+```sh
+yarn nx run api:vitest:test # inferred unit-test target, unless renamed by existing Nx configuration
+yarn nx run api:test       # native unit-test script
+yarn nx run api:test:e2e   # native HTTP integration script and separate config
+```
+
+Unit tests are owned by the Nest package, which discovers each app/library spec
+once. The integration does not generate overlapping member test targets. Nest's
+separate `vitest.config.e2e.ts` filename remains driven by its package script;
+it does not match the Nx plugin's inference filename convention.
+
+The member generator returns one Nx install callback for all staged dependencies.
+`--skipInstall` skips installation; dry runs neither write files nor install.
+An existing SWC import is treated as consumer-owned. Dynamic config factories or
+plugin expressions are preserved with guidance to add the documented transform
+manually; the generator does not replace them with a private template.
+
+The adapter now commits native schematic actions through Angular Devkit's public
+in-memory sink. Nest's conversion explicitly deletes the old `src` and `test`
+directories after copying them. Reading the uncommitted Tree had retained those
+files, causing duplicate discovery; applying the sink matches native filesystem
+semantics without touching the host filesystem.
+
+For an owner converted with an older plugin, first compare the old source/test
+files with their relocated copies and reconcile any edits before removing stale
+duplicates. Adding another member applies the Vitest setup. Existing owners are
+not rewritten just by loading the plugin. This resolves
+[#535](https://github.com/anarchitects/anarchitecture-plugins/issues/535);
+monorepo lint setup remains tracked in #536.
 
 ### Resources (0.0.2 development)
 
@@ -816,12 +870,12 @@ The application matrix generates an application, native sub-app and library,
 REST resource, and all structural/cross-cutting/transport artifacts in sequence.
 After every step it compares native files byte-for-byte, with focused assertions
 for Nx registration/project metadata and the member Rspack dependency and
-configuration additions.
+configuration additions, plus the member Vitest integration.
 
 | Contract           | Automated coverage                                                                                                                                                                                                            |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Module system      | Omitted `type` selects native ESM; explicit CJS, package metadata, NodeNext compiler options, and relative `.js` imports are checked.                                                                                         |
-| Test tooling       | ESM retains Vitest and its path-alias config; CJS retains Jest/ts-jest and its native VM-modules scripts.                                                                                                                     |
+| Test tooling       | ESM retains Vitest, with SWC and a test tsconfig added for members; CJS retains Jest/ts-jest and native VM-modules scripts.                                                                                                   |
 | Lint and build     | Native oxlint configuration/dependencies remain intact; native monorepo conversion retains the Rspack builder and library aliases.                                                                                            |
 | Observe            | Both module systems run with `observe` enabled and disabled; native dependency and instrumentation output are preserved.                                                                                                      |
 | HTTP validation    | Generated ESM/CJS apps with native REST resources compile and run with `StandardSchemaValidationPipe`, asynchronous body validation, and transforming route/query parameter schemas. Invalid input never reaches the handler. |
@@ -842,7 +896,9 @@ Tooling and Observe checks verify native generation contracts; they do not
 contact an Observe service or run the generated Vitest/Jest/oxlint toolchains.
 A separate real-install CJS consumer regression runs the native Jest unit,
 HTTP integration, and coverage suites under the supported Yarn configurations
-described above. It does not extend that claim to Vitest or Oxlint.
+described above. The real-install ESM consumer also runs standalone and converted
+Vitest unit/HTTP suites, checking exact test discovery, library injection, aliases, and inferred
+target cache invalidation. Oxlint remains outside this validation.
 
 Run the matrix with the plugin's regular Nx test and e2e targets:
 

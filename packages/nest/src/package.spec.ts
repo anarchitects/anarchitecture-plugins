@@ -56,11 +56,23 @@ describe('published Nest plugin', () => {
     for (const dependency of Object.keys({
       ...manifest.dependencies,
       ...manifest.peerDependencies,
+      ...Object.fromEntries(
+        [
+          '@nx/vitest',
+          '@swc/core',
+          'unplugin-swc',
+          'vite',
+          'vitest',
+          'vite-tsconfig-paths',
+        ].map((name) => [name, '*'])
+      ),
     })) {
       const destination = join(consumerRoot, 'node_modules', dependency);
       mkdirSync(dirname(destination), { recursive: true });
       symlinkSync(
-        dirname(require.resolve(`${dependency}/package.json`)),
+        ['unplugin-swc', 'vite-tsconfig-paths'].includes(dependency)
+          ? resolve(dirname(require.resolve(dependency)), '..')
+          : dirname(require.resolve(`${dependency}/package.json`)),
         destination,
         'junction'
       );
