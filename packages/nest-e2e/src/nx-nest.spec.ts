@@ -358,7 +358,7 @@ describe('packed Nest plugin with stable v12 applications', () => {
   );
 
   it.each(['esm', 'cjs'])(
-    'builds generated native %s members with resources and structural artifacts',
+    'builds generated native %s members with resources and cross-cutting artifacts',
     (type) => {
       const root = createWorkspace({
         ...fixtures[0],
@@ -406,6 +406,12 @@ describe('packed Nest plugin with stable v12 applications', () => {
             ['provider', 'cache'],
             ['service', 'logic'],
             ['controller', 'health'],
+            ['decorator', 'roles'],
+            ['filter', 'errors'],
+            ['guard', 'access'],
+            ['interceptor', 'logging'],
+            ['middleware', 'request'],
+            ['pipe', 'validation'],
           ]) {
             const args = [
               'generate',
@@ -414,7 +420,7 @@ describe('packed Nest plugin with stable v12 applications', () => {
               `--project=backend-${member}`,
               '--no-interactive',
             ];
-            if (!['interface', 'module'].includes(schematic))
+            if (!['interface', 'module', 'decorator'].includes(schematic))
               args.push('--spec=false');
             nx(root, args);
           }

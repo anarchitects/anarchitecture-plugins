@@ -141,6 +141,14 @@ describe('published Nest plugin', () => {
       'provider',
       'service',
       'controller',
+      'decorator',
+      'filter',
+      'gateway',
+      'guard',
+      'interceptor',
+      'middleware',
+      'pipe',
+      'resolver',
     ]) {
       const generator = collection.generators[name];
       expect(
@@ -420,7 +428,7 @@ describe('published Nest plugin', () => {
   );
 
   it.each(['esm', 'cjs'])(
-    'runs packed structural generators and aliases in %s',
+    'runs packed artifact generators and aliases in %s',
     (mode) => {
       const workspace = mkdtempSync(join(tmpdir(), 'nx-nest-structural-'));
       try {
@@ -465,7 +473,7 @@ describe('published Nest plugin', () => {
         const beforeModule = readFileSync(modulePath, 'utf8');
         nx(
           'generate',
-          '@anarchitects/nest:service',
+          '@anarchitects/nest:resolver',
           'preview',
           '--project=api',
           '--dry-run',
@@ -474,6 +482,14 @@ describe('published Nest plugin', () => {
         expect(readFileSync(modulePath, 'utf8')).toBe(beforeModule);
         expect(existsSync(join(workspace, 'apps/api/src/preview'))).toBe(false);
         for (const [name, alias, file] of [
+          ['decorator', 'd', 'artifact-decorator.decorator.ts'],
+          ['filter', 'f', 'artifact-filter.filter.ts'],
+          ['gateway', 'ga', 'artifact-gateway.gateway.ts'],
+          ['guard', 'gu', 'artifact-guard.guard.ts'],
+          ['interceptor', 'itc', 'artifact-interceptor.interceptor.ts'],
+          ['middleware', 'mi', 'artifact-middleware.middleware.ts'],
+          ['pipe', 'pi', 'artifact-pipe.pipe.ts'],
+          ['resolver', 'r', 'artifact-resolver/artifact-resolver.resolver.ts'],
           ['class', 'cl', 'artifact-class.ts'],
           ['interface', 'itf', 'artifact-interface.interface.ts'],
           ['module', 'mo', 'artifact-module/artifact-module.module.ts'],
@@ -494,7 +510,7 @@ describe('published Nest plugin', () => {
           );
           expect(existsSync(join(workspace, 'apps/api/src', file))).toBe(true);
         }
-        for (const name of ['provider', 'service']) {
+        for (const name of ['provider', 'service', 'gateway', 'resolver']) {
           const before = readFileSync(modulePath, 'utf8');
           nx(
             'generate',

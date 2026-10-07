@@ -6,8 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 
 // Real Node exercises native ESM factories and the emitted generator, avoiding
 // Jest's CommonJS transform of import(). Host side effects are forbidden.
-function runStructural(assertions: string) {
-  const cwd = mkdtempSync(join(tmpdir(), 'nest-structural-'));
+function runArtifact(assertions: string) {
+  const cwd = mkdtempSync(join(tmpdir(), 'nest-artifact-'));
   try {
     const output = execFileSync(
       process.execPath,
@@ -22,7 +22,7 @@ function runStructural(assertions: string) {
         resolve(__dirname, '../../../package.json')
       )});
       const { createTreeWithEmptyWorkspace } = local('@nx/devkit/testing');
-      const generators = Object.fromEntries(['class','interface','module','provider','service','controller'].map(name => [name,local('./dist/generators/'+name+'/generator.js').default]));
+      const generators = Object.fromEntries(['class','interface','module','provider','service','controller','decorator','filter','gateway','guard','interceptor','middleware','pipe','resolver'].map(name => [name,local('./dist/generators/'+name+'/generator.js').default]));
       const { subAppGenerator } = local('./dist/generators/sub-app/generator.js');
       const { libraryGenerator } = local('./dist/generators/library/generator.js');
       const { applicationGenerator } = local('./dist/generators/application/generator.js');
@@ -41,7 +41,7 @@ function runStructural(assertions: string) {
       syncBuiltinESMExports();
       (async () => {
         ${assertions}
-        console.log('STRUCTURAL_OK');
+        console.log('ARTIFACT_OK');
       })().catch(error => { console.error(error); process.exitCode = 1; });
     `,
       ],
@@ -58,15 +58,31 @@ function runStructural(assertions: string) {
         },
       }
     );
-    expect(output).toContain('STRUCTURAL_OK');
+    expect(output).toContain('ARTIFACT_OK');
     expect(readdirSync(cwd)).toEqual([]);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
 }
 
-// The six thin wrappers share one native-output matrix.
+// Structural, cross-cutting, and transport wrappers share a native-output matrix.
 const artifacts = [
+  ...[
+    'decorator',
+    'filter',
+    'gateway',
+    'guard',
+    'interceptor',
+    'middleware',
+    'pipe',
+    'resolver',
+  ].map((name) => ({
+    name,
+    flat: name !== 'resolver',
+    spec: name !== 'decorator',
+    suffix: '.' + name,
+    imports: ['gateway', 'resolver'].includes(name),
+  })),
   { name: 'class', flat: true, spec: true, suffix: '', imports: false },
   {
     name: 'interface',
@@ -99,7 +115,7 @@ const artifacts = [
   },
 ];
 
-describe('native Nest structural artifact generators', () => {
+describe('native Nest artifact generators', () => {
   it.each(artifacts)(
     'keeps $name schema aligned with native supported options',
     ({ name }) => {
@@ -119,7 +135,7 @@ describe('native Nest structural artifact generators', () => {
         if (native.properties[property])
           delete native.properties[property].default;
       const { project, nestProject, ...properties } = wrapper.properties;
-      if (['service', 'provider'].includes(name)) {
+      if (['service', 'provider', 'gateway', 'resolver'].includes(name)) {
         expect(properties.skipImport.type).toBe('boolean');
         delete properties.skipImport;
       }
@@ -137,7 +153,7 @@ describe('native Nest structural artifact generators', () => {
   )(
     'matches native $name defaults/options and imports in $mode',
     (artifact) => {
-      runStructural(String.raw`
+      runArtifact(String.raw`
         const artifact=${JSON.stringify(artifact)};
         const name=artifact.name;
         const variants=[{}, {flat:!artifact.flat,format:true,...(artifact.spec?{spec:false}:{}),...(artifact.imports?{skipImport:true}:{})},
@@ -181,7 +197,7 @@ describe('native Nest structural artifact generators', () => {
   );
 
   it('respects member selection, nearest modules, spec-map fallback, and per-generator defaults', () => {
-    runStructural(String.raw`
+    runArtifact(String.raw`
       await applicationGenerator(tree,{name:'api',directory:'services/api'});
       await subAppGenerator(tree,{name:'worker',project:'api'});
       await libraryGenerator(tree,{name:'shared',project:'api'});
@@ -208,9 +224,51 @@ describe('native Nest structural artifact generators', () => {
     `);
   });
 
+  it.each(['esm', 'cjs'])(
+    'preserves v12 decorators and transport registration in %s members',
+    (mode) => {
+      runArtifact(String.raw`
+      await applicationGenerator(tree,{name:'api',directory:'services/api',type:${JSON.stringify(
+        mode
+      )}});
+      await subAppGenerator(tree,{name:'worker',project:'api'});
+      await libraryGenerator(tree,{name:'shared',project:'api'});
+      const main=tree.read('services/api/apps/api/src/app.module.ts');
+      const config=JSON.parse(tree.read('services/api/nest-cli.json','utf8'));
+      config.generateOptions={spec:{gateway:false,guard:false},flat:false,specFileSuffix:'global'};
+      config.projects.worker.generateOptions={spec:{resolver:true},flat:true,specFileSuffix:'member'};
+      tree.write('services/api/nest-cli.json',JSON.stringify(config));
+      for(const name of ['decorator','filter','gateway','guard','interceptor','middleware','pipe','resolver']) {
+        await generators[name](tree,{name:'worker-'+name,project:'api-worker'});
+        await generators[name](tree,{name:'shared-'+name,project:'api',nestProject:'shared',...(name==='decorator'?{}:{spec:false})});
+        assert.ok(tree.exists('services/api/apps/worker/src/worker-'+name+'.'+name+'.ts'));
+        assert.ok(tree.exists('services/api/libs/shared/src/shared-'+name+'/shared-'+name+'.'+name+'.ts'));
+        assert.equal(tree.exists('services/api/apps/worker/src/worker-'+name+'.'+name+'.member.ts'),!['decorator','gateway','guard'].includes(name));
+      }
+      const decorator=tree.read('services/api/apps/worker/src/worker-decorator.decorator.ts','utf8');
+      assert.match(decorator,/import \{ Reflector \} from '@nestjs\/core'/);
+      assert.match(decorator,/Reflector.createDecorator<string\[\]>\(\)/);
+      assert.doesNotMatch(decorator,/SetMetadata/);
+      const extension=${JSON.stringify(mode)}==='esm'?'.js':'';
+      for(const name of ['gateway','resolver']) {
+        assert.ok(tree.read('services/api/apps/worker/src/worker.module.ts','utf8').includes('./worker-'+name+'.'+name+extension));
+        assert.ok(tree.read('services/api/libs/shared/src/shared.module.ts','utf8').includes('./shared-'+name+'/shared-'+name+'.'+name+extension));
+      }
+      assert.deepEqual(tree.read('services/api/apps/api/src/app.module.ts'),main);
+      await generators.gateway(tree,{name:'explicit',project:'api-worker',spec:true,specFileSuffix:'unit'});
+      assert.ok(tree.exists('services/api/apps/worker/src/explicit.gateway.unit.ts'));
+      // Failed creation must also discard the staged provider registration.
+      tree.write('services/api/apps/worker/src/conflict.resolver.ts','user-owned');
+      const before=snapshotNxTree(tree);
+      await assert.rejects(generators.resolver(tree,{name:'conflict',project:'api-worker'}));
+      assert.deepEqual(snapshotNxTree(tree),before);
+    `);
+    }
+  );
+
   it('delegates native JavaScript templates for generators that support language', () => {
-    runStructural(String.raw`
-      for(const name of ['class','module','provider','service','controller']) {
+    runArtifact(String.raw`
+      for(const name of Object.keys(generators).filter(name => name !== 'interface')) {
         const actual=createTreeWithEmptyWorkspace();
         const expected=createTreeWithEmptyWorkspace();
         for(const target of [actual,expected]) await applicationGenerator(target,{name:'api',directory:'apps/api',type:'cjs',language:'js'});
@@ -223,7 +281,7 @@ describe('native Nest structural artifact generators', () => {
   });
 
   it('rejects invalid selection, paths, and file conflicts without partial module changes', () => {
-    runStructural(String.raw`
+    runArtifact(String.raw`
       await applicationGenerator(tree,{name:'api',directory:'apps/api'});
       for(const name of Object.keys(generators)) {
         const before=snapshotNxTree(tree);

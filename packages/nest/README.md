@@ -485,13 +485,57 @@ templates, compiler choices, test runners, or explicit Nx targets are added.
 JavaScript templates are delegated where supported. Formatting remains opt-in,
 and generation errors leave the pending Tree unchanged.
 
+### Cross-cutting and transport artifacts (0.0.2 development)
+
+These generators use the same `project` / `nestProject` selection, native source
+roots, and configuration precedence as structural artifacts:
+
+```sh
+yarn nx g @anarchitects/nest:decorator roles --project=api
+yarn nx g @anarchitects/nest:guard access --project=api-worker --spec=false
+yarn nx g @anarchitects/nest:gateway events --project=api --nestProject=worker
+yarn nx g @anarchitects/nest:resolver users --project=api --skipImport --flat
+```
+
+| Generator     | Alias | Native default layout | Specs | Native module registration |
+| ------------- | ----- | --------------------- | ----- | -------------------------- |
+| `decorator`   | `d`   | Flat                  | No    | None                       |
+| `filter`      | `f`   | Flat                  | Yes   | None                       |
+| `gateway`     | `ga`  | Flat                  | Yes   | `providers`                |
+| `guard`       | `gu`  | Flat                  | Yes   | None                       |
+| `interceptor` | `itc` | Flat                  | Yes   | None                       |
+| `middleware`  | `mi`  | Flat                  | Yes   | None                       |
+| `pipe`        | `pi`  | Flat                  | Yes   | None                       |
+| `resolver`    | `r`   | New directory         | Yes   | `providers`                |
+
+Decorators preserve Nest v12's `Reflector.createDecorator<string[]>()` output.
+All eight support native `path`, `sourceRoot`, `language`, `flat`, and `format`
+options. Decorators have no spec options; the others support `spec` and
+`specFileSuffix`. Use full schematic names in spec maps, for example
+`generateOptions.spec.gateway`.
+
+Gateway and resolver wrappers expose `skipImport`, which their native factories
+support although their JSON schemas omit it. Otherwise Nest registers them in
+the nearest module's `providers`, retaining ESM `.js` extensions or CJS imports
+according to the owning Nest package. Cross-cutting artifacts retain native
+behavior: generating a guard, filter, interceptor, middleware, or pipe does not
+bind it to a route or application automatically.
+
+Gateways use native WebSocket templates (`@nestjs/websockets`), and resolvers use
+native GraphQL templates (`@nestjs/graphql`). The selected application must
+provide the corresponding transport dependencies and runtime configuration;
+these artifact generators do not install dependencies or configure transports.
+No source templates or explicit Nx targets are added. Native-output parity and
+packed CLI tests cover all eight in ESM/CJS projects and native members; build
+fixtures additionally cover the six cross-cutting artifacts.
+
 ### Native generation adapter (0.0.2 development)
 
 `src/generation-adapter/run-nest-schematic.ts` is internal infrastructure for
 [epic #498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
 `init`, `application`, `sub-app` (`app`), `library` (`lib`), `resource` (`res`),
-and the six structural generators above are registered publicly. Other wrappers
-arrive later. This is not a 0.0.2 publication.
+and the structural, cross-cutting, and transport generators above are registered
+publicly. This is not a 0.0.2 publication.
 
 The adapter runs the pinned stable `@nestjs/schematics` 12.0.6 collection with
 Angular DevKit 22.2.0. Native ESM factories are imported asynchronously before
@@ -531,7 +575,7 @@ The parent filesystem APIs and cwd are untouched, including concurrent calls.
 The worker uses production generation semantics because Nest skips source
 conversion when `NODE_ENV=test`.
 
-Resource and structural generators share context/default resolution before
+Resource and artifact generators share context/default resolution before
 invoking the adapter. The adapter itself does not emulate the entire CLI
 configuration lookup.
 
