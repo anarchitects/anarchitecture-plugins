@@ -63,6 +63,54 @@
       "schema": "./schemas/controller.json",
       "aliases": ["co"],
       "description": "Generate a native Nest controller in the selected project."
+    },
+    "decorator": {
+      "factory": "./dist/generators/decorator/generator",
+      "schema": "./schemas/decorator.json",
+      "aliases": ["d"],
+      "description": "Generate a native Nest decorator in the selected project."
+    },
+    "filter": {
+      "factory": "./dist/generators/filter/generator",
+      "schema": "./schemas/filter.json",
+      "aliases": ["f"],
+      "description": "Generate a native Nest filter in the selected project."
+    },
+    "gateway": {
+      "factory": "./dist/generators/gateway/generator",
+      "schema": "./schemas/gateway.json",
+      "aliases": ["ga"],
+      "description": "Generate a native Nest gateway in the selected project."
+    },
+    "guard": {
+      "factory": "./dist/generators/guard/generator",
+      "schema": "./schemas/guard.json",
+      "aliases": ["gu"],
+      "description": "Generate a native Nest guard in the selected project."
+    },
+    "interceptor": {
+      "factory": "./dist/generators/interceptor/generator",
+      "schema": "./schemas/interceptor.json",
+      "aliases": ["itc"],
+      "description": "Generate a native Nest interceptor in the selected project."
+    },
+    "middleware": {
+      "factory": "./dist/generators/middleware/generator",
+      "schema": "./schemas/middleware.json",
+      "aliases": ["mi"],
+      "description": "Generate a native Nest middleware in the selected project."
+    },
+    "pipe": {
+      "factory": "./dist/generators/pipe/generator",
+      "schema": "./schemas/pipe.json",
+      "aliases": ["pi"],
+      "description": "Generate a native Nest pipe in the selected project."
+    },
+    "resolver": {
+      "factory": "./dist/generators/resolver/generator",
+      "schema": "./schemas/resolver.json",
+      "aliases": ["r"],
+      "description": "Generate a native Nest resolver in the selected project."
     }
   }
 }
