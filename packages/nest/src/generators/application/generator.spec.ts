@@ -203,6 +203,7 @@ describe('native Nest application generator', () => {
           .map(([path,bytes])=>{
             if(path==='apps/api/package.json' || path==='package.json') {
               const json=JSON.parse(bytes);
+              if(json.scripts?.lint===local('./dist/utils/setup-lint').nestMemberLintScript) json.scripts.lint='oxlint --type-aware src/ test/';
               for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin','@swc/core','unplugin-swc',...(path==='package.json'?['@nx/vitest','vite','vitest']:[])]) delete json.devDependencies?.[dep];
               if(path==='package.json' && json.dependencies && !Object.keys(json.dependencies).length) delete json.dependencies;
               return [path,json];

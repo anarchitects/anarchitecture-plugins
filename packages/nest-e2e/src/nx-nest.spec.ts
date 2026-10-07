@@ -17,6 +17,7 @@ import { fixtures, type NestFixture } from './fixtures';
 import { standardSchemaFixture } from './standard-schema-fixture';
 import { assertCjsJestConsumer } from './cjs-jest-consumer';
 import { assertRspackConsumer } from './rspack-consumer';
+import { assertLintConsumer } from './lint-consumer';
 import { assertVitestConsumer } from './vitest-consumer';
 
 const e2eRoot = resolve(__dirname, '..');
@@ -306,6 +307,13 @@ describe('packed Nest plugin with stable v12 applications', () => {
         type
       );
     },
+    360_000
+  );
+
+  it.each(['esm', 'cjs'])(
+    'lints active native %s sources and tests with a real Yarn install',
+    (type) =>
+      assertLintConsumer(join(suiteRoot, `lint-yarn-${type}`), tarball, type),
     360_000
   );
 
