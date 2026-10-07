@@ -1,0 +1,52 @@
+{
+  "name": "nx-nest-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "projectType": "application",
+    "sourceRoot": "packages/nest-e2e/src",
+    "namedInputs": {
+      "default": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/yarn.lock",
+        "sharedGlobals"
+      ]
+    },
+    "implicitDependencies": [
+      "nx-nest"
+    ],
+    "targets": {
+      "e2e-ci": {
+        "dependsOn": [
+          "e2e-ci--src/nx-nest.spec.ts"
+        ]
+      },
+      "e2e-ci--src/nx-nest.spec.ts": {
+        "dependsOn": [
+          "^build"
+        ]
+      }
+    },
+    "tags": [
+      "type:e2e",
+      "domain:nest"
+    ]
+  },
+  "devDependencies": {
+    "@anarchitects/nest": "workspace:*",
+    "@nestjs/cli": "12.0.0",
+    "@nestjs/common": "12.1.2",
+    "@nestjs/core": "12.1.2",
+    "@nestjs/platform-express": "12.1.2",
+    "@nx/devkit": "23.2.0",
+    "@rspack/core": "2.1.10",
+    "@types/webpack-node-externals": "^3",
+    "nx": "23.2.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "tsconfig-paths-webpack-plugin": "4.2.0",
+    "typescript": "6.0.3",
+    "webpack-node-externals": "3.0.0"
+  },
+  "license": "MIT"
+}

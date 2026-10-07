@@ -1,0 +1,54 @@
+# Nest v12 E2E fixtures
+
+This private, MIT-licensed package tests the packed `@anarchitects/nest` plugin
+against real Nest applications. Run it after the workspace's immutable Yarn
+install:
+
+```sh
+yarn nx e2e nx-nest-e2e
+yarn nx run-many -t lint typecheck -p nx-nest-e2e
+```
+
+The E2E target builds `nx-nest` first. It packs that package into a temporary
+directory, extracts it into each consumer workspace, and links the exact
+dependencies from the repository's locked install. Each consumer receives the
+same Yarn lockfile so Nx can hash external dependencies. No registry server,
+runtime dependency download, source export condition, or generated Nest template
+is needed. The lockfile is an explicit input to the E2E project.
+
+The baseline is Nest CLI **12.0.0**, Nest common/core/platform-express **12.1.2**,
+Rspack **2.1.10**, TypeScript **6.0.3**, and Nx **23.2.0**. The suite checks the
+installed Nest versions against the exact manifest pins and rejects prereleases.
+
+| Fixture                              | Coverage                                                                                                                                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `standalone-esm`                     | Root application, ESM/NodeNext, `tsconfig.build.json` fallback                                                                                                                   |
+| `standalone-commonjs-builder-config` | CommonJS, tsc builder `configPath` taking precedence over a decoy build config                                                                                                   |
+| `nested-solution-custom-output`      | Nested project, solution references, explicit `tsConfigPath` taking precedence over builder options, shared inherited output outside the project, custom `compile`/`serve` names |
+| `monorepo-tsc`                       | Nest application and shared library compiled with tsc; one Nx project per CLI config                                                                                             |
+| `monorepo-rspack`                    | ESM Nest monorepo and shared library bundled with Rspack; explicit Rspack config file                                                                                            |
+
+Each fixture checks discovery, build/start command and metadata, cache and
+continuous settings, and absence of inferred test/lint targets even when those
+tools' config files exist. It runs the inferred build through Nx, checks actual
+emission, deletes the output, and verifies cache restoration. It then runs the
+inferred start target and checks a real HTTP response on an ephemeral loopback
+port. Child process groups and temporary files are cleaned up, with bounded
+startup and shutdown timeouts. Local execution is validated on macOS; CI runs on
+Linux.
+
+The Rspack fixture explicitly sets the bundle filename to `main.js` while retaining
+the default `dist` directory. It does not claim automatic inference of arbitrary
+bundler output overrides; those remain an explicit Nx configuration concern.
+
+## CI
+
+The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud. This
+project is included in the Jest E2E inference plugin and depends on `nx-nest`, so
+plugin changes affect the suite. Its `e2e-ci` dependency explicitly points to the
+inferred test-file task because workspace `targetDefaults.e2e-ci.dependsOn`
+overrides the inferred aggregate dependencies. That test-file task depends on
+the plugin build before packing it.
+
+Use `e2e` locally: the atomized `e2e-ci` target requires Nx Cloud. The fixture suite
+and assertions are identical in both paths.
