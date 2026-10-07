@@ -132,6 +132,7 @@ describe('published Nest plugin', () => {
     for (const name of [
       'init',
       'application',
+      'configuration',
       'sub-app',
       'library',
       'resource',
@@ -168,6 +169,125 @@ describe('published Nest plugin', () => {
       )
     ).toBe(false);
   });
+
+  it.each([
+    {
+      root: '.',
+      selector: [],
+      language: 'ts',
+      generator: 'configuration',
+      manifest: 'package.json',
+    },
+    {
+      root: '.',
+      selector: [],
+      language: 'js',
+      generator: 'config',
+      manifest: 'package.json',
+    },
+    {
+      root: 'services/api',
+      selector: ['--directory=services/api'],
+      language: 'ts',
+      generator: 'config',
+      manifest: 'package.json',
+    },
+    {
+      root: 'services/api',
+      selector: ['--project=api'],
+      language: 'js',
+      generator: 'configuration',
+      manifest: 'project.json',
+    },
+  ])(
+    'generates safe discoverable configuration through packed $generator at $root ($language, $manifest)',
+    ({ root, selector, language, generator, manifest }) => {
+      const workspace = mkdtempSync(join(tmpdir(), 'nx-nest-configuration-'));
+      try {
+        symlinkSync(
+          join(consumerRoot, 'node_modules'),
+          join(workspace, 'node_modules'),
+          'junction'
+        );
+        writeFileSync(
+          join(workspace, 'package.json'),
+          JSON.stringify({ name: 'consumer', private: true })
+        );
+        writeFileSync(join(workspace, 'nx.json'), '{}');
+        writeFileSync(join(workspace, '.gitignore'), 'node_modules\n.nx\n');
+        if (root !== '.') {
+          mkdirSync(join(workspace, root), { recursive: true });
+          writeFileSync(
+            join(workspace, root, manifest),
+            JSON.stringify({ name: 'api' })
+          );
+        }
+        const nx = (...args: string[]) =>
+          execFileSync(
+            process.execPath,
+            [require.resolve('nx/bin/nx.js'), ...args],
+            {
+              cwd: workspace,
+              encoding: 'utf8',
+              timeout: 30_000,
+              stdio: 'pipe',
+              env: {
+                ...process.env,
+                NODE_OPTIONS: '',
+                NX_DAEMON: 'false',
+                NX_ISOLATE_PLUGINS: 'false',
+                NX_NO_CLOUD: 'true',
+              },
+            }
+          );
+        const args = [
+          'generate',
+          '@anarchitects/nest:' + generator,
+          ...selector,
+          '--language=' + language,
+          '--no-interactive',
+        ];
+        nx(...args, '--dry-run');
+        const configPath = join(workspace, root, 'nest-cli.json');
+        expect(existsSync(configPath)).toBe(false);
+        expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe('{}');
+        nx(...args);
+        const generated = readFileSync(configPath, 'utf8');
+        expect(JSON.parse(generated)).toEqual({
+          $schema: 'https://json.schemastore.org/nest-cli',
+          collection: '@nestjs/schematics',
+          sourceRoot: 'src',
+          ...(language === 'js' ? { language: 'js' } : {}),
+        });
+        nx(...args);
+        expect(readFileSync(configPath, 'utf8')).toBe(generated);
+        const project = JSON.parse(
+          nx('show', 'project', root === '.' ? 'consumer' : 'api', '--json')
+        );
+        expect(project.root).toBe(root);
+        expect(project.targets.build.options).toEqual({
+          command: 'nest build',
+          cwd: root,
+        });
+        expect(project.targets.start.options).toEqual({
+          command: 'nest start',
+          cwd: root,
+        });
+        expect(project.targets.build.cache).toBe(true);
+        expect(project.targets.build.outputs).toEqual(['{projectRoot}/dist']);
+        expect(project.metadata.technologies).toContain('nest');
+        const custom = generated.replace('"src"', '"custom"');
+        writeFileSync(configPath, custom);
+        const nxBefore = readFileSync(join(workspace, 'nx.json'), 'utf8');
+        expect(() => nx(...args, '--force')).toThrow();
+        expect(readFileSync(configPath, 'utf8')).toBe(custom);
+        expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(nxBefore);
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    },
+    90_000
+  );
 
   it.each(['esm', 'cjs'])(
     'generates and discovers a native %s application through the packed Nx generator',

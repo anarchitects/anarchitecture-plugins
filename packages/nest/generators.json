@@ -111,6 +111,12 @@
       "schema": "./schemas/resolver.json",
       "aliases": ["r"],
       "description": "Generate a native Nest resolver in the selected project."
+    },
+    "configuration": {
+      "factory": "./dist/generators/configuration/generator",
+      "schema": "./schemas/configuration.json",
+      "aliases": ["config"],
+      "description": "Generate native Nest CLI configuration for an existing Nx project."
     }
   }
 }

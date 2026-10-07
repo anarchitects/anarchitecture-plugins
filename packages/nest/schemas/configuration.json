@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "NestConfiguration",
+  "title": "Nest Configuration Options Schema",
+  "type": "object",
+  "cli": "nx",
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Existing Nx project to configure. Mutually exclusive with directory."
+    },
+    "directory": {
+      "type": "string",
+      "description": "Workspace-relative directory containing package.json or project.json. Defaults to the workspace root when project is omitted."
+    },
+    "language": {
+      "type": "string",
+      "enum": ["ts", "js"],
+      "description": "Native configuration language. Nest defaults to ts."
+    },
+    "collection": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Collection written into nest-cli.json. Nest defaults to @nestjs/schematics; no collection is executed."
+    }
+  }
+}
