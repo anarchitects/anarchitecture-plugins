@@ -1,0 +1,78 @@
+{
+  "name": "@anarchitects/nest",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@anarchitecture-plugins/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "@anarchitecture-plugins/source": "./src/plugins/plugin.ts",
+      "types": "./dist/plugins/plugin.d.ts",
+      "import": "./dist/plugins/plugin.js",
+      "default": "./dist/plugins/plugin.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "!**/*.tsbuildinfo"
+  ],
+  "nx": {
+    "name": "nx-nest",
+    "targets": {
+      "test": {
+        "dependsOn": [
+          "build",
+          "^build"
+        ]
+      }
+    },
+    "tags": [
+      "npm:public",
+      "type:plugin",
+      "domain:nest"
+    ]
+  },
+  "description": "Nx integration for stable NestJS v12; upstream-portable Project Crystal package shell.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anarchitects/anarchitecture-plugins.git",
+    "directory": "packages/nest"
+  },
+  "bugs": {
+    "url": "https://github.com/anarchitects/anarchitecture-plugins/issues"
+  },
+  "homepage": "https://github.com/anarchitects/anarchitecture-plugins/tree/main/packages/nest#readme",
+  "keywords": [
+    "nx",
+    "nx-plugin",
+    "nestjs",
+    "nestjs-v12"
+  ],
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@nestjs/cli": ">=12.0.0 <13",
+    "@nx/devkit": ">=23.2.0 <24",
+    "nx": ">=23.2.0 <24"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "12.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  }
+}

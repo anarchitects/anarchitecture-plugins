@@ -26,6 +26,9 @@
     },
     {
       "path": "./packages/governance-extension-nx"
+    },
+    {
+      "path": "./packages/nest"
     }
   ],
   "compilerOptions": {

@@ -13,6 +13,7 @@
     "packages/governance-extension-nx/src/**/*.ts",
     "packages/governance/src/**/*.ts",
     "packages/js/src/**/*.ts",
+    "packages/nest/src/**/*.ts",
     "packages/typeorm/src/**/*.ts"
   ],
   "exclude": ["packages/*/src/**/*.spec.ts", "packages/*/src/**/*.test.ts"]
