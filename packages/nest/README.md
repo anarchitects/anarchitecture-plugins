@@ -24,19 +24,94 @@ bundler, asset handling, and startup behavior with Nest instead of duplicating
 them in an executor. Framework scaffolding belongs to the official Nest CLI
 and schematics, which avoids maintaining copies of Nest templates.
 
-| Concern                                                                               | Owner                                                       | Plugin boundary                                                                          |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution and application generation to Nest. |
-| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                                  |
-| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.        |
-| Jest and Vitest targets/configuration                                                 | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | No test target inference, runner selection, or test configuration changes.               |
-| ESLint and Oxlint targets/configuration                                               | `@nx/eslint` and the workspace's chosen Oxlint integration  | No lint target inference or linter selection.                                            |
-| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                     |
+| Concern                                                                               | Owner                                                       | Plugin boundary                                                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Framework configuration, compilation, startup, and scaffolding                        | Nest CLI and schematics                                     | Read configuration for inference; delegate execution and native generation to Nest. |
+| Project graph, task ordering, input hashing, cache storage/restoration, and overrides | Nx                                                          | Supply project and target metadata through public APIs.                             |
+| Nest discovery, build/start inference, and adoption into Nx                           | `@anarchitects/nest`                                        | Validate declarations and register inference without generating application code.   |
+| Jest and Vitest task integration                                                      | Their respective Nx integrations (`@nx/jest`, `@nx/vitest`) | Infer no test targets; preserve Nest-generated runner/configuration choices.        |
+| ESLint and Oxlint task integration                                                    | `@nx/eslint` and the workspace's chosen Oxlint integration  | Infer no lint targets; preserve Nest-generated linter configuration.                |
+| Domain layout, governance, platform preferences, and validation conventions           | Application teams and optional Anarchitects tooling         | Keep these policies outside the portable core and opt in explicitly.                |
 
 Register test and lint integrations separately, according to the tools used by
 the workspace. The presence of Jest, Vitest, ESLint, or Oxlint configuration does
 not cause this plugin to add targets. Nx may still expose targets from package
 scripts, explicit project configuration, or other plugins.
+
+## Native generators (0.0.2 development)
+
+The complete native generation surface is available in this development branch.
+The published 0.0.1 MVP provides `init` and inference; these generators are part
+of the upcoming 0.0.2 release under [#498](https://github.com/anarchitects/anarchitecture-plugins/issues/498).
+Install released versions through `nx add @anarchitects/nest`; use a packed build
+of this branch when testing generation before publication.
+
+| Generator       | Alias    | Purpose                                                      |
+| --------------- | -------- | ------------------------------------------------------------ |
+| `application`   | —        | Independent Nest application and package inside Nx.          |
+| `sub-app`       | `app`    | Application member within an existing native Nest workspace. |
+| `library`       | `lib`    | Library member within an existing native Nest workspace.     |
+| `configuration` | `config` | Native `nest-cli.json` for an existing Nx project.           |
+| `resource`      | `res`    | Native REST, GraphQL, microservice, or WebSocket resource.   |
+| `class`         | `cl`     | Class.                                                       |
+| `controller`    | `co`     | Controller and native module registration.                   |
+| `decorator`     | `d`      | v12 Reflector decorator.                                     |
+| `filter`        | `f`      | Exception filter.                                            |
+| `gateway`       | `ga`     | WebSocket gateway.                                           |
+| `guard`         | `gu`     | Guard.                                                       |
+| `interceptor`   | `itc`    | Interceptor.                                                 |
+| `interface`     | `itf`    | TypeScript interface.                                        |
+| `middleware`    | `mi`     | Middleware.                                                  |
+| `module`        | `mo`     | Module and native module registration.                       |
+| `pipe`          | `pi`     | Pipe.                                                        |
+| `provider`      | `pr`     | Provider and native module registration.                     |
+| `service`       | `s`      | Service and native module registration.                      |
+| `resolver`      | `r`      | GraphQL resolver.                                            |
+
+`init` is the Nx adoption/registration generator, not a Nest schematic. All
+nineteen generators above directly delegate framework files to the official
+pinned stable `@nestjs/schematics` collection. The public catalog and aliases
+are checked against that collection in the packed-package tests.
+
+Use `application` for independent Nx applications. Nx's monorepo does not
+require a native Nest monorepo; `app` specifically means `sub-app`, not
+`application`. Native sub-apps/libraries share their owner's package and CLI
+configuration. For example:
+
+```sh
+yarn nx g @anarchitects/nest:application api --directory=services/api
+yarn nx g @anarchitects/nest:application admin --directory=services/admin --type=cjs
+yarn nx g @anarchitects/nest:app worker --project=api
+yarn nx g @anarchitects/nest:lib shared --project=api
+yarn nx g @anarchitects/nest:res users --project=api-worker --type=rest
+yarn nx g @anarchitects/nest:s cache --project=api --nestProject=shared
+```
+
+`project` selects an Nx project. Artifact/resource `nestProject` selects a native
+member within the chosen owner; native paths remain relative to that owner.
+Select a project explicitly when several independent Nest owners exist. See the
+individual generator sections below for default precedence, supported options,
+registration behavior, dependency installation, and safe dry runs.
+
+### Native ownership and optional extensions
+
+Nest owns source templates, DTOs, module imports, module-system choices,
+Vitest/Jest, oxlint, and compiler/bundler output. Nx supplies project selection,
+Tree changes, additive project metadata, and inferred tasks. Generators do not
+rewrite native output into an Anarchitects architecture or select a Standard
+Schema library. Formatting follows the native opt-in options.
+
+`upgrade` and its alias `update` are deliberately absent: upgrading existing
+applications is a migration concern with its own execution and safety contract,
+not part of this generation adapter.
+
+Fastify scaffolding is separate, optional work tracked in
+[Fastify epic #508](https://github.com/anarchitects/anarchitecture-plugins/issues/508).
+It is not part of the native surface delivered by #498. That work layers an
+explicit platform choice over native application generation; it does not change
+the native defaults documented here. Domain layouts, governance conventions,
+and schema-library-specific scaffolding likewise belong to separately opted-in
+extensions. No Fastify or schema-library generator is advertised by this package.
 
 ## Compatibility
 
@@ -75,7 +150,8 @@ a Nest HTTP application using the packed plugin and pinned stable dependencies.
 The fixture baseline is Nest CLI 12.0.0, Nest common/core/platform-express 12.1.2,
 Nx 23.2.0, TypeScript 6.0.3, and Rspack 2.1.10. This is a tested baseline within
 the peer ranges, not validation of every version combination. Other builders,
-platform adapters, and transports are not covered by this matrix. The plugin
+platform adapters, and transport runtime combinations beyond the HTTP/TCP
+compatibility fixtures are not covered by this matrix. The plugin
 does not select or replace them; execution follows the application's Nest config.
 Nest prereleases and majors other than v12 are outside the supported contract.
 
