@@ -170,6 +170,41 @@ describe('published Nest plugin', () => {
     ).toBe(false);
   });
 
+  it('documents the complete native collection and aliases while excluding migration schematics', () => {
+    const published = JSON.parse(
+      readFileSync(join(installedPackage, 'generators.json'), 'utf8')
+    ).generators;
+    const nativeRoot = dirname(
+      require.resolve('@nestjs/schematics/package.json')
+    );
+    const native = JSON.parse(
+      readFileSync(join(nativeRoot, 'dist/collection.json'), 'utf8')
+    ).schematics as Record<string, { aliases?: string[] }>;
+    const expected = Object.keys(native).filter((name) => name !== 'upgrade');
+    expect(Object.keys(published).sort()).toEqual(['init', ...expected].sort());
+    const readme = readFileSync(join(installedPackage, 'README.md'), 'utf8');
+    const documented = new Map(
+      readme
+        .split('\n')
+        .filter((line) => line.startsWith('|'))
+        .map((line) => {
+          const cells = line
+            .split('|')
+            .slice(1, -1)
+            .map((cell) => cell.trim().replace(/`/g, ''));
+          return [cells[0], cells[1]];
+        })
+    );
+    for (const name of expected) {
+      const aliases = native[name].aliases ?? [];
+      expect(published[name].aliases ?? []).toEqual(aliases);
+      expect(documented.get(name)).toBe(aliases.join(', ') || '—');
+    }
+    expect(published.upgrade).toBeUndefined();
+    expect(published.update).toBeUndefined();
+    expect(readme).toContain('issues/508');
+  });
+
   it.each([
     {
       root: '.',
