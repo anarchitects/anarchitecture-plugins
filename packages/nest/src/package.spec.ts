@@ -6,11 +6,13 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
-describe('published package shell', () => {
+describe('published Nest plugin', () => {
   const packageRoot = resolve(__dirname, '..');
   let consumerRoot: string;
   let installedPackage: string;
@@ -46,6 +48,23 @@ describe('published package shell', () => {
       installedPackage,
       '--strip-components=1',
     ]);
+
+    // Supply the installed package's dependencies/peers without a network install.
+    const manifest = JSON.parse(
+      readFileSync(join(installedPackage, 'package.json'), 'utf8')
+    );
+    for (const dependency of Object.keys({
+      ...manifest.dependencies,
+      ...manifest.peerDependencies,
+    })) {
+      const destination = join(consumerRoot, 'node_modules', dependency);
+      mkdirSync(dirname(destination), { recursive: true });
+      symlinkSync(
+        dirname(require.resolve(`${dependency}/package.json`)),
+        destination,
+        'junction'
+      );
+    }
   }, 30_000);
 
   afterAll(() => {
@@ -118,4 +137,64 @@ describe('published package shell', () => {
       ]);
     }
   );
+
+  it('discovers projects through Nx and preserves explicit names and targets', () => {
+    const fixtures = {
+      'package.json': {
+        name: 'consumer',
+        private: true,
+        workspaces: ['apps/*'],
+      },
+      'nx.json': { plugins: ['@anarchitects/nest/plugin'] },
+      'nest-cli.json': { sourceRoot: 'src' },
+      'apps/api/package.json': { name: '@consumer/api' },
+      'apps/api/nest-cli.json': { sourceRoot: 'src' },
+      'services/worker/project.json': {
+        name: 'worker',
+        targets: { check: { command: 'echo check' } },
+      },
+      'services/worker/nest-cli.json': {},
+      'apps/web/package.json': { name: '@consumer/web' },
+      'tools/nest-cli.json': {},
+    };
+    for (const [path, value] of Object.entries(fixtures)) {
+      mkdirSync(dirname(join(consumerRoot, path)), { recursive: true });
+      writeFileSync(join(consumerRoot, path), JSON.stringify(value));
+    }
+
+    const graphFile = join(consumerRoot, 'graph.json');
+    execFileSync(
+      process.execPath,
+      [require.resolve('nx/bin/nx.js'), 'graph', '--file', graphFile],
+      {
+        cwd: consumerRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          NX_DAEMON: 'false',
+          NX_ISOLATE_PLUGINS: 'false',
+          NX_NO_CLOUD: 'true',
+        },
+        stdio: 'pipe',
+      }
+    );
+    const { nodes } = JSON.parse(readFileSync(graphFile, 'utf8')).graph;
+    expect(Object.keys(nodes).sort()).toEqual([
+      '@consumer/api',
+      '@consumer/web',
+      'consumer',
+      'worker',
+    ]);
+    for (const name of ['consumer', '@consumer/api', 'worker']) {
+      expect(nodes[name].data.metadata.technologies).toContain('nest');
+      for (const target of ['build', 'start', 'test', 'lint']) {
+        expect(nodes[name].data.targets[target]).toBeUndefined();
+      }
+    }
+    expect(nodes['@consumer/api'].data.root).toBe('apps/api');
+    expect(nodes.worker.data.targets.check.options.command).toBe('echo check');
+    expect(
+      nodes['@consumer/web'].data.metadata?.technologies ?? []
+    ).not.toContain('nest');
+  }, 30_000);
 });
