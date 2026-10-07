@@ -35,11 +35,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@anarchitects/nest@workspace:packages/nest"
   dependencies:
+    "@angular-devkit/core": "npm:22.2.0"
+    "@angular-devkit/schematics": "npm:22.2.0"
     "@nestjs/cli": "npm:12.0.0"
+    "@nestjs/schematics": "npm:12.0.6"
     "@types/semver": "npm:^7.7.0"
+    rxjs: "npm:7.8.2"
     semver: "npm:^7.7.2"
     tslib: "npm:^2.3.0"
-    typescript: "npm:>=5.9.0 <7"
+    typescript: "npm:>=6.0.0 <7"
   peerDependencies:
     "@nestjs/cli": ">=12.0.0 <13"
     "@nx/devkit": ">=23.2.0 <24"
@@ -4255,7 +4259,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:^12.0.0":
+"@nestjs/schematics@npm:12.0.6, @nestjs/schematics@npm:^12.0.0":
   version: 12.0.6
   resolution: "@nestjs/schematics@npm:12.0.6"
   dependencies:
@@ -16743,7 +16747,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:6.0.3, typescript@npm:>=5.9.0 <7, typescript@npm:~6.0.2, typescript@npm:~6.0.3":
+"typescript@npm:6.0.3, typescript@npm:>=5.9.0 <7, typescript@npm:>=6.0.0 <7, typescript@npm:~6.0.2, typescript@npm:~6.0.3":
   version: 6.0.3
   resolution: "typescript@npm:6.0.3"
   bin:
@@ -16763,7 +16767,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A>=5.9.0 <7#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~6.0.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~6.0.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A>=5.9.0 <7#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A>=6.0.0 <7#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~6.0.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~6.0.3#optional!builtin<compat/typescript>":
   version: 6.0.3
   resolution: "typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>::version=6.0.3&hash=5786d5"
   bin:
