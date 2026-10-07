@@ -1,2 +1,2 @@
 // SPDX-License-Identifier: MIT
-export { name } from './plugins/plugin';
+export { name, createNodes, createNodesV2 } from './plugins/plugin';

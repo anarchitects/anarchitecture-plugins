@@ -9,8 +9,8 @@ export default [
         'error',
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
-          // Host/tooling contracts are intentional before inference is implemented.
-          ignoredDependencies: ['@nestjs/cli', '@nx/devkit', 'nx'],
+          // Host/tooling contracts do not require direct imports.
+          ignoredDependencies: ['@nestjs/cli', 'nx'],
         },
       ],
     },

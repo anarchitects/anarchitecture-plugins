@@ -41,7 +41,7 @@
       "domain:nest"
     ]
   },
-  "description": "Nx integration for stable NestJS v12; upstream-portable Project Crystal package shell.",
+  "description": "Nx project discovery for stable NestJS v12 using Project Crystal.",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -5,9 +5,9 @@ intended for eventual contribution to `@nx/nest`, rather than a permanent fork.
 
 ## Status
 
-This package currently provides the publishable shell and the
-`@anarchitects/nest/plugin` entrypoint. It does not yet detect projects, infer
-targets, or provide generators or executors. Those features are tracked in
+This package discovers Nest projects through the `@anarchitects/nest/plugin`
+entrypoint. It does not yet infer targets or provide generators or executors.
+Those features are tracked in
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
 ## Compatibility
@@ -25,7 +25,8 @@ install or import the application's `@nestjs/core` or platform adapter.
 Application dependencies remain owned by the Nest project.
 
 These ranges establish the package contract. Full Nest v12 project-shape
-validation is planned in #485; this shell only validates packaging and loading.
+validation is planned in #485; current coverage validates packaging, loading,
+and project discovery.
 
 ## Installation and registration
 
@@ -35,7 +36,7 @@ Once a revived version is published, install it in an Nx workspace using:
 yarn nx add @anarchitects/nest
 ```
 
-The shell has no init generator yet (#486), so plugin registration is manual.
+The plugin has no init generator yet (#486), so registration is manual.
 Add the entry to the existing `plugins` array in `nx.json`:
 
 ```json
@@ -44,15 +45,28 @@ Add the entry to the existing `plugins` array in `nx.json`:
 }
 ```
 
-Registration currently adds no projects or targets. There are no plugin options,
-defaults, or precedence rules yet. Subsequent issues will add discovery from
-`nest-cli.json` and inference for Nest-owned `build` and `start` commands.
+Registration discovers `**/nest-cli.json` at the workspace root or in nested
+directories. A config must have a sibling `package.json` or `project.json`;
+configs without either are ignored, even if a parent directory has a manifest.
+The config's directory becomes the Nx project root (`.` at the workspace root).
+The plugin adds `nest` technology metadata and lets Nx's built-in plugins merge
+project names and explicit configuration from the manifests.
+
+Discovery uses filenames only; it does not parse or validate Nest config
+contents, execute the Nest CLI, change the working directory, or write a cache.
+Nest `sourceRoot`, `root`, and `projects` fields do not relocate the Nx project
+or create separate child nodes. In Nest monorepo mode, this stage discovers the
+directory containing `nest-cli.json`. There are no plugin options yet.
+
+No targets are inferred at this stage. Subsequent issues add Nest-owned `build`
+and `start` commands. Existing explicit targets remain unchanged.
 Jest, Vitest, ESLint, and Oxlint remain the responsibility of their respective
 Nx integrations.
 
 Both the root and `/plugin` entrypoints provide compiled CommonJS JavaScript,
 loadable with `require` or ESM `import`, plus TypeScript declarations. Workspace
-development uses the repository's source export condition. The shell uses no
+development uses the repository's source export condition. Discovery uses only
+public Nx APIs and Node filesystem reads. The plugin uses no
 private Nx APIs, copied Nest templates, or historical plugin implementation.
 
 ## Development and release
@@ -64,7 +78,8 @@ yarn nx release --projects nx-nest --first-release --dry-run
 
 The TypeScript, Jest, ESLint, and publish targets are inferred by the workspace's
 existing Nx plugins. Tests depend on the build to verify the actual packed
-artifact, including both entrypoints and the shipped declarations and license.
+artifact, including both entrypoints, the shipped declarations and license,
+and discovery through Nx's project graph in a temporary consumer workspace.
 
 The Nx project is `nx-nest`; the npm package is `@anarchitects/nest`. The existing
 independent release configuration can version just this project. The manual
@@ -81,5 +96,6 @@ and existing attribution so the core can be contributed to the MIT-licensed Nx
 repository without a later relicensing step.
 
 The architectural reference remains
-[Nx PR #35551](https://github.com/nrwl/nx/pull/35551). This shell does not copy code
-from that PR or restore the deleted Anarchitects implementation.
+[Nx PR #35551](https://github.com/nrwl/nx/pull/35551). Discovery follows its
+config-directory and sibling-manifest rules, without its private Nx API or
+target-cache dependencies. The deleted Anarchitects implementation is not restored.
