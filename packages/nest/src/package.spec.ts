@@ -138,63 +138,124 @@ describe('published Nest plugin', () => {
     }
   );
 
-  it('discovers projects through Nx and preserves explicit names and targets', () => {
-    const fixtures = {
-      'package.json': {
-        name: 'consumer',
-        private: true,
-        workspaces: ['apps/*'],
-      },
-      'nx.json': { plugins: ['@anarchitects/nest/plugin'] },
-      'nest-cli.json': { sourceRoot: 'src' },
-      'apps/api/package.json': { name: '@consumer/api' },
-      'apps/api/nest-cli.json': { sourceRoot: 'src' },
-      'services/worker/project.json': {
-        name: 'worker',
-        targets: { check: { command: 'echo check' } },
-      },
-      'services/worker/nest-cli.json': {},
-      'apps/web/package.json': { name: '@consumer/web' },
-      'tools/nest-cli.json': {},
-    };
-    for (const [path, value] of Object.entries(fixtures)) {
-      mkdirSync(dirname(join(consumerRoot, path)), { recursive: true });
-      writeFileSync(join(consumerRoot, path), JSON.stringify(value));
-    }
-
-    const graphFile = join(consumerRoot, 'graph.json');
-    execFileSync(
-      process.execPath,
-      [require.resolve('nx/bin/nx.js'), 'graph', '--file', graphFile],
-      {
-        cwd: consumerRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          NX_DAEMON: 'false',
-          NX_ISOLATE_PLUGINS: 'false',
-          NX_NO_CLOUD: 'true',
+  it.each(['build', 'compile'])(
+    'infers %s through Nx and preserves explicit targets',
+    (buildTargetName) => {
+      const fixtures = {
+        'package.json': {
+          name: 'consumer',
+          private: true,
+          workspaces: ['apps/*'],
         },
-        stdio: 'pipe',
+        'nx.json': {
+          plugins: [
+            {
+              plugin: '@anarchitects/nest/plugin',
+              options: { buildTargetName },
+            },
+          ],
+          namedInputs: {
+            default: ['{projectRoot}/**/*'],
+            production: ['default'],
+          },
+          targetDefaults: {
+            [buildTargetName]: {
+              metadata: { description: 'Workspace build default' },
+            },
+          },
+        },
+        'nest-cli.json': { sourceRoot: 'src' },
+        'apps/api/package.json': { name: '@consumer/api' },
+        'apps/api/nest-cli.json': { sourceRoot: 'src' },
+        'services/worker/project.json': {
+          name: 'worker',
+          targets: {
+            check: { command: 'echo check' },
+            [buildTargetName]: {
+              command: 'echo custom build',
+              cache: false,
+              outputs: ['{projectRoot}/custom-dist'],
+              metadata: { description: 'Explicit worker build' },
+            },
+          },
+        },
+        'services/worker/nest-cli.json': {},
+        'apps/web/package.json': { name: '@consumer/web' },
+        'tools/nest-cli.json': {},
+      };
+      for (const [path, value] of Object.entries(fixtures)) {
+        mkdirSync(dirname(join(consumerRoot, path)), { recursive: true });
+        writeFileSync(join(consumerRoot, path), JSON.stringify(value));
       }
-    );
-    const { nodes } = JSON.parse(readFileSync(graphFile, 'utf8')).graph;
-    expect(Object.keys(nodes).sort()).toEqual([
-      '@consumer/api',
-      '@consumer/web',
-      'consumer',
-      'worker',
-    ]);
-    for (const name of ['consumer', '@consumer/api', 'worker']) {
-      expect(nodes[name].data.metadata.technologies).toContain('nest');
-      for (const target of ['build', 'start', 'test', 'lint']) {
-        expect(nodes[name].data.targets[target]).toBeUndefined();
+
+      const graphFile = join(consumerRoot, 'graph.json');
+      execFileSync(
+        process.execPath,
+        [require.resolve('nx/bin/nx.js'), 'graph', '--file', graphFile],
+        {
+          cwd: consumerRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            NX_DAEMON: 'false',
+            NX_ISOLATE_PLUGINS: 'false',
+            NX_NO_CLOUD: 'true',
+          },
+          stdio: 'pipe',
+        }
+      );
+      const { nodes } = JSON.parse(readFileSync(graphFile, 'utf8')).graph;
+      expect(Object.keys(nodes).sort()).toEqual([
+        '@consumer/api',
+        '@consumer/web',
+        'consumer',
+        'worker',
+      ]);
+      for (const name of ['consumer', '@consumer/api', 'worker']) {
+        expect(nodes[name].data.metadata.technologies).toContain('nest');
+        for (const target of ['start', 'test', 'lint']) {
+          expect(nodes[name].data.targets[target]).toBeUndefined();
+        }
+        if (buildTargetName !== 'build')
+          expect(nodes[name].data.targets.build).toBeUndefined();
       }
-    }
-    expect(nodes['@consumer/api'].data.root).toBe('apps/api');
-    expect(nodes.worker.data.targets.check.options.command).toBe('echo check');
-    expect(
-      nodes['@consumer/web'].data.metadata?.technologies ?? []
-    ).not.toContain('nest');
-  }, 30_000);
+      for (const name of ['consumer', '@consumer/api']) {
+        expect(nodes[name].data.targets[buildTargetName]).toMatchObject({
+          executor: 'nx:run-commands',
+          options: { command: 'nest build', cwd: nodes[name].data.root },
+          cache: true,
+          dependsOn: [`^${buildTargetName}`],
+          inputs: [
+            'production',
+            '^production',
+            { externalDependencies: ['@nestjs/cli'] },
+            '{workspaceRoot}/tsconfig.json',
+            '{workspaceRoot}/tsconfig.base.json',
+          ],
+          outputs: ['{projectRoot}/dist'],
+          metadata: {
+            description: 'Workspace build default',
+            technologies: ['nest'],
+          },
+        });
+      }
+      expect(nodes.worker.data.targets[buildTargetName]).toMatchObject({
+        options: { command: 'echo custom build' },
+        cache: false,
+        outputs: ['{projectRoot}/custom-dist'],
+        metadata: { description: 'Explicit worker build' },
+      });
+      expect(nodes['@consumer/api'].data.root).toBe('apps/api');
+      expect(nodes.worker.data.targets.check.options.command).toBe(
+        'echo check'
+      );
+      expect(
+        nodes['@consumer/web'].data.metadata?.technologies ?? []
+      ).not.toContain('nest');
+      expect(
+        nodes['@consumer/web'].data.targets[buildTargetName]
+      ).toBeUndefined();
+    },
+    30_000
+  );
 });

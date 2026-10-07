@@ -41,7 +41,7 @@
       "domain:nest"
     ]
   },
-  "description": "Nx project discovery for stable NestJS v12 using Project Crystal.",
+  "description": "Nx project discovery and build inference for stable NestJS v12 using Project Crystal.",
   "license": "MIT",
   "repository": {
     "type": "git",

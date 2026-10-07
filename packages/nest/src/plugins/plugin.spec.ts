@@ -38,7 +38,32 @@ describe('Nest project discovery', () => {
 
   function expectedProject(root: string) {
     return {
-      projects: { [root]: { root, metadata: { technologies: ['nest'] } } },
+      projects: {
+        [root]: {
+          root,
+          metadata: { technologies: ['nest'] },
+          targets: {
+            build: {
+              command: 'nest build',
+              options: { cwd: root },
+              cache: true,
+              dependsOn: ['^build'],
+              inputs: [
+                'default',
+                '^default',
+                { externalDependencies: ['@nestjs/cli'] },
+                '{workspaceRoot}/tsconfig.json',
+                '{workspaceRoot}/tsconfig.base.json',
+              ],
+              outputs: ['{projectRoot}/dist'],
+              metadata: {
+                technologies: ['nest'],
+                description: 'Build the Nest project.',
+              },
+            },
+          },
+        },
+      },
     };
   }
 
@@ -98,6 +123,37 @@ describe('Nest project discovery', () => {
         context
       )
     ).toEqual([]);
+  });
+
+  it('uses custom target names without mutating options or adding other targets', async () => {
+    write('apps/api/nest-cli.json');
+    write('apps/api/package.json', {
+      name: 'api',
+      nx: { namedInputs: { production: ['default'] } },
+    });
+    const options = Object.freeze({ buildTargetName: 'compile' });
+
+    const result = await createNodesV2[1](
+      ['apps/api/nest-cli.json'],
+      options,
+      context
+    );
+    const targets = result[0][1].projects?.['apps/api'].targets;
+    expect(Object.keys(targets ?? {})).toEqual(['compile']);
+    expect(targets?.compile).toMatchObject({
+      command: 'nest build',
+      options: { cwd: 'apps/api' },
+      cache: true,
+      dependsOn: ['^compile'],
+      inputs: [
+        'production',
+        '^production',
+        { externalDependencies: ['@nestjs/cli'] },
+        '{workspaceRoot}/tsconfig.json',
+        '{workspaceRoot}/tsconfig.base.json',
+      ],
+    });
+    expect(options).toEqual({ buildTargetName: 'compile' });
   });
 
   it('ignores non-Nest files and an empty discovery list', async () => {
