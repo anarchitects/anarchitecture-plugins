@@ -198,7 +198,21 @@ describe('native Nest application generator', () => {
         assert.equal(/Observe/.test(tree.read('apps/api/'+file,'utf8')),observe);
 
       const parity=()=>{
-        const filtered=target=>new Map([...snapshotNxTree(target)].filter(([path])=>path!=='nx.json' && !path.endsWith('/project.json')));
+        const filtered=target=>new Map([...snapshotNxTree(target)]
+          .filter(([path])=>path!=='nx.json' && !path.endsWith('/project.json') && !path.endsWith('/rspack.config.cjs'))
+          .map(([path,bytes])=>{
+            if(path==='apps/api/package.json') {
+              const json=JSON.parse(bytes);
+              for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin']) delete json.devDependencies[dep];
+              return [path,json];
+            }
+            if(path==='apps/api/nest-cli.json') {
+              const json=JSON.parse(bytes);
+              if(json.compilerOptions?.builder?.type==='rspack') json.compilerOptions.builder='rspack';
+              return [path,json];
+            }
+            return [path,bytes];
+          }));
         assert.deepEqual(filtered(tree),filtered(expected));
       };
       parity();
@@ -207,7 +221,7 @@ describe('native Nest application generator', () => {
         await local('./dist/generators/'+schematic+'/generator.js').default(tree,{name,project:'api'});
         parity();
       }
-      assert.equal(json('nest-cli.json').compilerOptions.builder,'rspack');
+      assert.deepEqual(json('nest-cli.json').compilerOptions.builder,{type:'rspack',options:{configPath:'rspack.config.cjs'}});
       assert.ok(json('tsconfig.json').compilerOptions.paths['@app/shared']);
       const memberManifest=json('package.json');
       const resourceOptions={name:'users',type:'rest',crud:true};

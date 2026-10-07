@@ -16,6 +16,7 @@ import { delimiter, dirname, join, resolve } from 'node:path';
 import { fixtures, type NestFixture } from './fixtures';
 import { standardSchemaFixture } from './standard-schema-fixture';
 import { assertCjsJestConsumer } from './cjs-jest-consumer';
+import { assertRspackConsumer } from './rspack-consumer';
 
 const e2eRoot = resolve(__dirname, '..');
 const pluginRoot = resolve(e2eRoot, '../nest');
@@ -85,6 +86,14 @@ function environment(root: string): NodeJS.ProcessEnv {
 }
 
 function nx(root: string, args: string[]) {
+  // Linked fixtures test CLI behavior without network installs. Real consumers
+  // exercise the default installation callback through their own Yarn runner.
+  if (
+    ['g', 'generate'].includes(args[0]) &&
+    /^@anarchitects\/nest:(sub-app|app|library|lib)$/.test(args[1])
+  ) {
+    args = [...args, '--skipInstall'];
+  }
   try {
     return execFileSync(process.execPath, [nxBin, ...args], {
       cwd: root,
@@ -286,6 +295,18 @@ describe('packed Nest plugin with stable v12 applications', () => {
   it('runs CJS Jest with real Yarn hoisting and explicit consumer configuration', () => {
     assertCjsJestConsumer(join(suiteRoot, 'cjs-yarn-consumer'), tarball);
   }, 360_000);
+
+  it.each(['esm', 'cjs'])(
+    'builds and starts native %s members with real Yarn Rspack setup',
+    async (type) => {
+      await assertRspackConsumer(
+        join(suiteRoot, `rspack-yarn-${type}`),
+        tarball,
+        type
+      );
+    },
+    360_000
+  );
 
   it.each(fixtures)(
     '$name: discovers, builds, restores outputs, and starts',

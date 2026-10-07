@@ -40,6 +40,11 @@
     "project": {
       "type": "string",
       "description": "Nx project owning the Nest workspace. Required when selection is ambiguous."
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip installing dependencies after generation. Dependency and build configuration changes are still generated."
     }
   },
   "required": ["name"],

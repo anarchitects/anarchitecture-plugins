@@ -436,6 +436,7 @@ describe('published Nest plugin', () => {
         const subApp = [
           'generate',
           '@anarchitects/nest:app',
+          '--skipInstall=true',
           'worker',
           '--project=api',
           '--no-interactive',
@@ -447,6 +448,7 @@ describe('published Nest plugin', () => {
         nx(
           'generate',
           '@anarchitects/nest:lib',
+          '--skipInstall=true',
           'shared',
           '--project=api',
           '--prefix=@domain',

@@ -104,6 +104,25 @@ This catches the dependency-layout failure tracked by
 linked dependencies and template parity alone cannot detect. It does not test
 interactive watch/debug sessions, converted-monorepo Vitest, or Oxlint.
 
+## Real-install Rspack consumers
+
+The `rspack-yarn-esm` and `rspack-yarn-cjs` cases use the same isolated real-install
+helper as the CJS Jest regression. They generate an application, REST resource,
+sub-app, and library, checking that dry runs leave lockfiles unchanged and that
+member generation automatically installs the missing compiler dependencies.
+No dependencies are hand-linked and default workspace hoisting stays enabled.
+The generated Rspack configuration must handle the hoisted Nest framework
+without installing unused transport packages or changing hoisting policy.
+
+The three inferred native member builds must emit their expected files. Both
+applications then start through their inferred Nx targets and serve HTTP requests
+on temporary local ports; process groups are stopped in cleanup. Generated files
+remain unchanged during build/start, and native scripts and root Yarn
+configuration remain unchanged. These cases validate the default automatic
+setup for [#534](https://github.com/anarchitects/anarchitecture-plugins/issues/534),
+not arbitrary externalization overrides or other package managers. Each has a
+six-minute test timeout; installs require registry/cache access as described above.
+
 ## CI
 
 The existing Main CI workflow runs `nx affected -t ... e2e-ci` with Nx Cloud. This
