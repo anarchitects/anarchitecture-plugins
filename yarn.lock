@@ -36,6 +36,8 @@ __metadata:
   resolution: "@anarchitects/nest@workspace:packages/nest"
   dependencies:
     "@nestjs/cli": "npm:12.0.0"
+    "@types/semver": "npm:^7.7.0"
+    semver: "npm:^7.7.2"
     tslib: "npm:^2.3.0"
     typescript: "npm:>=5.9.0 <7"
   peerDependencies:
@@ -6036,6 +6038,13 @@ __metadata:
   dependencies:
     "@types/node": "npm:*"
   checksum: 10c0/474ac2402e6d43c007eee25f50d01eb1f67255ca83dd8e036877292bbe8dd5d2d1e50b54b408e233b50a8c38e681ff3ebeaf22f18b478056eddb65536abb003a
+  languageName: node
+  linkType: hard
+
+"@types/semver@npm:^7.7.0":
+  version: 7.8.0
+  resolution: "@types/semver@npm:7.8.0"
+  checksum: 10c0/46a1f38e36013448b279798e8b134e7e8de3b3630b1f40683903b9d57d36dd1d70838515570ed9a149fa09e9c381b9e39319b58d7b9f3b929b42ae2becff7aa3
   languageName: node
   linkType: hard
 

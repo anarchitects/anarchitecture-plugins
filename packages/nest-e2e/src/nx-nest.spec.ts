@@ -129,15 +129,7 @@ function createWorkspace(fixture: NestFixture) {
       type: fixture.moduleType,
     });
   write(root, 'nx.json', {
-    plugins: [
-      {
-        plugin: '@anarchitects/nest/plugin',
-        options: {
-          buildTargetName: fixture.buildTargetName,
-          startTargetName: fixture.startTargetName,
-        },
-      },
-    ],
+    plugins: [],
     namedInputs: { default: ['{projectRoot}/**/*'], production: ['default'] },
   });
   // Nx uses the real dependency lock to create external nodes for task hashing.
@@ -269,6 +261,28 @@ describe('packed Nest plugin with stable v12 applications', () => {
       try {
         const buildName = fixture.buildTargetName ?? 'build';
         const startName = fixture.startTargetName ?? 'start';
+        const initArgs = [
+          'generate',
+          '@anarchitects/nest:init',
+          '--no-interactive',
+        ];
+        if (fixture.buildTargetName)
+          initArgs.push(`--buildTargetName=${buildName}`);
+        if (fixture.startTargetName)
+          initArgs.push(`--startTargetName=${startName}`);
+        const manifest = readFileSync(join(root, 'package.json'), 'utf8');
+        const nestConfig = readFileSync(
+          join(root, fixture.root, 'nest-cli.json'),
+          'utf8'
+        );
+        nx(root, initArgs);
+        const initialized = readFileSync(join(root, 'nx.json'), 'utf8');
+        nx(root, initArgs);
+        expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(initialized);
+        expect(readFileSync(join(root, 'package.json'), 'utf8')).toBe(manifest);
+        expect(
+          readFileSync(join(root, fixture.root, 'nest-cli.json'), 'utf8')
+        ).toBe(nestConfig);
         const graphFile = join(root, 'graph.json');
         nx(root, ['graph', '--file', graphFile]);
         const nodes: Record<string, { data: ProjectConfiguration }> =
@@ -338,4 +352,22 @@ describe('packed Nest plugin with stable v12 applications', () => {
       }
     }
   );
+
+  it('rejects an incompatible declared framework without partial registration', () => {
+    const root = createWorkspace(fixtures[0]);
+    try {
+      const manifest = JSON.parse(
+        readFileSync(join(root, 'package.json'), 'utf8')
+      );
+      manifest.dependencies['@nestjs/common'] = '^11.0.0';
+      write(root, 'package.json', manifest);
+      const before = readFileSync(join(root, 'nx.json'), 'utf8');
+      expect(() =>
+        nx(root, ['generate', '@anarchitects/nest:init', '--no-interactive'])
+      ).toThrow('@nestjs/common@^11.0.0');
+      expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(before);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

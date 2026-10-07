@@ -7,8 +7,9 @@ intended for eventual contribution to `@nx/nest`, rather than a permanent fork.
 
 This package discovers Nest projects and infers cacheable build and continuous
 start targets through the `@anarchitects/nest/plugin` entrypoint. Build outputs
-are resolved from the effective Nest TypeScript configuration. Further validation
-and generators remain tracked in
+are resolved from the effective Nest TypeScript configuration. The `init`
+generator validates Nest v12 declarations and registers inference. Remaining
+integration work is tracked in
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
 ## Compatibility
@@ -39,14 +40,47 @@ Once a revived version is published, install it in an Nx workspace using:
 yarn nx add @anarchitects/nest
 ```
 
-The plugin has no init generator yet (#486), so registration is manual.
-Add the entry to the existing `plugins` array in `nx.json`:
+`nx add` invokes the package's `init` generator. For an already installed package,
+run it directly; custom target names are optional:
+
+```sh
+yarn nx g @anarchitects/nest:init
+yarn nx g @anarchitects/nest:init --buildTargetName=compile --startTargetName=serve
+```
+
+The generator registers the following entry in the existing `plugins` array in
+`nx.json` (manual registration remains supported):
 
 ```json
 {
   "plugins": ["@anarchitects/nest/plugin"]
 }
 ```
+
+Init validates before writing. It checks declared dependencies, devDependencies,
+peerDependencies, and optionalDependencies in every non-ignored `package.json`,
+including nested workspace packages. Nest CLI, common, core, platform-express,
+platform-fastify, microservices, websockets, and testing declarations must use
+stable semver ranges wholly within `>=12.0.0 <13`. Independently versioned
+integrations such as Swagger and TypeORM are not treated as framework versions.
+At least one workspace or project manifest must declare the CLI as more than a
+peer dependency. A CLI-only workspace is accepted before applications are added.
+
+Unsupported majors, prereleases, broad ranges spanning unsupported majors,
+tags, aliases, and unresolved `workspace:`/`file:` protocols fail with the
+manifest path, dependency section, and guidance. This is a declaration check,
+not an inspection of installed versions; run your package manager's install
+after correcting declarations. Missing CLI guidance recommends a stable v12
+devDependency, for example `yarn add -D @nestjs/cli@^12` at the appropriate
+workspace/project package. Init never installs packages or rewrites manifests,
+lockfiles, Nest configs, or targets.
+
+Repeated runs preserve existing names when options are omitted. Supplied names
+merge into existing registrations while preserving other options, include/exclude
+scopes, ordering, and unrelated Nx configuration. The root entrypoint alias
+`@anarchitects/nest` is recognized too. Deliberate multiple scoped registrations
+are retained; explicit name options apply to each. Effective build/start names
+must be non-empty and different. No application, library, or resource is generated.
 
 Registration discovers `**/nest-cli.json` at the workspace root or in nested
 directories. A config must have a sibling `package.json` or `project.json`;
@@ -190,6 +224,9 @@ declarations is now public `@nx/devkit`:
 | `readJsonFile`                               | Nest/project configuration reads in `src/utils/read-build-outputs.ts` and `src/utils/named-inputs.ts` |
 | `CreateNodesContext`, `ProjectConfiguration` | Named-input reader's public context/configuration types                                               |
 | `NxJsonConfiguration`, `TargetConfiguration` | Pure build/start target construction types                                                            |
+
+Init additionally uses public `readJson`, `writeJson`, `readNxJson`, `updateNxJson`,
+`visitNotIgnoredFiles`, and `Tree` for validation and configuration edits.
 
 `CreateNodes` and `CreateNodesContext` are the current types for the supported
 Nx baseline. The `createNodesV2` runtime export remains an alias of `createNodes`;

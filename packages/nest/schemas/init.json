@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "NestInit",
+  "title": "Initialize Nest v12 inference",
+  "description": "Validate declared stable Nest v12 dependencies and register the inference plugin without installing or upgrading packages.",
+  "type": "object",
+  "cli": "nx",
+  "properties": {
+    "buildTargetName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Build target name. Preserves existing options when omitted; new registrations default to build."
+    },
+    "startTargetName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Start target name. Preserves existing options when omitted; new registrations default to start."
+    }
+  },
+  "additionalProperties": false
+}

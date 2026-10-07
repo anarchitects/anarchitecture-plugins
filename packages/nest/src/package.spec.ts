@@ -94,6 +94,12 @@ describe('published Nest plugin', () => {
       }
     }
     expect(manifest.license).toBe('MIT');
+    const collection = JSON.parse(
+      readFileSync(join(installedPackage, manifest.generators), 'utf8')
+    );
+    const init = collection.generators.init;
+    expect(existsSync(join(installedPackage, `${init.factory}.js`))).toBe(true);
+    expect(existsSync(join(installedPackage, init.schema))).toBe(true);
     expect(readFileSync(join(installedPackage, 'LICENSE'), 'utf8')).toContain(
       'MIT License'
     );
