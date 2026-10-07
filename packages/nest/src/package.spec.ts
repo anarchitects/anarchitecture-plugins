@@ -138,9 +138,12 @@ describe('published Nest plugin', () => {
     }
   );
 
-  it.each(['build', 'compile'])(
-    'infers %s through Nx and preserves explicit targets',
-    (buildTargetName) => {
+  it.each([
+    ['build', 'start'],
+    ['compile', 'serve'],
+  ])(
+    'infers %s and %s through Nx and preserves explicit targets',
+    (buildTargetName, startTargetName) => {
       const fixtures = {
         'package.json': {
           name: 'consumer',
@@ -151,7 +154,7 @@ describe('published Nest plugin', () => {
           plugins: [
             {
               plugin: '@anarchitects/nest/plugin',
-              options: { buildTargetName },
+              options: { buildTargetName, startTargetName },
             },
           ],
           namedInputs: {
@@ -159,6 +162,9 @@ describe('published Nest plugin', () => {
             production: ['default'],
           },
           targetDefaults: {
+            [startTargetName]: {
+              metadata: { description: 'Workspace start default' },
+            },
             [buildTargetName]: {
               metadata: { description: 'Workspace build default' },
             },
@@ -181,6 +187,11 @@ describe('published Nest plugin', () => {
           name: 'worker',
           targets: {
             check: { command: 'echo check' },
+            [startTargetName]: {
+              command: 'echo custom start',
+              continuous: false,
+              metadata: { description: 'Explicit worker start' },
+            },
             [buildTargetName]: {
               command: 'echo custom build',
               cache: false,
@@ -223,13 +234,29 @@ describe('published Nest plugin', () => {
       ]);
       for (const name of ['consumer', '@consumer/api', 'worker']) {
         expect(nodes[name].data.metadata.technologies).toContain('nest');
-        for (const target of ['start', 'test', 'lint']) {
+        for (const target of ['test', 'lint']) {
           expect(nodes[name].data.targets[target]).toBeUndefined();
         }
         if (buildTargetName !== 'build')
           expect(nodes[name].data.targets.build).toBeUndefined();
+        if (startTargetName !== 'start')
+          expect(nodes[name].data.targets.start).toBeUndefined();
       }
       for (const name of ['consumer', '@consumer/api']) {
+        const startTarget = nodes[name].data.targets[startTargetName];
+        expect(startTarget).toMatchObject({
+          executor: 'nx:run-commands',
+          options: { command: 'nest start', cwd: nodes[name].data.root },
+          continuous: true,
+          cache: false,
+          metadata: {
+            description: 'Workspace start default',
+            technologies: ['nest'],
+          },
+        });
+        for (const property of ['inputs', 'outputs', 'dependsOn']) {
+          expect(startTarget[property]).toBeUndefined();
+        }
         expect(nodes[name].data.targets[buildTargetName]).toMatchObject({
           executor: 'nx:run-commands',
           options: { command: 'nest build', cwd: nodes[name].data.root },
@@ -266,6 +293,13 @@ describe('published Nest plugin', () => {
         outputs: ['{projectRoot}/custom-dist'],
         metadata: { description: 'Explicit worker build' },
       });
+      expect(nodes.worker.data.targets[startTargetName]).toMatchObject({
+        options: { command: 'echo custom start' },
+        continuous: false,
+        metadata: { description: 'Explicit worker start' },
+      });
+      // A replacement command can replace inferred settings rather than merge them.
+      expect(nodes.worker.data.targets[startTargetName].cache).not.toBe(true);
       expect(nodes['@consumer/api'].data.root).toBe('apps/api');
       expect(nodes.worker.data.targets.check.options.command).toBe(
         'echo check'
@@ -275,6 +309,9 @@ describe('published Nest plugin', () => {
       ).not.toContain('nest');
       expect(
         nodes['@consumer/web'].data.targets[buildTargetName]
+      ).toBeUndefined();
+      expect(
+        nodes['@consumer/web'].data.targets[startTargetName]
       ).toBeUndefined();
     },
     30_000
