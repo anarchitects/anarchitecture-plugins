@@ -29,7 +29,7 @@ The workspace is organized as independent plugin packages under `packages/`.
 - Governance plugin: [packages/governance/README.md](packages/governance/README.md)
 - TypeORM plugin: [packages/typeorm/README.md](packages/typeorm/README.md)
 - JS plugin: [packages/js/README.md](packages/js/README.md)
-- Nest plugin: [packages/nest/README.md](packages/nest/README.md), including ownership boundaries, support coverage, and its upstream path. The revived package is being prepared for release.
+- Nest plugin: [packages/nest/README.md](packages/nest/README.md), including ownership boundaries, support coverage, and its upstream path. The revived MVP is available as `@anarchitects/nest@0.0.1`; see the [release notes](docs/releases/nest-0.0.1.md).
 
 See the [plugin support matrix](docs/support-matrix.md) for supported Nx and
 TypeScript versions.

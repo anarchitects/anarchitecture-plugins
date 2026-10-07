@@ -8,8 +8,11 @@ intended for eventual contribution to `@nx/nest`, rather than a permanent fork.
 This package discovers Nest projects and infers cacheable build and continuous
 start targets through the `@anarchitects/nest/plugin` entrypoint. Build outputs
 are resolved from the effective Nest TypeScript configuration. The `init`
-generator validates Nest v12 declarations and registers inference. Remaining
-integration work is tracked in
+generator validates Nest v12 declarations and registers inference. The revived
+MVP is published on npm as
+[`@anarchitects/nest@0.0.1`](https://www.npmjs.com/package/@anarchitects/nest/v/0.0.1).
+See the [release notes, verification record, and known limitations](https://github.com/anarchitects/anarchitecture-plugins/blob/main/docs/releases/nest-0.0.1.md)
+for the scope delivered under
 [epic #478](https://github.com/anarchitects/anarchitecture-plugins/issues/478).
 
 ## Architecture and ownership
@@ -74,10 +77,10 @@ Nest prereleases and majors other than v12 are outside the supported contract.
 
 ## Installation and registration
 
-Once a revived version is published, install it in an Nx workspace using:
+Install the released MVP in an Nx workspace with stable Nest v12 dependencies:
 
 ```sh
-yarn nx add @anarchitects/nest
+yarn nx add @anarchitects/nest@0.0.1
 ```
 
 `nx add` invokes the package's `init` generator. For an already installed package,
@@ -338,7 +341,7 @@ and `@nx/devkit` aligned within the documented peer range.
 ```sh
 yarn nx run-many -t build test lint typecheck -p nx-nest
 yarn nx e2e nx-nest-e2e
-yarn nx release --projects nx-nest --first-release --dry-run
+yarn nx release --projects nx-nest --dry-run
 ```
 
 The TypeScript, Jest, ESLint, and publish targets are inferred by the workspace's
@@ -350,7 +353,9 @@ The Nx project is `nx-nest`; the npm package is `@anarchitects/nest`. The existi
 independent release configuration can version just this project. The manual
 release workflow accepts `nx-nest`, and the publish workflow selects it from a
 `nx-nest@<version>` tag. Packaging uses `packages/nest/package.json` and its
-in-place `dist` directory. No publishing is performed as part of shell setup.
+in-place `dist` directory. Version 0.0.1 was released through the manual release
+workflow and published manually to npm. Subsequent releases use the existing
+release tag as their baseline; `--first-release` is no longer needed.
 
 ## License and upstream path
 
