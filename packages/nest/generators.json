@@ -1,0 +1,9 @@
+{
+  "generators": {
+    "init": {
+      "factory": "./dist/generators/init/generator",
+      "schema": "./schemas/init.json",
+      "description": "Register Nest inference and validate stable Nest v12 dependencies."
+    }
+  }
+}

@@ -28,7 +28,8 @@ installed Nest versions against the exact manifest pins and rejects prereleases.
 | `monorepo-tsc`                       | Nest application and shared library compiled with tsc; one Nx project per CLI config                                                                                             |
 | `monorepo-rspack`                    | ESM Nest monorepo and shared library bundled with Rspack; explicit Rspack config file                                                                                            |
 
-Each fixture checks discovery, build/start command and metadata, cache and
+Each fixture runs the packed `init` generator twice through Nx, checks repeat
+safety and unchanged package/Nest configs, then checks discovery, build/start command and metadata, cache and
 continuous settings, and absence of inferred test/lint targets even when those
 tools' config files exist. It runs the inferred build through Nx, checks actual
 emission, deletes the output, and verifies cache restoration. It then runs the
@@ -36,6 +37,9 @@ inferred start target and checks a real HTTP response on an ephemeral loopback
 port. Child process groups and temporary files are cleaned up, with bounded
 startup and shutdown timeouts. Local execution is validated on macOS; CI runs on
 Linux.
+
+A negative adoption case rejects an incompatible framework declaration without
+partially registering the plugin.
 
 The Rspack fixture explicitly sets the bundle filename to `main.js` while retaining
 the default `dist` directory. It does not claim automatic inference of arbitrary
