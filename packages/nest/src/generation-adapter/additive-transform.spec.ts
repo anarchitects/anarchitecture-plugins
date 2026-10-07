@@ -11,6 +11,11 @@ describe('additive Nx post-processing', () => {
       ],
     ]);
     const guard = additiveTransform(files);
+    const detached = guard.readJson<{ scripts: { build: string } }>(
+      'package.json'
+    );
+    detached.scripts.build = 'patched';
+    expect(files.get('package.json')!.toString()).toContain('nest build');
     guard.createFile('project.json', '{"name":"api"}');
     guard.addJsonProperties('package.json', { nx: { tags: ['nest'] } });
     expect(JSON.parse(files.get('package.json')!.toString())).toEqual({

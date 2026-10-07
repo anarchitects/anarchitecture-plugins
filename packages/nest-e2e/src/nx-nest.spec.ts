@@ -23,11 +23,11 @@ const nxBin = require.resolve('nx/bin/nx.js');
 let suiteRoot: string;
 let tarball: string;
 
-function packageRoot(name: string): string {
+function packageRoot(name: string, from = e2eRoot): string {
   try {
-    return dirname(require.resolve(`${name}/package.json`));
+    return dirname(require.resolve(`${name}/package.json`, { paths: [from] }));
   } catch {
-    let directory = dirname(require.resolve(name));
+    let directory = dirname(require.resolve(name, { paths: [from] }));
     while (dirname(directory) !== directory) {
       const manifest = join(directory, 'package.json');
       if (
@@ -109,7 +109,11 @@ function createWorkspace(fixture: NestFixture) {
   })) {
     const destination = join(root, 'node_modules', name);
     mkdirSync(dirname(destination), { recursive: true });
-    symlinkSync(packageRoot(name), destination, 'junction');
+    symlinkSync(
+      packageRoot(name, name in pluginDependencies ? pluginRoot : e2eRoot),
+      destination,
+      'junction'
+    );
   }
   mkdirSync(join(root, 'node_modules/.bin'), { recursive: true });
   symlinkSync(
@@ -347,6 +351,81 @@ describe('packed Nest plugin with stable v12 applications', () => {
         );
         expect(readFileSync(emittedPath, 'utf8')).toBe(emitted);
         await assertStarts(root, `${fixture.name}:${startName}`);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each(['esm', 'cjs'])(
+    'builds generated native %s sub-app and library members',
+    (type) => {
+      const root = createWorkspace({
+        ...fixtures[0],
+        name: `generated-${type}`,
+        files: {},
+      });
+      try {
+        nx(root, [
+          'generate',
+          '@anarchitects/nest:application',
+          'backend',
+          '--directory=services/backend',
+          `--type=${type}`,
+          '--no-interactive',
+        ]);
+        nx(root, [
+          'generate',
+          '@anarchitects/nest:sub-app',
+          'worker',
+          '--project=backend',
+          '--no-interactive',
+        ]);
+        nx(root, [
+          'generate',
+          '@anarchitects/nest:library',
+          'shared',
+          '--project=backend',
+          '--prefix=@domain',
+          '--no-interactive',
+        ]);
+        // Model dependencies installed for this native Nest package. Its default
+        // Rspack externals discovery reads node_modules from the package cwd.
+        symlinkSync(
+          join(root, 'node_modules'),
+          join(root, 'services/backend/node_modules'),
+          'junction'
+        );
+        for (const [name, directory] of [
+          ['worker', 'apps'],
+          ['shared', 'libs'],
+        ]) {
+          const project = JSON.parse(
+            nx(root, ['show', 'project', `backend-${name}`, '--json'])
+          );
+          expect(project.targets.build.options).toEqual({
+            command: `nest build '${name}'`,
+            cwd: 'services/backend',
+          });
+          if (name === 'shared') expect(project.targets.start).toBeUndefined();
+          nx(root, ['run', `backend-${name}:build`, '--outputStyle=static']);
+          const output = join(root, 'services/backend/dist', directory, name);
+          expect(
+            existsSync(join(output, name === 'worker' ? 'main.js' : 'index.js'))
+          ).toBe(true);
+          rmSync(output, { recursive: true, force: true });
+          expect(
+            nx(root, ['run', `backend-${name}:build`, '--outputStyle=static'])
+          ).toMatch(/\[local cache\]|read the output from the cache/);
+          expect(
+            existsSync(join(output, name === 'worker' ? 'main.js' : 'index.js'))
+          ).toBe(true);
+        }
+        const config = JSON.parse(
+          readFileSync(join(root, 'services/backend/nest-cli.json'), 'utf8')
+        );
+        expect(config.projects.worker.root).toBe('apps/worker');
+        expect(config.projects.shared.root).toBe('libs/shared');
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
