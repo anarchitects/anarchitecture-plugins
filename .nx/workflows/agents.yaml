@@ -1,0 +1,15 @@
+launch-templates:
+  linux-medium-js-workspace-node:
+    resource-class: 'docker_linux_amd64/medium'
+    image: 'ubuntu22.04-node24.14-v1'
+    init-steps:
+      - name: Checkout
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/checkout/main.yaml'
+      # The image's bundled Node is older than the stable Nest runtime requires.
+      # install-node reads .nvmrc and persists PATH for subsequent tasks.
+      - name: Install workspace Node version
+        uses: 'nrwl/nx-cloud-workflows/v5/workflow-steps/install-node/main.yaml'
+      - name: Enable Corepack
+        script: corepack enable
+      - name: Install dependencies
+        script: yarn install --immutable

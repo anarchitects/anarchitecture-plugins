@@ -23,14 +23,14 @@ jobs:
           filter: tree:0
           fetch-depth: 0
 
-      - run: corepack enable
-
-      - run: yarn dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="lint,test,build,typecheck,e2e-ci"
-
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: 'yarn'
+
+      - run: corepack enable
+
+      - run: yarn dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js-workspace-node" --stop-agents-after="lint,test,build,typecheck,e2e-ci"
 
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v5
