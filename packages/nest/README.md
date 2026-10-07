@@ -173,6 +173,57 @@ private Nx APIs, copied Nest templates, or historical plugin implementation.
 
 ## Development and release
 
+### Nx API compatibility boundary
+
+The #484 audit found no handwritten private Nx imports, but TypeScript inferred
+a private `nx/src/config/workspace-json-project-json.js` reference in the emitted
+`named-inputs.d.ts` return type. An explicit return type using public
+`ProjectConfiguration['namedInputs']` removes that declaration dependency without
+changing runtime behavior. The only Nx import entrypoint in shipped code and
+declarations is now public `@nx/devkit`:
+
+| API                                          | Use                                                                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `createNodesFromFiles`, `CreateNodes`        | Discovery adapter in `src/plugins/plugin.ts`                                                          |
+| `readJsonFile`                               | Nest/project configuration reads in `src/utils/read-build-outputs.ts` and `src/utils/named-inputs.ts` |
+| `CreateNodesContext`, `ProjectConfiguration` | Named-input reader's public context/configuration types                                               |
+| `NxJsonConfiguration`, `TargetConfiguration` | Pure build/start target construction types                                                            |
+
+`CreateNodes` and `CreateNodesContext` are the current types for the supported
+Nx baseline. The `createNodesV2` runtime export remains an alias of `createNodes`;
+the deprecated `CreateNodesV2` and `CreateNodesContextV2` types are not used.
+
+Public APIs and local utilities already replace the internal helpers needed by
+an in-tree Nx plugin: named inputs are merged from public configuration, build
+hashes use public target inputs, and TypeScript's public parser resolves effective
+compiler options. There is no private Nx hashing, workspace-context, tsconfig,
+or inference-cache helper to wrap. No `nx-compat` runtime module is needed today.
+
+If a future feature demonstrably requires a private API, isolate that operation
+under `src/nx-compat/` with a narrow typed adapter. Document the exact import,
+supported Nx versions, why public alternatives do not suffice, and its failure
+behavior; add focused adapter tests before making a file-specific exception to
+the API boundary check. Nest config parsing, path selection, and target
+construction stay in `src/utils/`, outside that adapter. Do not make it a general
+re-export of Nx internals.
+
+`nx-api-boundary.spec.ts` checks static imports, re-exports, import types,
+CommonJS requires, and literal dynamic imports in production source, compiled
+JavaScript, and declarations against the audited public entrypoint allowlist.
+New Nx entrypoints require review even if they may be public. Computed module
+loading is not covered by this static check and must not be used to bypass it.
+Test-only Nx CLI resolution (`nx/bin/nx.js`) runs the installed CLI in consumer
+fixtures; it is not shipped or used by plugin inference.
+
+For Nx upgrades, rerun the boundary check through the test target and the
+packed-package consumer tests, then build, lint, and typecheck. The consumer tests
+exercise both public entrypoints, root/nested discovery, target naming, config
+inheritance, and Nx override precedence. These checks validate the installed
+Nx baseline; they do not claim a multi-version compatibility matrix. Keep `nx`
+and `@nx/devkit` aligned within the documented peer range.
+
+### Validation and publishing
+
 ```sh
 yarn nx run-many -t build test lint typecheck -p nx-nest
 yarn nx release --projects nx-nest --first-release --dry-run
