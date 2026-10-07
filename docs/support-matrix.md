@@ -9,9 +9,12 @@ plugins. The current release line is developed and verified against Nx 23.2.
 | `@anarchitects/nx-typeorm`    | `>=19 <24` (including Nx 23)     | 5.9.x and 6.x | 1.x     | Supported |
 | `@anarchitects/nx-js`         | `>=21.6.4 <24` (including Nx 23) | 5.9.x and 6.x | n/a     | Supported |
 
-The revived `@anarchitects/nest` incubator is being prepared for release and has
+The revived `@anarchitects/nest` MVP is published as **0.0.1** and has
 a separate [Nest v12 compatibility contract and tested project matrix](../packages/nest/README.md#compatibility).
-Its Nx peer range is `>=23.2.0 <24`; the broader ranges above do not apply to it.
+It supports stable Nest CLI `>=12.0.0 <13`, Nx and `@nx/devkit` `>=23.2.0 <24`,
+TypeScript `>=5.9.0 <7`, and Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`.
+The broader Nx ranges above do not apply to it. See the
+[release notes and verification record](releases/nest-0.0.1.md).
 
 ## TypeScript 5 policy
 
