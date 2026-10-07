@@ -11,7 +11,7 @@ import { join } from 'node:path';
 export function readNamedInputs(
   projectRoot: string,
   context: CreateNodesContext
-) {
+): NonNullable<ProjectConfiguration['namedInputs']> {
   const packagePath = join(context.workspaceRoot, projectRoot, 'package.json');
   const projectPath = join(context.workspaceRoot, projectRoot, 'project.json');
   const packageConfig = existsSync(packagePath)
