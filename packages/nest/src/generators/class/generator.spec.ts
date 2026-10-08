@@ -299,3 +299,133 @@ describe('native Nest artifact generators', () => {
     `);
   });
 });
+
+describe('Nx-native library artifacts', () => {
+  it.each(
+    artifacts.flatMap((artifact) =>
+      ['esm', 'cjs'].map((mode) => ({ ...artifact, mode }))
+    )
+  )(
+    'matches native $name output and options in a scoped $mode library',
+    (artifact) => {
+      runArtifact(String.raw`
+        const artifact = ${JSON.stringify(artifact)};
+        const initial = createTreeWithEmptyWorkspace();
+        await libraryGenerator(initial,{name:'users',directory:'libs/users',skipInstall:true});
+        const manifest=JSON.parse(initial.read('libs/users/package.json','utf8'));
+        manifest.type=artifact.mode==='esm'?'module':'commonjs';
+        initial.write('libs/users/package.json',JSON.stringify(manifest));
+        initial.write('libs/outer.module.ts',"import { Module } from '@nestjs/common'; @Module({}) export class OuterModule {}\n");
+        initial.write('libs/users/src/unrelated.ts','export  const  unchanged=1');
+        const baseline = snapshotNxTree(initial);
+        const variants = [
+          {},
+          {flat:!artifact.flat,format:true,...(artifact.spec?{spec:false}:{}),...(artifact.imports?{skipImport:true}:{})},
+          {name:'deep/Thing.Dto',path:'features',sourceRoot:'src/custom',flat:true,...(artifact.spec?{specFileSuffix:'check'}:{})}
+        ];
+        for (const variant of variants) {
+          const actual = createTreeWithEmptyWorkspace();
+          const expected = createTreeWithEmptyWorkspace();
+          for (const target of [actual, expected])
+            for (const [path, bytes] of baseline) target.write(path, bytes);
+          const before=snapshotNxTree(actual);
+          const beforeModule=actual.read('libs/users/src/users.module.ts');
+          const options={name:'thing',...variant};
+          const original=structuredClone(options);
+          await runNestSchematic(expected,{schematic:artifact.name,workingDirectory:'libs/users',options:{sourceRoot:'src',...options}});
+          const install = await generators[artifact.name](actual,{...options,project:'users'});
+          assert.equal(install,undefined);
+          assert.deepEqual(options,original);
+          assert.deepEqual(snapshotNxTree(actual),snapshotNxTree(expected));
+          if(!variant.name) {
+            const root='libs/users/src/'+((variant.flat??artifact.flat)?'':'thing/');
+            assert.ok(actual.exists(root+'thing'+artifact.suffix+'.ts'));
+            assert.equal(actual.exists(root+'thing'+artifact.suffix+'.spec.ts'),artifact.spec && variant.spec!==false);
+          } else {
+            assert.ok(actual.exists('libs/users/src/custom/features/deep/thing.dto'+artifact.suffix+'.ts'));
+            if(artifact.spec) assert.ok(actual.exists('libs/users/src/custom/features/deep/thing.dto'+artifact.suffix+'.check.ts'));
+          }
+          if(!artifact.imports || variant.skipImport) assert.deepEqual(actual.read('libs/users/src/users.module.ts'),beforeModule);
+          else assert.notDeepEqual(actual.read('libs/users/src/users.module.ts'),beforeModule);
+          for(const [path, bytes] of snapshotNxTree(actual)) {
+            if(before.get(path)?.equals(bytes)) continue;
+            assert.ok(path.startsWith('libs/users/src/'),path);
+            for(const match of bytes.toString().matchAll(/from ['"](\.[^'"]+)['"]/g))
+              assert.equal(match[1].endsWith('.js'),artifact.mode==='esm',path+': '+match[1]);
+          }
+          assert.equal(actual.exists('libs/users/nest-cli.json'),false);
+        }
+      `);
+    }
+  );
+
+  it('uses the configured source root and nearest library module in a mixed workspace', () => {
+    runArtifact(String.raw`
+      await applicationGenerator(tree,{name:'api',directory:'apps/api',skipInstall:true});
+      await libraryGenerator(tree,{name:'shared',project:'api',skipInstall:true});
+      await libraryGenerator(tree,{name:'@acme/users',directory:'libs/users',skipInstall:true});
+      const project=JSON.parse(tree.read('libs/users/project.json','utf8'));
+      project.sourceRoot='libs/users/source';
+      tree.write('libs/users/project.json',JSON.stringify(project));
+      tree.rename('libs/users/src/users.module.ts','libs/users/source/users.module.ts');
+      const before=snapshotNxTree(tree);
+      await generators.module(tree,{name:'feature',project:'@acme/users'});
+      const rootModule=tree.read('libs/users/source/users.module.ts');
+      await generators.service(tree,{name:'orders',project:'@acme/users',path:'feature',flat:true,spec:false});
+      assert.match(tree.read('libs/users/source/feature/feature.module.ts','utf8'),/OrdersService/);
+      assert.deepEqual(tree.read('libs/users/source/users.module.ts'),rootModule);
+      assert.ok(tree.exists('libs/users/source/feature/orders.service.ts'));
+      assert.equal(tree.exists('libs/users/source/feature/orders.service.spec.ts'),false);
+      for(const [path,bytes] of before) if(!path.startsWith('libs/users/source/')) assert.deepEqual(tree.read(path),bytes,path);
+      // With no module in this package, lookup must not reach a sibling/ancestor.
+      tree.delete('libs/users/source/users.module.ts');
+      tree.write('libs/outer.module.ts',"import { Module } from '@nestjs/common'; @Module({}) export class OuterModule {}\n");
+      const outside=tree.read('libs/outer.module.ts');
+      await generators.service(tree,{name:'unregistered',project:'@acme/users',spec:false});
+      assert.deepEqual(tree.read('libs/outer.module.ts'),outside);
+      assert.ok(tree.exists('libs/users/source/unregistered/unregistered.service.ts'));
+    `);
+  });
+
+  it('delegates explicit JavaScript templates in a CJS library where supported', () => {
+    runArtifact(String.raw`
+      await libraryGenerator(tree,{name:'users',directory:'libs/users',skipInstall:true});
+      const manifest=JSON.parse(tree.read('libs/users/package.json','utf8'));
+      manifest.type='commonjs';
+      tree.write('libs/users/package.json',JSON.stringify(manifest));
+      const baseline=snapshotNxTree(tree);
+      for(const name of Object.keys(generators).filter(name=>name!=='interface')) {
+        const actual=createTreeWithEmptyWorkspace();
+        const expected=createTreeWithEmptyWorkspace();
+        for(const target of [actual,expected])
+          for(const [path,bytes] of baseline) target.write(path,bytes);
+        const options={name:'thing',language:'js',sourceRoot:'src',flat:true};
+        await runNestSchematic(expected,{schematic:name,workingDirectory:'libs/users',options});
+        await generators[name](actual,{...options,project:'users'});
+        assert.deepEqual(snapshotNxTree(actual),snapshotNxTree(expected));
+      }
+    `);
+  });
+
+  it('rejects escaping paths and duplicate artifacts without partial module registration', () => {
+    runArtifact(String.raw`
+      await libraryGenerator(tree,{name:'users',directory:'libs/users',skipInstall:true});
+      for(const name of Object.keys(generators)) {
+        const before=snapshotNxTree(tree);
+        for(const options of [
+          {name:'../bad'}, {name:'x',path:'../other'}, {name:'x',module:'../other'},
+          {name:'x',sourceRoot:'../other'}, {name:'x',sourceRoot:'other'},
+          {name:'x',sourceRoot:'src-other'}, {name:'x',sourceRoot:''},
+          {name:'x',nestProject:'users'}, {name:'x',specFileSuffix:'../../outside'}
+        ]) {
+          await assert.rejects(generators[name](tree,{...options,project:'users'}));
+          assert.deepEqual(snapshotNxTree(tree),before);
+        }
+      }
+      tree.write('libs/users/src/orders/orders.service.ts','user-owned');
+      const before=snapshotNxTree(tree);
+      await assert.rejects(generators.service(tree,{name:'orders',project:'users'}));
+      assert.deepEqual(snapshotNxTree(tree),before);
+    `);
+  });
+});

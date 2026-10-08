@@ -239,3 +239,11 @@ library through Nx-owned TypeScript check targets. Root Angular compiler options
 module policy, existing aliases/references, dry-run behavior, and collision
 idempotence are asserted. Angular and Nest application consumption remain scoped
 to the later epic scenarios.
+
+`nx-library-artifacts.spec.ts` exercises all 14 non-resource artifact generators
+through the packed plugin in a real installed Yarn consumer. It verifies scoped
+placement, ESM imports, nearest-module registration, custom spec suffixes,
+`skipImport`, dry-run preservation, conflict rollback, and path rejection. The
+library manifest, lockfile, and install state remain unchanged by these native
+artifact schematics. The unit matrix additionally compares native output in ESM,
+CJS, and explicit JavaScript modes.
