@@ -10,7 +10,7 @@ import { posix } from 'node:path';
 import { runNestSchematic } from '../../generation-adapter/run-nest-schematic';
 import { treePath } from '../../generation-adapter/tree-snapshot';
 import { registerNestPlugin } from '../../utils/plugin-registration';
-import { planApplicationWorkspaceRegistration } from '../../utils/register-application-workspace';
+import { planPackageWorkspaceRegistration } from '../../utils/register-package-workspace';
 import {
   dependencyState,
   installAfterGeneration,
@@ -55,7 +55,7 @@ export async function applicationGenerator(
   const nxJson = readNxJson(tree)!;
   // Validate registration and project collisions before staging native files.
   const plugins = registerNestPlugin(nxJson.plugins, {});
-  const registerWorkspace = planApplicationWorkspaceRegistration(
+  const registerWorkspace = planPackageWorkspaceRegistration(
     tree,
     root,
     options.packageManager
