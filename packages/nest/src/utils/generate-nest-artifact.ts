@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { GeneratorCallback, Tree } from '@nx/devkit';
+import { posix } from 'node:path';
 import {
   dependencyState,
   installAfterGeneration,
@@ -42,12 +43,34 @@ export async function generateNestArtifact(
   for (const path of [options.path, options.module])
     if (path !== undefined) nativeRelativePath(path);
   const context = resolveNestGenerationContext(tree, options);
-  // Library artifact/resource execution is the next integration step (#552/#553).
-  if (context.kind === 'nx-library')
+  if (context.kind === 'nx-library' && schematic === 'resource')
     throw new Error(
-      'Artifact generation in Nx-native Nest libraries is not supported yet.'
+      'Resource generation in Nx-native Nest libraries is not supported yet.'
     );
-  const { ownerRoot, config, member } = context;
+  const ownerRoot =
+    context.kind === 'nx-library' ? context.projectRoot : context.ownerRoot;
+  const config =
+    context.kind === 'nx-library'
+      ? { sourceRoot: context.relativeSourceRoot, language: context.language }
+      : context.config;
+  const member = context.kind === 'native-member' ? context.member : undefined;
+  if (context.kind === 'nx-library') {
+    const sourceRoot = posix.join(
+      ownerRoot,
+      nativeRelativePath(options.sourceRoot ?? context.relativeSourceRoot)
+    );
+    if (
+      sourceRoot !== context.sourceRoot &&
+      !sourceRoot.startsWith(`${context.sourceRoot}/`)
+    )
+      throw new Error(
+        '--sourceRoot must stay inside the selected Nx-native library source root.'
+      );
+    if (options.specFileSuffix && /[/\\]/.test(options.specFileSuffix))
+      throw new Error(
+        '--specFileSuffix must be a filename suffix, not a path.'
+      );
+  }
   const {
     project: _project,
     nestProject: _nestProject,

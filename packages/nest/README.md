@@ -624,10 +624,35 @@ Conflicting native ownership is rejected, and `--nestProject` remains exclusive
 to native owners/members. Implicit owner selection is unchanged; independent
 libraries require an explicit Nx project name.
 
-Artifact/resource execution in these libraries is not enabled yet; it is tracked in
-[#552](https://github.com/anarchitects/anarchitecture-plugins/issues/552) and
-[#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553),
-and application consumption in
+All non-resource artifact generators can target the library by Nx project name:
+
+```sh
+yarn nx g @anarchitects/nest:module feature --project=users
+yarn nx g @anarchitects/nest:service orders --project=users --path=feature --flat --dry-run
+yarn nx g @anarchitects/nest:service orders --project=users --path=feature --flat
+yarn nx g @anarchitects/nest:controller orders --project=@acme/support
+```
+
+This includes module, service, controller, provider, class, interface, decorator,
+filter, gateway, guard, interceptor, middleware, pipe, and resolver. Official
+Nest v12 schematics own their output and module registration. Their working Tree
+contains only the selected library, so nearest-module lookup cannot reach a
+parent or sibling workspace project. `path` is relative to the configured source
+root. An explicit `sourceRoot` is package-relative and must stay within the
+library's configured source root; `specFileSuffix` must be a filename suffix.
+
+Without a native Nest configuration, each schematic retains its own `flat`,
+`spec`, and suffix defaults. Explicit options, `skipImport`, and supported
+`language=js` templates remain native; `format` is opt-in. ESM relative `.js`
+imports follow the library's own package type. Dry runs and failed generations
+preserve files and module registrations. Any native install request or dependency
+change uses the deferred Nx workspace install lifecycle and honors `skipInstall`.
+These artifacts do not configure test tooling or add optional framework packages
+unless the native schematic does so.
+
+Resource generation remains tracked in
+[#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553), and
+application consumption in
 [#554](https://github.com/anarchitects/anarchitecture-plugins/issues/554).
 The source-only entrypoint requires a TypeScript-aware consumer; it is not a
 precompiled Node.js package. Existing workspace tools may infer tasks from the
