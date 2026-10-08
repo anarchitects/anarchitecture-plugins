@@ -23,6 +23,16 @@ export function createInstalledConsumer(
   };
 
   function yarn(args: string[], nodeOptions?: string, stdoutOnly = false) {
+    const trace =
+      process.env.CI === 'true' || process.env.NEST_E2E_TRACE === 'true';
+    const started = Date.now();
+    const command = `yarn ${args.join(' ')}`;
+    // Write directly to stderr so a blocked command still has a start record.
+    // Log only fixture commands and result metadata, never the environment.
+    if (trace)
+      process.stderr.write(
+        `[nest-consumer] ${new Date(started).toISOString()} START ${command}\n`
+      );
     const result = spawnSync('yarn', args, {
       cwd: root,
       env: { ...env, ...(nodeOptions ? { NODE_OPTIONS: nodeOptions } : {}) },
@@ -30,6 +40,14 @@ export function createInstalledConsumer(
       timeout: 120_000,
       maxBuffer: 10 * 1024 * 1024,
     });
+    if (trace)
+      process.stderr.write(
+        `[nest-consumer] ${new Date().toISOString()} END ${command} durationMs=${
+          Date.now() - started
+        } status=${result.status} signal=${result.signal ?? '-'} error=${
+          (result.error as NodeJS.ErrnoException | undefined)?.code ?? '-'
+        }\n`
+      );
     const output = stripVTControlCharacters(
       `${result.stdout ?? ''}\n${result.stderr ?? ''}`
     );

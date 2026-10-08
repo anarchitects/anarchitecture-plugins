@@ -17,6 +17,8 @@ concurrency:
 jobs:
   main-ci:
     runs-on: ubuntu-latest
+    # Bound coordinator/agent stalls, including failures outside Jest's timers.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -38,7 +40,10 @@ jobs:
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v5
       - run: yarn nx-cloud record -- yarn nx format:check
-      - run: yarn nx affected -t lint test build typecheck e2e-ci
+      - name: Run affected tasks on Nx Agents
+        run: yarn nx affected -t lint test build typecheck e2e-ci
+        # Leave time for fix-ci diagnostics before the overall job deadline.
+        timeout-minutes: 15
       - run: yarn dlx -q -p typescript@5.9.3 tsc --project tsconfig.ts5.json --pretty false
       - run: yarn nx fix-ci
         if: always()

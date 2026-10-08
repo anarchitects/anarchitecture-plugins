@@ -102,6 +102,8 @@ describe('native Nest workspace members', () => {
       if (schematic === 'library') {
         expect(directory.type).toBe('string');
         delete native.properties.prefix['x-prompt'];
+        native.properties.language.description =
+          'Nest library language. Nx-native libraries currently support ts only.';
         for (const key of ['prefix', 'path', 'rootDir']) {
           native.properties[key].description +=
             ' Native Nest mode only (requires project).';

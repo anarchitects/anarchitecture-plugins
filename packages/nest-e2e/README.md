@@ -203,3 +203,28 @@ the same specs. Consumer subprocesses get their own Nx environment: outer
 This lets an uncached outer run still verify inner cache restoration, and avoids
 editor auto-attach keeping consumer commands alive. Explicit consumer runtime
 options, such as CJS Jest's VM-modules flag, are applied after isolation.
+
+Real-install consumer commands emit start/end timestamps, elapsed milliseconds,
+exit status, termination signal, and spawn error code in CI. Enable the same
+diagnostics locally with `NEST_E2E_TRACE=true`. Environment values are not logged.
+Command failures still throw, including timeouts; expected generator failures
+remain checked by the scenario assertions.
+
+Main CI bounds distributed task execution to 15 minutes and the complete job to
+20 minutes, leaving time for failure diagnostics. These coordinator deadlines
+also cover stalls outside a test process. The existing 120-second command and
+per-test Jest timeouts remain unchanged: synchronous child processes block Jest
+timers, and a child that ignores SIGTERM can outlive `spawnSync`'s timeout.
+The deadlines are safeguards, not evidence of a subprocess defect; see the
+[PR #570 investigation](../../docs/ci/pr-570-stall.md).
+
+## Nx-native library container
+
+`nx-library.spec.ts` installs the packed plugin into a fresh Yarn workspace and
+generates `library users --directory=libs/users` without a Nest owner. It checks
+native module output, Nx project discovery, package identity and membership,
+automatic installation, a consumer-owned TypeScript check run through Nx,
+collision errors, the `lib` alias, and `--skipInstall`. Dry runs preserve the
+manifest, lockfile, install state, and generated directory. Root compiler
+configuration and hoisting policy remain unchanged. Cross-project TypeScript
+linking and Angular/application consumption belong to later epic scenarios.

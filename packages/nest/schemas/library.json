@@ -19,7 +19,7 @@
     },
     "language": {
       "type": "string",
-      "description": "Nest library language."
+      "description": "Nest library language. Nx-native libraries currently support ts only."
     },
     "path": {
       "type": "string",
@@ -53,7 +53,7 @@
     "directory": {
       "type": "string",
       "format": "path",
-      "description": "Workspace-relative destination for a new independent Nx library/package. Mutually exclusive with project; Nx-native generation is not available yet."
+      "description": "Workspace-relative destination for a new independent Nx library/package. Supply exactly one of project or directory."
     }
   },
   "required": ["name"],

@@ -20,7 +20,7 @@
       "factory": "./dist/generators/library/generator",
       "schema": "./schemas/library.json",
       "aliases": ["lib"],
-      "description": "Generate a native Nest library in an existing Nest workspace."
+      "description": "Generate a native Nest CLI library with project or an independent Nx-native Nest library with directory."
     },
     "resource": {
       "factory": "./dist/generators/resource/generator",
