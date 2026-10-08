@@ -43,10 +43,6 @@ export async function generateNestArtifact(
   for (const path of [options.path, options.module])
     if (path !== undefined) nativeRelativePath(path);
   const context = resolveNestGenerationContext(tree, options);
-  if (context.kind === 'nx-library' && schematic === 'resource')
-    throw new Error(
-      'Resource generation in Nx-native Nest libraries is not supported yet.'
-    );
   const ownerRoot =
     context.kind === 'nx-library' ? context.projectRoot : context.ownerRoot;
   const config =
@@ -81,6 +77,8 @@ export async function generateNestArtifact(
   const result = await runNestSchematic(tree, {
     schematic,
     workingDirectory: ownerRoot,
+    aliasResourceImports:
+      context.kind === 'nx-library' && schematic === 'resource',
     options: {
       ...nativeOptions,
       ...nestGenerationDefaults(config, member, options, schematic, defaults),

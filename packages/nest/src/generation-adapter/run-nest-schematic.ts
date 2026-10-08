@@ -6,6 +6,7 @@ import {
 } from './additive-transform';
 import { runNativeSchematic } from './run-native-schematic';
 import { runIsolatedSchematic } from './run-isolated-schematic';
+import { aliasResourceModuleImports } from './alias-resource-module-imports';
 import {
   applySnapshot,
   diffSnapshots,
@@ -23,6 +24,8 @@ export interface RunNestSchematicOptions {
   workingDirectory?: string;
   /** Isolate native cwd-based reads and satisfy them from the scoped Tree. */
   isolateHostReads?: boolean;
+  /** Alias colliding resource imports when registering into an Nx library module. */
+  aliasResourceImports?: boolean;
   postTransform?: (transform: AdditiveTransform) => void | Promise<void>;
 }
 
@@ -52,6 +55,8 @@ export async function runNestSchematic(
   const result = options.isolateHostReads
     ? await runIsolatedSchematic(scoped, options)
     : await runNativeSchematic(scoped, options);
+  if (options.schematic === 'resource' && options.aliasResourceImports)
+    aliasResourceModuleImports(scoped, result.after);
   const after = new Map(
     [...before].filter(([path]) => !path.startsWith(prefix))
   );

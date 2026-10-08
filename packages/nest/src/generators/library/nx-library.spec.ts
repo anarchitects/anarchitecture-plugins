@@ -86,12 +86,6 @@ describe('Nx-native Nest library container', () => {
       assert.deepEqual(context.packageJson, manifest);
       assert.equal(context.moduleSystem, 'esm');
       assert.equal(context.language, 'ts');
-      const beforeArtifacts = snapshotNxTree(tree);
-      const { resourceGenerator } = local('./dist/generators/resource/generator');
-      await assert.rejects(resourceGenerator(tree, {name:'orders',project:${JSON.stringify(
-        name
-      )}}), /not supported yet/);
-      assert.deepEqual(snapshotNxTree(tree), beforeArtifacts);
       assert.equal(tree.exists(root+'/nest-cli.json'), false);
       assert.equal(tree.exists('nest-cli.json'), false);
       const native = await runNativeSchematic(new Map([['package.json',tree.read(root+'/package.json')]]),{

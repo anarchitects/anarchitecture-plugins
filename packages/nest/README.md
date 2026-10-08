@@ -650,9 +650,30 @@ change uses the deferred Nx workspace install lifecycle and honors `skipInstall`
 These artifacts do not configure test tooling or add optional framework packages
 unless the native schematic does so.
 
-Resource generation remains tracked in
-[#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553), and
-application consumption in
+Resources also target the library by project name:
+
+```sh
+yarn nx g @anarchitects/nest:resource users --project=users --type=rest --crud
+```
+
+REST, GraphQL code-first/schema-first, microservice, and WebSocket resources
+retain native CRUD, spec, flat, suffix, and skip-import behavior. Native runtime
+additions such as `@nestjs/mapped-types` belong to the library's manifest, never
+the monorepo root. Swagger detection likewise uses the library's own manifest.
+One deferred workspace install runs when native generation requests it or changes
+dependencies; `--skipInstall` suppresses it, and dry runs do not install anything.
+Existing consumer build/test tooling can then use the installed dependencies.
+Optional transport packages and test tooling remain consumer-owned unless the
+native schematic adds them.
+
+For a same-name library and resource, native Nest would import `UsersModule`
+into a file already declaring `UsersModule`. The Nx library adapter aliases only
+the new import and registration to `UsersResourceModule` (or an unused numbered
+variant). Both exported classes retain their native names. Existing references
+remain intact; an ambiguous registration fails atomically with guidance to use
+`--skipImport` and register it explicitly. Native owner/member output is unchanged.
+
+Application consumption is tracked in
 [#554](https://github.com/anarchitects/anarchitecture-plugins/issues/554).
 The source-only entrypoint requires a TypeScript-aware consumer; it is not a
 precompiled Node.js package. Existing workspace tools may infer tasks from the
@@ -1103,6 +1124,11 @@ conversion when `NODE_ENV=test`.
 Resource and artifact generators share context/default resolution before
 invoking the adapter. The adapter itself does not emulate the entire CLI
 configuration lookup.
+
+Nx-native resource registration has one narrow source adaptation before commit:
+a newly added module import that collides with an existing binding receives an
+alias, along with its new `@Module` imports entry. Native templates and exported
+names are preserved. This does not relax the additive post-processing API.
 
 ### Nest v12 compatibility matrix (0.0.2 development)
 

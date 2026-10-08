@@ -247,3 +247,11 @@ placement, ESM imports, nearest-module registration, custom spec suffixes,
 library manifest, lockfile, and install state remain unchanged by these native
 artifact schematics. The unit matrix additionally compares native output in ESM,
 CJS, and explicit JavaScript modes.
+
+`nx-library-resources.spec.ts` generates REST CRUD using the same name as its
+Nx-native library. After preconfiguring consumer-owned test tooling, it verifies
+one automatic install, library-owned mapped-types, no root manifest changes,
+and immediate TypeScript compilation plus execution of the generated Nest specs.
+It also checks dry-run preservation, zero redundant installs, and `skipInstall`.
+The unit matrix covers every supported transport in ESM/CJS, native output parity,
+local Swagger detection, and atomic import-alias repair for same-name modules.
