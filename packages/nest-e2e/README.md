@@ -203,3 +203,14 @@ the same specs. Consumer subprocesses get their own Nx environment: outer
 This lets an uncached outer run still verify inner cache restoration, and avoids
 editor auto-attach keeping consumer commands alive. Explicit consumer runtime
 options, such as CJS Jest's VM-modules flag, are applied after isolation.
+
+## Nx-native library container
+
+`nx-library.spec.ts` installs the packed plugin into a fresh Yarn workspace and
+generates `library users --directory=libs/users` without a Nest owner. It checks
+native module output, Nx project discovery, package identity and membership,
+automatic installation, a consumer-owned TypeScript check run through Nx,
+collision errors, the `lib` alias, and `--skipInstall`. Dry runs preserve the
+manifest, lockfile, install state, and generated directory. Root compiler
+configuration and hoisting policy remain unchanged. Cross-project TypeScript
+linking and Angular/application consumption belong to later epic scenarios.

@@ -235,9 +235,8 @@ describe('published Nest plugin', () => {
     },
     {
       generator: 'lib',
-      selectors: ['--directory=libs/users'],
-      error:
-        'Nx-native library generation with --directory is not available yet',
+      selectors: ['--directory=libs/users', '--language=js'],
+      error: 'Nx-native Nest libraries currently support --language=ts',
     },
   ])(
     'validates packed $generator ownership before dry-run writes: $selectors',

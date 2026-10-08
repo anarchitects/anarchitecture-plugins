@@ -59,7 +59,7 @@ of this branch when testing generation before publication.
 | --------------- | -------- | ------------------------------------------------------------ |
 | `application`   | —        | Independent Nest application and package inside Nx.          |
 | `sub-app`       | `app`    | Application member within an existing native Nest workspace. |
-| `library`       | `lib`    | Library member within an existing native Nest workspace.     |
+| `library`       | `lib`    | Native Nest CLI member or independent Nx-native library.     |
 | `configuration` | `config` | Native `nest-cli.json` for an existing Nx project.           |
 | `resource`      | `res`    | Native REST, GraphQL, microservice, or WebSocket resource.   |
 | `class`         | `cl`     | Class.                                                       |
@@ -541,9 +541,8 @@ explicit selection. Root and nested
 TypeScript Nest workspaces are covered, including standalone-to-monorepo
 conversion and adding members to an existing monorepo.
 
-The library contract reserves `--directory=libs/users` for a new independent
-Nx library/package; that generation mode is not available yet. Supply exactly
-one of `--project` or `--directory`. `rootDir`, `path`, and `prefix` apply only
+Use `--directory=libs/users` for a new independent Nx library/package, as
+described below. Supply exactly one of `--project` or `--directory`. `rootDir`, `path`, and `prefix` apply only
 to native libraries selected with `--project`; `directory` is the complete
 workspace-relative destination. The `library` / `lib` names and `--skipInstall`
 remain unchanged.
@@ -579,6 +578,53 @@ it does not rewrite that member. Dry-run, generation, and native cwd lookups use
 the pending Tree. Member generation returns an Nx dependency-install task when required;
 `--skipInstall` skips that task, and dry runs never install packages. Generation
 does not initialize git or change the process cwd.
+
+#### Independent Nx-native library containers
+
+```sh
+yarn nx g @anarchitects/nest:library users --directory=libs/users --dry-run
+yarn nx g @anarchitects/nest:library users --directory=libs/users
+yarn nx g @anarchitects/nest:lib @acme/support --directory=libs/support
+```
+
+This creates a private, source-only TypeScript package with its own
+`package.json`, `project.json`, `tsconfig.json`, `tsconfig.lib.json`,
+`src/index.ts`, and initial Nest module. The module comes from the official
+stable Nest v12 module schematic. Package and Nx project names are identical:
+`users` or `@acme/support` above. Names normalize to kebab case; the unscoped
+part must start with a letter and contain only letters, digits, or hyphens.
+`directory` selects the complete destination, independently of the name.
+Existing names, non-empty destinations, and overlapping project/package roots
+are rejected before any files are staged.
+
+The package owns `@nestjs/common`, `reflect-metadata`, and `rxjs`. It is
+registered using the same package-manager detection, glob/exclusion handling,
+and deferred Nx install as applications. `--skipInstall` stages the package and
+workspace changes without installing; `--dry-run` writes and installs nothing.
+The package exports its TypeScript source and is not configured for publishing.
+Only TypeScript (`--language=ts`) is supported in this mode. The initial module
+has no spec; `specFileSuffix` has no effect on this initial output. `--format`
+remains opt-in for native module generation.
+
+The project carries `metadata.nest.kind: "nx-library"`, distinguishing it from
+ordinary shared libraries. Its initial compiler configuration is local and
+uses ESM/NodeNext and Nest decorators. It does not update root aliases,
+references, compiler settings, or any `nest-cli.json`. It can coexist with a
+native library such as `packages/api/libs/internal`. There is no new runtime
+dependency on `@nx/js` and no added Nest build/start target or inference
+registration for this container.
+
+This delivery covers container creation. Workspace TypeScript linking is
+tracked in [#550](https://github.com/anarchitects/anarchitecture-plugins/issues/550),
+artifact/resource generation by Nx project name in
+[#551](https://github.com/anarchitects/anarchitecture-plugins/issues/551),
+[#552](https://github.com/anarchitects/anarchitecture-plugins/issues/552), and
+[#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553),
+and application consumption in
+[#554](https://github.com/anarchitects/anarchitecture-plugins/issues/554).
+The source-only entrypoint requires a TypeScript-aware consumer; it is not a
+precompiled Node.js package. Existing workspace tools may infer tasks from the
+generated files; this generator does not install build/test/lint tooling.
 
 #### Rspack setup for native members
 
@@ -1045,7 +1091,7 @@ declarations is now public `@nx/devkit`:
 | `NxJsonConfiguration`, `TargetConfiguration` | Pure build/start target construction types                                                            |
 
 Generators additionally use public `readJson`, `writeJson`, `readNxJson`,
-`updateNxJson`, `getProjects`, `visitNotIgnoredFiles`, and `Tree` for validation
+`updateNxJson`, `getProjects`, `names`, `visitNotIgnoredFiles`, and `Tree` for validation
 and configuration edits.
 
 `CreateNodes` and `CreateNodesContext` are the current types for the supported

@@ -3,12 +3,16 @@ import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { generateNestMember } from '../../utils/generate-nest-member';
+import { generateNxNestLibrary } from '../../utils/generate-nx-nest-library';
 import { libraryGenerator } from './generator';
 import { resolveLibraryMode } from './resolve-library-mode';
 import type { LibraryGeneratorSchema } from './schema';
 
 jest.mock('../../utils/generate-nest-member', () => ({
   generateNestMember: jest.fn(),
+}));
+jest.mock('../../utils/generate-nx-nest-library', () => ({
+  generateNxNestLibrary: jest.fn(),
 }));
 
 describe('library ownership contract', () => {
@@ -46,12 +50,14 @@ describe('library ownership contract', () => {
       kind: 'nx',
       directory: 'libs/users/',
     });
-    const before = tree.listChanges();
-    // Container generation is a separate subissue; never silently use a Nest owner.
-    await expect(libraryGenerator(tree, options)).rejects.toThrow(
-      'not available yet'
+    const install = jest.fn();
+    jest.mocked(generateNxNestLibrary).mockResolvedValueOnce(install);
+    expect(await libraryGenerator(tree, options)).toBe(install);
+    expect(generateNxNestLibrary).toHaveBeenCalledWith(
+      tree,
+      options,
+      'libs/users/'
     );
-    expect(tree.listChanges()).toEqual(before);
     expect(generateNestMember).not.toHaveBeenCalled();
   });
 
@@ -95,6 +101,7 @@ describe('library ownership contract', () => {
       ).rejects.toThrow(message);
       expect(tree.listChanges()).toEqual(before);
       expect(generateNestMember).not.toHaveBeenCalled();
+      expect(generateNxNestLibrary).not.toHaveBeenCalled();
     }
   );
 
