@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -216,6 +216,82 @@ describe('published Nest plugin', () => {
     expect(published.update).toBeUndefined();
     expect(readme).toContain('issues/508');
   });
+
+  it.each([
+    {
+      generator: 'library',
+      selectors: [],
+      error: 'Choose exactly one library owner',
+    },
+    {
+      generator: 'lib',
+      selectors: ['--project=api', '--directory=libs/users'],
+      error: 'mutually exclusive',
+    },
+    {
+      generator: 'library',
+      selectors: ['--directory=libs/users', '--rootDir=modules'],
+      error: 'only supported with --project',
+    },
+    {
+      generator: 'lib',
+      selectors: ['--directory=libs/users'],
+      error:
+        'Nx-native library generation with --directory is not available yet',
+    },
+  ])(
+    'validates packed $generator ownership before dry-run writes: $selectors',
+    ({ generator, selectors, error }) => {
+      const workspace = mkdtempSync(
+        join(tmpdir(), 'nx-nest-library-contract-')
+      );
+      try {
+        symlinkSync(
+          join(consumerRoot, 'node_modules'),
+          join(workspace, 'node_modules'),
+          'junction'
+        );
+        const manifest = JSON.stringify({ name: 'consumer', private: true });
+        writeFileSync(join(workspace, 'package.json'), manifest);
+        writeFileSync(join(workspace, 'nx.json'), '{}');
+        const result = spawnSync(
+          process.execPath,
+          [
+            require.resolve('nx/bin/nx.js'),
+            'g',
+            `@anarchitects/nest:${generator}`,
+            'users',
+            ...selectors,
+            '--skipInstall',
+            '--dry-run',
+            '--no-interactive',
+          ],
+          {
+            cwd: workspace,
+            encoding: 'utf8',
+            timeout: 30_000,
+            env: {
+              ...process.env,
+              NX_DAEMON: 'false',
+              NX_ISOLATE_PLUGINS: 'false',
+              NX_NO_CLOUD: 'true',
+            },
+          }
+        );
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(1);
+        expect(`${result.stdout}\n${result.stderr}`).toContain(error);
+        expect(readFileSync(join(workspace, 'package.json'), 'utf8')).toBe(
+          manifest
+        );
+        expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe('{}');
+        expect(existsSync(join(workspace, 'libs'))).toBe(false);
+        expect(existsSync(join(workspace, 'nest-cli.json'))).toBe(false);
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    }
+  );
 
   it.each([
     {
