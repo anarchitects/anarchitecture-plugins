@@ -237,3 +237,123 @@ describe('native Nest resource generator', () => {
     `);
   });
 });
+
+describe('Nx-native library resources', () => {
+  it.each(
+    transports.flatMap((type) => ['esm', 'cjs'].map((mode) => ({ type, mode })))
+  )(
+    'matches native $type library output, dependencies, CRUD and options in $mode',
+    ({ type, mode }) => {
+      runResource(String.raw`
+        const type=${JSON.stringify(type)};
+        const mode=${JSON.stringify(mode)};
+        await libraryGenerator(tree,{name:'domain',directory:'libs/domain',skipInstall:true});
+        const manifest=JSON.parse(tree.read('libs/domain/package.json','utf8'));
+        manifest.type=mode==='esm'?'module':'commonjs';
+        tree.write('libs/domain/package.json',JSON.stringify(manifest));
+        tree.write('libs/outer.module.ts',"import { Module } from '@nestjs/common'; @Module({}) export class OuterModule {}\n");
+        const baseline=snapshotNxTree(tree);
+        for(const variant of [
+          {crud:true}, {crud:false},
+          {crud:true,flat:true,spec:false,skipImport:true,path:'features',format:true},
+          {crud:true,sourceRoot:'src/custom',spec:true,specFileSuffix:'unit'}
+        ]) {
+          const actual=createTreeWithEmptyWorkspace();
+          const expected=createTreeWithEmptyWorkspace();
+          for(const target of [actual,expected]) for(const [path,bytes] of baseline) target.write(path,bytes);
+          const options={name:'users',type,...variant};
+          const original=structuredClone(options);
+          const native=await runNestSchematic(expected,{schematic:'resource',workingDirectory:'libs/domain',options:{...options,sourceRoot:options.sourceRoot??'src'}});
+          const callback=await resourceGenerator(actual,{...options,project:'domain'});
+          assert.equal(typeof callback,type==='graphql-code-first'?'undefined':'function');
+          assert.deepEqual(options,original);
+          assert.deepEqual(snapshotNxTree(actual),snapshotNxTree(expected));
+          assert.deepEqual(actual.read('package.json'),baseline.get('package.json'));
+          assert.deepEqual(actual.read('libs/outer.module.ts'),baseline.get('libs/outer.module.ts'));
+          const root='libs/domain/'+(options.sourceRoot??'src')+'/'+(options.path?options.path+'/':'')+(options.flat?'':'users/');
+          const transport=type.startsWith('graphql')?'resolver':type==='ws'?'gateway':'controller';
+          assert.ok(actual.exists(root+'users.'+transport+'.ts'));
+          assert.equal(actual.exists(root+'users.'+transport+'.'+(options.specFileSuffix??'spec')+'.ts'),options.spec!==false);
+          assert.equal(actual.exists(root+'dto/create-user.'+(type.startsWith('graphql')?'input':'dto')+'.ts'),options.crud);
+          const module=actual.read('libs/domain/src/domain.module.ts','utf8');
+          if(options.skipImport) assert.equal(module,baseline.get('libs/domain/src/domain.module.ts').toString());
+          else assert.match(module,/UsersModule/);
+          const afterManifest=JSON.parse(actual.read('libs/domain/package.json','utf8'));
+          if(type==='graphql-code-first') assert.equal(afterManifest.dependencies['@nestjs/mapped-types'],undefined);
+          else {
+            assert.equal(afterManifest.dependencies['@nestjs/mapped-types'],'*');
+            assert.ok(native.deferredTasks.some(task=>task.name==='node-package'));
+          }
+          for(const [path,bytes] of snapshotNxTree(actual)) if(path.startsWith(root)&&path.endsWith('.ts')) {
+            for(const match of bytes.toString().matchAll(/from ['"](\.[^'"]+)['"]/g))
+              assert.equal(match[1].endsWith('.js'),mode==='esm',path+': '+match[1]);
+          }
+        }
+      `);
+    }
+  );
+
+  it('uses only library-local Swagger and mapped-types declarations and honors skipInstall', () => {
+    runResource(String.raw`
+      await libraryGenerator(tree,{name:'domain',directory:'libs/domain',skipInstall:true});
+      const root=JSON.parse(tree.read('package.json','utf8'));
+      root.dependencies={...root.dependencies,'@nestjs/swagger':'^12.0.0','@nestjs/mapped-types':'*'};
+      tree.write('package.json',JSON.stringify(root));
+      const before=tree.read('package.json');
+      assert.equal(await resourceGenerator(tree,{name:'users',project:'domain',crud:true,skipInstall:true}),undefined);
+      assert.match(tree.read('libs/domain/src/users/dto/update-user.dto.ts','utf8'),/@nestjs\/mapped-types/);
+      assert.equal(JSON.parse(tree.read('libs/domain/package.json','utf8')).dependencies['@nestjs/mapped-types'],'*');
+      assert.equal(await resourceGenerator(tree,{name:'posts',project:'domain',crud:true}),undefined);
+      assert.deepEqual(tree.read('package.json'),before);
+      const local=JSON.parse(tree.read('libs/domain/package.json','utf8'));
+      delete local.dependencies['@nestjs/mapped-types'];
+      local.dependencies['@nestjs/swagger']='^12.0.0';
+      tree.write('libs/domain/package.json',JSON.stringify(local));
+      assert.equal(await resourceGenerator(tree,{name:'events',project:'domain',crud:true}),undefined);
+      assert.match(tree.read('libs/domain/src/events/dto/update-event.dto.ts','utf8'),/@nestjs\/swagger/);
+      assert.equal(JSON.parse(tree.read('libs/domain/package.json','utf8')).dependencies['@nestjs/mapped-types'],undefined);
+    `);
+  });
+
+  it('discards staged library dependencies and module registration when native generation fails', () => {
+    runResource(String.raw`
+      await libraryGenerator(tree,{name:'domain',directory:'libs/domain',skipInstall:true});
+      tree.write('libs/domain/src/users/users.service.ts','user-owned');
+      const before=snapshotNxTree(tree);
+      for(const options of [{name:'users',type:'rest',crud:true},{name:'x',type:'invalid'},{name:'x',language:'js'},{name:'x',sourceRoot:'../other'}]) {
+        await assert.rejects(resourceGenerator(tree,{...options,project:'domain'}));
+        assert.deepEqual(snapshotNxTree(tree),before);
+      }
+    `);
+  });
+});
+
+it.each(
+  ['esm', 'cjs'].flatMap((mode) =>
+    [false, true].map((format) => ({ mode, format }))
+  )
+)(
+  'aliases same-name resource imports in a $mode library with format=$format',
+  ({ mode, format }) => {
+    runResource(String.raw`
+    await libraryGenerator(tree,{name:'users',directory:'libs/users',skipInstall:true});
+    const manifest=JSON.parse(tree.read('libs/users/package.json','utf8'));
+    manifest.type=${JSON.stringify(mode)}==='esm'?'module':'commonjs';
+    tree.write('libs/users/package.json',JSON.stringify(manifest));
+    await resourceGenerator(tree,{name:'users',project:'users',type:'rest',crud:true,skipInstall:true,format:${JSON.stringify(
+      format
+    )}});
+    const module=tree.read('libs/users/src/users.module.ts','utf8');
+    assert.match(module,/import \{ UsersModule as UsersResourceModule \}/);
+    assert.match(module,/imports: \[UsersResourceModule\]/);
+    assert.match(module,/export class UsersModule/);
+    assert.match(tree.read('libs/users/src/users/users.module.ts','utf8'),/export class UsersModule/);
+    const other=createTreeWithEmptyWorkspace();
+    await libraryGenerator(other,{name:'users',directory:'libs/users',skipInstall:true});
+    other.write('libs/users/src/users.module.ts',"import { Module } from '@nestjs/common';\nconst SHARED_IMPORTS=[];\n@Module({imports:SHARED_IMPORTS}) export class UsersModule {}\n");
+    const before=snapshotNxTree(other);
+    await assert.rejects(resourceGenerator(other,{name:'users',project:'users',crud:true}),/Cannot safely alias/);
+    assert.deepEqual(snapshotNxTree(other),before);
+  `);
+  }
+);
