@@ -59,7 +59,7 @@ async function stop(child: ChildProcess) {
   });
 }
 
-async function assertHttp(
+export async function assertHttp(
   root: string,
   env: NodeJS.ProcessEnv,
   target: string,
