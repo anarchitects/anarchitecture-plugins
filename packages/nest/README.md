@@ -1360,6 +1360,26 @@ existing Nx plugins. Tests depend on the build to verify the actual packed
 artifact, including both entrypoints, the shipped declarations and license,
 and build/start inference through Nx's project graph in a temporary consumer workspace.
 
+The packed Angular coexistence scenario generates `apps/web` with Nx Angular
+23.2's Angular 22.1 defaults (esbuild, Angular's Vitest runner, and ESLint), plus
+a generic `libs/contracts` package. It runs Angular build/test/lint uncached
+before and after generating `libs/users`, its Nest service/resource, and
+`packages/api` with a native `internal` library. Angular and contracts files
+must remain byte-identical; the active root paths model may gain only the
+`users` entry. It asserts workspace globs, package-owned dependencies, automatic
+generator installs, and graph edges, then checks the library and serves its
+shared contract through the API. Explicit workspace dependency/tooling `yarn add`
+commands express consumer choices; no repair install follows a Nest generator.
+The modern reference model and other package-manager representations retain
+their focused linking/registration coverage.
+
+```sh
+yarn nx run nx-nest-e2e:e2e-ci--src/nest-scenarios/angular-coexistence.spec.ts --skipNxCache
+```
+
+This scenario is one atomized Jest task in CI. It shares the source-consumer
+Rspack/Vitest configuration with the independent consumption regression.
+
 The Nx project is `nx-nest`; the npm package is `@anarchitects/nest`. The existing
 independent release configuration can version just this project. The manual
 release workflow accepts `nx-nest`, and the publish workflow selects it from a
