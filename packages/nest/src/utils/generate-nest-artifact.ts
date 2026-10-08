@@ -41,10 +41,13 @@ export async function generateNestArtifact(
   treePath(options.name);
   for (const path of [options.path, options.module])
     if (path !== undefined) nativeRelativePath(path);
-  const { ownerRoot, config, member } = resolveNestGenerationContext(
-    tree,
-    options
-  );
+  const context = resolveNestGenerationContext(tree, options);
+  // Library artifact/resource execution is the next integration step (#552/#553).
+  if (context.kind === 'nx-library')
+    throw new Error(
+      'Artifact generation in Nx-native Nest libraries is not supported yet.'
+    );
+  const { ownerRoot, config, member } = context;
   const {
     project: _project,
     nestProject: _nestProject,
