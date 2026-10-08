@@ -673,11 +673,131 @@ variant). Both exported classes retain their native names. Existing references
 remain intact; an ambiguous registration fails atomically with guidance to use
 `--skipImport` and register it explicitly. Native owner/member output is unchanged.
 
-Application consumption is tracked in
-[#554](https://github.com/anarchitects/anarchitecture-plugins/issues/554).
 The source-only entrypoint requires a TypeScript-aware consumer; it is not a
 precompiled Node.js package. Existing workspace tools may infer tasks from the
 generated files; this generator does not install build/test/lint tooling.
+
+#### Consuming an Nx-native library from an application
+
+The supported source-consumption recipe below uses an ESM Nest application,
+Yarn node-modules workspaces, Nest's Rspack builder, and Vitest with SWC. Start
+with `yarn nx add @anarchitects/nest` in an existing Nx workspace, then:
+
+```sh
+yarn nx g @anarchitects/nest:library @acme/users --directory=libs/users
+yarn nx g @anarchitects/nest:resource users --project=@acme/users --type=rest --crud
+yarn nx g @anarchitects/nest:application api --directory=packages/api --type=esm --packageManager=yarn
+yarn workspace api add '@acme/users@workspace:*'
+yarn nx g @anarchitects/nest:init --buildTargetName=compile --startTargetName=serve
+```
+
+`@acme/users` is both the package and Nx project name; `libs/users` is its
+location. Import `UsersModule` from `@acme/users` and add it to `AppModule`'s
+`imports`. The application owns `"@acme/users": "workspace:*"` in its
+`dependencies`. This is explicit consumer metadata: generators register new
+packages in the workspace but do not find or modify potential consumers.
+No dependency on the library belongs in the root manifest, no Nest CLI alias
+is needed, and `libs/users` must not be added to the application's
+`nest-cli.json`. Yarn hoisting may place the link in root `node_modules`; that
+does not change dependency ownership.
+
+The library exports decorated TypeScript through `src/index.ts`. Plain Node
+execution of that entrypoint is not supported, and the default application
+compiler is not a source-package bundler. Configure the consumer to compile
+the library rather than leave it as a runtime external:
+
+```sh
+yarn workspace api add -D @rspack/core@2.1.10 webpack-node-externals@3.0.0 tsconfig-paths-webpack-plugin@4.2.0
+```
+
+Merge this builder into `packages/api/nest-cli.json`'s `compilerOptions`:
+
+```json
+{
+  "builder": {
+    "type": "rspack",
+    "options": { "configPath": "rspack.config.cjs" }
+  }
+}
+```
+
+Create `packages/api/rspack.config.cjs`:
+
+```js
+const { builtinModules } = require('node:module');
+const { resolve } = require('node:path');
+const nodeExternals = require('webpack-node-externals');
+
+module.exports = (options) => ({
+  ...options,
+  externals: [
+    nodeExternals({
+      modulesDir: resolve(__dirname, 'node_modules'),
+      additionalModuleDirs: [resolve(__dirname, '../../node_modules')],
+      allowlist: ['@acme/users'],
+      importType: 'module',
+    }),
+    ({ request }, callback) => {
+      const bare = request?.replace(/^node:/, '');
+      return bare && builtinModules.includes(bare)
+        ? callback(null, 'module ' + request)
+        : callback();
+    },
+  ],
+});
+```
+
+Replacing the default externalizer matters: appending an allowlisted
+externalizer cannot undo an earlier decision to externalize the library.
+List each source-only package the application consumes; retain externalization
+of installed framework packages. Adjust module directories for other layouts.
+Nest's ESM Rspack defaults supply the TypeScript/decorator compiler and resolve
+relative `.js` imports to TypeScript sources. Existing custom bundler configs
+remain consumer-owned; merge equivalent behavior instead of overwriting them.
+
+For tests importing the library, install `@swc/core` and `unplugin-swc` in the
+consumer and add SWC to its Vitest plugins so Nest decorator metadata survives:
+
+```sh
+yarn workspace api add -D @swc/core@1.16.13 unplugin-swc@2.0.0
+```
+
+```ts
+import swc from 'unplugin-swc';
+
+// In defineConfig({ plugins: [...] }); preserve other plugins/test settings.
+swc.vite({
+  tsconfigFile: false,
+  swcrc: false,
+  module: { type: 'es6' },
+  jsc: {
+    parser: { syntax: 'typescript', decorators: true },
+    transform: { legacyDecorator: true, decoratorMetadata: true },
+  },
+});
+```
+
+Run `yarn nx run api:test`, `yarn nx run api:compile`, and
+`yarn nx run api:serve`. Distinct inferred target names avoid native
+`build`/`start` script precedence. The graph records `api -> @acme/users` from
+ordinary package/import metadata. The inferred `compile` target hashes
+`^production` (or `^default` when no production input exists), depends on
+`^compile`, and caches/restores its outputs. Library source edits therefore
+invalidate the application bundle. If you override inputs, preserve dependency
+inputs; if you configure library compilation, use the matching dependency
+target name. Source consumption does not require a separate library build.
+
+The packed regression also equips the library with consumer-owned TypeScript
+compilation and Vitest targets, runs its generated resource specs independently,
+and tests the application's imported module over HTTP. It verifies cache
+restoration, rebuild and changed HTTP output after a library-only edit, then
+generates native `internal` under the same application and repeats startup.
+The native library has its own `api-internal:compile` target; adding it alone
+leaves the application at its original root with `api:compile` and `api:serve`.
+The independent package remains outside the native owner's membership. See
+[the complete executable consumer](../nest-e2e/src/nest-scenarios/nx-library-consumption.spec.ts)
+for the additional library test/compile configuration. This recipe does not
+claim precompiled publication or default CJS/Jest consumption support.
 
 #### Workspace TypeScript linking
 
