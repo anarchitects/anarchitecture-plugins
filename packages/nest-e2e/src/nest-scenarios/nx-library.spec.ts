@@ -15,7 +15,7 @@ it('generates and installs an independent Nx-native library from the packed plug
     compilerOptions: {
       module: 'preserve',
       moduleResolution: 'bundler',
-      paths: { contracts: ['libs/contracts/src/index.ts'] },
+      paths: { contracts: ['./libs/contracts/src/index.ts'] },
     },
   });
   writeFileSync(join(root, 'tsconfig.base.json'), rootCompiler);
@@ -38,6 +38,7 @@ it('generates and installs an independent Nx-native library from the packed plug
   expect(read('package.json')).toBe(before.manifest);
   expect(read('yarn.lock')).toBe(before.lock);
   expect(read('node_modules/.yarn-state.yml')).toBe(before.state);
+  expect(read('tsconfig.base.json')).toBe(rootCompiler);
   const output = yarn(generate);
   expect(output.match(/Yarn \d+\.\d+\.\d+/g)).toHaveLength(1);
   const project = JSON.parse(
@@ -69,7 +70,15 @@ it('generates and installs an independent Nx-native library from the packed plug
   expect(existsSync(join(root, 'nest-cli.json'))).toBe(false);
   expect(read('package.json')).toBe(before.manifest);
   expect(read('nx.json')).toBe(before.nx);
-  expect(read('tsconfig.base.json')).toBe(rootCompiler);
+  expect(JSON.parse(read('tsconfig.base.json'))).toEqual({
+    compilerOptions: {
+      ...JSON.parse(rootCompiler).compilerOptions,
+      paths: {
+        contracts: ['./libs/contracts/src/index.ts'],
+        users: ['./libs/users/src/index.ts'],
+      },
+    },
+  });
   expect(read('.yarnrc.yml')).toBe(yarnConfig);
 
   // The source-only container adds no build target. This consumer-owned check
@@ -89,7 +98,9 @@ it('generates and installs an independent Nx-native library from the packed plug
   yarn(['nx', 'run', 'users:check', '--skipNxCache']);
   const lock = read('yarn.lock');
   const state = read('node_modules/.yarn-state.yml');
+  const linking = read('tsconfig.base.json');
   expect(() => yarn(generate)).toThrow('already exists');
+  expect(read('tsconfig.base.json')).toBe(linking);
   expect(() =>
     yarn([
       'nx',

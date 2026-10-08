@@ -91,8 +91,12 @@ describe('Nx-native Nest library container', () => {
       )}+'.module.js').replaceAll('"',"'")+';\\n');
       assert.deepEqual(readJson(tree,root+'/tsconfig.json').references,[{path:'./tsconfig.lib.json'}]);
       assert.equal(readJson(tree,root+'/tsconfig.json').compilerOptions.experimentalDecorators,true);
-      assert.equal(readJson(tree,root+'/tsconfig.lib.json').compilerOptions.rootDir,'src');
-      for (const [file, content] of original) if (file!=='package.json') assert.deepEqual(tree.read(file),content,file);
+      assert.equal(readJson(tree,root+'/tsconfig.lib.json').compilerOptions.rootDir,'../..');
+      assert.equal(readJson(tree,root+'/tsconfig.lib.json').compilerOptions.composite,false);
+      assert.deepEqual(readJson(tree,'tsconfig.base.json').compilerOptions.paths[${JSON.stringify(
+        name
+      )}],['./libs/users/src/index.ts']);
+      for (const [file, content] of original) if (!['package.json','tsconfig.base.json'].includes(file)) assert.deepEqual(tree.read(file),content,file);
       const before = snapshotNxTree(tree);
       await assert.rejects(libraryGenerator(tree,{name:${JSON.stringify(
         input
@@ -134,7 +138,8 @@ describe('Nx-native Nest library container', () => {
       tree.write('tsconfig.base.json',JSON.stringify({compilerOptions:{module:'preserve',moduleResolution:'bundler',paths:{'@app/contracts':['libs/contracts/src/index.ts']}},angularCompilerOptions:{strictTemplates:true}}));
       const before=snapshotNxTree(tree);
       await libraryGenerator(tree,{name:'users',directory:'libs/users',skipInstall:true});
-      for(const [file,content] of before) assert.deepEqual(tree.read(file),content,file);
+      for(const [file,content] of before) if(file!=='tsconfig.base.json') assert.deepEqual(tree.read(file),content,file);
+      assert.deepEqual(readJson(tree,'tsconfig.base.json'),{compilerOptions:{module:'preserve',moduleResolution:'bundler',paths:{'@app/contracts':['libs/contracts/src/index.ts'],users:['./libs/users/src/index.ts']}},angularCompilerOptions:{strictTemplates:true}});
       assert.equal(readJson(tree,'packages/api/nest-cli.json').projects.users,undefined);
       assert.equal(tree.exists('packages/api/libs/internal/package.json'),false);
     `);
