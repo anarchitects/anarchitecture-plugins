@@ -20,6 +20,7 @@ function runLibrary(assertions: string) {
       const { createTreeWithEmptyWorkspace } = local('@nx/devkit/testing');
       const { getProjects, readJson, writeJson } = local('@nx/devkit');
       const { libraryGenerator } = local('./dist/generators/library/generator');
+      const { resolveNestGenerationContext } = local('./dist/utils/resolve-nest-generation-context');
       const { snapshotNxTree } = local('./dist/generation-adapter/tree-snapshot');
       const { runNativeSchematic } = local('./dist/generation-adapter/run-native-schematic');
       const tree = createTreeWithEmptyWorkspace();
@@ -74,6 +75,23 @@ describe('Nx-native Nest library container', () => {
       assert.equal(project.sourceRoot, root+'/src');
       assert.equal(project.projectType, 'library');
       assert.deepEqual(project.metadata.nest, {kind:'nx-library'});
+      const context = resolveNestGenerationContext(tree, {project: ${JSON.stringify(
+        name
+      )}});
+      assert.equal(context.kind, 'nx-library');
+      assert.equal(context.projectName, ${JSON.stringify(name)});
+      assert.equal(context.projectRoot, root);
+      assert.equal(context.sourceRoot, root+'/src');
+      assert.equal(context.relativeSourceRoot, 'src');
+      assert.deepEqual(context.packageJson, manifest);
+      assert.equal(context.moduleSystem, 'esm');
+      assert.equal(context.language, 'ts');
+      const beforeArtifacts = snapshotNxTree(tree);
+      const { serviceGenerator } = local('./dist/generators/service/generator');
+      await assert.rejects(serviceGenerator(tree, {name:'orders',project:${JSON.stringify(
+        name
+      )}}), /not supported yet/);
+      assert.deepEqual(snapshotNxTree(tree), beforeArtifacts);
       assert.equal(tree.exists(root+'/nest-cli.json'), false);
       assert.equal(tree.exists('nest-cli.json'), false);
       const native = await runNativeSchematic(new Map([['package.json',tree.read(root+'/package.json')]]),{

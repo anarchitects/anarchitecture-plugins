@@ -613,9 +613,19 @@ native library such as `packages/api/libs/internal`. There is no new runtime
 dependency on `@nx/js` and no added Nest build/start target or inference
 registration for this container.
 
-Artifact/resource generation by Nx project name is tracked in
-[#551](https://github.com/anarchitects/anarchitecture-plugins/issues/551),
-[#552](https://github.com/anarchitects/anarchitecture-plugins/issues/552), and
+Generation-context resolution recognizes these libraries by their explicit
+`metadata.nest.kind: "nx-library"` marker and Nx project name. It requires a
+library project with a source root inside its project directory and its own
+named `package.json`. It resolves TypeScript defaults and the local package's
+module type (`"module"` means ESM; `"commonjs"` or omitted means CJS), without
+inheriting an unrelated native owner's defaults or creating `nest-cli.json`.
+Dependencies or technology tags alone do not opt ordinary libraries in.
+Conflicting native ownership is rejected, and `--nestProject` remains exclusive
+to native owners/members. Implicit owner selection is unchanged; independent
+libraries require an explicit Nx project name.
+
+Artifact/resource execution in these libraries is not enabled yet; it is tracked in
+[#552](https://github.com/anarchitects/anarchitecture-plugins/issues/552) and
 [#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553),
 and application consumption in
 [#554](https://github.com/anarchitects/anarchitecture-plugins/issues/554).
