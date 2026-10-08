@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { installPackagesTask } from '@nx/devkit';
+import { installPackagesTask, writeJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { runIsolatedSchematic } from '../generation-adapter/run-isolated-schematic';
 import { snapshotNxTree } from '../generation-adapter/tree-snapshot';
@@ -16,16 +16,36 @@ jest.mock('../generation-adapter/run-isolated-schematic', () => ({
 describe('Nx-native library transaction and install lifecycle', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('keeps package, project, workspace, and compiler files unstaged when native generation fails', async () => {
+  it.each(['paths', 'references'])(
+    'keeps package, project, workspace, and %s linking unstaged when native generation fails',
+    async (mode) => {
+      const tree = createTreeWithEmptyWorkspace();
+      if (mode === 'references') {
+        writeJson(tree, 'tsconfig.json', { files: [], references: [] });
+      }
+      const before = snapshotNxTree(tree);
+      jest
+        .mocked(runIsolatedSchematic)
+        .mockRejectedValueOnce(new Error('native generation failed'));
+      await expect(
+        generateNxNestLibrary(tree, { name: 'users' }, 'libs/users')
+      ).rejects.toThrow('native generation failed');
+      expect(snapshotNxTree(tree)).toEqual(before);
+      expect(installPackagesTask).not.toHaveBeenCalled();
+    }
+  );
+
+  it('rejects a conflicting user alias before invoking native generation', async () => {
     const tree = createTreeWithEmptyWorkspace();
+    writeJson(tree, 'tsconfig.base.json', {
+      compilerOptions: { paths: { users: ['existing.ts'] } },
+    });
     const before = snapshotNxTree(tree);
-    jest
-      .mocked(runIsolatedSchematic)
-      .mockRejectedValueOnce(new Error('native generation failed'));
     await expect(
       generateNxNestLibrary(tree, { name: 'users' }, 'libs/users')
-    ).rejects.toThrow('native generation failed');
+    ).rejects.toThrow('alias "users" already exists');
     expect(snapshotNxTree(tree)).toEqual(before);
+    expect(runIsolatedSchematic).not.toHaveBeenCalled();
     expect(installPackagesTask).not.toHaveBeenCalled();
   });
 

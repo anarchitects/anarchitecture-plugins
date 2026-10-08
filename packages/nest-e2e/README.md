@@ -226,5 +226,16 @@ native module output, Nx project discovery, package identity and membership,
 automatic installation, a consumer-owned TypeScript check run through Nx,
 collision errors, the `lib` alias, and `--skipInstall`. Dry runs preserve the
 manifest, lockfile, install state, and generated directory. Root compiler
-configuration and hoisting policy remain unchanged. Cross-project TypeScript
-linking and Angular/application consumption belong to later epic scenarios.
+compiler options and hoisting policy remain unchanged; the existing legacy
+alias map gains only the generated package entry.
+
+`nx-library-linking.spec.ts` covers modern reference and legacy alias layouts in
+fresh installed consumers. A shared contract is imported by the generated Nest
+library and another ESM package imports both. Yarn workspace commands establish
+real package dependencies. In the modern layout, the existing `@nx/js/typescript`
+plugin and `nx sync` maintain dependency references and the inferred typecheck
+compiles the consumer. The legacy layout checks both the consumer and generated
+library through Nx-owned TypeScript check targets. Root Angular compiler options,
+module policy, existing aliases/references, dry-run behavior, and collision
+idempotence are asserted. Angular and Nest application consumption remain scoped
+to the later epic scenarios.

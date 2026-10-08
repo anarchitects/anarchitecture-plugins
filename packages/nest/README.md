@@ -608,15 +608,12 @@ remains opt-in for native module generation.
 
 The project carries `metadata.nest.kind: "nx-library"`, distinguishing it from
 ordinary shared libraries. Its initial compiler configuration is local and
-uses ESM/NodeNext and Nest decorators. It does not update root aliases,
-references, compiler settings, or any `nest-cli.json`. It can coexist with a
+uses ESM/NodeNext and Nest decorators. It can coexist with a
 native library such as `packages/api/libs/internal`. There is no new runtime
 dependency on `@nx/js` and no added Nest build/start target or inference
 registration for this container.
 
-This delivery covers container creation. Workspace TypeScript linking is
-tracked in [#550](https://github.com/anarchitects/anarchitecture-plugins/issues/550),
-artifact/resource generation by Nx project name in
+Artifact/resource generation by Nx project name is tracked in
 [#551](https://github.com/anarchitects/anarchitecture-plugins/issues/551),
 [#552](https://github.com/anarchitects/anarchitecture-plugins/issues/552), and
 [#553](https://github.com/anarchitects/anarchitecture-plugins/issues/553),
@@ -625,6 +622,48 @@ and application consumption in
 The source-only entrypoint requires a TypeScript-aware consumer; it is not a
 precompiled Node.js package. Existing workspace tools may infer tasks from the
 generated files; this generator does not install build/test/lint tooling.
+
+#### Workspace TypeScript linking
+
+The generator detects these supported root layouts, in this order:
+
+| Workspace model                                                                                                              | Generated integration                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `tsconfig.json` has empty `files`/`include` and a `references` array                                                         | Append one root reference to the library; preserve existing references and do not add paths.                      |
+| Empty Nx solution extending `tsconfig.base.json`, whose compiler options enable `composite` and do not disable `declaration` | Same reference integration, including the first project in a new solution.                                        |
+| `tsconfig.base.json` already declares `compilerOptions.paths`, including an empty object                                     | Add only the library's package-name alias to its source entrypoint. Existing aliases and `baseUrl` are preserved. |
+| No recognized linking model                                                                                                  | Retain a standalone local config; do not invent root aliases or references.                                       |
+
+Reference and alias libraries extend the existing root base config when present.
+Nest decorators and ESM/NodeNext options remain local; root module settings,
+Angular compiler options, existing aliases, and other projects' configuration
+are preserved. Native `--project` libraries retain their owner-controlled Nest
+CLI configs and do not use this integration.
+
+Reference libraries are composite projects with `rootDir: "src"`, a local
+`tsconfig.lib.json`, and a declaration output directory. Existing Nx TypeScript
+sync tooling can maintain their dependency references. Alias libraries instead
+use a non-composite program rooted at the workspace, so imported shared source
+does not fail the composite file-list or project-local `rootDir` checks. Alias
+destinations are relative to the existing `baseUrl`, or explicitly relative to
+`tsconfig.base.json` when no `baseUrl` is set. A conflicting exact alias is an
+error before generation; user mappings are never replaced.
+
+Package dependencies still belong to their consuming packages. For example,
+in a Yarn workspace using the existing `@nx/js/typescript` inference plugin:
+
+```sh
+yarn workspace @acme/consumer add @acme/users
+yarn nx sync
+yarn nx run @acme/consumer:typecheck
+```
+
+The generator does not install that plugin, migrate linking models, rewrite
+arbitrary third-party tsconfig inheritance, or add dependency references for
+imports that do not exist yet. Root reference/alias registration is duplicate-safe,
+including equivalent predeclared entries. Re-running library creation still
+rejects an existing project without modifying its linking metadata. Dry runs and
+failed native generation leave all root linking files untouched.
 
 #### Rspack setup for native members
 

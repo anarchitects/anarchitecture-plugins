@@ -18,6 +18,7 @@ import {
 import type { LibraryGeneratorSchema } from '../generators/library/schema';
 import { installAfterGeneration } from './dependency-install';
 import { planPackageWorkspaceRegistration } from './register-package-workspace';
+import { planLibraryTypeScriptLinking } from './library-typescript-linking';
 
 const libraryDependencies = {
   '@nestjs/common': '^12.0.1',
@@ -100,7 +101,7 @@ function assertAvailable(tree: Tree, name: string, root: string): void {
   }
 }
 
-/** Create only the independent container; workspace TypeScript linking is separate. */
+/** Create an independent container using the workspace's TypeScript linking model. */
 export async function generateNxNestLibrary(
   tree: Tree,
   options: LibraryGeneratorSchema,
@@ -125,11 +126,11 @@ export async function generateNxNestLibrary(
   }
   assertAvailable(tree, name, root);
   const registerWorkspace = planPackageWorkspaceRegistration(tree, root);
+  const linking = planLibraryTypeScriptLinking(tree, name, root);
   const before = snapshotNxTree(tree);
   const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
   // Source-only package entrypoints follow the Nx 23.2 library convention.
-  // The package owns its framework dependencies; root compiler/tooling policy
-  // and other projects' Nest CLI configuration are not generation inputs.
+  // The package owns its framework dependencies and local Nest compiler options.
   const initial: TreeSnapshot = new Map([
     [
       'package.json',
@@ -176,43 +177,14 @@ export async function generateNxNestLibrary(
     'src/index.ts',
     `export * from './${moduleName}.module.js';\n`
   );
-  guard.createFile(
-    'tsconfig.json',
-    json({
-      compilerOptions: {
-        target: 'ES2023',
-        module: 'NodeNext',
-        moduleResolution: 'NodeNext',
-        experimentalDecorators: true,
-        emitDecoratorMetadata: true,
-        strict: true,
-        skipLibCheck: true,
-      },
-      files: [],
-      include: [],
-      references: [{ path: './tsconfig.lib.json' }],
-    })
-  );
-  guard.createFile(
-    'tsconfig.lib.json',
-    json({
-      extends: './tsconfig.json',
-      compilerOptions: {
-        rootDir: 'src',
-        outDir: 'dist',
-        composite: true,
-        declaration: true,
-        tsBuildInfoFile: 'dist/tsconfig.lib.tsbuildinfo',
-      },
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
-    })
-  );
+  guard.createFile('tsconfig.json', json(linking.tsconfig));
+  guard.createFile('tsconfig.lib.json', json(linking.tsconfigLib));
   const after = new Map(before);
   for (const [file, content] of result.after)
     after.set(`${root}/${treePath(file)}`, Buffer.from(content));
   applySnapshot(tree, before, after);
   registerWorkspace();
+  linking.commit();
   // A new package always needs its dependencies installed and workspace link created.
   return installAfterGeneration(tree, options.skipInstall, true);
 }
