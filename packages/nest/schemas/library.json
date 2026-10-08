@@ -15,8 +15,7 @@
     },
     "prefix": {
       "type": "string",
-      "description": "The prefix of the library.",
-      "x-prompt": "What prefix would you like to use for the library (default: @app or 'defaultLibraryPrefix' setting value)?"
+      "description": "The prefix of the library. Native Nest mode only (requires project)."
     },
     "language": {
       "type": "string",
@@ -25,12 +24,12 @@
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the library."
+      "description": "The path to create the library. Native Nest mode only (requires project)."
     },
     "rootDir": {
       "type": "string",
       "format": "path",
-      "description": "The libraries root directory."
+      "description": "The libraries root directory. Native Nest mode only (requires project)."
     },
     "specFileSuffix": {
       "type": "string",
@@ -44,12 +43,17 @@
     },
     "project": {
       "type": "string",
-      "description": "Nx project owning the Nest workspace. Required when selection is ambiguous."
+      "description": "Nx project owning the existing Nest workspace. Supply exactly one of project or directory."
     },
     "skipInstall": {
       "type": "boolean",
       "default": false,
       "description": "Skip the workspace dependency install after generation."
+    },
+    "directory": {
+      "type": "string",
+      "format": "path",
+      "description": "Workspace-relative destination for a new independent Nx library/package. Mutually exclusive with project; Nx-native generation is not available yet."
     }
   },
   "required": ["name"],

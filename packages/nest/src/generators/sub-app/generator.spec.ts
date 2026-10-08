@@ -97,7 +97,16 @@ describe('native Nest workspace members', () => {
           'utf8'
         )
       );
-      const { project, skipInstall, ...properties } = wrapper.properties;
+      const { project, directory, skipInstall, ...properties } =
+        wrapper.properties;
+      if (schematic === 'library') {
+        expect(directory.type).toBe('string');
+        delete native.properties.prefix['x-prompt'];
+        for (const key of ['prefix', 'path', 'rootDir']) {
+          native.properties[key].description +=
+            ' Native Nest mode only (requires project).';
+        }
+      } else expect(directory).toBeUndefined();
       expect(properties).toEqual(native.properties);
       expect(project.type).toBe('string');
       expect(skipInstall.type).toBe('boolean');
@@ -172,7 +181,7 @@ describe('native Nest workspace members', () => {
       const config=JSON.parse(tree.read('services/backend/nest-cli.json','utf8'));
       config.defaultLibraryPrefix='@selected';
       tree.write('services/backend/nest-cli.json',JSON.stringify(config));
-      await libraryGenerator(tree,{name:'MyLib',rootDir:'modules',path:'nested'});
+      await libraryGenerator(tree,{name:'MyLib',project:'backend',rootDir:'modules',path:'nested'});
       const ts=JSON.parse(tree.read('services/backend/tsconfig.json','utf8'));
       assert.deepEqual(ts.compilerOptions.paths['@selected/my-lib'],['./modules/nested/my-lib/src/index.ts']);
       assert.equal(JSON.parse(tree.read('services/backend/nest-cli.json','utf8')).projects['my-lib'].root,'modules/nested/my-lib');
@@ -244,7 +253,7 @@ describe('native Nest workspace members', () => {
       const root=createTreeWithEmptyWorkspace();
       const app=await runNativeSchematic(new Map(),{schematic:'application',options:{name:'root',directory:'root'}});
       for(const [p,b] of app.after) root.write(p.slice('root/'.length),b);
-      await libraryGenerator(root,{name:'shared'});
+      await libraryGenerator(root,{name:'shared',project:'root'});
       assert.equal(JSON.parse(root.read('libs/shared/project.json','utf8')).name,'root-shared');
       assert.ok(root.exists('libs/shared/src/shared.module.ts'));
       await subAppGenerator(root,{name:'worker'});

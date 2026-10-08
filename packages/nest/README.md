@@ -532,11 +532,21 @@ yarn nx g @anarchitects/nest:library shared --project=api --prefix=@domain
 yarn nx g @anarchitects/nest:lib utilities --project=api --rootDir=modules
 ```
 
-`--project` selects the owning Nx project, not a Nest member. When omitted,
-the root Nest workspace takes precedence, otherwise the single Nest owner is
-selected. Multiple nested owners require an explicit selection. Root and nested
+`--project` selects the owning Nx project, not a Nest member. Libraries now
+require an explicit ownership selector, including workspaces with only one Nest
+owner: add `--project=<owner>` to existing library commands that omit it.
+Sub-apps retain automatic selection: the root Nest workspace takes precedence,
+otherwise the single Nest owner is selected. Multiple nested owners require an
+explicit selection. Root and nested
 TypeScript Nest workspaces are covered, including standalone-to-monorepo
 conversion and adding members to an existing monorepo.
+
+The library contract reserves `--directory=libs/users` for a new independent
+Nx library/package; that generation mode is not available yet. Supply exactly
+one of `--project` or `--directory`. `rootDir`, `path`, and `prefix` apply only
+to native libraries selected with `--project`; `directory` is the complete
+workspace-relative destination. The `library` / `lib` names and `--skipInstall`
+remain unchanged.
 
 Nest owns the layout: destinations are `<rootDir>/<path>/<normalized-name>`,
 relative to the selected owner, with native `apps`/`libs` defaults. `prefix`
