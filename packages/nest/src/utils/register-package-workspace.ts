@@ -4,13 +4,18 @@ import { minimatch } from 'minimatch';
 import { posix } from 'node:path';
 import { isMap, isSeq, parseDocument } from 'yaml';
 
-/** Validate before native generation; commit registration only after it succeeds. */
-export function planApplicationWorkspaceRegistration(
+/**
+ * Plan membership for an independent package at a validated workspace-relative root.
+ * Validate before generation; invoke the returned commit only after it succeeds.
+ * Native Nest members share their owner's package and do not need registration.
+ */
+export function planPackageWorkspaceRegistration(
   tree: Tree,
   root: string,
-  nativePackageManager?: string
+  packageManagerHint?: string
 ): () => void {
   const manifest = readJson(tree, 'package.json');
+  // Workspace evidence takes precedence over a generating tool's manager hint.
   const declared = manifest.packageManager?.split('@')[0];
   const lockManager = [
     ['pnpm-lock.yaml', 'pnpm'],
@@ -24,11 +29,11 @@ export function planApplicationWorkspaceRegistration(
     lockManager ??
     (tree.exists('pnpm-workspace.yaml') ? 'pnpm' : undefined) ??
     readJson(tree, 'nx.json').cli?.packageManager ??
-    (nativePackageManager === 'undefined' ? undefined : nativePackageManager) ??
+    (packageManagerHint === 'undefined' ? undefined : packageManagerHint) ??
     'npm';
   if (!['npm', 'yarn', 'pnpm', 'bun'].includes(manager))
     throw new Error(
-      `Cannot register a Nest application for package manager "${manager}".`
+      `Cannot register a generated package for package manager "${manager}".`
     );
 
   if (manager === 'pnpm') {
@@ -38,7 +43,7 @@ export function planApplicationWorkspaceRegistration(
       document.errors.length ||
       (document.contents !== null && !isMap(document.contents))
     )
-      throw new Error(`Cannot register a Nest application: invalid ${file}.`);
+      throw new Error(`Cannot register a generated package: invalid ${file}.`);
     const packages = document.toJS()?.packages;
     if (isCovered(packages, root, file)) return () => undefined;
     const sequence = document.get('packages');
@@ -52,7 +57,7 @@ export function planApplicationWorkspaceRegistration(
   const objectForm = workspaces !== undefined && !Array.isArray(workspaces);
   if (objectForm && (workspaces === null || typeof workspaces !== 'object'))
     throw new Error(
-      'Cannot register a Nest application: invalid package.json workspaces.'
+      'Cannot register a generated package: invalid package.json workspaces.'
     );
   const patterns = objectForm ? workspaces.packages : workspaces;
   if (isCovered(patterns, root, 'package.json workspaces'))
@@ -72,7 +77,7 @@ function isCovered(patterns: unknown, root: string, source: string): boolean {
     patterns.some((pattern) => typeof pattern !== 'string')
   )
     throw new Error(
-      `Cannot register a Nest application: ${source} must contain an array of workspace patterns.`
+      `Cannot register a generated package: ${source} must contain an array of workspace patterns.`
     );
   const matches = (pattern: string) =>
     minimatch(root, posix.normalize(pattern).replace(/\/$/, ''), {
@@ -85,7 +90,7 @@ function isCovered(patterns: unknown, root: string, source: string): boolean {
     )
   )
     throw new Error(
-      `Nest application "${root}" is excluded by ${source}. Choose another directory or update that exclusion explicitly.`
+      `Generated package "${root}" is excluded by ${source}. Choose another directory or update that exclusion explicitly.`
     );
   return patterns.some(
     (pattern) => !pattern.startsWith('!') && matches(pattern)

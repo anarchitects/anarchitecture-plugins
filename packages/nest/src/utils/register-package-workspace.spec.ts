@@ -2,9 +2,147 @@
 import { readJson, writeJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { parse } from 'yaml';
-import { planApplicationWorkspaceRegistration as plan } from './register-application-workspace';
+import { planPackageWorkspaceRegistration as plan } from './register-package-workspace';
 
-describe('application package-manager workspace registration', () => {
+describe('generated package-manager workspace registration', () => {
+  it.each(['npm', 'yarn', 'bun', 'pnpm'])(
+    'registers an independent library for %s only after committing the plan',
+    (manager) => {
+      const tree = createTreeWithEmptyWorkspace();
+      writeJson(tree, 'package.json', {
+        packageManager: `${manager}@1.0.0`,
+        workspaces: ['apps/*'],
+      });
+      if (manager === 'pnpm')
+        tree.write(
+          'pnpm-workspace.yaml',
+          'packages: ["apps/*"]\nhoistPattern: []\n'
+        );
+      const before = tree.listChanges();
+      const commit = plan(tree, 'libs/users');
+      expect(tree.listChanges()).toEqual(before);
+      // Generation may update unrelated manifest fields before registration.
+      const manifest = readJson(tree, 'package.json');
+      writeJson(tree, 'package.json', {
+        ...manifest,
+        description: 'preserve generation changes',
+      });
+      commit();
+      const patterns =
+        manager === 'pnpm'
+          ? parse(tree.read('pnpm-workspace.yaml', 'utf8') ?? '').packages
+          : readJson(tree, 'package.json').workspaces;
+      expect(patterns).toEqual(['apps/*', 'libs/users']);
+      expect(readJson(tree, 'package.json').description).toBe(
+        'preserve generation changes'
+      );
+      if (manager === 'pnpm')
+        expect(
+          parse(tree.read('pnpm-workspace.yaml', 'utf8') ?? '').hoistPattern
+        ).toEqual([]);
+      const after = tree.listChanges();
+      plan(tree, 'libs/users')();
+      expect(tree.listChanges()).toEqual(after);
+    }
+  );
+
+  it.each(['array', 'object', 'pnpm'])(
+    'preserves exact and glob library coverage and exclusions in %s declarations',
+    (representation) => {
+      for (const inclusion of ['libs/users', 'libs/*']) {
+        const tree = createTreeWithEmptyWorkspace();
+        const patterns = [inclusion, '!libs/private'];
+        writeJson(tree, 'package.json', {
+          packageManager:
+            representation === 'pnpm' ? 'pnpm@10.0.0' : 'yarn@4.0.0',
+          workspaces:
+            representation === 'object'
+              ? { packages: patterns, nohoist: ['**/native'] }
+              : patterns,
+        });
+        if (representation === 'pnpm')
+          tree.write(
+            'pnpm-workspace.yaml',
+            `# libraries\npackages: ${JSON.stringify(
+              patterns
+            )}\nhoistPattern: []\n`
+          );
+        const before = tree.listChanges();
+        plan(tree, 'libs/users')();
+        expect(tree.listChanges()).toEqual(before);
+        expect(() => plan(tree, 'libs/private')).toThrow(
+          'Generated package "libs/private" is excluded'
+        );
+        expect(tree.listChanges()).toEqual(before);
+      }
+    }
+  );
+
+  it.each([
+    {
+      declared: 'yarn',
+      files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml'],
+      cli: 'pnpm',
+      hint: 'pnpm',
+      expected: 'manifest',
+    },
+    {
+      declared: 'pnpm',
+      files: ['yarn.lock'],
+      cli: 'yarn',
+      hint: 'npm',
+      expected: 'yaml',
+    },
+    {
+      files: ['pnpm-lock.yaml', 'yarn.lock'],
+      cli: 'yarn',
+      hint: 'npm',
+      expected: 'yaml',
+    },
+    {
+      files: ['yarn.lock', 'pnpm-workspace.yaml'],
+      cli: 'pnpm',
+      hint: 'pnpm',
+      expected: 'manifest',
+    },
+    {
+      files: ['pnpm-workspace.yaml'],
+      cli: 'yarn',
+      hint: 'npm',
+      expected: 'yaml',
+    },
+    { files: [], cli: 'pnpm', hint: 'yarn', expected: 'yaml' },
+    { files: [], hint: 'pnpm', expected: 'yaml' },
+    { files: [], hint: 'undefined', expected: 'manifest' },
+    { files: [], expected: 'manifest' },
+  ])(
+    'preserves manager detection precedence: %j',
+    ({ declared, files, cli, hint, expected }) => {
+      const tree = createTreeWithEmptyWorkspace();
+      writeJson(
+        tree,
+        'package.json',
+        declared ? { packageManager: `${declared}@1.0.0` } : {}
+      );
+      writeJson(tree, 'nx.json', cli ? { cli: { packageManager: cli } } : {});
+      for (const file of files) tree.write(file, '');
+      const beforeManifest = tree.read('package.json');
+      const beforeYaml = tree.read('pnpm-workspace.yaml');
+      plan(tree, 'libs/users', hint)();
+      if (expected === 'yaml') {
+        expect(
+          parse(tree.read('pnpm-workspace.yaml', 'utf8') ?? '').packages
+        ).toEqual(['libs/users']);
+        expect(tree.read('package.json')).toEqual(beforeManifest);
+      } else {
+        expect(readJson(tree, 'package.json').workspaces).toEqual([
+          'libs/users',
+        ]);
+        expect(tree.read('pnpm-workspace.yaml')).toEqual(beforeYaml);
+      }
+    }
+  );
+
   it.each(['npm', 'yarn', 'bun'])(
     'adds a custom root for %s without changing other manifest fields',
     (manager) => {
