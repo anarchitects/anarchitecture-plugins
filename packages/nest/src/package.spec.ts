@@ -214,7 +214,50 @@ describe('published Nest plugin', () => {
     }
     expect(published.upgrade).toBeUndefined();
     expect(published.update).toBeUndefined();
-    expect(readme).toContain('issues/508');
+    expect(documented.get('init')).toBe('—');
+  });
+
+  it('ships the public README verbatim with generator examples matching the packed schemas', () => {
+    const readme = readFileSync(join(installedPackage, 'README.md'), 'utf8');
+    expect(readme).toBe(readFileSync(join(packageRoot, 'README.md'), 'utf8'));
+    expect(readme).not.toMatch(
+      /(?:issues|pull)\/\d+|\bepic\b|development log|fixture/i
+    );
+    const manifest = JSON.parse(
+      readFileSync(join(installedPackage, 'package.json'), 'utf8')
+    );
+    for (const version of Object.values(manifest.peerDependencies)) {
+      expect(readme).toContain(version);
+    }
+    expect(readme).toContain(manifest.dependencies.typescript);
+    for (const range of manifest.engines.node.split(' || '))
+      expect(readme).toContain(range);
+    const published: Record<string, { schema: string; aliases?: string[] }> =
+      JSON.parse(
+        readFileSync(join(installedPackage, 'generators.json'), 'utf8')
+      ).generators;
+    const commands = [
+      ...readme.matchAll(/yarn nx g @anarchitects\/nest:([\w-]+)([^\n]*)/g),
+    ];
+    expect(commands.length).toBeGreaterThan(10);
+    for (const [, name, args] of commands) {
+      const generator =
+        published[name] ??
+        Object.values(published).find((entry) => entry.aliases?.includes(name));
+      expect(generator).toBeDefined();
+      const schema = JSON.parse(
+        readFileSync(join(installedPackage, generator.schema), 'utf8')
+      );
+      for (const [, flag, value] of args.matchAll(
+        /--([\w-]+)(?:=([^\s]+))?/g
+      )) {
+        if (['dry-run', 'help'].includes(flag)) continue;
+        expect(schema.properties).toHaveProperty(flag);
+        if (value && schema.properties[flag].enum) {
+          expect(schema.properties[flag].enum).toContain(value);
+        }
+      }
+    }
   });
 
   it.each([
