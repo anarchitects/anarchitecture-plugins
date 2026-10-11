@@ -65,8 +65,8 @@ describe('documented provider composition', () => {
     expect(() =>
       provideEditorial(
         withReviewSink(() => {}),
-        withReviewSink(() => {}),
-      ),
+        withReviewSink(() => {})
+      )
     ).toThrow();
   });
   it('unregisters only the destroyed child channel', () => {
@@ -85,7 +85,7 @@ describe('documented provider composition', () => {
     TestBed.configureTestingModule({ providers: [provideEditorial()] });
     const a = createEnvironmentInjector(
       [provideTitleSuffix(' / first')],
-      TestBed.inject(EnvironmentInjector),
+      TestBed.inject(EnvironmentInjector)
     );
     const b = createEnvironmentInjector([provideTitleSuffix(' / second')], a);
     expect(b.get(TITLE_DECORATOR)('Title')).toBe('Title / first / second');
@@ -95,7 +95,7 @@ describe('documented provider composition', () => {
   it('defines a fallback when the decorator has no parent provider', () => {
     const child = createEnvironmentInjector(
       [provideTitleSuffix('!')],
-      TestBed.inject(EnvironmentInjector),
+      TestBed.inject(EnvironmentInjector)
     );
     expect(child.get(TITLE_DECORATOR)('Ready')).toBe('Ready!');
     child.destroy();
@@ -187,7 +187,7 @@ describe('documented state and forms', () => {
       form
         .title()
         .errors()
-        .some((error) => error.kind === 'server'),
+        .some((error) => error.kind === 'server')
     ).toBe(true);
     expect(fixture.componentInstance.value().title).toBe('Occupied title');
   });
@@ -204,7 +204,7 @@ describe('HTTP environment ownership', () => {
               order.push('parent');
               return next(request);
             },
-          ]),
+          ])
         ),
         provideHttpClientTesting(),
       ],
@@ -219,10 +219,10 @@ describe('HTTP environment ownership', () => {
               return next(request);
             },
           ]),
-          withRequestsMadeViaParent(),
+          withRequestsMadeViaParent()
         ),
       ],
-      TestBed.inject(EnvironmentInjector),
+      TestBed.inject(EnvironmentInjector)
     );
     const requests = TestBed.inject(HttpTestingController);
     const childResponse = firstValueFrom(child.get(HttpClient).get('/reviews'));
@@ -232,7 +232,7 @@ describe('HTTP environment ownership', () => {
     order.length = 0;
     expect(child.get(RootReader)).toBe(rootReader);
     const rootResponse = firstValueFrom(
-      child.get(RootReader).client.get('/root-reviews'),
+      child.get(RootReader).client.get('/root-reviews')
     );
     requests.expectOne('/root-reviews').flush([]);
     await rootResponse;

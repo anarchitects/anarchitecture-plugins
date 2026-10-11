@@ -23,7 +23,7 @@ export class ReviewState {
   readonly #items = signal<readonly ReviewItem[]>([]);
   readonly items = this.#items.asReadonly();
   readonly outstanding = computed(
-    () => this.items().filter((item) => !item.approved).length,
+    () => this.items().filter((item) => !item.approved).length
   );
 
   replace(items: readonly ReviewItem[]): void {
@@ -32,9 +32,7 @@ export class ReviewState {
 
   approve(id: string): void {
     this.#items.update((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, approved: true } : item,
-      ),
+      items.map((item) => (item.id === id ? { ...item, approved: true } : item))
     );
   }
 }

@@ -32,11 +32,11 @@ import {
 
 export type ReviewPolicy = (title: string) => boolean;
 export const REVIEW_POLICY = new InjectionToken<ReviewPolicy>(
-  'editorial.review-policy',
+  'editorial.review-policy'
 );
 
 export function provideReviewPolicy(
-  policy: ReviewPolicy,
+  policy: ReviewPolicy
 ): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: REVIEW_POLICY, useValue: policy },
@@ -86,7 +86,7 @@ import {
 export type ReviewSink = (message: string) => void;
 export const REVIEW_SINK = new InjectionToken<ReviewSink>('editorial.sink');
 export const TITLE_DECORATOR = new InjectionToken<(title: string) => string>(
-  'editorial.decorator',
+  'editorial.decorator'
 );
 
 type EditorialFeature = { readonly kind: 'sink'; readonly sink: ReviewSink };
@@ -147,7 +147,7 @@ export function provideTitleSuffix(suffix: string): EnvironmentProviders {
 @NgModule({})
 export class EditorialCompatibilityModule {
   static forRoot(
-    sink: ReviewSink,
+    sink: ReviewSink
   ): ModuleWithProviders<EditorialCompatibilityModule> {
     return {
       ngModule: EditorialCompatibilityModule,

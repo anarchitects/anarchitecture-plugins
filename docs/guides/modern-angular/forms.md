@@ -66,7 +66,7 @@ export class ReviewTitleControl implements FormValueControl<string> {
     <form method="post" [formRoot]="fields">
       <editorial-title-control [formField]="fields.title" />
       @if (fields.title().touched() && fields.title().invalid()) {
-        <p role="alert">Enter a review title.</p>
+      <p role="alert">Enter a review title.</p>
       }
       <button
         type="submit"
