@@ -49,7 +49,6 @@ Call `ci_information` with the provided URL. Return ONLY: `{ shortLink, cipeUrl 
 - Do NOT poll, loop, sleep, or make decisions
 - Extract and return ONLY the fields specified for each command — do NOT dump the full MCP response
 
-
 ## Mandatory ADR preflight for AI code generation
 
 Before generating or modifying any code, tests, templates or migrations, enumerate and read every ADR in BOTH `anarchitects/anarchitecture-meta/adr/**` and this repository (`adr/**`, `docs/adr/**`, and any other ADR directories). Review all accepted, proposed, historical and superseded records and respect their status. Record applicable decisions and conflicts; proposals do not supersede accepted decisions. Re-check after scope changes. If either ADR source is inaccessible, stop code generation and report the blocker. See https://github.com/anarchitects/anarchitecture-meta/tree/main/adr.
