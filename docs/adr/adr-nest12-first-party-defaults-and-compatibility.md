@@ -1,7 +1,7 @@
 # ADR: Nest 12 First-Party Scaffolding and Dependency Discipline
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 `@anarchitects/nest` is Nest 12-only tooling. The ecosystem has selected A2/B2/C1/D2/E1/F1, with a target Nest 12-first stack, native authentication and authorization, native mail, Zod, patch-only Nest 11 maintenance and optional reliability composition. These decisions concern runtime package ownership and must not lead to a fork of native Nest schematics.
