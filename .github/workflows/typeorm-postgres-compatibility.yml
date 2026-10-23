@@ -1,0 +1,60 @@
+name: TypeORM PostgreSQL compatibility
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/typeorm/**'
+      - 'tools/testing/typeorm-postgres-compatibility.mjs'
+      - '.github/workflows/typeorm-postgres-compatibility.yml'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.yarnrc.yml'
+      - 'nx.json'
+      - 'tsconfig*.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typeorm-postgres-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    name: TypeORM / PostgreSQL ${{ matrix.postgres }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '17', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-alpine
+        env:
+          POSTGRES_USER: compat
+          POSTGRES_PASSWORD: compat
+          POSTGRES_DB: compat
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd 'pg_isready -U compat -d compat'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NX_DAEMON: 'false'
+      NX_NO_CLOUD: 'true'
+      NX_CLOUD_DISTRIBUTED_EXECUTION: 'false'
+      PG_COMPAT_DATABASE_URL: postgres://compat:compat@127.0.0.1:5432/compat
+      PG_COMPAT_EXPECTED_MAJOR: ${{ matrix.postgres }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn nx run nx-typeorm:test-postgres --skip-nx-cache
