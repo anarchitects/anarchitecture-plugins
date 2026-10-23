@@ -126,6 +126,34 @@ describe('resolveTypeormCliRunner', () => {
       )
     ).toThrow('typeorm-ts-node-esm');
   });
+
+  it.each(['esm', 'commonjs'] as const)(
+    'resolves the %s CLI when TypeORM hides package.json through exports',
+    (moduleSystem) => {
+      for (const runner of [
+        'typeorm-ts-node-esm',
+        'typeorm-ts-node-commonjs',
+      ]) {
+        rmSync(join(workspaceRoot, 'node_modules', runner), {
+          recursive: true,
+          force: true,
+        });
+      }
+      const directory = join(workspaceRoot, 'node_modules/typeorm');
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(
+        join(directory, 'package.json'),
+        JSON.stringify({
+          name: 'typeorm',
+          exports: { './*.js': './*.js', './*': { require: './*.js' } },
+        })
+      );
+      writeFileSync(join(directory, `cli-ts-node-${moduleSystem}.js`), '');
+      expect(
+        resolveTypeormCliRunner({ moduleSystem }, context, absoluteProjectRoot)
+      ).toBe(`typeorm-ts-node-${moduleSystem}`);
+    }
+  );
 });
 
 function ensureRunnerPackage(workspaceRoot: string, packageName: string) {
