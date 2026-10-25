@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: MIT
-import { installPackagesTask, readJson, writeJson } from '@nx/devkit';
+import {
+  installPackagesTask,
+  NX_VERSION,
+  readJson,
+  writeJson,
+} from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { addNestTransform, setupVitest } from './setup-vitest';
 
@@ -76,7 +81,7 @@ describe('Nest Vitest setup', () => {
         readJson(tree, at('package.json')).devDependencies['@swc/core']
       ).toBe('1.16.13');
       expect(readJson(tree, 'package.json').devDependencies['@nx/vitest']).toBe(
-        '23.2.0'
+        NX_VERSION
       );
       expect(readJson(tree, 'nx.json').plugins).toContainEqual({
         plugin: '@nx/vitest',

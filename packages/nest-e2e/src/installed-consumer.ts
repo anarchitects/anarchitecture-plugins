@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 import { consumerEnvironment } from './consumer-environment';
+import { NX_VERSION } from '@nx/devkit';
 
 /** Install the packed plugin into a separate, real Yarn consumer. */
 export function createInstalledConsumer(
@@ -23,6 +24,10 @@ export function createInstalledConsumer(
   };
 
   function yarn(args: string[], nodeOptions?: string, stdoutOnly = false) {
+    // Nx 24 summarizes task failures by default; assertions need diagnostics.
+    if (args[0] === 'nx' && args[1] === 'run') {
+      args = [...args, '--output-style=static'];
+    }
     const trace =
       process.env.CI === 'true' || process.env.NEST_E2E_TRACE === 'true';
     const started = Date.now();
@@ -71,8 +76,8 @@ export function createInstalledConsumer(
       devDependencies: {
         '@anarchitects/nest': `file:${tarball}`,
         '@nestjs/cli': '12.0.0',
-        '@nx/devkit': '23.2.0',
-        nx: '23.2.0',
+        '@nx/devkit': NX_VERSION,
+        nx: NX_VERSION,
         typescript: '6.0.3',
       },
     })
