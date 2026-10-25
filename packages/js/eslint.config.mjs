@@ -8,6 +8,8 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
+          // Nx is the runtime host peer, even without direct source imports.
+          ignoredDependencies: ['nx'],
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
         },
       ],

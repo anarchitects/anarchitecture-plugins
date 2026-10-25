@@ -79,9 +79,17 @@
     }
   },
   "dependencies": {
-    "@nx/devkit": ">=21.6.4 <24",
-    "@nx/js": ">=21.6.4 <24",
     "tslib": "^2.3.0",
     "typescript": ">=5.9.0 <7"
+  },
+  "peerDependencies": {
+    "@nx/devkit": ">=21.6.4 <25",
+    "@nx/js": ">=21.6.4 <25",
+    "nx": ">=21.6.4 <25"
+  },
+  "devDependencies": {
+    "@nx/devkit": "24.0.1",
+    "@nx/js": "24.0.1",
+    "nx": "24.0.1"
   }
 }

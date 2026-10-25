@@ -128,7 +128,7 @@ yarn nx g @anarchitects/nx-governance:add-extension
 
 ## Compatibility
 
-- Supported toolchain: Nx >=19 and <24, including Nx 23; TypeScript 5.9.x and
+- Supported toolchain: Nx >=19.2.0 and <25, including Nx 23 and 24; TypeScript 5.9.x and
   6.x. See the [plugin support matrix](../../docs/support-matrix.md).
 - Designed for Nx workspaces that want governance checks integrated into normal Nx workflows.
 
@@ -147,3 +147,11 @@ Use ../../docs/architecture/governance-plugin-side-packages.md and ../../docs/mi
 Copyright © 2026 Optimalist BV and Anarchitects contributors.
 
 Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.
+
+### Nx host dependencies
+
+Declare matching `nx` and `@nx/devkit` versions in your workspace. These are
+peer dependencies so the plugin uses your existing host toolchain. When
+upgrading from a release that installed devkit transitively, add it explicitly
+at your workspace's Nx version before installing this release.
+Nx 19.0 and 19.1 must first be upgraded to at least 19.2.0.

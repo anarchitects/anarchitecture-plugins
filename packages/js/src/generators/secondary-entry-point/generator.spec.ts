@@ -174,7 +174,10 @@ export default defineConfig({
       `export const value = 'primary';\n`
     );
 
-    tree.write('packages/rollup-lib/rollup.config.js', 'export default {};');
+    tree.write(
+      'packages/rollup-lib/rollup.config.js',
+      "export default { input: 'src/index.ts', output: { dir: 'dist', format: 'es' } };"
+    );
 
     await secondaryEntryPointGenerator(tree, {
       project: 'rollup-lib',
@@ -184,11 +187,9 @@ export default defineConfig({
 
     expect(tree.exists('packages/rollup-lib/src/feature/index.ts')).toBe(true);
     const projectConfig = readProjectConfiguration(tree, 'rollup-lib');
-    expect(
-      projectConfig.targets?.build?.options?.additionalEntryPoints
-    ).toContain('packages/rollup-lib/src/feature/index.ts');
-    expect(projectConfig.targets?.build?.options?.generateExportsField).toBe(
-      true
+    expect(projectConfig.targets?.build).toBeUndefined();
+    expect(tree.read('packages/rollup-lib/rollup.config.js', 'utf8')).toMatch(
+      /['"]feature\/index['"]:\s*['"]src\/feature\/index\.ts['"]/
     );
   });
 
@@ -244,6 +245,51 @@ export default defineConfig({
       ?.toString('utf-8');
     expect(viteConfig).toMatch(
       /['"]feature\/index['"]:\s*['"]src\/feature\/index\.ts['"]/
+    );
+  });
+
+  it.each(['vite', 'rollup'])(
+    'updates inferred %s configuration with target overrides',
+    async (bundler) => {
+      const project = readProjectConfiguration(tree, 'my-lib');
+      project.targets = { build: { dependsOn: ['^build'], cache: true } };
+      updateProjectConfiguration(tree, 'my-lib', project);
+      const path = `packages/my-lib/${bundler}.config.cts`;
+      tree.write(
+        path,
+        bundler === 'vite'
+          ? "export default { build: { lib: { entry: 'src/index.ts' } } };"
+          : "module.exports = { input: { index: 'src/index.ts' }, output: { dir: 'dist' } };"
+      );
+      await secondaryEntryPointGenerator(tree, {
+        project: 'my-lib',
+        name: 'feature',
+        skipFormat: true,
+      });
+      expect(tree.read(path, 'utf8')).toContain('src/feature/index.ts');
+      expect(readProjectConfiguration(tree, 'my-lib').targets).toEqual(
+        project.targets
+      );
+    }
+  );
+
+  it('uses the declared source root for inferred bundler entries', async () => {
+    const project = readProjectConfiguration(tree, 'my-lib');
+    project.sourceRoot = 'packages/my-lib/source';
+    project.targets = {};
+    updateProjectConfiguration(tree, 'my-lib', project);
+    tree.write(
+      'packages/my-lib/vite.config.ts',
+      "export default { build: { lib: { entry: 'source/index.ts' } } };"
+    );
+    await secondaryEntryPointGenerator(tree, {
+      project: 'my-lib',
+      name: 'feature',
+      skipFormat: true,
+    });
+    expect(tree.exists('packages/my-lib/source/feature/index.ts')).toBe(true);
+    expect(tree.read('packages/my-lib/vite.config.ts', 'utf8')).toContain(
+      'source/feature/index.ts'
     );
   });
 });

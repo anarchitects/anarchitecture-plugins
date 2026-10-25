@@ -12,6 +12,8 @@ import {
   updateProjectConfiguration,
 } from '@nx/devkit';
 import * as ts from 'typescript';
+import { relative } from 'node:path/posix';
+import { updateRollupConfig } from './rollup-config';
 import type { SecondaryEntryPointGeneratorSchema } from './schema';
 
 interface NormalizedOptions {
@@ -79,7 +81,7 @@ function normalizeOptions(
   const entryFolder = joinPathFragments(sourceRoot, entryPointPath);
   const entryIndexPath = joinPathFragments(entryFolder, 'index.ts');
   const entrySourceRelativeToProjectRoot = normalizePath(
-    joinPathFragments('src', entryPointPath, 'index.ts')
+    relative(projectRoot, entryIndexPath)
   );
   const viteEntryKey = `${entryPointPath}/index`;
 
@@ -124,35 +126,16 @@ function updateBuildTargetOptions(tree: Tree, options: NormalizedOptions) {
   const projectConfiguration = options.projectConfiguration;
   const buildTarget = projectConfiguration.targets?.[options.buildTargetName];
 
-  // Handle inferred targets: if no explicit target, try inferred executors
-  if (!buildTarget) {
-    // Check if rollup or vite could be inferred (they don't create explicit targets)
+  // Tree configurations can contain only overrides for an inferred target.
+  // Inference runs the tool CLI; executor options would become invalid CLI flags.
+  if (!buildTarget || (!buildTarget.executor && !buildTarget.command)) {
     if (isRollupProject(tree, options)) {
-      // For rollup with inferred targets, we still need to update the config
-      // Create a synthetic target config for rollup
-      const syntheticTarget: TargetConfiguration = {
-        executor: '@nx/rollup:rollup',
-      };
-      const updated = configureAdditionalEntryPoints(
-        projectConfiguration,
-        syntheticTarget,
-        options
+      updateRollupConfig(
+        tree,
+        options.projectRoot,
+        options.viteEntryKey,
+        options.entrySourceRelativeToProjectRoot
       );
-      if (updated) {
-        // Ensure targets object exists
-        projectConfiguration.targets ??= {};
-        projectConfiguration.targets[options.buildTargetName] = {
-          ...projectConfiguration.targets[options.buildTargetName],
-          options: {
-            ...syntheticTarget.options,
-          },
-        };
-        updateProjectConfiguration(
-          tree,
-          options.projectName,
-          projectConfiguration
-        );
-      }
       return;
     }
 
@@ -216,6 +199,7 @@ function isRollupProject(tree: Tree, options: NormalizedOptions): boolean {
     'rollup.config.mjs',
     'rollup.config.mts',
     'rollup.config.cjs',
+    'rollup.config.cts',
   ];
 
   return rollupConfigs.some((config) =>
@@ -352,6 +336,7 @@ function findViteConfigPath(tree: Tree, projectRoot: string): string | null {
     'vite.config.js',
     'vite.config.mjs',
     'vite.config.cjs',
+    'vite.config.cts',
   ];
 
   for (const candidate of candidates) {

@@ -24,6 +24,8 @@ export interface GovernancePluginOptions {
   profileGlob?: string;
 }
 
+export const name = '@anarchitects/nx-governance/inference';
+
 export const createNodesV2: CreateNodes<GovernancePluginOptions> = [
   DEFAULT_PROFILE_GLOB,
   async (profileFiles, options, context) => {
@@ -46,7 +48,7 @@ export const createNodesV2: CreateNodes<GovernancePluginOptions> = [
 ];
 
 export default {
-  name: '@anarchitects/nx-governance/inference',
+  name,
   createNodesV2,
 };
 
