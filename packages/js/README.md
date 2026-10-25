@@ -2,7 +2,7 @@
 
 An Nx plugin that extends [`@nx/js`](https://nx.dev/packages/js) with first-class secondary entry point generation for JavaScript and TypeScript libraries.
 
-It provides a single generator that scaffolds the source files for a secondary entry point and automatically wires it into the library's build target — for all bundlers `@nx/js` supports, including libraries that rely on inferred targets.
+It provides a generator that scaffolds secondary entry point source files and configures supported executor builds or inferred Vite/Rollup library builds. Custom and dynamic build configurations may require manual setup.
 
 ---
 
@@ -22,7 +22,7 @@ yarn add -D @anarchitects/nx-js
 npm install -D @anarchitects/nx-js
 ```
 
-Compatibility: supports Nx `>=21.6.4 <24`, including Nx 23, and TypeScript
+Compatibility: supports Nx `>=21.6.4 <25`, including Nx 23 and 24, and TypeScript
 5.9.x and 6.x. See the [plugin support matrix](../../docs/support-matrix.md).
 
 ---
@@ -77,13 +77,20 @@ The generator always runs these steps:
 
 For libraries that use Project Crystal inference (no explicit `build` target in `project.json`), the generator detects the bundler by checking for its config file:
 
-- `rollup.config.js|ts|mjs|mts|cjs` → treated as rollup; entry points are written into `project.json`.
-- `vite.config.ts|mts|js|mjs|cjs` → treated as vite; the config file is updated directly.
+- `rollup.config.js|ts|mjs|mts|cjs|cts` → updates a static Rollup `input` string/map, including the native config argument of `@nx/rollup/with-nx`. The primary entry and custom settings are preserved. Package exports remain consumer-owned; add the secondary export when publishing.
+- `vite.config.ts|mts|js|mjs|cjs|cts` → updates `build.lib.entry` directly.
+
+Target overrides such as `dependsOn` do not disable inference detection. Dynamic
+Rollup configurations are preserved with instructions for manual configuration.
+Nx 24 removes the Rollup and Vite executors listed above; those rows
+describe compatibility with older Nx workspaces. Run Nx's official migrations
+before upgrading an executor-based workspace. Inferred esbuild/custom command
+targets require manual configuration; the generator reports unsupported targets.
 
 **Additional notes**
 
 - `additionalEntryPoints` is deduplicated and sorted on every update.
-- `generateExportsField` is forced to `true` so Nx emits secondary exports in the built `package.json`.
+- With a supported legacy executor, `generateExportsField` is set to `true` so Nx emits secondary exports in the built `package.json`.
 - The generator never mutates the source `package.json` exports directly.
 - Unknown executors are skipped with a warning so you can configure entry points manually.
 
@@ -149,3 +156,11 @@ yarn nx lint nx-js
 Copyright © 2026 Optimalist BV and Anarchitects contributors.
 
 Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.
+
+### Nx host dependencies
+
+Declare matching `nx` and `@nx/devkit` versions in your workspace. These are
+peer dependencies so the plugin uses your existing host toolchain. When
+upgrading from a release that installed devkit transitively, add it explicitly
+at your workspace's Nx version before installing this release.
+The matching `@nx/js` version is also a required peer dependency.

@@ -20,7 +20,7 @@ linked fixtures. The lockfile
 is an explicit input to the E2E project.
 
 The baseline is Nest CLI **12.0.0**, Nest common/core/platform-express **12.1.2**,
-Rspack **2.1.10**, TypeScript **6.0.3**, and Nx **23.2.0**. The suite checks the
+Rspack **2.1.10**, TypeScript **6.0.3**, and Nx **24.0.1**. The suite checks the
 installed Nest versions against the exact manifest pins and rejects prereleases.
 Standard Schema runtime fixtures additionally pin Swagger 12.0.2, microservices
 12.1.2, mapped-types 12.0.0, and interface types from `@standard-schema/spec`

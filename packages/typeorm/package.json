@@ -50,24 +50,24 @@
         }
       },
       "test": {
-        "executor": "@nx/jest:jest",
-        "outputs": [
-          "{projectRoot}/test-output/jest/coverage"
-        ],
         "options": {
-          "jestConfig": "packages/typeorm/jest.config.cts",
           "passWithNoTests": false
         }
       }
     }
   },
   "peerDependencies": {
+    "@nx/devkit": ">=19.2.0 <25",
+    "nx": ">=19.2.0 <25",
     "ts-node": "^10.9.1",
     "typeorm": "^1.0.0"
   },
   "dependencies": {
-    "@nx/devkit": ">= 19 <24",
     "ts-morph": "^22.0.0",
     "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@nx/devkit": "24.0.1",
+    "nx": "24.0.1"
   }
 }

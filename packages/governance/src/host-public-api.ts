@@ -23,5 +23,9 @@ export { default as initGenerator } from './generators/init/generator.js';
 export { default as addExtensionGenerator } from './generators/add-extension/generator.js';
 export { default as eslintIntegrationGenerator } from './generators/eslint-integration/generator.js';
 
-export { createNodesV2, type GovernancePluginOptions } from './plugin/index.js';
+export {
+  name,
+  createNodesV2,
+  type GovernancePluginOptions,
+} from './plugin/index.js';
 export { default } from './plugin/index.js';

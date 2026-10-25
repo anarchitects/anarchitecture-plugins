@@ -139,7 +139,7 @@ const capabilities = createNxCanonicalCapabilities({
 
 ## Compatibility
 
-- Peer dependency: Nx >=19 and <23.
+- Nx / `@nx/devkit`: >=19 and <25, including Nx 24.
 - Depends on @anarchitects/governance-core.
 
 ## FAQ
@@ -168,3 +168,10 @@ remain Community-owned.
 Copyright © 2026 Optimalist BV and Anarchitects contributors.
 
 Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.
+
+### Nx host dependencies
+
+Declare matching `nx` and `@nx/devkit` versions in your workspace. These are
+peer dependencies so the plugin uses your existing host toolchain. When
+upgrading from a release that installed devkit transitively, add it explicitly
+at your workspace's Nx version before installing this release.

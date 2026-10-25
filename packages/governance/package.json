@@ -80,12 +80,7 @@
         }
       },
       "test": {
-        "executor": "@nx/jest:jest",
-        "outputs": [
-          "{projectRoot}/test-output/jest/coverage"
-        ],
         "options": {
-          "jestConfig": "packages/governance/jest.config.cts",
           "passWithNoTests": true
         }
       }
@@ -98,8 +93,15 @@
   "dependencies": {
     "@anarchitects/governance-adapter-nx": "0.2.4",
     "@anarchitects/governance-core": "0.4.1",
-    "@nx/devkit": ">=19 <24",
     "minimatch": "9.0.5",
     "tslib": "^2.6.2"
+  },
+  "peerDependencies": {
+    "@nx/devkit": ">=19.2.0 <25",
+    "nx": ">=19.2.0 <25"
+  },
+  "devDependencies": {
+    "@nx/devkit": "24.0.1",
+    "nx": "24.0.1"
   }
 }

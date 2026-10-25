@@ -115,6 +115,17 @@ describe('nx-governance root package entrypoint compatibility shell', () => {
     );
   });
 
+  it('exposes the plugin object to Nx loaders that assign a plugin name', () => {
+    expect(governanceRoot.name).toBe(governanceRoot.default.name);
+    expect(governanceRoot.default.createNodesV2).toBe(
+      governanceRoot.createNodesV2
+    );
+    expect(governanceRoot.default.name).toBe(
+      '@anarchitects/nx-governance/inference'
+    );
+    expect(Object.isExtensible(governanceRoot.default)).toBe(true);
+  });
+
   it('stops exporting monolithic internals from the root package entrypoint compatibility shell', () => {
     expect('runGovernance' in governanceRoot).toBe(false);
     expect('runGovernanceSnapshot' in governanceRoot).toBe(false);

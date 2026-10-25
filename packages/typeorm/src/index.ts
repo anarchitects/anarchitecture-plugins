@@ -27,3 +27,5 @@ export { default as subscriberCreateGenerator } from './generators/subscriber-cr
 export { default as subscriberGenerator } from './generators/subscriber-create/generator.js';
 
 export { default } from './plugin/index.js';
+// Nx 19.2 loaders inspect named hooks and must not mutate an ESM namespace.
+export { name, createNodesV2 } from './plugin/index.js';
