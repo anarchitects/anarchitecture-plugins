@@ -1,0 +1,35 @@
+name: Nx compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nx-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packed-consumers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        nx:
+          ['19.0.0', '19.2.0', '20.0.0', '21.6.4', '22.0.0', '23.2.0', '24.0.1']
+    env:
+      NX_DAEMON: 'false'
+      NX_NO_CLOUD: 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn nx run @anarchitecture-plugins/source:nx-compatibility --versions=${{ matrix.nx }} --output-style=static
