@@ -344,7 +344,11 @@ function assertRunnerInstalled(
   workspaceRoot: string
 ) {
   try {
-    requireFromExecutor.resolve('typeorm/package.json', {
+    // TypeORM's export map does not expose package.json. Resolve the actual
+    // runner file instead, which also verifies the selected CLI is present.
+    const cliFile =
+      runner === ESM_RUNNER ? 'cli-ts-node-esm.js' : 'cli-ts-node-commonjs.js';
+    requireFromExecutor.resolve(`typeorm/${cliFile}`, {
       paths: [workspaceRoot],
     });
   } catch {
