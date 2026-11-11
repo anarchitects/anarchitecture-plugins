@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { consumerEnvironment } from '../consumer-environment';
 import { fixtures } from '../fixtures';
 import {
   dependencies,
   nx,
+  packageRoot,
   snapshotFiles,
   usePackedPlugin,
   write,
@@ -176,10 +177,10 @@ run().catch(error => { console.error(error); process.exitCode = 1; });
     expect(version).toMatch(/^12\.\d+\.\d+$/);
 }
 
-describe('published library peers: current init rejection (#593)', () => {
+describe('published library peers with a selected Nest 12 host', () => {
   const suite = usePackedPlugin();
 
-  it.each(['^11 || ^12', '^11.0.0 || ^12.0.0', '^12.0.0'])(
+  it.each(['^11 || ^12', '^11.0.0 || ^12.0.0', '>=11 <13', '^12.0.0'])(
     'loads a packed library with %s peers on Nest 12 before testing init',
     (peers) => {
       const root = suite.createWorkspace({
@@ -188,6 +189,18 @@ describe('published library peers: current init rejection (#593)', () => {
       });
       try {
         writeLibrary(root, peers);
+        if (peers === '>=11 <13') {
+          // Exercise an actual project-local layout as well as root hoisting.
+          mkdirSync(join(root, 'libs/node_modules/@nestjs'), {
+            recursive: true,
+          });
+          for (const name of ['@nestjs/common', '@nestjs/core'])
+            symlinkSync(
+              packageRoot(name),
+              join(root, 'libs/node_modules', name),
+              'junction'
+            );
+        }
         const installed = packLibrary(root);
         assertRuntime(root);
         const libraryBefore = snapshotFiles(join(root, libraryPath));
@@ -208,30 +221,131 @@ describe('published library peers: current init rejection (#593)', () => {
           '--no-interactive',
         ];
 
-        if (peers === '^12.0.0') {
-          nx(root, init);
-          expect(
-            JSON.parse(readFileSync(join(root, 'nx.json'), 'utf8')).plugins
-          ).toContain('@anarchitects/nest/plugin');
-          const registered = readFileSync(join(root, 'nx.json'), 'utf8');
-          nx(root, init);
-          expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(registered);
-        } else {
-          // Characterization only: #594 must replace rejection with acceptance.
-          // Both dry-run and normal init must fail for the peer, without edits.
-          for (const args of [[...init, '--dry-run'], init]) {
-            expect(() => nx(root, args)).toThrow(
-              `${libraryPath}/package.json (peerDependencies): @nestjs/common@${peers} is not a stable Nest v12 range`
-            );
-            expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(nxBefore);
-          }
-        }
+        nx(root, [...init, '--dry-run']);
+        expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(nxBefore);
+        nx(root, init);
+        expect(
+          JSON.parse(readFileSync(join(root, 'nx.json'), 'utf8')).plugins
+        ).toContain('@anarchitects/nest/plugin');
+        const registered = readFileSync(join(root, 'nx.json'), 'utf8');
+        nx(root, init);
+        expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(registered);
 
         expect(
           paths.map((path) => readFileSync(join(root, path), 'utf8'))
         ).toEqual(before);
         expect(snapshotFiles(join(root, libraryPath))).toEqual(libraryBefore);
         expect(snapshotFiles(installed)).toEqual(installedBefore);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('initializes a publishable root retaining dual peers and stable v12 development dependencies', () => {
+    const root = suite.createWorkspace({
+      ...fixtures[0],
+      name: 'publishable-root',
+    });
+    try {
+      const manifest = JSON.parse(
+        readFileSync(join(root, 'package.json'), 'utf8')
+      );
+      write(root, 'package.json', {
+        ...manifest,
+        private: false,
+        devDependencies: manifest.dependencies,
+        dependencies: {},
+        peerDependencies: {
+          '@nestjs/common': '^11 || ^12',
+          '@nestjs/core': '^11 || ^12',
+        },
+      });
+      const before = readFileSync(join(root, 'package.json'), 'utf8');
+      const init = ['generate', '@anarchitects/nest:init', '--no-interactive'];
+      nx(root, init);
+      const registered = readFileSync(join(root, 'nx.json'), 'utf8');
+      expect(JSON.parse(registered).plugins).toContain(
+        '@anarchitects/nest/plugin'
+      );
+      nx(root, init);
+      expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(registered);
+      expect(readFileSync(join(root, 'package.json'), 'utf8')).toBe(before);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    { label: 'nested-v11', version: '11.1.0', diagnostic: 'installed 11.1.0' },
+    { label: 'nested-v10', version: '10.4.0', diagnostic: 'installed 10.4.0' },
+    { label: 'nested-v13', version: '13.0.0', diagnostic: 'installed 13.0.0' },
+    {
+      label: 'nested-prerelease',
+      version: '12.1.2-beta.1',
+      diagnostic: 'installed 12.1.2-beta.1',
+    },
+    {
+      label: 'peer-excludes-host',
+      peers: '^11 || >=12.2 <13',
+      diagnostic: 'installed 12.1.2',
+    },
+    {
+      label: 'unsupported-peers',
+      peers: '^10 || ^12',
+      diagnostic: 'not a supported library peer range',
+    },
+    {
+      label: 'missing-install',
+      missing: true,
+      diagnostic: 'no installed package could be resolved',
+    },
+    {
+      label: 'conflicting-declaration',
+      conflicting: true,
+      diagnostic: '(dependencies): @nestjs/common@^11',
+    },
+  ])(
+    'rejects $label before normal or dry-run mutation',
+    ({ label, version, peers, missing, conflicting, diagnostic }) => {
+      const root = suite.createWorkspace({ ...fixtures[0], name: label });
+      try {
+        writeLibrary(root, peers ?? '^11 || ^12');
+        if (version)
+          write(
+            root,
+            `${libraryPath}/node_modules/@nestjs/common/package.json`,
+            {
+              name: '@nestjs/common',
+              version,
+            }
+          );
+        if (missing) rmSync(join(root, 'node_modules/@nestjs/common'));
+        if (conflicting) {
+          const manifest = JSON.parse(
+            readFileSync(join(root, libraryPath, 'package.json'), 'utf8')
+          );
+          manifest.dependencies = { '@nestjs/common': '^11' };
+          write(root, `${libraryPath}/package.json`, manifest);
+        }
+        const before = snapshotFiles(join(root, libraryPath));
+        const nxBefore = readFileSync(join(root, 'nx.json'), 'utf8');
+        const packageBefore = readFileSync(join(root, 'package.json'), 'utf8');
+        for (const extra of [['--dry-run'], []]) {
+          expect(() =>
+            nx(root, [
+              'generate',
+              '@anarchitects/nest:init',
+              '--no-interactive',
+              ...extra,
+            ])
+          ).toThrow(diagnostic);
+          expect(readFileSync(join(root, 'nx.json'), 'utf8')).toBe(nxBefore);
+          expect(readFileSync(join(root, 'package.json'), 'utf8')).toBe(
+            packageBefore
+          );
+          expect(snapshotFiles(join(root, libraryPath))).toEqual(before);
+        }
       } finally {
         rmSync(root, { recursive: true, force: true });
       }

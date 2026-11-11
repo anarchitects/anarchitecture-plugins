@@ -1,9 +1,10 @@
 # Published Nest library compatibility preflight
 
-Status: implementation contract for [#593](https://github.com/anarchitects/anarchitecture-plugins/issues/593),
-the first slice of [#585](https://github.com/anarchitects/anarchitecture-plugins/issues/585).
-The current plugin still rejects dual-major peers. This document specifies the
-next validation slice; it does not announce shipped support or amend an ADR.
+Status: implementation and validation contract for [#594](https://github.com/anarchitects/anarchitecture-plugins/issues/594),
+building on the reproduction in [#593](https://github.com/anarchitects/anarchitecture-plugins/issues/593)
+under [#585](https://github.com/anarchitects/anarchitecture-plugins/issues/585).
+This describes the current development branch; it does not retroactively change
+published versions or amend an ADR.
 
 ## Reproduction and ownership
 
@@ -16,17 +17,18 @@ resolves the library's injectable service before the packed plugin runs `init`.
 
 The host uses the E2E package's locked dependencies: Nest CLI 12.0.0 and
 common/core 12.1.2. Assertions read the resolved versions in the consumer process.
-Both `^11 || ^12` and `^11.0.0 || ^12.0.0` then reproduce the exact library-peer
-diagnostic. A separate `^12.0.0` control initializes twice successfully. The
+Both `^11 || ^12` and `^11.0.0 || ^12.0.0`, plus the equivalent `>=11 <13`,
+initialize twice successfully. A separate `^12.0.0` control also passes. The
 control is a distinct fixture, not a workaround that narrows a real library's
 published compatibility range.
 
-Normal and dry-run rejection preserve `nx.json`; all cases preserve library
+Successful dry runs and negative preflights preserve `nx.json`; all cases preserve library
 source, build configuration, compiled output, exported declarations, installed
 artifact bytes, host source/configuration, package manifests and the lockfile.
-The rejection assertions deliberately characterize the bug. Replace them with
-successful initialization assertions in [#594](https://github.com/anarchitects/anarchitecture-plugins/issues/594).
-Do not retain the rejection as the desired public contract.
+The original rejection characterization has become an acceptance regression.
+Negative packed-plugin cases cover nested Nest 10/11/13 and prerelease metadata,
+incompatible peers, missing installs and conflicting declarations. These negative
+metadata fixtures prove preflight behavior; they do not run unsupported frameworks.
 
 This uses the existing linked-dependency E2E harness: the plugin and library are
 real tarballs, while framework/tool dependencies are linked from the immutable
@@ -43,7 +45,7 @@ describes the consumers that its published artifact supports; it does not select
 the framework used to run this workspace. A verified dual-major library must not
 lose its Nest 11 compatibility declaration merely to initialize Nest 12 tooling.
 
-The next implementation must distinguish:
+Validation distinguishes:
 
 - **Host/tool declarations:** dependencies, devDependencies and
   optionalDependencies selecting Nest packages must remain within the supported
@@ -60,6 +62,21 @@ The next implementation must distinguish:
   framework packages must form a compatible host; independently versioned
   integrations such as Swagger retain their own compatibility requirements.
 
+The installed-evidence phase runs only when at least one valid runtime peer
+range extends below v12. It then checks all supported framework declarations
+from their own package contexts, including the CLI, and the installed packages'
+Nest peer requirements. Absent optionalDependencies and absent optional peers
+of installed framework packages are permitted; an explicitly declared library
+peer and the CLI still require evidence. No filesystem resolution is added to
+the existing v12-only declaration path.
+
+Resolution reads metadata in Node's package search order within the canonical
+workspace directory. It supports hoisted/nested node_modules and package-manager
+symlinks without executing framework code or relying on package.json exports.
+A broken nearer install fails rather than falling back to a root install.
+Parent/global installations and PnP do not count as supported evidence. The
+resolver reads fresh metadata per invocation; it does not cache across installs.
+
 Do not infer library eligibility solely from `private`, directory names, the
 presence of `exports`, or an Nx build executor. A standalone publishable root
 may have dual-major peers and v12 development dependencies, just as a nested
@@ -71,7 +88,7 @@ preflight. It does not certify the library author's broader support matrix.
 That author remains responsible for packed runtime evidence on every advertised
 major. Nest 11 hosts remain outside this plugin's runtime contract.
 
-## Required acceptance and rejection cases for #594
+## Acceptance and rejection cases
 
 | Input                                                                                                            | Required outcome                                                                             |
 | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -100,7 +117,9 @@ compatibility change requires stronger evidence.
 
 The preflight enumerated and read all 24 records in Meta's `adr/` and all six
 records in this repository's `docs/adr/` on 2026-11-11, including proposals and
-historical records. No other repository ADR location was found. Relevant rules:
+historical records. Before #594 implementation, both inventories were enumerated
+again; all Meta contents and local ADRs were unchanged from that full review.
+No other repository ADR location was found. Relevant rules:
 
 - Accepted Meta 0004, 0010 and 0016 retain local implementation ownership,
   Nest 12 feature development and ecosystem architecture authority. Honoring
@@ -118,11 +137,12 @@ historical records. No other repository ADR location was found. Relevant rules:
   The new scenario uses the existing inferred per-spec E2E task and lockfile
   inputs; it does not add CI partitions or disable task caching.
 - The local public-package-documentation ADR remains proposed. Contributor
-  evidence belongs here; public README support claims stay unchanged.
+  evidence belongs here; the package README describes the added acceptance path
+  and its installed-evidence limits without claiming Nest 11 runtime support.
 - The accepted Angular ADR is read but its Angular implementation policies are
   outside this Node/Nx-only scope. No Angular dependency is introduced.
 
-No applicable decision conflicts with this reproduction. Some historical/local
+No applicable decision conflicts with this validation change. Some historical/local
 text predates current generators and Meta's canonical Contracts ownership; the
 current package contract and accepted Meta decisions take precedence. This work
 does not author HTTP contracts or change framework source ownership.
@@ -144,5 +164,9 @@ yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/publ
 yarn nx run-many -t lint typecheck -p nx-nest-e2e
 ```
 
-This slice deliberately leaves production validation unchanged. Completion of
-the reproduction is not completion of #585 or release approval.
+The pure validator and filesystem resolver have focused unit coverage for root
+libraries, equivalent ranges, conflicting sections, version/declaration mismatches,
+framework peer requirements, missing or malformed metadata, nested precedence,
+symlinked installations and unchanged declaration-only behavior.
+
+Completion of this validation slice is not completion of #585 or release approval.
