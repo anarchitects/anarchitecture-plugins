@@ -63,6 +63,13 @@ Linux.
 A negative adoption case rejects an incompatible framework declaration without
 partially registering the plugin.
 
+`published-library-peers.spec.ts` characterizes the current dual-major peer
+rejection: a compiled and packed library runs in a Nest 12 application context,
+but `init` rejects its `^11 || ^12` peers without edits. A separate v12-only
+control initializes twice. This is a bug reproduction, not the desired support
+contract; see the [host/peer compatibility contract](../../docs/guides/nest-published-library-compatibility.md)
+for the follow-up validation cases and evidence limits.
+
 Generated-member cases preserve native source/config output and link dependencies
 at the selected Nest package root for default Rspack externals discovery. Both
 the sub-app and library receive native REST resources with CRUD disabled and
