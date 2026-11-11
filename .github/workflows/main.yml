@@ -40,6 +40,8 @@ jobs:
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v5
       - run: yarn nx-cloud record -- yarn nx format:check
+      - name: Test release workflow handoff
+        run: yarn nx-cloud record -- yarn nx run @anarchitecture-plugins/source:test-release-workflows
       - name: Run affected tasks on Nx Agents
         run: yarn nx affected -t lint test build typecheck e2e-ci
         # Leave time for fix-ci diagnostics before the overall job deadline.

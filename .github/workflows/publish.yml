@@ -1,9 +1,14 @@
 name: Publish
 
 on:
-  push:
-    tags:
-      - '*@*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish, for example nx-js@0.2.0
+        required: true
+        type: string
 
 env:
   NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
@@ -13,7 +18,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: publish-${{ github.ref }}
+  group: publish-${{ inputs.tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
@@ -21,19 +26,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Derive project from tag
+      - name: Resolve release tag
         id: tag
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
-          project="${GITHUB_REF_NAME%@*}"
-          version="${GITHUB_REF_NAME##*@}"
+          project="${RELEASE_TAG%@*}"
+          version="${RELEASE_TAG##*@}"
 
-          if [ -z "$project" ] || [ -z "$version" ] || [ "$project" = "$GITHUB_REF_NAME" ]; then
-            echo "Invalid release tag: $GITHUB_REF_NAME"
+          if [[ "$RELEASE_TAG" != "$project@$version" ]] ||
+             [[ ! "$project" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] ||
+             [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag"
             echo "Expected format: <nx-project-name>@<version>"
             exit 1
           fi
 
+          echo "ref=refs/tags/$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           echo "project=$project" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -43,6 +53,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ steps.tag.outputs.ref }}
           fetch-depth: 0
           filter: tree:0
 
@@ -59,21 +70,57 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Validate Nx project exists
+      # Inline so recovery also works for tags predating this workflow change.
+      - name: Validate release and check npm publication
+        id: publication
         shell: bash
+        env:
+          RELEASE_PROJECT: ${{ steps.tag.outputs.project }}
+          RELEASE_VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          yarn nx show project "${{ steps.tag.outputs.project }}" > /dev/null
+          node <<'NODE'
+          const { execFileSync, spawnSync } = require('node:child_process');
+          const { readFileSync, appendFileSync } = require('node:fs');
+          const { join } = require('node:path');
+          const { valid } = require('semver');
+          const projectName = process.env.RELEASE_PROJECT;
+          const version = process.env.RELEASE_VERSION;
+          if (!valid(version)) throw new Error('Release tag must contain a valid SemVer');
+          const project = JSON.parse(execFileSync('yarn', ['nx', 'show', 'project', projectName, '--json'], { encoding: 'utf8' }));
+          if (project.name !== projectName || !project.targets?.['nx-release-publish']) {
+            throw new Error('Release tag must identify a publishable Nx project');
+          }
+          const pkg = JSON.parse(readFileSync(join(project.root, 'package.json'), 'utf8'));
+          if (!pkg.name || pkg.private || pkg.version !== version) {
+            throw new Error('Release tag must match a public package version');
+          }
+          const result = spawnSync('npm', ['view', `${pkg.name}@${version}`, 'version', '--json', '--registry=https://registry.npmjs.org/'], { encoding: 'utf8' });
+          if (result.error || result.signal) throw result.error || new Error(`npm view terminated: ${result.signal}`);
+          const metadata = JSON.parse(result.stdout || '{}');
+          if (result.status === 0 && metadata === version) {
+            appendFileSync(process.env.GITHUB_OUTPUT, 'published=true\n');
+            console.log(`${pkg.name}@${version} is already published; leaving npm dist-tags unchanged.`);
+          } else if (result.status !== 0 && metadata.error?.code === 'E404') {
+            appendFileSync(process.env.GITHUB_OUTPUT, 'published=false\n');
+          } else {
+            throw new Error(`Unable to verify npm publication: ${result.stderr || result.stdout}`);
+          }
+          NODE
 
       - name: Build project
+        if: steps.publication.outputs.published == 'false'
         run: yarn nx build "${{ steps.tag.outputs.project }}"
 
       - name: Typecheck project
+        if: steps.publication.outputs.published == 'false'
         run: yarn nx typecheck "${{ steps.tag.outputs.project }}"
 
       - name: Test project
+        if: steps.publication.outputs.published == 'false'
         run: yarn nx test "${{ steps.tag.outputs.project }}"
 
       - name: Publish project
+        if: steps.publication.outputs.published == 'false'
         run: yarn nx release publish --projects "${{ steps.tag.outputs.project }}" --yes
         env:
           NPM_CONFIG_PROVENANCE: true

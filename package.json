@@ -64,6 +64,27 @@
       }
     },
     "targets": {
+      "test-release-workflows": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "{workspaceRoot}/tools/testing/publish-workflow.test.cjs",
+          "{workspaceRoot}/.github/workflows/publish.yml",
+          "{workspaceRoot}/.github/workflows/release.yml",
+          "{workspaceRoot}/package.json",
+          "{workspaceRoot}/yarn.lock",
+          {
+            "runtime": "node --version"
+          },
+          {
+            "runtime": "git --version"
+          }
+        ],
+        "outputs": [],
+        "options": {
+          "command": "node --test tools/testing/publish-workflow.test.cjs"
+        }
+      },
       "local-registry": {
         "executor": "@nx/js:verdaccio",
         "options": {
