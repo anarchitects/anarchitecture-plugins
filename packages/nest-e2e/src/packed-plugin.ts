@@ -193,7 +193,11 @@ async function stop(child: ChildProcess) {
   });
 }
 
-export async function assertStarts(root: string, target: string) {
+export async function assertStarts(
+  root: string,
+  target: string,
+  message = 'Nest v12 fixture'
+) {
   const child = spawn(
     process.execPath,
     [nxBin, 'run', target, '--outputStyle=stream'],
@@ -232,7 +236,7 @@ export async function assertStarts(root: string, target: string) {
     });
     const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ message: 'Nest v12 fixture' });
+    expect(await response.json()).toEqual({ message });
     expect(child.exitCode).toBeNull();
   } finally {
     await stop(child);

@@ -1,6 +1,7 @@
 # Published Nest library compatibility preflight
 
-Status: implementation and validation contract for [#594](https://github.com/anarchitects/anarchitecture-plugins/issues/594),
+Status: implementation and validation contract for [#594](https://github.com/anarchitects/anarchitecture-plugins/issues/594)
+and build-ownership evidence for [#595](https://github.com/anarchitects/anarchitecture-plugins/issues/595),
 building on the reproduction in [#593](https://github.com/anarchitects/anarchitecture-plugins/issues/593)
 under [#585](https://github.com/anarchitects/anarchitecture-plugins/issues/585).
 This describes the current development branch; it does not retroactively change
@@ -35,8 +36,49 @@ real tarballs, while framework/tool dependencies are linked from the immutable
 repository install. It proves loading and dependency injection on one Nest 12
 baseline. It does not prove a fresh package-manager install, Nest 11 runtime
 compatibility, full ESM/CJS interoperability, secondary exports, or an entire
-Node/Nx/TypeScript support range. Those are later slices. No registry publication
+Node/Nx/TypeScript support range. The separate build-ownership scenarios below
+cover module formats and secondary exports on this baseline. No registry publication
 occurs, and no claim is made that this fixture is a released third-party package.
+
+## Publishable build ownership
+
+The `published-tsc-build` and `published-custom-build` packed E2E scenarios
+exercise an existing publishable library alongside a native Nest owner, an
+application member and a native library member. They use original application
+fixtures rather than copies of Nest schematic templates. No production inference
+or generator change is needed for these layouts.
+
+- The `@nx/js:tsc` package owns its CommonJS/declaration output in `dist`. Its
+  authored exports remain authoritative (`generatePackageJson: false`).
+- The custom build uses TypeScript to produce ESM and CommonJS JavaScript and
+  declarations in separate `output` directories, with conditional exports and
+  explicit module types. It is not a Vite fixture.
+- Both expose a root Nest module/service and a secondary public entry point.
+  The tests pack them before adoption and after a forced rebuild, comparing all
+  extracted file bytes. A separate consumer executes import and require,
+  resolves Nest providers, checks `.mts`/`.cts` declarations (including rejection
+  of an incorrect return type), and confirms Nx is not resolvable there.
+- Dry-run and repeated initialization preserve owner and library source,
+  manifests, TypeScript configuration, package exports, build/release targets,
+  compiled output and the dependency lockfile. Resolved library targets remain
+  equal before/after inference. No release target is executed.
+- Package/import metadata supplies static project edges; there are no explicit
+  implicit-dependency edges or source path-alias workarounds. The task graph
+  requires the library build before the native application build. Deleting
+  library and app outputs exercises local cache restoration; library source and
+  TypeScript configuration changes must invalidate the consuming app build.
+- Default `build` depends on `^build`. When Nest targets are renamed to
+  `compile`, consumers of existing `build` targets explicitly add `^build` to
+  their own prerequisites. The fixture proves this configuration without
+  converting or renaming the library build.
+
+The framework/tool install and workspace links are controlled fixtures based on
+the repository lockfile. The isolated consumer uses the extracted tarball and
+linked framework dependencies. This does not certify a fresh install, arbitrary
+custom builders, every supported platform/version, remote cache reuse, or Nest
+11 runtime support. Clean-install matrix work remains in #596. Existing
+source-only generator contracts remain covered by their separate regression
+tests; this adoption evidence does not change those defaults.
 
 ## Host selection and library compatibility
 
@@ -119,6 +161,9 @@ The preflight enumerated and read all 24 records in Meta's `adr/` and all six
 records in this repository's `docs/adr/` on 2026-11-11, including proposals and
 historical records. Before #594 implementation, both inventories were enumerated
 again; all Meta contents and local ADRs were unchanged from that full review.
+For #595 on 2026-11-12, both inventories were enumerated again and all 24 fetched
+Meta ADR contents matched the prior full review. All six local ADRs and relevant
+package/contributor guides were reviewed for the build/export/cache scope.
 No other repository ADR location was found. Relevant rules:
 
 - Accepted Meta 0004, 0010 and 0016 retain local implementation ownership,
@@ -161,6 +206,7 @@ Run the reproduction through Nx (the E2E target builds the plugin first):
 
 ```sh
 yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/published-library-peers.spec.ts
+yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/published-tsc-build.spec.ts src/nest-scenarios/published-custom-build.spec.ts
 yarn nx run-many -t lint typecheck -p nx-nest-e2e
 ```
 
