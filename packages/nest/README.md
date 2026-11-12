@@ -52,8 +52,27 @@ yarn nx g @anarchitects/nest:init
 ```
 
 An existing Nest 11 workspace must be upgraded separately before initialization.
-Framework dependency ranges must stay within stable v12; tags such as `latest`,
-prereleases, and unresolved local protocols are not accepted as version guarantees.
+Host framework dependencies and CLI declarations must stay within stable v12;
+tags such as `latest`, prereleases, and unresolved local protocols are not
+accepted as version guarantees.
+
+Published libraries may retain bounded Nest 11/12 runtime peer ranges such as
+`^11 || ^12` or `>=11 <13`. These describe library compatibility, while the
+plugin still runs against Nest 12 only. When broader peers are present, `init`
+reads installed Nest versions from each declaring package's location and checks
+them against its declarations and the framework packages' Nest peer requirements.
+Install the stable v12 host and CLI before running `nx add`/`init`; a peer range
+alone is insufficient. Missing, malformed, prerelease, incompatible or nested
+older installs fail before configuration changes. Absent optional framework
+dependencies are allowed; the CLI and explicitly declared library peers require
+installed evidence. Existing v12-only workspaces retain declaration-only checks.
+
+The installed-version check supports workspace `node_modules` layouts, including
+hoisting and package-manager symlinks. Installations above the workspace and
+Yarn PnP are not evidence for broader peer acceptance. A root publishable package
+can retain dual-major peers alongside v12 development dependencies. Initialization
+does not rewrite those peers, existing library build targets, exports or release
+outputs. Library authors remain responsible for verifying each advertised major.
 
 ## Quick start
 

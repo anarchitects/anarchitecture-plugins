@@ -8,6 +8,7 @@ import {
   type Tree,
 } from '@nx/devkit';
 import { registerNestPlugin } from '../../utils/plugin-registration';
+import { installedNestPackageResolver } from '../../utils/installed-nest-package';
 import {
   validateNestDependencies,
   type PackageManifest,
@@ -32,7 +33,7 @@ export function initGenerator(
       manifests[path] = readJson<PackageManifest>(tree, path);
     }
   });
-  validateNestDependencies(manifests);
+  validateNestDependencies(manifests, installedNestPackageResolver(tree.root));
   if (JSON.stringify(plugins) !== JSON.stringify(nxJson.plugins)) {
     if (tree.exists('nx.json')) updateNxJson(tree, { ...nxJson, plugins });
     else writeJson(tree, 'nx.json', { ...nxJson, plugins });
