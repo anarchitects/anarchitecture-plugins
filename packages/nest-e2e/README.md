@@ -71,6 +71,25 @@ or prerelease installs, incompatible peers, missing evidence and conflicting
 host declarations before mutation. See the [host/peer compatibility contract](../../docs/guides/nest-published-library-compatibility.md)
 for the validation rules and evidence limits.
 
+`published-tsc-build.spec.ts` and `published-custom-build.spec.ts` adopt a native
+Nest owner with application/library members alongside an established publishable
+package. One library uses `@nx/js:tsc`; the other uses a custom TypeScript build
+with separate ESM and CommonJS outputs. Both retain root and secondary exports,
+declarations, explicit build/release targets, peer ranges and output locations.
+The scenarios compare resolved targets and packed file bytes before and after
+adoption, including a forced rebuild. A sibling consumer loads the tarball's
+public entries using both import and require, checks Nest dependency injection,
+and type-checks `.mts` and `.cts` imports without Nx installed in that consumer.
+
+The graph must derive owner/member edges to the published package, and the task
+graph must build the library before the native app. Tests remove outputs to
+verify cache restoration and edit library source/configuration to verify consumer
+invalidation. A renamed `compile` target explicitly depends on the library's
+existing `build`; initialization never renames the library target. These are
+linked-install fixtures with a custom build, not evidence for fresh installs or
+Vite-specific packaging. Each spec is independently atomized by the existing
+Jest/Nx integration.
+
 Generated-member cases preserve native source/config output and link dependencies
 at the selected Nest package root for default Rspack externals discovery. Both
 the sub-app and library receive native REST resources with CRUD disabled and

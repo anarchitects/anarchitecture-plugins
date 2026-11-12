@@ -281,6 +281,35 @@ classes are named `UsersModule`, the import is aliased to avoid a compilation
 collision; their exported names remain unchanged. If registration is ambiguous,
 use `--skipImport` and register the resource module yourself.
 
+### Existing publishable libraries
+
+Keep an existing library's build and release targets, package exports, module
+formats, declarations and output directories. `init` can register native Nest
+inference alongside `@nx/js:tsc` or custom library builds; it does not convert
+those libraries into native Nest members or source-only packages. A library
+without `nest-cli.json` or native membership receives no Nest build/start target.
+
+Declare the library dependency in the consuming application's package and import
+its public entry points. For a precompiled library, its build must run before
+the application compiles. The default inferred `build` target uses `^build`.
+If you use `compile` for Nest while libraries retain `build`, merge this into
+the consuming application's (or native member's) `project.json`:
+
+```json
+{
+  "targets": {
+    "compile": { "dependsOn": ["^build"] }
+  }
+}
+```
+
+Preserve any other required prerequisites. Inspect the resolved target with
+`yarn nx show project <app>` and its task graph with
+`yarn nx run <app>:compile --graph`. Keep dependency source/configuration inputs
+and all library outputs declared so Nx can invalidate and restore artifacts.
+The library owns its supported import/require exports and matching declarations;
+Nest adoption does not add module formats or secondary entry points.
+
 ## Generator reference
 
 Run `yarn nx g @anarchitects/nest:<generator> --help` for its complete option list.

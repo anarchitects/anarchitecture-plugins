@@ -13828,6 +13828,7 @@ __metadata:
     "@nestjs/platform-express": "npm:12.1.2"
     "@nestjs/swagger": "npm:12.0.2"
     "@nx/devkit": "npm:24.0.1"
+    "@nx/js": "npm:24.0.1"
     "@nx/vitest": "npm:24.0.1"
     "@rspack/core": "npm:2.1.10"
     "@standard-schema/spec": "npm:1.1.0"
