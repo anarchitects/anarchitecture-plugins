@@ -1,7 +1,8 @@
 name: Release (Manual)
 
 env:
-  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_NO_CLOUD: 'true'
+  NX_CLOUD_DISTRIBUTED_EXECUTION: 'false'
 
 on:
   workflow_dispatch:
@@ -22,7 +23,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: release-manual
@@ -30,28 +30,27 @@ concurrency:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    environment: shared-bot-release
     runs-on: ubuntu-latest
 
     steps:
       - name: Ensure workflow runs from main
         if: github.ref != 'refs/heads/main'
         run: |
-          echo "This workflow must run from main. Current ref: ${{ github.ref }}"
+          echo 'This workflow must run from main.'
           exit 1
-
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.ANARCHITECTS_BOT_APP_ID }}
-          private-key: ${{ secrets.ANARCHITECTS_BOT_PRIVATE_KEY }}
 
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
           fetch-depth: 0
           filter: tree:0
+
+      - name: Attach approved revision to local main
+        run: git switch --force-create main "$GITHUB_SHA"
 
       - name: Enable Corepack
         run: corepack enable
@@ -65,8 +64,19 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.ANARCHITECTS_BOT_APP_ID }}
+          private-key: ${{ secrets.ANARCHITECTS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Configure git author for release commits
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          gh auth setup-git
           git config user.name "anarchitects-bot[bot]"
           git config user.email "anarchitects-bot[bot]@users.noreply.github.com"
 
@@ -74,18 +84,23 @@ jobs:
         run: |
           args=(--skip-publish)
 
-          if [ -n "${{ inputs.projects }}" ]; then
-            args+=("--projects=${{ inputs.projects }}")
+          if [ -n "$RELEASE_PROJECTS" ]; then
+            args+=("--projects=$RELEASE_PROJECTS")
           fi
 
-          if [ -n "${{ inputs.specifier }}" ]; then
-            args+=("${{ inputs.specifier }}")
+          if [ -n "$RELEASE_SPECIFIER" ]; then
+            [[ "$RELEASE_SPECIFIER" != -* ]] || { echo 'Specifier must not be an option'; exit 1; }
+            args+=("$RELEASE_SPECIFIER")
           fi
 
-          if [ "${{ inputs.first_release }}" = "true" ]; then
+          if [ "$RELEASE_FIRST" = "true" ]; then
             args+=(--first-release)
           fi
 
           yarn nx release "${args[@]}"
         env:
+          RELEASE_PROJECTS: ${{ inputs.projects }}
+          RELEASE_SPECIFIER: ${{ inputs.specifier }}
+          RELEASE_FIRST: ${{ inputs.first_release }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}

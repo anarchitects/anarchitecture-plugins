@@ -308,6 +308,24 @@ test('registry failures and unexpected metadata do not authorize publication', (
 });
 
 test('retains GitHub App release handoff, validation and npm OIDC publishing', () => {
+  const job = release.jobs.release;
+  assert.equal(job.environment, 'shared-bot-release');
+  assert.equal(
+    job.if,
+    "github.ref == 'refs/heads/main' && github.run_attempt == 1"
+  );
+  assert.deepEqual(release.permissions, { contents: 'read' });
+  const checkout = job.steps.find((s) =>
+    s.uses?.startsWith('actions/checkout@')
+  );
+  assert.equal(checkout.with.ref, '${{ github.sha }}');
+  assert.equal(checkout.with['persist-credentials'], false);
+  assert.equal(checkout.with.token, undefined);
+  assert.ok(
+    job.steps.findIndex((s) => s.id === 'app-token') >
+      job.steps.findIndex((s) => s.name === 'Install dependencies')
+  );
+  assert.equal(release.env.NX_NO_CLOUD, 'true');
   const releaseStep = release.jobs.release.steps.find(
     (step) => step.name === 'Run Nx release'
   );
@@ -328,4 +346,76 @@ test('retains GitHub App release handoff, validation and npm OIDC publishing', (
     steps.find((step) => step.name === 'Install dependencies').run,
     'yarn install --immutable'
   );
+});
+
+test('release inputs remain literal shell arguments and cannot supply Nx options', () => {
+  const step = release.jobs.release.steps.find(
+    (s) => s.name === 'Run Nx release'
+  );
+  assert.doesNotMatch(step.run, /\$\{\{\s*inputs\./);
+  const run = (specifier) =>
+    spawnSync(
+      'bash',
+      [
+        '-e',
+        '-o',
+        'pipefail',
+        '-c',
+        'yarn() { printf "arg=%s\\n" "$@"; };\n' + step.run,
+      ],
+      {
+        encoding: 'utf8',
+        env: {
+          PATH: process.env.PATH,
+          RELEASE_PROJECTS: 'nest; echo injected',
+          RELEASE_SPECIFIER: specifier,
+          RELEASE_FIRST: 'false',
+        },
+      }
+    );
+  const literal = run('$(echo injected)');
+  assert.equal(literal.status, 0);
+  assert.match(literal.stdout, /arg=--projects=nest; echo injected/);
+  assert.match(literal.stdout, /arg=\$\(echo injected\)/);
+  assert.notEqual(run('--publish').status, 0);
+});
+
+test('Nx releases use local main pinned to the approved SHA despite a newer main', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'release-approved-sha-'));
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_SYSTEM: '/dev/null',
+  };
+  const git = (...args) => {
+    const result = spawnSync('git', args, {
+      cwd: directory,
+      env,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  try {
+    git('init', '--initial-branch=main');
+    git('config', 'user.name', 'Release fixture');
+    git('config', 'user.email', 'fixture@example.invalid');
+    git('commit', '--allow-empty', '-m', 'chore: approved');
+    const approved = git('rev-parse', 'HEAD');
+    git('commit', '--allow-empty', '-m', 'chore: later main');
+    git('checkout', '--detach', approved);
+    const step = release.jobs.release.steps.find(
+      (s) => s.name === 'Attach approved revision to local main'
+    );
+    const result = spawnSync('bash', ['-e', '-c', step.run], {
+      cwd: directory,
+      env: { ...env, GITHUB_SHA: approved },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(git('branch', '--show-current'), 'main');
+    assert.equal(git('rev-parse', 'HEAD'), approved);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

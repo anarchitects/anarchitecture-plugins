@@ -136,6 +136,27 @@ Use clear, conventional commit messages when possible:
 
 ## Release publication and recovery
 
+Release jobs require Johan's approval through `shared-bot-release`, execute only
+the immutable dispatch revision on `main`, and reject reruns. Dispatch a fresh
+run for a new approval. Configure reviewer `vrxj81` (`5003361`), self-review
+allowed, administrator approval bypass disabled and only branch `main` (no tag
+policy). Put `ANARCHITECTS_BOT_APP_ID` and the replacement
+`ANARCHITECTS_BOT_PRIVATE_KEY` in that environment only.
+
+The coordinated credential cutover is tracked in [Community #722](https://github.com/anarchitects/anarchitecture-community/issues/722).
+Merge and verify the protected route before removing organization key allocations
+and revoking the old App keys. Johan retains a protected recovery copy. Failed
+cutover stops releases; do not restore an unguarded credential. No publication or
+tag is created merely for verification, and Community stays paused pending its
+remaining controls and owner acceptance.
+
+The shared App still spans four repositories. Approval must cover the full
+reviewed release job, dependencies and requested release intent. Delayed token
+creation and credential-free checkout reduce exposure but do not isolate the
+runner from installation hooks. This is not Community's artifact-only execution
+controller. The release job disables Nx Cloud and requests no publication OIDC;
+the separate publication workflow retains its existing validation and trust.
+
 The **Release (Manual)** workflow uses Nx to version packages and create GitHub
 Releases with the Anarchitects GitHub App token. Each `release: published` event
 starts **Publish** for that release's tag. Keep the App token for release creation:
