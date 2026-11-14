@@ -313,7 +313,14 @@ resolutions, all six clean-consumer tests passed again on the exact runtimes in
 the table; lint, typecheck, plugin build prerequisite and formatting also passed.
 The resolved atomized Node 24 CI target passed, replayed from local cache, missed
 cache and passed after a harmless fixture-lock comment change, then replayed
-again after byte-for-byte restoration. Linux/Nx Cloud execution and remote cache
-reuse still require the PR's CI run; local results do not claim those outcomes.
+again after byte-for-byte restoration. Subsequently, #596's
+[Main CI](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/43613809380)
+and [Nx compatibility](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/43613809409)
+runs passed on PR #602. This supplies Linux CI evidence; it does not by itself
+establish a dedicated remote-cache reuse test.
+
+The [adoption release-readiness record](../releases/nest-published-library-adoption.md)
+collects prerequisite CI links, packed artifact validation, version-preview
+evidence and the remaining owner/publication gates for #597.
 
 Completion of this validation slice is not completion of #585 or release approval.

@@ -20,10 +20,14 @@ and task tooling. The runtime contract is **NestJS 12 only**.
 | Module systems         | Independent applications and native members support ESM and CommonJS. New Nx-native libraries are TypeScript, ESM, and source-only.                                                                                                              |
 | Package managers       | Workspace registration supports npm, Yarn, Bun, and pnpm. The complete installation/build/test workflows documented here use Yarn 4 with `nodeLinker: node-modules`; equivalent end-to-end support for every manager or Yarn PnP is not claimed. |
 
-The supported ranges are broader than the verification baselines: Nx 23.2.0 and 24.0.1,
-Nest CLI 12.0.0, Nest framework 12.1.2, and TypeScript 6.0.3. Independently versioned
-Nest integrations, such as Swagger, follow their own compatibility requirements.
-Your application owns its framework dependencies and platform adapter.
+The supported ranges are broader than the verified combinations. Clean installed
+publishable-library consumers are checked with Node 22.22.3 / Nx 23.2.0,
+Node 24.21.0 / Nx 24.0.1, and Node 26.0.0 / Nx 24.0.1. Each uses Nest CLI 12.0.0,
+Nest framework 12.1.2, TypeScript 6.0.3 and Yarn 4.17.0 with node-modules linking.
+These samples do not certify every version combination or every custom builder.
+Independently versioned integrations, such as Swagger, follow their own
+compatibility requirements. Your application owns its framework dependencies and
+platform adapter.
 
 ## Installation
 
@@ -283,6 +287,46 @@ use `--skipImport` and register the resource module yourself.
 
 ### Existing publishable libraries
 
+Adopt the workspace containing the library; do not rerun a library generator over
+the package. For example, an existing standalone library can keep this manifest
+fragment, merged with its own dependencies, exports and build configuration:
+
+```json
+{
+  "peerDependencies": {
+    "@nestjs/common": "^11 || ^12",
+    "@nestjs/core": "^11 || ^12"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "12.0.0",
+    "@nestjs/common": "12.1.2",
+    "@nestjs/core": "12.1.2"
+  }
+}
+```
+
+The peers describe the library's verified consumer compatibility. The development
+dependencies select this workspace's stable Nest 12 host. In a mixed monorepo,
+the application owns its stable v12 runtime dependencies and the library retains
+its own peer declarations. Install them normally before adding the plugin:
+
+```sh
+yarn install
+yarn nx add @anarchitects/nest
+yarn nx g @anarchitects/nest:init --dry-run
+yarn nx g @anarchitects/nest:init
+yarn nx show project @acme/shared
+yarn nx run @acme/shared:build
+```
+
+Replace `@acme/shared` with the existing Nx project name. If the plugin is already
+installed, use the `init` commands directly. Successful initialization adds its
+inference registration; repeating it preserves that registration and existing
+options. A dry run writes nothing. Use the README bundled with your installed
+plugin version: an older release may reject broader library peers. Update the
+tooling to a release supporting this adoption flow instead of narrowing verified
+library compatibility merely to pass initialization.
+
 Keep an existing library's build and release targets, package exports, module
 formats, declarations and output directories. `init` can register native Nest
 inference alongside `@nx/js:tsc` or custom library builds; it does not convert
@@ -309,6 +353,21 @@ Preserve any other required prerequisites. Inspect the resolved target with
 and all library outputs declared so Nx can invalidate and restore artifacts.
 The library owns its supported import/require exports and matching declarations;
 Nest adoption does not add module formats or secondary entry points.
+
+Keep Nx and this plugin as development tooling. A packed library must resolve
+through its authored JavaScript and declaration exports in a consumer that has
+no Nx installation. A generated source-only library instead needs the consuming
+compiler to handle its TypeScript and decorators; initializing the plugin does
+not turn either model into the other.
+
+### Adoption boundaries
+
+Initialization does not upgrade a Nest 11 application, migrate legacy application
+code, or select a different HTTP adapter. Upgrade and validate the host separately
+before adoption. Native Nest scaffolding owns new framework code; an existing
+application keeps its bootstrap and platform dependencies. There is no shipped
+Fastify platform overlay option in these commands. Keep existing Fastify setup
+under the application's own configuration and test it separately.
 
 ## Generator reference
 
@@ -578,6 +637,29 @@ Custom configurations remain yours to maintain. Tests/lint normally run on the
 owner (`api:test`, `api:lint`), while member builds/servers use member Nx names.
 
 ## Troubleshooting
+
+### Published-library initialization failures
+
+Read the diagnostic's manifest path and dependency section first. A root Nest 12
+installation cannot prove compatibility for a nested package that resolves a
+different framework version. Preflight rejection leaves configuration unchanged;
+correct the reported declaration or install and rerun the dry run.
+
+| Diagnostic or situation                                                                                    | Action                                                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A host dependency selects `^11 \|\| ^12`                                                                   | Select stable v12 in the application's dependencies or the standalone library's development dependencies. Broader compatibility belongs in library peers.                             |
+| A library peer excludes the installed host, includes other majors, is open-ended, or includes a prerelease | Verify the library's actual compatibility. Use a compatible library/host combination; do not assert a peer range that its artifact does not support.                                  |
+| Installed version conflicts with the declaration, including a nested v11 install                           | Align the declaring package's host dependencies, install them normally, and check its actual resolution. Root hoisting must not hide an older nested install.                         |
+| No installed package can be resolved, or installed metadata cannot be read                                 | Repair the workspace's node-modules installation and lockfile using its package manager. Parent/global installations and Yarn PnP do not supply supported evidence for broader peers. |
+| CLI is missing or declared only as a peer                                                                  | Add a stable v12 CLI development dependency to the workspace or Nest owner and install it before initialization.                                                                      |
+
+An optional framework dependency may be absent, but explicitly declared library
+peers and the CLI need installed evidence. Accepting dual-major peers on a Nest 12
+host does not establish Nest 11 runtime compatibility; library authors must test
+each major they advertise. Do not force an install or edit installed metadata to
+bypass these diagnostics.
+
+### Project and task setup
 
 | Symptom                                                 | What to check                                                                                                                                                                                                                      |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
