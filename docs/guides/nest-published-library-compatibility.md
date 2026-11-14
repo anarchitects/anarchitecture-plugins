@@ -1,7 +1,8 @@
 # Published Nest library compatibility preflight
 
 Status: implementation and validation contract for [#594](https://github.com/anarchitects/anarchitecture-plugins/issues/594)
-and build-ownership evidence for [#595](https://github.com/anarchitects/anarchitecture-plugins/issues/595),
+build-ownership evidence for [#595](https://github.com/anarchitects/anarchitecture-plugins/issues/595),
+and clean-consumer evidence for [#596](https://github.com/anarchitects/anarchitecture-plugins/issues/596),
 building on the reproduction in [#593](https://github.com/anarchitects/anarchitecture-plugins/issues/593)
 under [#585](https://github.com/anarchitects/anarchitecture-plugins/issues/585).
 This describes the current development branch; it does not retroactively change
@@ -76,9 +77,89 @@ The framework/tool install and workspace links are controlled fixtures based on
 the repository lockfile. The isolated consumer uses the extracted tarball and
 linked framework dependencies. This does not certify a fresh install, arbitrary
 custom builders, every supported platform/version, remote cache reuse, or Nest
-11 runtime support. Clean-install matrix work remains in #596. Existing
+11 runtime support. The separate clean-install matrix is described below. Existing
 source-only generator contracts remain covered by their separate regression
 tests; this adoption evidence does not change those defaults.
+
+## Clean packed consumers and sampled versions
+
+The three `packed-library-node*.spec.ts` scenarios install the actual plugin
+tarball, build and pack an original publishable library, and install that library
+through Yarn into independent consumers. Framework/tool dependencies are fetched
+by the consumer's package manager, with no links to the repository installation.
+The shared library fixture also remains covered by the build-ownership scenarios
+above; the clean-install lanes use its `@nx/js:tsc` CommonJS output.
+
+| Lane     | Exact Node runtime | Exact Nx / `@nx/devkit` / `@nx/js` | TypeScript |
+| -------- | ------------------ | ---------------------------------- | ---------- |
+| `node22` | 22.22.3            | 23.2.0                             | 6.0.3      |
+| `node24` | 24.21.0            | 24.0.1                             | 6.0.3      |
+| `node26` | 26.0.0             | 24.0.1                             | 6.0.3      |
+
+All lanes select Nest CLI 12.0.0, common/core/platform-express 12.1.2,
+reflect-metadata 0.2.2 and RxJS 7.8.2, using the repository's pinned Yarn
+package manager (4.17.0 at implementation). The npm `node` package installs an
+exact platform-specific runtime separately from the consumer dependency graph.
+Each lane verifies that binary's version, uses it for every consumer Nx/Nest/TS
+process, and asserts installed framework/tool versions and local resolution.
+These are samples of the declared ranges, not a full Cartesian matrix or evidence
+for every patch, TypeScript 6 minor, Node 24 lower bound, operating system, or
+future Node major. Nest 11 runtime compatibility remains outside this plugin.
+
+Each lane proves:
+
+- An existing standalone publishable root keeps its dual-major peers, exports,
+  source, declarations, build targets and lockfile through dry-run, first and
+  repeated initialization, and a forced library rebuild.
+- A clean runtime consumer installs the library tarball, runs both `import` and
+  `require` through the root and secondary exports, and resolves its provider in
+  a real Nest application context. `.mts` and `.cts` consumers check the public
+  declarations, including rejection of an incorrect return type. Nx is absent
+  from this runtime installation. Adding the packed plugin as development tooling
+  afterward preserves the artifact and existing declaration-check target.
+- A separate mixed monorepo installs both tarballs. An existing publishable
+  library keeps its resolved build targets while native Nest owner, application
+  member and library member builds run. The application resolves the installed
+  tarball, not workspace source, and owner/member native start tasks resolve the
+  packed provider. Their one-shot application contexts close cleanly; these
+  scenarios need no fixed ports or background servers. HTTP startup remains
+  covered by the build-ownership scenarios.
+- The Node 24 lane rejects unsupported/excluding peers, missing installs,
+  malformed nearer evidence, and actual installed Nest 11 metadata at nested and
+  root locations. The older package is installed normally in a separate fixture
+  and moved intact to model a stale/conflicting install; no successful lane
+  narrows peers or changes installed version metadata. Normal and dry-run
+  rejection preserve authored files, compiled output, manifests, lockfile,
+  installed library bytes and package-manager installation state.
+
+First installs start from the checked-in `src/consumer-locks/yarn.lock` registry
+fixture. Yarn creates only the run-specific workspace/local-tarball records and
+prunes unused entries. The harness checks every resulting registry resolution
+and its dependency metadata against that fixture, then requires an immutable
+install. Unexpected transitive resolution fails the test. Optional platform
+package checksums may be added when fetched on another OS; existing checksums
+remain Yarn-validated. All installs reject missing/incompatible peer warnings.
+There are no force installs, resolutions overrides or peer-range rewrites.
+As with the existing installed-consumer harness, lifecycle scripts are disabled
+in framework/tool consumers; actual native binaries, compilation and execution
+are still exercised. This does not certify lifecycle-script side effects or
+non-Yarn/PnP installation layouts.
+
+The fixed fixtures keep the inferred per-spec tasks cacheable and eligible for
+Nx Agents. Inputs include the registry fixture, lane definitions, plugin source,
+repository lockfile/package-manager selection, `.nvmrc`, outer Node version,
+OS/architecture and npm version. The existing `e2e-ci` wildcard and main CI
+affected-task run discover the new files without new CI partitions; the normal
+plugin build prerequisite remains in place. Each spec owns its
+temporary workspaces and tarball, isolates inner Nx state, bounds subprocesses,
+and removes the fixtures afterward. Registry access and Corepack/npm are required.
+
+Release readiness still requires green CI on the release candidate and owner
+approval under #597. Failed sampled lanes, install/peer conflicts, or missing
+runtime/declaration evidence block that claim; successful local samples neither
+authorize publication nor certify the entire advertised support range. This is
+reproducible installed-artifact compatibility evidence, not a live check of
+whatever transitive versions are newest in the registry.
 
 ## Host selection and library compatibility
 
@@ -164,7 +245,16 @@ again; all Meta contents and local ADRs were unchanged from that full review.
 For #595 on 2026-11-12, both inventories were enumerated again and all 24 fetched
 Meta ADR contents matched the prior full review. All six local ADRs and relevant
 package/contributor guides were reviewed for the build/export/cache scope.
-No other repository ADR location was found. Relevant rules:
+No other repository ADR location was found.
+
+For #596 on 2026-11-14, the inventories were enumerated again: all 24 Meta ADRs
+were fetched at `b2cc857bef3ecc4180ca8180db015ba5537bc497` (the same reviewed
+revision), and the six local ADRs were unchanged. The contributor instructions,
+package ownership/compatibility contract and proposed Meta Nest development guide
+were reviewed for clean installation and runtime-matrix validation. The proposed
+guide does not supersede accepted ADRs. No new architecture conflict was found.
+
+Relevant rules:
 
 - Accepted Meta 0004, 0010 and 0016 retain local implementation ownership,
   Nest 12 feature development and ecosystem architecture authority. Honoring
@@ -180,7 +270,8 @@ No other repository ADR location was found. Relevant rules:
   clarification governs over older local wording; this slice changes no version.
 - Accepted Meta 0015 requires suitable Nx caching and distributed task inputs.
   The new scenario uses the existing inferred per-spec E2E task and lockfile
-  inputs; it does not add CI partitions or disable task caching.
+  inputs. #596 adds a pinned registry-resolution fixture and explicit runtime
+  inputs, preserving cacheability and existing atomization for Nx Agents.
 - The local public-package-documentation ADR remains proposed. Contributor
   evidence belongs here; the package README describes the added acceptance path
   and its installed-evidence limits without claiming Nest 11 runtime support.
@@ -207,6 +298,7 @@ Run the reproduction through Nx (the E2E target builds the plugin first):
 ```sh
 yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/published-library-peers.spec.ts
 yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/published-tsc-build.spec.ts src/nest-scenarios/published-custom-build.spec.ts
+yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/packed-library-node22.spec.ts src/nest-scenarios/packed-library-node24.spec.ts src/nest-scenarios/packed-library-node26.spec.ts
 yarn nx run-many -t lint typecheck -p nx-nest-e2e
 ```
 
@@ -214,5 +306,14 @@ The pure validator and filesystem resolver have focused unit coverage for root
 libraries, equivalent ranges, conflicting sections, version/declaration mismatches,
 framework peer requirements, missing or malformed metadata, nested precedence,
 symlinked installations and unchanged declaration-only behavior.
+
+Local #596 evidence on 2026-11-14 (macOS arm64, outer Node 24.22.3): all 21 tests
+across the six peer/build/clean-consumer suites passed. After pinning registry
+resolutions, all six clean-consumer tests passed again on the exact runtimes in
+the table; lint, typecheck, plugin build prerequisite and formatting also passed.
+The resolved atomized Node 24 CI target passed, replayed from local cache, missed
+cache and passed after a harmless fixture-lock comment change, then replayed
+again after byte-for-byte restoration. Linux/Nx Cloud execution and remote cache
+reuse still require the PR's CI run; local results do not claim those outcomes.
 
 Completion of this validation slice is not completion of #585 or release approval.

@@ -26,7 +26,11 @@ const owner = 'packages/api';
 type BuildStyle = 'tsc' | 'custom';
 
 /** Existing publishable packages are original fixtures, not generator defaults. */
-function writeLibrary(root: string, style: BuildStyle) {
+export function writePublishableLibrary(
+  root: string,
+  style: BuildStyle,
+  libraryRoot = 'libs/published'
+) {
   const entry = (name: string) =>
     style === 'tsc'
       ? { types: `./dist/${name}.d.ts`, default: `./dist/${name}.js` }
@@ -312,7 +316,7 @@ export function publishedBuildScenario(style: BuildStyle) {
     const build = (target = 'api:build') =>
       nx(root, ['run', target, '--output-style=static']);
     try {
-      writeLibrary(root, style);
+      writePublishableLibrary(root, style);
       write(root, '.gitignore', read('.gitignore') + 'output\n.npm\n');
       write(root, 'package.json', {
         ...json('package.json'),

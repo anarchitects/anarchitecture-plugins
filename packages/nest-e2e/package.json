@@ -9,7 +9,15 @@
       "default": [
         "{projectRoot}/**/*",
         "{workspaceRoot}/yarn.lock",
-        "sharedGlobals"
+        "sharedGlobals",
+        "{workspaceRoot}/package.json",
+        "{workspaceRoot}/.nvmrc",
+        {
+          "runtime": "node -p \"JSON.stringify([process.version, process.platform, process.arch])\""
+        },
+        {
+          "runtime": "npm --version"
+        }
       ]
     },
     "implicitDependencies": [
