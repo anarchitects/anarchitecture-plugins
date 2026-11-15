@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 import { parseJson } from '@nx/devkit';
 import { posix } from 'node:path';
-import { nodeHttpSource } from './node-application';
+import { httpSource } from './http-application';
 import { treePath, type TreeSnapshot } from './tree-snapshot';
-import { nodeRuntimeVersion } from '../utils/node-runtime-version';
+import {
+  httpPlatforms,
+  httpRuntimeVersion,
+  type HttpPlatform,
+} from '../utils/http-platform';
 
 interface Workspace {
   projects?: Record<
@@ -13,15 +17,17 @@ interface Workspace {
 }
 
 /** Only the requested new member is transformed, never a relocated owner app. */
-export function transformNodeMember(
+export function transformHttpMember(
   before: TreeSnapshot,
   after: TreeSnapshot,
   requested: string,
-  version: string
+  version: string,
+  platform: HttpPlatform = 'node'
 ): void {
+  const { packageName: adapterPackage, label } = httpPlatforms[platform];
   if (version !== '12.0.6')
     throw new Error(
-      `Node member generation requires audited @nestjs/schematics 12.0.6; found ${version}.`
+      `${label} member generation requires audited @nestjs/schematics 12.0.6; found ${version}.`
     );
   const read = <T extends object>(snapshot: TreeSnapshot, path: string): T => {
     const content = snapshot.get(path);
@@ -38,12 +44,12 @@ export function transformNodeMember(
   const member = read<Workspace>(after, 'nest-cli.json').projects?.[name];
   if (old.projects?.[name] || !member || member.type !== 'application')
     throw new Error(
-      `Node overlay requires a newly generated application member: ${name}.`
+      `${label} overlay requires a newly generated application member: ${name}.`
     );
   const root = treePath(member.root);
   const source = treePath(member.sourceRoot);
   if (!source.startsWith(root + '/'))
-    throw new Error(`Invalid sourceRoot for Node member ${name}.`);
+    throw new Error(`Invalid sourceRoot for ${label} member ${name}.`);
   const main = treePath(posix.join(source, member.entryFile ?? 'main') + '.ts');
   const paths = [
     main,
@@ -57,15 +63,16 @@ export function transformNodeMember(
     const content = after.get(path);
     if (before.has(path) || !content)
       throw new Error(
-        `Cannot transform existing or missing Node member file: ${path}`
+        `Cannot transform existing or missing ${label} member file: ${path}`
       );
     updates.set(
       path,
       Buffer.from(
-        nodeHttpSource(
+        httpSource(
           Buffer.from(content).toString(),
           path,
-          path === main ? 'bootstrap' : 'test'
+          path === main ? 'bootstrap' : 'test',
+          platform
         )
       )
     );
@@ -74,11 +81,11 @@ export function transformNodeMember(
     after,
     'package.json'
   );
-  if (!manifest.dependencies?.['@nestjs/platform-node']) {
+  if (!manifest.dependencies?.[adapterPackage]) {
     manifest.dependencies = Object.fromEntries(
       Object.entries({
         ...manifest.dependencies,
-        '@nestjs/platform-node': nodeRuntimeVersion,
+        [adapterPackage]: httpRuntimeVersion,
       }).sort(([a], [b]) => a.localeCompare(b))
     );
     updates.set(

@@ -21,7 +21,12 @@ import { setupLint } from './setup-lint';
 import { setupRspack } from './setup-rspack';
 import { setupVitest } from './setup-vitest';
 import { stageTree } from '../generation-adapter/staged-tree';
-import { validateNodeMemberOwner } from './node-member-dependencies';
+import { validateHttpMemberOwner } from './http-member-dependencies';
+import {
+  httpPlatforms,
+  isHttpPlatform,
+  type HttpPlatform,
+} from './http-platform';
 
 export interface NestMemberOptions {
   name: string;
@@ -52,31 +57,35 @@ interface NestWorkspace {
 export async function generateNestMember(
   tree: Tree,
   schematic: 'sub-app' | 'library',
-  options: NestMemberOptions & { platform?: 'node' }
+  options: NestMemberOptions & { platform?: HttpPlatform }
 ): Promise<GeneratorCallback | undefined> {
   if (
     options.platform !== undefined &&
-    (options.platform !== 'node' || schematic !== 'sub-app')
+    (!isHttpPlatform(options.platform) || schematic !== 'sub-app')
   )
     throw new Error(
-      'Use --platform=node only for a sub-app, or omit platform for native member generation.'
+      'Use --platform=node or --platform=express only for a sub-app, or omit platform for native member generation.'
     );
   if (
-    options.platform === 'node' &&
+    options.platform !== undefined &&
     options.language !== undefined &&
     options.language !== 'ts'
   )
-    throw new Error('--platform=node requires TypeScript (--language=ts).');
-  if (options.platform === 'node') {
+    throw new Error(
+      `--platform=${options.platform} requires TypeScript (--language=ts).`
+    );
+  if (options.platform !== undefined) {
     // Native 12.0.6 member tsconfigs hard-code ../../tsconfig.json and rootDir.
     // Do not commit an unbuildable nested layout or rewrite compiler templates.
     const container = posix.join(options.rootDir ?? 'apps', options.path ?? '');
     if (container !== 'apps' || /[/\\]/.test(options.name))
       throw new Error(
-        'Node sub-apps require the native apps/<name> layout. Custom rootDir/path containers are not supported by the audited native compiler/start templates.'
+        `${
+          httpPlatforms[options.platform].label
+        } sub-apps require the native apps/<name> layout. Custom rootDir/path containers are not supported by the audited native compiler/start templates.`
       );
   }
-  return options.platform === 'node'
+  return options.platform !== undefined
     ? stageTree(tree, (staged) => generateMember(staged, schematic, options))
     : generateMember(tree, schematic, options);
 }
@@ -84,7 +93,7 @@ export async function generateNestMember(
 async function generateMember(
   tree: Tree,
   schematic: 'sub-app' | 'library',
-  options: NestMemberOptions & { platform?: 'node' }
+  options: NestMemberOptions & { platform?: HttpPlatform }
 ): Promise<GeneratorCallback | undefined> {
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error('Generate Nest members inside an existing Nx workspace.');
@@ -127,16 +136,19 @@ async function generateMember(
     );
   }
   const nxJson = readNxJson(tree)!;
-  if (options.platform === 'node') validateNodeMemberOwner(tree, ownerRoot);
+  if (options.platform !== undefined)
+    validateHttpMemberOwner(tree, ownerRoot, undefined, options.platform);
   const plugins = registerNestPlugin(nxJson.plugins, {});
   const previousConfig = readJson<NestWorkspace>(tree, at('nest-cli.json'));
   if (
-    options.platform === 'node' &&
+    options.platform !== undefined &&
     previousConfig.language &&
     previousConfig.language !== 'ts'
   )
     throw new Error(
-      `${at('nest-cli.json')}: Node sub-apps require a TypeScript owner.`
+      `${at('nest-cli.json')}: ${
+        httpPlatforms[options.platform].label
+      } sub-apps require a TypeScript owner.`
     );
   let nextSourceRoot: string | undefined;
   const {

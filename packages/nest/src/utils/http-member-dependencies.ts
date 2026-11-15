@@ -6,17 +6,23 @@ import {
   installedNestPackageResolver,
   type ResolveInstalledNestPackage,
 } from './installed-nest-package';
-import { nodeRuntimeVersion } from './node-runtime-version';
+import {
+  httpPlatforms,
+  httpRuntimeVersion,
+  type HttpPlatform,
+} from './http-platform';
 import type { PackageManifest } from './validate-dependencies';
 
-/** Existing owners are verified, never silently upgraded to the Node candidate. */
-export function validateNodeMemberOwner(
+/** Existing owners are verified, never silently upgraded to the audited runtime. */
+export function validateHttpMemberOwner(
   tree: Tree,
   ownerRoot: string,
   resolveInstalled: ResolveInstalledNestPackage = installedNestPackageResolver(
     tree.root
-  )
+  ),
+  platform: HttpPlatform = 'node'
 ): void {
+  const { packageName: adapterPackage, label } = httpPlatforms[platform];
   const path = posix.join(ownerRoot, 'package.json');
   const manifest = readJson<PackageManifest>(tree, path);
   const sections = [
@@ -33,7 +39,9 @@ export function validateNodeMemberOwner(
   ];
   const fail = (name: string, reason: string): never => {
     throw new Error(
-      `${path}: cannot generate a Node sub-app: ${name} ${reason}. Select and install the audited common/core/testing/adapter ${nodeRuntimeVersion} host and a stable v12 CLI in this owner before retrying; skipInstall does not bypass compatibility checks.`
+      `${path}: cannot generate ${
+        platform === 'express' ? 'an' : 'a'
+      } ${label} sub-app: ${name} ${reason}. Select and install the audited common/core/testing/adapter ${httpRuntimeVersion} host and a stable v12 CLI in this owner before retrying; skipInstall does not bypass compatibility checks.`
     );
   };
   for (const name of [...required, ...adapters, '@nestjs/cli']) {
@@ -48,10 +56,10 @@ export function validateNodeMemberOwner(
       name !== '@nestjs/cli' &&
       !required.includes(name) &&
       !ranges.length &&
-      name !== '@nestjs/platform-node'
+      name !== adapterPackage
     )
       continue;
-    const expected = name === '@nestjs/cli' ? '>=12 <13' : nodeRuntimeVersion;
+    const expected = name === '@nestjs/cli' ? '>=12 <13' : httpRuntimeVersion;
     for (const { section, range } of declarations) {
       const supported =
         section === 'peerDependencies' &&
@@ -62,18 +70,18 @@ export function validateNodeMemberOwner(
         typeof range !== 'string' ||
         !validRange(range) ||
         !subset(range, supported) ||
-        (name !== '@nestjs/cli' && !satisfies(nodeRuntimeVersion, range)) ||
+        (name !== '@nestjs/cli' && !satisfies(httpRuntimeVersion, range)) ||
         /\d+\.\d+\.\d+-/.test(range)
       )
         fail(name, `has incompatible declaration ${String(range)}`);
       if (
         name === '@nestjs/platform-node' &&
-        !subset(range, nodeRuntimeVersion)
+        !subset(range, httpRuntimeVersion)
       )
-        fail(name, `must select exactly ${nodeRuntimeVersion}, found ${range}`);
+        fail(name, `must select exactly ${httpRuntimeVersion}, found ${range}`);
     }
     if (
-      name === '@nestjs/platform-node' &&
+      (name === adapterPackage || name === '@nestjs/platform-node') &&
       ranges.length &&
       !manifest.dependencies?.[name]
     )
@@ -84,8 +92,7 @@ export function validateNodeMemberOwner(
     } catch (error) {
       return fail(name, String(error));
     }
-    if (!installed && name === '@nestjs/platform-node' && !ranges.length)
-      continue;
+    if (!installed && name === adapterPackage && !ranges.length) continue;
     if (
       !installed ||
       !satisfies(installed.version, expected) ||

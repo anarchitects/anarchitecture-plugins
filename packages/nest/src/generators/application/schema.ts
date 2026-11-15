@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
+import type { HttpPlatform } from '../../utils/http-platform';
 /** Native application options; defaults and validation belong to Nest's schema. */
 export interface ApplicationGeneratorSchema {
   /** Explicit HTTP adapter overlay; omission retains native Nest behavior. */
-  platform?: 'node';
+  platform?: HttpPlatform;
   skipInstall?: boolean;
   name: string | number;
   directory?: string;

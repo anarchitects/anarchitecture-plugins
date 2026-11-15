@@ -2,8 +2,11 @@
 import * as ts from 'typescript';
 import { satisfies } from 'semver';
 import type { TreeSnapshot } from './tree-snapshot';
-import { nodeRuntimeVersion } from '../utils/node-runtime-version';
-const adapterPackage = '@nestjs/platform-node';
+import {
+  httpPlatforms,
+  httpRuntimeVersion,
+  type HttpPlatform,
+} from '../utils/http-platform';
 
 function nodes<T extends ts.Node>(
   source: ts.Node,
@@ -19,11 +22,17 @@ function nodes<T extends ts.Node>(
 }
 
 /** A bounded edit of native HTTP entry points; never a migration of user source. */
-export function nodeHttpSource(
+export function httpSource(
   content: string,
   path: string,
-  kind: 'bootstrap' | 'test'
+  kind: 'bootstrap' | 'test',
+  platform: HttpPlatform = 'node'
 ): string {
+  const {
+    packageName: adapterPackage,
+    adapter: adapterName,
+    application: applicationType,
+  } = httpPlatforms[platform];
   const source = ts.createSourceFile(
     path,
     content,
@@ -32,7 +41,7 @@ export function nodeHttpSource(
   );
   const fail = (): never => {
     throw new Error(
-      `Cannot safely select NodeAdapter in ${path}: expected an unambiguous native Nest HTTP ${kind}. Restore native output or use a fresh destination.`
+      `Cannot safely select ${adapterName} in ${path}: expected an unambiguous native Nest HTTP ${kind}. Restore native output or use a fresh destination.`
     );
   };
   const imports = nodes(source, ts.isImportDeclaration);
@@ -92,16 +101,16 @@ export function nodeHttpSource(
   );
   if (calls.length !== 1) return fail();
   const call = calls[0];
-  const adapter = binding(adapterPackage, 'NodeAdapter');
-  const appType = binding(adapterPackage, 'NestNodeApplication');
+  const adapter = binding(adapterPackage, adapterName);
+  const appType = binding(adapterPackage, applicationType);
   const adapterIndex = kind === 'bootstrap' ? 1 : 0;
   const explicit = call.arguments[adapterIndex];
   if (adapter || appType) {
     if (
       !adapter ||
       !appType ||
-      adapter.entry.name.text !== 'NodeAdapter' ||
-      appType.entry.name.text !== 'NestNodeApplication' ||
+      adapter.entry.name.text !== adapterName ||
+      appType.entry.name.text !== applicationType ||
       adapter.statement.importClause?.isTypeOnly ||
       adapter.entry.isTypeOnly ||
       !(
@@ -109,18 +118,18 @@ export function nodeHttpSource(
       ) ||
       !explicit ||
       !ts.isNewExpression(explicit) ||
-      explicit.expression.getText(source) !== 'NodeAdapter' ||
+      explicit.expression.getText(source) !== adapterName ||
       explicit.arguments?.length !== 0 ||
       call.typeArguments?.length !== 1 ||
-      call.typeArguments[0].getText(source) !== 'NestNodeApplication' ||
+      call.typeArguments[0].getText(source) !== applicationType ||
       binding('@nestjs/common', 'INestApplication')
     )
       return fail();
     return content;
   }
   if (
-    nodes(source, ts.isIdentifier).some((node) =>
-      ['NodeAdapter', 'NestNodeApplication'].includes(node.text)
+    nodes(source, ts.isIdentifier).some(
+      (node) => node.text === adapterName || node.text === applicationType
     )
   )
     return fail();
@@ -140,13 +149,13 @@ export function nodeHttpSource(
   edits.push({
     start: call.expression.end,
     end: call.expression.end,
-    text: '<NestNodeApplication>',
+    text: `<${applicationType}>`,
   });
   const insertion = kind === 'bootstrap' ? call.arguments[0].end : call.end - 1;
   edits.push({
     start: insertion,
     end: insertion,
-    text: `${kind === 'bootstrap' ? ', ' : ''}new NodeAdapter()`,
+    text: `${kind === 'bootstrap' ? ', ' : ''}new ${adapterName}()`,
   });
   if (kind === 'test') {
     const oldType = binding('@nestjs/common', 'INestApplication');
@@ -177,14 +186,14 @@ export function nodeHttpSource(
         return fail();
       replace(old.statement, '');
     }
-    replace(refs[0], 'NestNodeApplication');
+    replace(refs[0], applicationType);
   }
   const importEnd = imports.at(-1)?.end;
   if (importEnd === undefined) return fail();
   edits.push({
     start: importEnd,
     end: importEnd,
-    text: `\nimport { NodeAdapter } from '${adapterPackage}';\nimport type { NestNodeApplication } from '${adapterPackage}';`,
+    text: `\nimport { ${adapterName} } from '${adapterPackage}';\nimport type { ${applicationType} } from '${adapterPackage}';`,
   });
   for (const edit of edits.sort((a, b) => b.start - a.start))
     content =
@@ -193,14 +202,16 @@ export function nodeHttpSource(
 }
 
 /** Transform only the fresh native application snapshot, before conflict checks. */
-export function transformNodeApplication(
+export function transformHttpApplication(
   snapshot: TreeSnapshot,
   root: string,
-  schematicVersion: string
+  schematicVersion: string,
+  platform: HttpPlatform = 'node'
 ): void {
+  const { packageName: adapterPackage, label } = httpPlatforms[platform];
   if (schematicVersion !== '12.0.6')
     throw new Error(
-      `Node application generation requires audited @nestjs/schematics 12.0.6; found ${schematicVersion}. Reinstall the plugin's pinned dependencies.`
+      `${label} application generation requires audited @nestjs/schematics 12.0.6; found ${schematicVersion}. Reinstall the plugin's pinned dependencies.`
     );
   const manifestPath = `${root}/package.json`;
   const bytes = snapshot.get(manifestPath);
@@ -208,21 +219,28 @@ export function transformNodeApplication(
     throw new Error(`Missing native application manifest: ${manifestPath}`);
   const manifest = JSON.parse(bytes.toString());
   for (const [section, names] of [
-    ['dependencies', ['@nestjs/common', '@nestjs/core']],
+    [
+      'dependencies',
+      [
+        '@nestjs/common',
+        '@nestjs/core',
+        ...(platform === 'express' ? [adapterPackage] : []),
+      ],
+    ],
     ['devDependencies', ['@nestjs/testing']],
   ] as const) {
     for (const name of names) {
       const range = manifest[section]?.[name];
-      if (typeof range !== 'string' || !satisfies(nodeRuntimeVersion, range))
+      if (typeof range !== 'string' || !satisfies(httpRuntimeVersion, range))
         throw new Error(
           `${manifestPath}: ${name}@${String(
             range
-          )} does not admit the audited Node runtime ${nodeRuntimeVersion}.`
+          )} does not admit the audited ${label} runtime ${httpRuntimeVersion}.`
         );
-      manifest[section][name] = nodeRuntimeVersion;
+      manifest[section][name] = httpRuntimeVersion;
     }
   }
-  manifest.dependencies[adapterPackage] = nodeRuntimeVersion;
+  manifest.dependencies[adapterPackage] = httpRuntimeVersion;
   // Yarn normalizes dependency order on install. Emit that order up front so
   // installation alone does not turn a repeated generation into a conflict.
   manifest.dependencies = Object.fromEntries(
@@ -232,16 +250,18 @@ export function transformNodeApplication(
   const main = `${root}/src/main.ts`;
   const mainContent = snapshot.get(main);
   if (!mainContent)
-    throw new Error(`Node generation requires TypeScript: missing ${main}.`);
+    throw new Error(
+      `${label} generation requires TypeScript: missing ${main}.`
+    );
   updates.set(
     main,
-    Buffer.from(nodeHttpSource(mainContent.toString(), main, 'bootstrap'))
+    Buffer.from(httpSource(mainContent.toString(), main, 'bootstrap', platform))
   );
   for (const [path, content] of snapshot) {
     if (path.startsWith(`${root}/test/`) && /\/app\.e2e-.+\.ts$/.test(path))
       updates.set(
         path,
-        Buffer.from(nodeHttpSource(content.toString(), path, 'test'))
+        Buffer.from(httpSource(content.toString(), path, 'test', platform))
       );
   }
   updates.set(

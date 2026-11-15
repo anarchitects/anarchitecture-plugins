@@ -1,6 +1,6 @@
 # Three-adapter generation audit and implementation contract
 
-Status: proposed implementation contract for [#620](https://github.com/anarchitects/anarchitecture-plugins/issues/620),
+Status: reviewed implementation contract for [#620](https://github.com/anarchitects/anarchitecture-plugins/issues/620),
 under [#607](https://github.com/anarchitects/anarchitecture-plugins/issues/607).
 Audited 2026-11-15 against Plugins `0388420` and Meta
 `4f0339d86f0ebfa073173ad307cb67c8d6042bdd`.
@@ -9,10 +9,11 @@ Audited 2026-11-15 against Plugins `0388420` and Meta
 application. Explicit generation needs a small adapter-specific bootstrap and
 test transformation.** This contract extends the
 [Node audit and implementation record](nest-native-node-generation-audit.md);
-it does not reopen #608–#610 or implement Express/Fastify selection. The current
-plugin still accepts only explicit `platform=node`. Omission remains native Nest
-generation. No runtime dependency, generator default, support claim or release
-changes in this audit.
+the original #620 audit did not reopen #608–#610 or implement Express/Fastify
+selection. #620 was reviewed and merged in [#623](https://github.com/anarchitects/anarchitecture-plugins/pull/623).
+The #621 implementation below adds explicit Express alongside Node. Omission
+remains native Nest generation. Fastify generation, runtime rebaselining, defaults,
+production certification and releases retain their separate gates.
 
 ## Evidence and version boundaries
 
@@ -343,3 +344,67 @@ evidence; living [Nest testing](https://docs.nestjs.com/fundamentals/testing),
 [Fastify](https://docs.nestjs.com/http/performance) and
 [upload](https://docs.nestjs.com/techniques/file-upload) guides are supplementary
 and must be checked against the pinned release.
+
+## #621 implementation record: explicit Express
+
+Before implementation, re-enumerated and read every ADR: all 25 Meta records at
+`4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local records at Plugins
+`b9a67d0ea6b67d0cf64c7c1a94bbede04052590f`. The full inventory is recorded in the
+linked audit evidence. Re-read this contract, the Node implementation audit,
+published-library compatibility guide, package README and repository engineering
+instructions. The decisions, proposal statuses and conflicts recorded above apply
+unchanged. Native Nest owns generated source; Nx supplies orchestration and a
+bounded adapter transform. Meta's lifecycle policy requires verification before
+changing the runtime baseline; #611 retains the 12.5.0 rebaseline decision.
+
+`application` and `sub-app` (alias `app`) now accept `platform: node | express`,
+without a schema default. Shared adapter metadata selects the package, constructor
+and application type. The bounded AST transform changes only fresh native bootstrap
+and HTTP-test output. Express is always explicitly constructed, never represented
+by an omitted adapter. Native options, including independent-application Observe,
+remain owned by the pinned schematics 12.0.6. New Express packages pin
+common/core/testing/platform-express to 12.3.0 and retain Express typings.
+
+Existing member owners must resolve the audited 12.3.0 framework set and stable
+v12 CLI. Compatible declarations and existing Node/Express/Fastify/custom source
+are preserved. A missing selected adapter is added at 12.3.0. Owner validation,
+native conversion, adapter transformation and Nx tooling are staged transactionally;
+invalid owners, duplicate members and late tooling failures leave the caller tree
+unchanged. Root and nested owners use the same native `apps/<name>` constraint.
+The original application's Observe setup is preserved, not inherited by a member.
+
+The packed consumer scenarios are now shared across Node and Express:
+`http-application.spec.ts` and `http-sub-app.spec.ts`. They cover both ESM and
+CommonJS, actual adapter identity and HTTP, native conversion, mixed Node/Fastify
+owners, dependency retention, dry-run, install/skipInstall, repeated generation,
+resource registration and inferred build/start. Express CLI selection overrides a
+configured Node or Fastify default before schema validation, including through
+the canonical `sub-app` defaults when invoking the `app` alias. Unit coverage also preserves
+native output/Observe, exercises root owners and verifies rollback and compatibility.
+
+The existing native CommonJS member floating-promise lint limitation remains;
+no compiler or lint template rewrite is introduced. Node's retained Express range
+gap above remains assigned to #611. These checks do not certify production HTTP
+security, optional integrations, the full host matrix or a changed default.
+
+Validation on 2026-11-15 used Node 24.22.3 (macOS arm64), Nx 24.0.1,
+TypeScript 6.0.3 and Yarn 4.17.0. The plugin resolves schematics 12.0.6;
+the installed member owner resolves CLI/schematics 12.0.13. Express runtime
+common/core/testing/platform-express resolve 12.3.0, with Node/Fastify 12.3.0
+in the corresponding mixed-owner fixtures. These are clean consumer installations,
+not repository framework links. Registry resolution is not a frozen lockfile matrix.
+
+Passed: plugin build, lint and typecheck; all **619 unit tests in 35 suites**;
+e2e-package lint/typecheck; all **eight packed Node/Express ESM/CJS application
+and member cases**; and all **13 published-library peer compatibility checks**.
+Plugin lint reports 16 existing warnings and no errors. The packed checks exercise
+build/start, actual HTTP, native tests and resources. They retain the documented
+CommonJS Jest invocation workaround and expected native-member lint failure;
+Observe generation/preservation is unit-covered, while broader Observe runtime
+certification remains in #611.
+
+```sh
+corepack yarn nx run nx-nest:test --runInBand
+corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts src/nest-scenarios/http-sub-app.spec.ts src/nest-scenarios/published-library-peers.spec.ts
+```
