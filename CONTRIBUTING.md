@@ -90,6 +90,11 @@ own their targets. Keep Anarchitects-specific policies in separate optional
 tooling. The Nest package and its E2E fixtures are MIT-licensed exceptions to the
 repository's Apache-2.0 license, supporting an eventual upstream contribution.
 
+For HTTP-platform generation work, read the
+[native Node generation audit](docs/guides/nest-native-node-generation-audit.md).
+It separates current schematic behavior from the proposed overlay contract and
+the consumer evidence required before support or default activation.
+
 ## Testing Expectations
 
 For plugin changes, include tests relevant to the change:
