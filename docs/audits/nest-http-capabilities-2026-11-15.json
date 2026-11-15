@@ -1,0 +1,388 @@
+{
+  "issue": 613,
+  "date": "2026-11-15",
+  "status": "local validation passed",
+  "sourceBase": "dbb909a65bdc61dd5597ec13280cda01de6920f6",
+  "architecture": {
+    "metaRevision": "4f0339d86f0ebfa073173ad307cb67c8d6042bdd",
+    "metaAdrs": [
+      "adr/0001-cooperative-governance-enrichment.md",
+      "adr/0001-two-core-implementation-styles.md",
+      "adr/0002-modulith-first-ecosystem-position.md",
+      "adr/0003-cross-repo-ai-enablement-model.md",
+      "adr/0004-meta-owns-landscape-contracts.md",
+      "adr/0005-governance-hierarchy-and-policy-inheritance.md",
+      "adr/0006-archi-as-reference-implementation-for-enterprise-architecture-governance.md",
+      "adr/0007-governance-workspace-layering-model.md",
+      "adr/0008-http-platform-independence.md",
+      "adr/0008-modern-angular-22-signal-forms.md",
+      "adr/0009-native-node-candidate-default.md",
+      "adr/0010-nest-first-runtime-and-dependency-policy.md",
+      "adr/0011-nest12-authn-authz-contracts-and-compatibility.md",
+      "adr/0012-canonical-public-api-contract-ownership.md",
+      "adr/0013-package-initial-release-and-nx-versioning.md",
+      "adr/0014-renovate-and-dependabot-dependency-management.md",
+      "adr/0015-nx-task-caching-and-distributed-execution.md",
+      "adr/0016-sdlc-ownership-and-architecture-authority.md",
+      "adr/0017-release-cadence-and-owner-authority.md",
+      "adr/0018-upstream-first-exceptions-and-cutover.md",
+      "adr/0019-repository-projects-and-organization-overview.md",
+      "adr/0020-application-infrastructure-boundary-and-migration.md",
+      "adr/0021-consumer-applications-and-public-upstream-reuse.md",
+      "adr/0022-core-framework-lifecycle-90-day-maintenance.md",
+      "adr/ADR-0001.md"
+    ],
+    "localAdrs": [
+      "docs/adr/adr-nest-generation-strategy.md",
+      "docs/adr/adr-nest-http-platform-scaffolding.md",
+      "docs/adr/adr-nest12-first-party-defaults-and-compatibility.md",
+      "docs/adr/adr-package-initial-release-and-nx-versioning.md",
+      "docs/adr/adr-public-package-documentation.md",
+      "docs/adr/modern-angular-22-signal-forms.md"
+    ],
+    "review": "Freshly enumerated both sources and read all 25 Meta and six local ADRs before implementation. Accepted HTTP independence, Nest-first runtime/dependencies, security, canonical contract ownership, framework lifecycle and Nx inference/cache decisions apply. Historical local Contracts wording yields to accepted Meta ADR 0012; Meta ADRs 0013/0017 govern initial release and release authority. Proposals do not override accepted behavior; no exception or default activation.",
+    "guides": [
+      "CONTRIBUTING.md",
+      "docs/guides/nest-native-node-generation-audit.md",
+      "docs/guides/nest-three-adapter-generation-contract.md",
+      "docs/guides/nest-published-library-compatibility.md",
+      "docs/guides/nest-http-consumer-matrix.md",
+      "packages/nest/README.md",
+      "Meta docs/guides/nestjs-ai-assisted-development.md (proposed guidance only)"
+    ]
+  },
+  "host": {
+    "node": "24.22.3",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nx": "24.0.1",
+    "yarn": "4.17.0",
+    "npm": "11.19.1"
+  },
+  "consumer": {
+    "node": "24.21.0",
+    "nx": "24.0.1",
+    "yarn": "4.17.0",
+    "linker": "node-modules",
+    "typescript": "6.0.3",
+    "nestRuntimeAndAdapters": "12.5.0",
+    "nestCliAndSchematics": "12.0.13",
+    "standardSchemaSpec": "1.1.0",
+    "webpack": "5.112.2"
+  },
+  "optionalPackages": {
+    "all": {
+      "@nestjs/swagger": "12.1.2",
+      "ejs": "5.0.1"
+    },
+    "fastifyOnly": {
+      "@fastify/static": "10.1.11",
+      "@fastify/multipart": "10.1.8",
+      "@fastify/view": "12.0.1"
+    }
+  },
+  "runtimeTransitives": {
+    "swagger-ui-dist": "5.34.1",
+    "multer": "2.5.0",
+    "express": "5.3.0",
+    "fastify": "5.12.8"
+  },
+  "scenarios": {
+    "platforms": ["node", "express", "fastify"],
+    "moduleFormats": ["esm", "cjs"],
+    "consumerCount": 6,
+    "applicationCount": 12,
+    "modes": ["disabled", "enabled"],
+    "scope": "Independent generated applications; native source/configuration preserved; consumer-owned optional bootstrap/controller; native build and standalone fixture compile before real loopback HTTP."
+  },
+  "supportedForAllAdapters": [
+    "Swagger document generation independently of runtime validation: operation/path/method, request and response schemas, documented error response",
+    "Swagger JSON endpoint and UI HTML/CSS/JS serving",
+    "Vendor-neutral Standard JSON Schema input/output conversion and explicit custom converter for validation-only Standard Schema",
+    "Native single-file memory upload with file/field/count limits, malformed/missing/unexpected/multiple-part rejection before handler, basename normalization and no persisted path",
+    "Static GET/HEAD and content type, hidden/missing file and encoded traversal denial",
+    "Explicit EJS view rendering with HTML escaping",
+    "Composition of all four optional integrations, disabled endpoint checks and generated optional dependency omission"
+  ],
+  "unsupported": [
+    {
+      "configuration": "Complete OpenAPI inference from a validation-only Standard Schema without conversion",
+      "platforms": ["node", "express", "fastify"],
+      "rationale": "Negative document assertion fails to find the expected schema; explicit standardSchemaConverter or Standard JSON Schema conversion is required.",
+      "owner": 510
+    },
+    {
+      "configuration": "Express/Multer interceptor on Fastify",
+      "platforms": ["fastify"],
+      "rationale": "Public native adapter contract requires the matching Fastify interceptor; cross-adapter upload wiring is not certified.",
+      "owner": 511
+    },
+    {
+      "configuration": "String argument to Fastify setViewEngine",
+      "platforms": ["fastify"],
+      "rationale": "Released public types document failure; use engine/root options and explicit optional peer.",
+      "owner": 512
+    }
+  ],
+  "unverified": [
+    {
+      "capabilities": [
+        "Disk/cloud storage",
+        "File-content or MIME validation",
+        "Streaming/concurrent/slow uploads",
+        "Other engines/layouts/includes/caches"
+      ],
+      "owners": [511, 512, 514],
+      "rationale": "Only bounded memory upload and one fixed EJS view are exercised."
+    },
+    {
+      "capabilities": [
+        "Native monorepo member optional composition",
+        "Observe",
+        "Rspack",
+        "Other Node/package-manager/OS optional lanes"
+      ],
+      "owners": [514, 614],
+      "rationale": "Broader baseline support does not establish optional capability support."
+    },
+    {
+      "capabilities": [
+        "Browser execution of Swagger UI",
+        "Custom CSP",
+        "Documentation authentication",
+        "Reverse-proxy paths"
+      ],
+      "owners": [510, 514],
+      "rationale": "HTTP asset responses are not browser/deployment verification."
+    },
+    {
+      "capabilities": [
+        "SSE reconnection",
+        "WebSockets",
+        "HTTP/2",
+        "Session/passkey integrations",
+        "Full authorization policy",
+        "Frontend SSR"
+      ],
+      "owners": [614],
+      "rationale": "Outside this bounded consumer fixture; runtime presentation/SSR parity belongs to Bricks #506 and Community #33."
+    }
+  ],
+  "adapterDifferences": [
+    {
+      "capability": "Static dotfiles",
+      "node": "Hidden by default",
+      "express": "Hidden by default",
+      "fastify": "Initial run served sentinel with 200; supported configuration explicitly uses dotfiles: ignore",
+      "owner": 512
+    },
+    {
+      "capability": "Swagger plus application static assets",
+      "node": "Public useStaticAssets(path, options)",
+      "express": "Public useStaticAssets(path, options)",
+      "fastify": "Public useStaticAssets(options), decorateReply: false on application root; Swagger owns sendFile decoration",
+      "owner": 512
+    },
+    {
+      "capability": "Uploads",
+      "node": "Native FileInterceptor with adapter-owned Multer",
+      "express": "Native FileInterceptor with adapter-owned Multer",
+      "fastify": "Native Fastify FileInterceptor automatically registers explicit optional @fastify/multipart peer",
+      "owner": 511
+    },
+    {
+      "capability": "Views",
+      "node": "setBaseViewsDir and setViewEngine(ejs)",
+      "express": "setBaseViewsDir and setViewEngine(ejs)",
+      "fastify": "setViewEngine({ engine: { ejs }, root }) with explicit @fastify/view peer",
+      "owner": 512
+    }
+  ],
+  "limits": {
+    "fileSizeBytes": 64,
+    "files": 1,
+    "textFields": 1,
+    "textFieldSizeBytes": 16,
+    "parts": 3,
+    "storage": "memory only",
+    "requestTimeoutMs": 5000,
+    "consumerSubprocessTimeoutMs": 120000,
+    "testTimeoutMs": 600000
+  },
+  "dependencyEvidence": {
+    "registryRecords": 1059,
+    "additionalRegistryRecords": 19,
+    "strictPeerAndEngineDiagnostics": true,
+    "immutableSecondInstall": true,
+    "checksumsPreserved": true,
+    "baselineLockChanged": false,
+    "optionalGeneratedDependencies": false
+  },
+  "handoffs": {
+    "508": "Optional Fastify integration owner; no automatic optional scaffolding is added.",
+    "510": "Shared Swagger/conversion plus Fastify static serving peer.",
+    "511": "Use native Fastify interceptor; do not duplicate automatic multipart registration.",
+    "512": "Public static/view API differences, explicit engine choice, dotfile exclusion and sendFile decoration composition.",
+    "513": "No additional shim needed for #612 verified raw-body/shared pipeline; other hooks remain unverified.",
+    "514": "Broaden optional composition and failure coverage only with independent evidence.",
+    "515": "Document future presets when implemented; use this matrix for current limits.",
+    "614": "Readiness consolidation and unverified capability disposition.",
+    "615": "Separate adapter-default activation gate."
+  },
+  "fixtureSha256": {
+    "packages/nest-e2e/src/http-capability-consumer.ts": "86d6777c6654aafef29a60f2dd322906cfa3aa6bd8c815a9f57a7fcb6dd7580f",
+    "packages/nest-e2e/src/http-capability-fixture.ts": "9abbd7406b4fa293def55e3e8692fa467a96445d8aef990b7031e2f60604322e",
+    "packages/nest-e2e/src/consumer-locks/http-capabilities-yarn.lock": "507edc1a806dac79df7ada361809d287994ba37bf1a0ac6170396e137d78f6a5",
+    "packages/nest-e2e/src/nest-scenarios/http-capability-node.spec.ts": "1af75ab6ba4de0e1717ea42e9bcb73afb241aafb573b1bbe965ea17f89bc205f",
+    "packages/nest-e2e/src/nest-scenarios/http-capability-express.spec.ts": "40996e5c87d8634cd5ba06993ad43fe8f73668f579609272a41bad7bb8b17975",
+    "packages/nest-e2e/src/nest-scenarios/http-capability-fastify.spec.ts": "fe50d6d99dfa583f374043d9982ad35381436650d3468021c107874c62c8bed6"
+  },
+  "validation": {
+    "environment": {
+      "NX_DAEMON": "false",
+      "NX_ISOLATE_PLUGINS": "false",
+      "NX_NO_CLOUD": "true",
+      "SWC_CACHE_DIR": "/private/tmp/nest613-swc"
+    },
+    "commands": [
+      "corepack yarn nx run-many -p nx-nest-e2e -t e2e-ci--src/nest-scenarios/http-capability-node.spec.ts,e2e-ci--src/nest-scenarios/http-capability-express.spec.ts,e2e-ci--src/nest-scenarios/http-capability-fastify.spec.ts --parallel=2 --output-style=static",
+      "corepack yarn nx run-many -p nx-nest,nx-nest-e2e -t build,lint,typecheck --parallel=2 --output-style=static",
+      "corepack yarn nx run nx-nest:test --output-style=static"
+    ],
+    "unit": {
+      "tests": 675,
+      "suites": 35,
+      "status": "passed"
+    },
+    "buildLintTypecheck": {
+      "tasks": 5,
+      "status": "passed",
+      "cacheHits": 2
+    },
+    "consumers": {
+      "status": "passed",
+      "tests": 6,
+      "suites": 3,
+      "applicationStarts": 12,
+      "e2eCacheHits": 0,
+      "duration": "1m 44s",
+      "cases": [
+        {
+          "platform": "express",
+          "type": "esm",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-express": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        },
+        {
+          "platform": "express",
+          "type": "cjs",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-express": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        },
+        {
+          "platform": "fastify",
+          "type": "esm",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@fastify/static": "10.1.11",
+            "@fastify/multipart": "10.1.8",
+            "@fastify/view": "12.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-fastify": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        },
+        {
+          "platform": "fastify",
+          "type": "cjs",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@fastify/static": "10.1.11",
+            "@fastify/multipart": "10.1.8",
+            "@fastify/view": "12.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-fastify": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        },
+        {
+          "platform": "node",
+          "type": "esm",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-node": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        },
+        {
+          "platform": "node",
+          "type": "cjs",
+          "node": "24.21.0",
+          "versions": {
+            "@nestjs/swagger": "12.1.2",
+            "ejs": "5.0.1",
+            "@nestjs/common": "12.5.0",
+            "@nestjs/core": "12.5.0",
+            "@nestjs/platform-node": "12.5.0",
+            "@nestjs/cli": "12.0.13",
+            "@nestjs/schematics": "12.0.13",
+            "nx": "24.0.1",
+            "typescript": "6.0.3",
+            "@standard-schema/spec": "1.1.0"
+          }
+        }
+      ]
+    },
+    "ci": "Not monitored; automatically inferred tasks are included by the existing e2e-ci wildcard. No remote CI result is asserted."
+  },
+  "sources": [
+    "https://docs.nestjs.com/openapi/introduction",
+    "https://docs.nestjs.com/techniques/file-upload",
+    "https://github.com/fastify/fastify-static",
+    "Released npm package manifests and public declarations for the exact versions above"
+  ]
+}

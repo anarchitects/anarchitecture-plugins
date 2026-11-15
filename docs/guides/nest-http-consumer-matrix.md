@@ -195,6 +195,172 @@ inferred tasks without E2E cache hits, covering 32 application starts. The 675
 plugin unit tests and applicable plugin/e2e build, lint and typecheck tasks passed.
 These are macOS arm64 results; the evidence does not imply Linux CI completion.
 
+## Optional HTTP capabilities
+
+[#613](https://github.com/anarchitects/anarchitecture-plugins/issues/613) evaluates
+optional integrations independently of the baseline generation and HTTP/security
+contracts above. The scope is explicit Node, Express and Fastify independent
+applications in ESM and CJS, with consumer-owned configuration. It adds no
+generator flags, optional dependencies to generated applications, compatibility
+ranges, migration or adapter default. These are candidate implementation results,
+not a release announcement or a claim of general production parity.
+
+The matrix uses **supported** for the bounded configuration exercised by the
+packed-consumer tests, **unsupported** for an explicitly excluded configuration,
+and **unverified** when the evidence does not establish support. A package being
+installable or an application building is not runtime capability evidence.
+
+| Capability/configuration                                                                                 | Node        | Express     | Fastify     | Evidence or restriction                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------- | ----------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Swagger OpenAPI document, JSON endpoint and UI assets                                                    | Supported   | Supported   | Supported   | `createDocument` and `setup`; method/path, operation ID, request/response schema, error description, JSON, HTML, CSS and JS requests       |
+| Standard Schema with Standard JSON Schema input/output conversion                                        | Supported   | Supported   | Supported   | Same vendor-neutral descriptor and schema assertions; real valid/invalid body requests                                                     |
+| Validation-only Standard Schema with an explicit converter                                               | Supported   | Supported   | Supported   | Same `standardSchemaConverter` checks both input and output                                                                                |
+| Inferring a complete OpenAPI schema from validation alone                                                | Unsupported | Unsupported | Unsupported | Negative document assertion: a validator without JSON-schema conversion does not produce the expected schema; supply conversion explicitly |
+| Single, bounded, in-memory multipart file                                                                | Supported   | Supported   | Supported   | Native adapter `FileInterceptor`; one file, 64-byte limit, one 16-byte text field, three-part cap; valid upload and rejection cases below  |
+| Express interceptor or manual Multer wiring on Fastify                                                   | N/A         | N/A         | Unsupported | Use the interceptor from `@nestjs/platform-fastify`; no cross-adapter compatibility claim                                                  |
+| Static directory through the public adapter API                                                          | Supported   | Supported   | Supported   | GET/HEAD, content type, missing/hidden file and traversal rejection                                                                        |
+| Explicit EJS engine with `@Render`                                                                       | Supported   | Supported   | Supported   | Real HTML response and escaped untrusted template data                                                                                     |
+| Combined Swagger, multipart, static and EJS application                                                  | Supported   | Supported   | Supported   | All four enabled in the same process; separate disabled run verifies absent endpoints                                                      |
+| Other template engines, layouts, includes or template caches                                             | Unverified  | Unverified  | Unverified  | Only EJS and one fixed view are exercised; #512/#514 own extensions                                                                        |
+| Disk/cloud uploads, file-content validation, streaming uploads, concurrent/slow uploads                  | Unverified  | Unverified  | Unverified  | Memory storage only; no MIME trust, malware detection, persistence, cleanup, storage or backpressure claim; #511/#514 own extensions       |
+| Optional capabilities in native monorepo members, Observe, Rspack or other Node/package-manager lanes    | Unverified  | Unverified  | Unverified  | The baseline has broader coverage; optional-feature composition is restricted to the six independent-app cases here; #514 owns expansion   |
+| Swagger browser execution, custom CSP, authentication on documentation, reverse-proxy paths              | Unverified  | Unverified  | Unverified  | HTTP asset serving is checked, not a browser or production exposure policy; #510/#514 own expansion                                        |
+| SSE reconnect, WebSockets, HTTP/2, session/passkey integrations, full authorization policy, frontend SSR | Unverified  | Unverified  | Unverified  | Outside this bounded HTTP fixture; #614 must retain these restrictions and route new claims to their runtime/deployment owners             |
+
+The earlier #612 evidence covers shared validation/serialization, raw body,
+cookies, CORS, CSRF, guard ordering, security headers, proxy trust, HTTPS and
+representative streaming. It does not turn the unverified rows above into
+supported features. No frontend renderer or SSR setup is included.
+Runtime presentation/SSR parity remains with Bricks #506 and Community #33.
+
+### Exact optional dependency boundary
+
+The consumer runtime remains Node **24.21.0**, Nest common/core/testing and
+selected adapter **12.5.0**, native CLI/schematics **12.0.13**, Nx **24.0.1**,
+TypeScript **6.0.3**, Yarn **4.17.0** and Standard Schema spec **1.1.0**.
+Dependencies added explicitly by the consumer are:
+
+| Package              | Node/Express | Fastify | Purpose                                                            |
+| -------------------- | ------------ | ------- | ------------------------------------------------------------------ |
+| `@nestjs/swagger`    | 12.1.2       | 12.1.2  | Document generation and serving; includes `swagger-ui-dist` 5.34.1 |
+| `ejs`                | 5.0.1        | 5.0.1   | Explicitly selected view engine                                    |
+| `@fastify/static`    | Not added    | 10.1.11 | Swagger assets and application static directory                    |
+| `@fastify/multipart` | Not added    | 10.1.8  | Native Fastify upload interceptor's optional peer                  |
+| `@fastify/view`      | Not added    | 12.0.1  | Fastify view API's optional peer                                   |
+
+The Nest Node/Express adapters supply Multer **2.5.0**; platform-express supplies
+Express **5.3.0**, and platform-fastify supplies Fastify **5.12.8**. No direct
+Fastify server package, mandatory schema vendor or legacy validation packages are
+introduced. The baseline generated manifest is checked before optional packages
+are added. Each separate consumer installs the real packed plugin and verifies
+the resolved versions, strict peer/engine diagnostics, all registry lock records
+and a second immutable install. The dedicated
+[`http-capabilities-yarn.lock`](../../packages/nest-e2e/src/consumer-locks/http-capabilities-yarn.lock)
+freezes the complete optional graph without changing the earlier baseline lock.
+
+### Configuration differences and security limits
+
+The shared controllers, schemas and request assertions are identical for all
+adapters. Only public bootstrap options and the `FileInterceptor` import vary:
+
+- Swagger setup and schema conversion are common. Fastify additionally needs
+  `@fastify/static`. When Swagger and the application's static directory coexist,
+  the latter uses `decorateReply: false` so only Swagger's registration decorates
+  `reply.sendFile`. This is a composition requirement, not a reason to disable
+  Swagger or duplicate its implementation.
+- Node/Express call `useStaticAssets(path, { prefix })`,
+  `setBaseViewsDir(path)` and `setViewEngine('ejs')`. Fastify uses
+  `useStaticAssets({ root, prefix, decorateReply: false, dotfiles: 'ignore' })` and
+  `setViewEngine({ engine: { ejs }, root })`; a string view-engine argument is
+  unsupported there. Paths are absolute, resolved from the consumer's explicit
+  working directory, without `__dirname` assumptions in ESM. Asset copying and
+  deployment working directories remain the consumer's responsibility.
+- Uploads import `FileInterceptor` from the selected Nest adapter. Fastify
+  registers its optional multipart peer automatically; no explicit
+  `app.register(multipart)` is needed. The public Nest upload decorators and
+  `ParseFilePipe` are shared. Installing or using an interceptor from a different
+  adapter is outside the supported configuration.
+- The fixture sets limits explicitly rather than relying on different parser
+  defaults. It rejects oversized files (413), unexpected/duplicate file fields,
+  oversized/extra text fields, missing files and malformed multipart (400), and
+  verifies rejection before the handler. Client filename paths are stripped;
+  memory storage must not expose a persisted path. Uploaded content is never
+  executed or rendered. This does not validate a file's declared MIME type or
+  make arbitrary uploaded content safe.
+- Fastify's tested static package defaults to allowing dotfiles; the first
+  consumer run exposed the hidden sentinel with HTTP 200. The supported
+  configuration explicitly sets `dotfiles: 'ignore'`. Node/Express hide it by
+  default. #512 must preserve this restriction when offering a static preset.
+  Static tests reject access to a hidden file and an out-of-root sentinel,
+  including encoded traversal paths. EJS escaping is checked with script-shaped
+  data. View names and engine options are fixed, never supplied by the request.
+
+These restrictions apply to consumer configuration. There are currently no
+optional-feature generator options to guard. Future presets must reject
+unsupported combinations rather than silently installing packages or emitting
+configuration based only on an adapter name.
+
+### Follow-up ownership and reproducibility
+
+[#508](https://github.com/anarchitects/anarchitecture-plugins/issues/508) remains
+the optional Fastify integration owner. This evidence narrows its work:
+[#510](https://github.com/anarchitects/anarchitecture-plugins/issues/510) can reuse
+shared Swagger/schema configuration with the explicit Fastify serving peer;
+[#511](https://github.com/anarchitects/anarchitecture-plugins/issues/511) can reuse
+Nest's native multipart interceptor and avoid duplicate plugin registration;
+[#512](https://github.com/anarchitects/anarchitecture-plugins/issues/512) owns
+static/view presets and explicit engine selection. For
+[#513](https://github.com/anarchitects/anarchitecture-plugins/issues/513), the
+#612 raw-body/shared-pipeline results justify no additional adapter shim for the
+verified cases; additional hooks still need independent evidence.
+[#514](https://github.com/anarchitects/anarchitecture-plugins/issues/514) owns
+broader optional-feature composition and failure coverage;
+[#515](https://github.com/anarchitects/anarchitecture-plugins/issues/515) owns
+documentation for those presets when implemented. None of these issues is
+declared complete by this matrix. #614 owns readiness and consolidation of the
+remaining restrictions; #615 owns the separate default gate.
+
+The original MIT consumer fixture preserves native generated application,
+bootstrap, test and configuration files, runs the native build and an explicit
+consumer-owned compile target, then exercises real loopback HTTP. Each of six
+consumers starts enabled and disabled applications. Disabled mode means the
+optional packages are installed but endpoints/configuration are absent; it is
+not a dependency-uninstall test. Baseline dependency omission is a separate
+manifest assertion and the existing baseline consumer suite remains authoritative.
+
+Reproduce through the three automatically inferred tasks:
+
+```sh
+corepack yarn nx run-many -p nx-nest-e2e -t e2e-ci--src/nest-scenarios/http-capability-node.spec.ts,e2e-ci--src/nest-scenarios/http-capability-express.spec.ts,e2e-ci--src/nest-scenarios/http-capability-fastify.spec.ts --parallel=2 --output-style=static
+```
+
+Registry access and loopback HTTP listeners are required. Requests and
+subprocesses have deadlines, and each spec owns and removes its temporary
+consumers. The existing `e2e-ci` wildcard discovers all three specs without
+explicit target configuration. Local results, source hashes and the complete
+fresh architecture preflight inventory are recorded in the
+[capability evidence](../audits/nest-http-capabilities-2026-11-15.json).
+Local validation on 2026-11-15 passed all six consumer cases and 12 application
+starts across the three inferred tasks without E2E cache hits (1m44s). All 675
+plugin unit tests in 35 suites and the five applicable build/lint/typecheck
+tasks passed. These are macOS arm64 results, not cross-platform certification.
+CI execution is not monitored or asserted by this evidence.
+
+All 25 Meta ADRs at `4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local
+ADRs were re-enumerated and read before implementation, with the relevant Nest
+guides. Accepted HTTP independence, first-party runtime, security, canonical
+contract ownership and Nx inference/cache decisions apply. Meta ADR 0012 takes
+precedence over older local Contracts-ownership wording; generated OpenAPI is
+runtime evidence, not the canonical application API contract. Meta ADRs 0013/0017
+govern release authority. Proposed documentation/default decisions do not change
+accepted behavior; no exception is required for these consumer-owned tests.
+
+Primary API references: [Nest OpenAPI](https://docs.nestjs.com/openapi/introduction),
+[Nest uploads](https://docs.nestjs.com/techniques/file-upload), and the installed
+12.5.0 adapter public types. Package versions and peer ranges were independently
+read from released registry manifests; runtime support comes from the tests,
+not solely from documentation or a dependency declaration.
+
 ## CI execution budget
 
 [Main CI run 43748853192](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/43748853192)

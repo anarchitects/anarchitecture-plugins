@@ -253,6 +253,15 @@ overwriting the existing application. This command is not an adapter migration.
 Basic generated HTTP execution is checked; optional integrations and production
 HTTP/security parity require their own validation.
 
+Swagger/OpenAPI, Standard Schema documentation, bounded in-memory uploads,
+static files and EJS views have separate
+[three-adapter capability evidence](https://github.com/anarchitects/anarchitecture-plugins/blob/main/docs/guides/nest-http-consumer-matrix.md#optional-http-capabilities).
+These integrations require consumer-owned configuration and explicit optional
+dependencies; the generator does not provide feature presets. Standard Schema
+validation alone does not supply an OpenAPI schema. Fastify uploads use Nest's
+Fastify interceptor, and Fastify static/view setup uses its adapter-specific
+options. Consult the matrix for exact tested versions and remaining restrictions.
+
 To configure the option, use Nx generator defaults in `nx.json`:
 
 ```json
