@@ -11,13 +11,13 @@ and task tooling. The runtime contract is **NestJS 12 only**.
 
 ## Compatibility
 
-| Component              | Supported contract                                                                                                                                                                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nx and `@nx/devkit`    | `>=23.2.0 <25`; keep their versions aligned.                                                                                                                                                                                                     |
-| Nest CLI and framework | Stable `>=12.0.0 <13`; other majors and prereleases are unsupported.                                                                                                                                                                             |
-| Node.js                | `^22.22.3` or `^24.15.0` or `>=26.0.0`.                                                                                                                                                                                                          |
-| TypeScript             | The generation runtime requires `>=6.0.0 <7`. Generated TypeScript projects use Nest 12 compiler conventions.                                                                                                                                    |
-| Module systems         | Independent applications and native members support ESM and CommonJS. New Nx-native libraries are TypeScript, ESM, and source-only.                                                                                                              |
+| Component              | Supported contract                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nx and `@nx/devkit`    | `>=23.2.0 <25`; keep their versions aligned.                                                                                                                                                                              |
+| Nest CLI and framework | Stable `>=12.0.0 <13`; other majors and prereleases are unsupported.                                                                                                                                                      |
+| Node.js                | `^22.22.3` or `^24.15.0` or `>=26.0.0`.                                                                                                                                                                                   |
+| TypeScript             | The generation runtime requires `>=6.0.0 <7`. Generated TypeScript projects use Nest 12 compiler conventions.                                                                                                             |
+| Module systems         | Independent applications and native members support ESM and CommonJS. New Nx-native libraries are TypeScript, ESM, and source-only.                                                                                       |
 | Package managers       | Workspace registration supports npm, Yarn, Bun, and pnpm. Verified HTTP workflows use Yarn 4 with `nodeLinker: node-modules` and npm 11.19.1; equivalent end-to-end support for every manager or Yarn PnP is not claimed. |
 
 The supported ranges are broader than the verified combinations. Clean installed

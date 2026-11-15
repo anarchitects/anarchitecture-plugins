@@ -97,15 +97,8 @@
     }
   ],
   "scenarioDefinition": {
-    "adapters": [
-      "node",
-      "express",
-      "fastify"
-    ],
-    "formats": [
-      "esm",
-      "cjs"
-    ],
+    "adapters": ["node", "express", "fastify"],
+    "formats": ["esm", "cjs"],
     "total": 24,
     "ownerLayouts": "Nested packages/api; node24 Fastify ESM uses a root owner under both package managers",
     "mixedPairs": "All nine owner/member adapter pairs in both formats across the Yarn lanes",

@@ -26,12 +26,12 @@ forwarded without a platform; explicit platforms require the full TypeScript
 application template. Libraries, public exports and Nest 11/12 library peers
 retain their separate contracts.
 
-| Lane | Node | Nx / @nx/devkit | Package manager | Observe |
-| --- | --- | --- | --- | --- |
-| node22 | 22.22.3 | 23.2.0 | Yarn 4.17.0, node-modules | off |
-| node24 | 24.21.0 | 24.0.1 | Yarn 4.17.0, node-modules | on |
-| node26 | 26.0.0 | 24.0.1 | Yarn 4.17.0, node-modules | off |
-| npm | 24.21.0 | 24.0.1 | npm 11.19.1 | on |
+| Lane   | Node    | Nx / @nx/devkit | Package manager           | Observe |
+| ------ | ------- | --------------- | ------------------------- | ------- |
+| node22 | 22.22.3 | 23.2.0          | Yarn 4.17.0, node-modules | off     |
+| node24 | 24.21.0 | 24.0.1          | Yarn 4.17.0, node-modules | on      |
+| node26 | 26.0.0  | 24.0.1          | Yarn 4.17.0, node-modules | off     |
+| npm    | 24.21.0 | 24.0.1          | npm 11.19.1               | on      |
 
 Every lane exercises Node, Express and Fastify applications in ESM and CommonJS:
 24 scenarios, using TypeScript 6.0.3 and CLI 12.0.13. Observe-on cases assert
