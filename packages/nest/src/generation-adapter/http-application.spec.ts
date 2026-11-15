@@ -22,6 +22,11 @@ describe.each([
     adapter: 'ExpressAdapter',
     application: 'NestExpressApplication',
   },
+  {
+    platform: 'fastify' as const,
+    adapter: 'FastifyAdapter',
+    application: 'NestFastifyApplication',
+  },
 ])('$platform overlay', ({ platform, adapter, application }) => {
   it('preserves aliases, options and unrelated bytes and is idempotent', () => {
     const transformed = httpSource(bootstrap, 'main.ts', 'bootstrap', platform);
@@ -76,3 +81,96 @@ describe.each([
     expect(snapshot).toEqual(before);
   });
 });
+
+const httpTest = `import { TestingModule as Fixture } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import type { App } from 'supertest/types.js';
+let api: INestApplication<App>;
+async function prepare() {
+  const fixture: Fixture = await compileFixture();
+  api = fixture.createNestApplication();
+  await api.init();
+  // Preserve subsequent assertions and cleanup owned by the native test.
+}
+`;
+const ready = 'await api.getHttpAdapter().getInstance().ready();';
+
+it('adds one awaited Fastify readiness call after initialization and preserves aliases', () => {
+  const output = httpSource(httpTest, 'api.e2e.ts', 'test', 'fastify');
+  expect(output).toContain('let api: NestFastifyApplication');
+  expect(output).toContain(
+    'fixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter())'
+  );
+  expect(output).toContain(`await api.init();\n  ${ready}`);
+  expect(output).toContain('// Preserve subsequent assertions');
+  expect(httpSource(output, 'api.e2e.ts', 'test', 'fastify')).toBe(output);
+  const windows = httpSource(
+    httpTest.replace(/\n/g, '\r\n'),
+    'api.e2e.ts',
+    'test',
+    'fastify'
+  );
+  expect(windows).toContain(`await api.init();\r\n  ${ready}`);
+});
+
+it.each([
+  httpTest.replace('await api.init();', ''),
+  httpTest.replace('await api.init();', 'api.init();'),
+  httpTest.replace('await api.init();', 'await other.init();'),
+  httpTest.replace('await api.init();', 'await api.init(); await api.init();'),
+  httpTest.replace('await api.init();', 'if (enabled) { await api.init(); }'),
+  httpTest.replace('api = fixture', 'other = fixture'),
+  httpTest.replace(
+    'async function prepare()',
+    'async function prepare(api: unknown)'
+  ),
+  httpTest.replace(
+    'async function prepare()',
+    'function api() {}\nasync function prepare()'
+  ),
+  httpTest.replace('await api.init();', `${ready}\n  await api.init();`),
+])(
+  'rejects ambiguous Fastify lifecycle setup before snapshot mutation',
+  (test) => {
+    const snapshot = new Map([
+      ['api/src/main.ts', Buffer.from(bootstrap)],
+      ['api/test/app.e2e-spec.ts', Buffer.from(test)],
+      [
+        'api/package.json',
+        Buffer.from(
+          JSON.stringify({
+            dependencies: {
+              '@nestjs/common': '^12.0.1',
+              '@nestjs/core': '^12.0.1',
+              '@nestjs/platform-express': '^12.0.1',
+            },
+            devDependencies: { '@nestjs/testing': '^12.0.1' },
+          })
+        ),
+      ],
+    ]);
+    const before = new Map(snapshot);
+    expect(() =>
+      transformHttpApplication(snapshot, 'api', '12.0.6', 'fastify')
+    ).toThrow('api/test/app.e2e-spec.ts');
+    expect(snapshot).toEqual(before);
+  }
+);
+
+it.each([
+  (text: string) => text.replace(ready, ''),
+  (text: string) => text.replace(ready, ready + '\n' + ready),
+  (text: string) => text.replace(ready, ready.replace('await ', '')),
+  (text: string) =>
+    text
+      .replace(ready, '')
+      .replace('await api.init();', ready + '\nawait api.init();'),
+])(
+  'rejects incomplete or conflicting previously explicit Fastify test output',
+  (change) => {
+    const output = httpSource(httpTest, 'api.e2e.ts', 'test', 'fastify');
+    expect(() =>
+      httpSource(change(output), 'api.e2e.ts', 'test', 'fastify')
+    ).toThrow('api.e2e.ts');
+  }
+);

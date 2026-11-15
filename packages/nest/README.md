@@ -197,17 +197,17 @@ yarn nx g @anarchitects/nest:application api --directory=packages/api --type=esm
 yarn nx g @anarchitects/nest:application legacy-api --directory=packages/legacy-api --type=cjs
 ```
 
-| Option                                   | Behavior                                                                                        |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--type=esm` / `--type=cjs`              | ESM with Vitest is the default; CommonJS uses Jest. Both retain native Nest tooling and Oxlint. |
-| `--directory`                            | Exact destination for the independent package.                                                  |
-| `--strict`                               | Strict TypeScript; enabled by default.                                                          |
-| `--packageManager`                       | Forwarded to Nest; the containing workspace determines actual installation.                     |
-| `--spec`, `--specFileSuffix`             | Native generated test options.                                                                  |
-| `--observe`                              | Opt into native Nest observe instrumentation.                                                   |
-| `--platform=node` / `--platform=express` | Explicit adapter for a TypeScript HTTP application; no platform default.                        |
-| `--format`                               | Opt into native source formatting.                                                              |
-| `--skipInstall`                          | Write the package and workspace changes without installing.                                     |
+| Option                                                          | Behavior                                                                                        |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--type=esm` / `--type=cjs`                                     | ESM with Vitest is the default; CommonJS uses Jest. Both retain native Nest tooling and Oxlint. |
+| `--directory`                                                   | Exact destination for the independent package.                                                  |
+| `--strict`                                                      | Strict TypeScript; enabled by default.                                                          |
+| `--packageManager`                                              | Forwarded to Nest; the containing workspace determines actual installation.                     |
+| `--spec`, `--specFileSuffix`                                    | Native generated test options.                                                                  |
+| `--observe`                                                     | Opt into native Nest observe instrumentation.                                                   |
+| `--platform=node` / `--platform=express` / `--platform=fastify` | Explicit adapter for a TypeScript HTTP application; no platform default.                        |
+| `--format`                                                      | Opt into native source formatting.                                                              |
+| `--skipInstall`                                                 | Write the package and workspace changes without installing.                                     |
 
 Generation registers the package in the workspace and installs required
 changes automatically after successful generation. `--dry-run` previews without
@@ -219,6 +219,7 @@ workspace install before executing tasks.
 ```sh
 yarn nx g @anarchitects/nest:application api --directory=packages/api --platform=node --type=esm
 yarn nx g @anarchitects/nest:application web --directory=packages/web --platform=express --type=cjs
+yarn nx g @anarchitects/nest:application fast-api --directory=packages/fast-api --platform=fastify --type=esm
 ```
 
 Explicit `node` selects `NodeAdapter` in both the application and generated HTTP
@@ -233,9 +234,20 @@ in both the bootstrap and HTTP test. New Express applications pin common/core/te
 and platform-express to **12.3.0**, keep native Express typings, and add no Node or
 Fastify adapter dependency. ESM/CJS and native Observe options are supported.
 
+Explicit `fastify` constructs `FastifyAdapter` and uses `NestFastifyApplication`.
+Its generated HTTP test awaits Fastify readiness after application initialization
+before running native Supertest assertions. New Fastify applications pin
+common/core/testing/platform-fastify and the retained platform-express dependency
+to **12.3.0**. Express typings stay available for native tooling. The Nest adapter
+supplies its Fastify server dependency; no direct `fastify`, multipart, Swagger,
+static/view or schema-library dependency is added. ESM/CJS and native Observe
+instrumentation are supported. Optional platform features need their own explicit
+configuration and validation.
+
 The selection is limited to new TypeScript HTTP applications and the verified
 sub-app path below. It does not select an adapter for libraries, resources or
-non-HTTP transports. JavaScript and explicit `fastify` selections are rejected.
+non-HTTP transports. Explicit selection requires TypeScript. Fastify is currently
+available for independent applications only; sub-apps accept Node or Express.
 Identical output can be generated again; conflicting files are rejected without
 overwriting the existing application. This command is not an adapter migration.
 Basic generated HTTP execution is checked; optional integrations and production
@@ -257,8 +269,9 @@ nested collection keys at each level. Direct programmatic calls use their
 supplied options. To return to native generation, remove the applicable platform
 default; there is no per-command reset value. Explicit `--platform=express`
 overrides a configured Node or Fastify generator default and still generates
-an explicit adapter. A Fastify default itself is not executable until Fastify
-selection is implemented.
+an explicit adapter. Independent applications also accept `--platform=fastify`
+or a Fastify application-generator default; explicit options override configured
+Node or Express defaults.
 Inference plugin options, `targetDefaults` and `nest-cli.json` do not select an
 HTTP platform.
 
@@ -459,9 +472,10 @@ not turn either model into the other.
 Initialization does not upgrade a Nest 11 application, migrate legacy application
 code, or select a different HTTP adapter. Upgrade and validate the host separately
 before adoption. Native Nest scaffolding owns new framework code; an existing
-application keeps its bootstrap and platform dependencies. There is no shipped
-Fastify platform overlay option in these commands. Keep existing Fastify setup
-under the application's own configuration and test it separately.
+application keeps its bootstrap and platform dependencies. Explicit Fastify
+selection creates new independent applications; initialization and configuration
+do not migrate existing apps. Keep existing Fastify setup under the application's
+own configuration and test it separately.
 
 ## Generator reference
 

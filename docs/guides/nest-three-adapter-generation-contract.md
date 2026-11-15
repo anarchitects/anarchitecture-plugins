@@ -12,8 +12,9 @@ test transformation.** This contract extends the
 the original #620 audit did not reopen #608–#610 or implement Express/Fastify
 selection. #620 was reviewed and merged in [#623](https://github.com/anarchitects/anarchitecture-plugins/pull/623).
 The #621 implementation below adds explicit Express alongside Node. Omission
-remains native Nest generation. Fastify generation, runtime rebaselining, defaults,
-production certification and releases retain their separate gates.
+remains native Nest generation. #509 adds independent Fastify applications below;
+Fastify members, runtime rebaselining, defaults, production certification and
+releases retain their separate gates.
 
 ## Evidence and version boundaries
 
@@ -407,4 +408,75 @@ certification remains in #611.
 corepack yarn nx run nx-nest:test --runInBand
 corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
 corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts src/nest-scenarios/http-sub-app.spec.ts src/nest-scenarios/published-library-peers.spec.ts
+```
+
+## #509 implementation record: independent Fastify applications
+
+Before code changes, re-enumerated and read all 25 Meta ADRs at
+`4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local ADRs at Plugins
+`a7872993c81827d1e6f9ab2b3fad72de3628af57`. The inventory is unchanged from the
+linked audit evidence. Revisited this shared contract, the Node implementation
+record, published-library compatibility guide, package/contributor instructions
+and proposed Meta Nest development guide. The accepted decisions and explicit
+historical/local conflicts recorded above apply unchanged. Angular runtime policy
+does not introduce Angular into generated Nest applications. This implements the
+approved baseline before the separate #611 version rebaseline; no owner upgrade,
+release or default activation follows from this change.
+
+The independent `application` schema now accepts all three selections without a
+default. Fastify metadata reuses the bounded bootstrap/type/import transformation
+and adds exactly one awaited `app.getHttpAdapter().getInstance().ready()` after
+`await app.init()` in the generated HTTP test. The AST guard verifies the assigned
+application, unambiguous initialization and statement ordering; malformed,
+duplicate, misplaced or unawaited lifecycle calls fail. Reapplying a complete
+transform is byte-identical; an incomplete explicit test is not silently repaired.
+Native assertions, shutdown, Observe factory options, listen policy, compiler and
+test-runner choices remain native-owned.
+
+New Fastify applications pin common/core/testing/platform-fastify and retained
+platform-express to 12.3.0. They retain Express typings without adding a direct
+server, schema library or optional Fastify integration dependency. Generic
+controllers/resources remain shared. Libraries and published peer compatibility
+remain unchanged. Node's previously recorded retained-Express range gap stays
+with #611.
+
+Fastify members are still rejected by the public sub-app/app schema, programmatic
+member generator and schematic boundary before caller mutation. The shared
+metadata/readiness logic is reusable by #622 after its member-specific validation.
+Only independent applications are enabled here. Existing applications are never
+converted through platform selection; conflicting source or a different adapter
+at the same destination still rejects atomically.
+
+The shared packed application scenario covers Node/Express ESM/CJS and Fastify
+ESM/CJS with Observe off/on. Fastify command options override Node/Express defaults;
+separate cases exercise a deliberate Fastify default with the CLI flag omitted.
+It verifies actual adapter identity, HTTP startup, native HTTP tests, resource
+registration, dry-run/install/skip-install, repeat generation and exact runtime
+resolution from the clean consumer. Optional integrations under #508 are not
+prerequisites. Broader transport/security/schema conformance, telemetry export,
+full host-version certification and default activation retain their own gates.
+
+Validation on 2026-11-15 used Node 24.22.3 (macOS arm64), Nx 24.0.1,
+TypeScript 6.0.3 and Yarn 4.17.0. The plugin uses schematics 12.0.6;
+clean Fastify consumers resolved CLI/schematics 12.0.13, Observe 0.3.26,
+common/core/testing/platform-fastify/platform-express 12.3.0 and the adapter-owned
+Fastify server 5.12.7. These are consumer-local installations, not repository
+framework links. Registry resolution is not a frozen lockfile matrix.
+
+Passed: plugin build, all **652 unit tests in 35 suites**, plugin/e2e lint and
+typecheck, **eight packed application cases** (four Node/Express and four Fastify),
+**four retained Node/Express member cases**, and **13 published-library peer
+compatibility checks**. Plugin lint reports 16 existing warnings and no errors.
+The final lifecycle guard also passed 50 focused adapter tests. Packed Fastify
+checks compile and execute native tests, start the built application and exercise
+HTTP/resources with Observe off/on. They retain the documented CommonJS Jest
+invocation workaround; member regressions retain their expected native lint
+limitation. Observe exporter delivery and broader telemetry certification are
+outside these checks.
+
+```sh
+corepack yarn nx run nx-nest:test --runInBand
+corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-sub-app.spec.ts src/nest-scenarios/published-library-peers.spec.ts
 ```

@@ -7,17 +7,24 @@ import { assertHttp } from '../rspack-consumer';
 
 const suite = usePackedPlugin();
 it.each(
-  ['node', 'express'].flatMap((platform) =>
-    ['esm', 'cjs'].map((type) => ({
-      platform,
-      type,
-      adapter: platform === 'node' ? 'NodeAdapter' : 'ExpressAdapter',
-    }))
+  ['node', 'express', 'fastify'].flatMap((platform) =>
+    ['esm', 'cjs'].flatMap((type) =>
+      (platform === 'fastify' ? [false, true] : [false]).map((observe) => ({
+        platform,
+        type,
+        observe,
+        adapter: {
+          node: 'NodeAdapter',
+          express: 'ExpressAdapter',
+          fastify: 'FastifyAdapter',
+        }[platform],
+      }))
+    )
   )
 )(
-  'runs a clean installed explicit $platform $type application',
-  async ({ type, platform, adapter }) => {
-    const root = join(suite.root, platform + '-' + type);
+  'runs a clean installed explicit $platform $type application (observe=$observe)',
+  async ({ type, platform, adapter, observe }) => {
+    const root = join(suite.root, platform + '-' + type + '-' + observe);
     const { yarn, env } = createInstalledConsumer(root, suite.tarball, {});
     const json = (path: string) =>
       JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -29,7 +36,15 @@ it.each(
         generators: {
           '@anarchitects/nest:application': {
             platform:
-              platform === 'express' && type === 'esm' ? 'fastify' : 'node',
+              platform === 'fastify'
+                ? observe
+                  ? 'fastify'
+                  : type === 'esm'
+                  ? 'node'
+                  : 'express'
+                : platform === 'express' && type === 'esm'
+                ? 'fastify'
+                : 'node',
           },
         },
       })
@@ -42,12 +57,15 @@ it.each(
       '--directory=packages/api',
       `--type=${type}`,
       '--packageManager=yarn',
-      ...(platform === 'express' ? ['--platform=express'] : []),
+      ...(platform !== 'node' && !(platform === 'fastify' && observe)
+        ? [`--platform=${platform}`]
+        : []),
+      ...(observe ? ['--observe'] : []),
       '--no-interactive',
     ];
     const lock = readFileSync(join(root, 'yarn.lock'), 'utf8');
     const manifest = readFileSync(join(root, 'package.json'), 'utf8');
-    expect(() => yarn([...generate, '--platform=fastify'])).toThrow();
+    expect(() => yarn([...generate, '--platform=Fastify'])).toThrow();
     yarn([...generate, '--dry-run']);
     expect(existsSync(join(root, 'packages/api'))).toBe(false);
     expect(readFileSync(join(root, 'yarn.lock'), 'utf8')).toBe(lock);
@@ -70,7 +88,7 @@ it.each(
     const {createRequire}=require('node:module');
     const {realpathSync}=require('node:fs');
     const local=createRequire(require('node:path').resolve('packages/api/package.json'));
-    console.log(JSON.stringify(Object.fromEntries(['common','core','testing','platform-${platform}'].map(name=>{
+    console.log(JSON.stringify(Object.fromEntries(['common','core','testing','platform-${platform}',...('${platform}'==='fastify'?['platform-express']:[])].map(name=>{
       const path=local.resolve('@nestjs/'+name+'/package.json');
       if(!realpathSync(path).startsWith(process.cwd()+'/')) throw new Error('External framework link: '+path);
       return [name,local(path).version];
@@ -86,17 +104,34 @@ it.each(
       core: '12.3.0',
       testing: '12.3.0',
       ['platform-' + platform]: '12.3.0',
+      ...(platform === 'fastify' ? { 'platform-express': '12.3.0' } : {}),
     });
     const generatedManifest = json('packages/api/package.json');
-    if (platform === 'express')
+    if (platform !== 'node')
       expect(
         generatedManifest.dependencies['@nestjs/platform-node']
       ).toBeUndefined();
+    if (platform === 'fastify') {
+      for (const name of [
+        'fastify',
+        'express',
+        '@fastify/multipart',
+        '@fastify/static',
+        '@fastify/view',
+        'zod',
+        '@nestjs/swagger',
+      ])
+        expect(generatedManifest.dependencies[name]).toBeUndefined();
+    }
     const main = readFileSync(join(root, 'packages/api/src/main.ts'), 'utf8');
     expect(main).toContain(`new ${adapter}()`);
     const specPath = join(root, 'packages/api/test/app.e2e-spec.ts');
     const spec = readFileSync(specPath, 'utf8');
     expect(spec).toContain(`new ${adapter}()`);
+    expect(
+      spec.includes('await app.getHttpAdapter().getInstance().ready();')
+    ).toBe(platform === 'fastify');
+    expect(main.includes('instrument: ObserveInstrument')).toBe(observe);
     // Assert the running adapter, alongside the native HTTP assertion and cleanup.
     writeFileSync(
       specPath,

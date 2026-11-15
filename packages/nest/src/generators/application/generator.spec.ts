@@ -78,7 +78,7 @@ describe('native Nest application generator', () => {
     );
     const { skipInstall, platform, ...properties } = wrapper.properties;
     expect(skipInstall.type).toBe('boolean');
-    expect(platform.enum).toEqual(['node', 'express']);
+    expect(platform.enum).toEqual(['node', 'express', 'fastify']);
     expect(platform.default).toBeUndefined();
     expect(properties).toEqual(native.properties);
     expect(wrapper.required).toEqual(native.required);
@@ -319,6 +319,11 @@ describe.each([
     adapter: 'ExpressAdapter',
     application: 'NestExpressApplication',
   },
+  {
+    platform: 'fastify',
+    adapter: 'FastifyAdapter',
+    application: 'NestFastifyApplication',
+  },
 ])(
   'explicit $platform HTTP application',
   ({ platform, adapter, application }) => {
@@ -347,6 +352,7 @@ describe.each([
           assert.match(text,/import type \{ ${application} \}/);
           assert.equal(overlay.httpSource(text,path,file.startsWith('src')?'bootstrap':'test','${platform}'),text);
           assert.doesNotMatch(text,/INestApplication|supertest\/types/);
+          if(file.startsWith('test')) assert.equal(text.includes('await app.getHttpAdapter().getInstance().ready();'),'${platform}'==='fastify');
           if(file.startsWith('src')) {
             assert.equal(text.includes('instrument: ObserveInstrument'),options.observe);
             assert.ok(text.includes(options.type==='esm'?'await bootstrap()':'void bootstrap()'));
@@ -355,10 +361,11 @@ describe.each([
         const manifest=JSON.parse(tree.read('apps/api/package.json','utf8'));
         for(const name of ['common','core','platform-${platform}']) assert.equal(manifest.dependencies['@nestjs/'+name],'12.3.0');
         assert.equal(manifest.devDependencies['@nestjs/testing'],'12.3.0');
-        assert.equal(manifest.dependencies['@nestjs/platform-express'], '${platform}'==='express'?'12.3.0':'^12.0.1');
-        if('${platform}'==='express') assert.equal(manifest.dependencies['@nestjs/platform-node'],undefined);
+        assert.equal(manifest.dependencies['@nestjs/platform-express'], '${platform}'!=='node'?'12.3.0':'^12.0.1');
+        if('${platform}'!=='node') assert.equal(manifest.dependencies['@nestjs/platform-node'],undefined);
         assert.ok(manifest.devDependencies['@types/express']);
-        assert.equal(manifest.dependencies['@nestjs/platform-fastify'],undefined);
+        assert.equal(manifest.dependencies['@nestjs/platform-fastify'],'${platform}'==='fastify'?'12.3.0':undefined);
+        for(const name of ['fastify','express','@fastify/multipart','@fastify/static','@fastify/view','@nestjs/swagger','zod']) assert.equal(manifest.dependencies[name],undefined);
         for(const [path,bytes] of snapshotNxTree(expected)) {
           if(!['nx.json','package.json','apps/api/package.json','apps/api/src/main.ts','apps/api/test/app.e2e-spec.ts'].includes(path)) assert.deepEqual(tree.read(path),bytes,path);
         }
@@ -410,7 +417,7 @@ describe.each([
 
     it('rejects unsupported selections, language and conflicting destinations atomically', () => {
       runApplication(String.raw`
-      for(const platform of [null,'',false,true,'fastify','unknown','Express','toString']) {
+      for(const platform of [null,'',false,true,'Fastify','unknown','Express','toString']) {
         const before=snapshotNxTree(tree);
         await assert.rejects(applicationGenerator(tree,{name:'api',platform}),/Unsupported HTTP platform/);
         assert.deepEqual(snapshotNxTree(tree),before);

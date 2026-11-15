@@ -21,6 +21,86 @@ function nodes<T extends ts.Node>(
   return found;
 }
 
+/** Fastify must finish registering routes before native Supertest assertions. */
+function fastifyReadiness(
+  source: ts.SourceFile,
+  creation: ts.CallExpression,
+  fail: () => never
+): { start: number; end: number; text: string } | undefined {
+  const assignment = creation.parent;
+  if (
+    !ts.isBinaryExpression(assignment) ||
+    assignment.operatorToken.kind !== ts.SyntaxKind.EqualsToken ||
+    assignment.right !== creation ||
+    !ts.isIdentifier(assignment.left) ||
+    !ts.isExpressionStatement(assignment.parent) ||
+    !ts.isBlock(assignment.parent.parent)
+  )
+    return fail();
+  const name = assignment.left.text;
+  const bindings = nodes(source, ts.isIdentifier).filter(
+    (node) =>
+      node.text === name &&
+      (ts.isVariableDeclaration(node.parent) ||
+        ts.isParameter(node.parent) ||
+        ts.isFunctionDeclaration(node.parent) ||
+        ts.isClassDeclaration(node.parent) ||
+        ts.isImportSpecifier(node.parent)) &&
+      node.parent.name === node
+  );
+  if (bindings.length !== 1) return fail();
+  const calls = nodes(source, ts.isCallExpression);
+  const init = calls.filter(
+    (node) =>
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === name &&
+      node.expression.name.text === 'init'
+  );
+  if (
+    init.length !== 1 ||
+    init[0].arguments.length ||
+    !ts.isAwaitExpression(init[0].parent) ||
+    !ts.isExpressionStatement(init[0].parent.parent)
+  )
+    return fail();
+  const statement = init[0].parent.parent;
+  const block = assignment.parent.parent;
+  if (
+    statement.parent !== block ||
+    block.statements.indexOf(statement) !==
+      block.statements.indexOf(assignment.parent) + 1
+  )
+    return fail();
+  const ready = `${name}.getHttpAdapter().getInstance().ready`;
+  const existing = calls.filter(
+    (node) => node.expression.getText(source).replace(/\s/g, '') === ready
+  );
+  if (existing.length) {
+    const call = existing[0];
+    if (
+      existing.length !== 1 ||
+      call.arguments.length ||
+      !ts.isAwaitExpression(call.parent) ||
+      !ts.isExpressionStatement(call.parent.parent) ||
+      call.parent.parent.parent !== block ||
+      block.statements.indexOf(call.parent.parent) !==
+        block.statements.indexOf(statement) + 1
+    )
+      return fail();
+    return undefined;
+  }
+  const start = statement.end;
+  const lineStart =
+    source.text.lastIndexOf('\n', statement.getStart(source)) + 1;
+  const indent =
+    source.text
+      .slice(lineStart, statement.getStart(source))
+      .match(/^[\t ]*/)?.[0] ?? '';
+  const newline = source.text.includes('\r\n') ? '\r\n' : '\n';
+  return { start, end: start, text: `${newline}${indent}await ${ready}();` };
+}
+
 /** A bounded edit of native HTTP entry points; never a migration of user source. */
 export function httpSource(
   content: string,
@@ -32,6 +112,7 @@ export function httpSource(
     packageName: adapterPackage,
     adapter: adapterName,
     application: applicationType,
+    requiresReady,
   } = httpPlatforms[platform];
   const source = ts.createSourceFile(
     path,
@@ -101,6 +182,10 @@ export function httpSource(
   );
   if (calls.length !== 1) return fail();
   const call = calls[0];
+  const readyEdit =
+    kind === 'test' && requiresReady
+      ? fastifyReadiness(source, call, fail)
+      : undefined;
   const adapter = binding(adapterPackage, adapterName);
   const appType = binding(adapterPackage, applicationType);
   const adapterIndex = kind === 'bootstrap' ? 1 : 0;
@@ -122,7 +207,8 @@ export function httpSource(
       explicit.arguments?.length !== 0 ||
       call.typeArguments?.length !== 1 ||
       call.typeArguments[0].getText(source) !== applicationType ||
-      binding('@nestjs/common', 'INestApplication')
+      binding('@nestjs/common', 'INestApplication') ||
+      readyEdit
     )
       return fail();
     return content;
@@ -143,7 +229,9 @@ export function httpSource(
   )
     return fail();
 
-  const edits: { start: number; end: number; text: string }[] = [];
+  const edits: { start: number; end: number; text: string }[] = readyEdit
+    ? [readyEdit]
+    : [];
   const replace = (node: ts.Node, text: string) =>
     edits.push({ start: node.getStart(source), end: node.end, text });
   edits.push({
@@ -224,7 +312,7 @@ export function transformHttpApplication(
       [
         '@nestjs/common',
         '@nestjs/core',
-        ...(platform === 'express' ? [adapterPackage] : []),
+        ...(platform !== 'node' ? ['@nestjs/platform-express'] : []),
       ],
     ],
     ['devDependencies', ['@nestjs/testing']],
