@@ -76,8 +76,10 @@ describe('native Nest application generator', () => {
         'utf8'
       )
     );
-    const { skipInstall, ...properties } = wrapper.properties;
+    const { skipInstall, platform, ...properties } = wrapper.properties;
     expect(skipInstall.type).toBe('boolean');
+    expect(platform.enum).toEqual(['node']);
+    expect(platform.default).toBeUndefined();
     expect(properties).toEqual(native.properties);
     expect(wrapper.required).toEqual(native.required);
   });
@@ -302,6 +304,115 @@ describe('native Nest application generator', () => {
         await assert.rejects(applicationGenerator(tree,options));
         assert.deepEqual(snapshotNxTree(tree),before);
       }
+    `);
+  });
+});
+
+describe('explicit Node HTTP application', () => {
+  it.each(
+    ['esm', 'cjs'].flatMap((type) =>
+      [false, true].map((observe) => ({ type, observe }))
+    )
+  )(
+    'stages native $type output with Node bootstraps (observe=$observe)',
+    ({ type, observe }) => {
+      runApplication(String.raw`
+        const options={name:'api',directory:'apps/api',platform:'node',type:${JSON.stringify(
+          type
+        )},observe:${observe},packageManager:'yarn'};
+        const original=structuredClone(options);
+        const expected=createTreeWithEmptyWorkspace();
+        const {platform,...native}=options;
+        await runNestSchematic(expected,{schematic:'application',options:native});
+        assert.equal(typeof await applicationGenerator(tree,options),'function');
+        assert.deepEqual(options,original);
+        const overlay=local('./dist/generation-adapter/node-application');
+        for(const file of ['src/main.ts','test/app.e2e-spec.ts']) {
+          const path='apps/api/'+file;
+          const text=tree.read(path,'utf8');
+          assert.match(text,/new NodeAdapter\(\)/);
+          assert.match(text,/import type \{ NestNodeApplication \}/);
+          assert.equal(overlay.nodeHttpSource(text,path,file.startsWith('src')?'bootstrap':'test'),text);
+          assert.doesNotMatch(text,/INestApplication|supertest\/types/);
+          if(file.startsWith('src')) {
+            assert.equal(text.includes('instrument: ObserveInstrument'),options.observe);
+            assert.ok(text.includes(options.type==='esm'?'await bootstrap()':'void bootstrap()'));
+          }
+        }
+        const manifest=JSON.parse(tree.read('apps/api/package.json','utf8'));
+        for(const name of ['common','core','platform-node']) assert.equal(manifest.dependencies['@nestjs/'+name],'12.3.0');
+        assert.equal(manifest.devDependencies['@nestjs/testing'],'12.3.0');
+        assert.ok(manifest.dependencies['@nestjs/platform-express']);
+        assert.ok(manifest.devDependencies['@types/express']);
+        assert.equal(manifest.dependencies['@nestjs/platform-fastify'],undefined);
+        for(const [path,bytes] of snapshotNxTree(expected)) {
+          if(!['nx.json','package.json','apps/api/package.json','apps/api/src/main.ts','apps/api/test/app.e2e-spec.ts'].includes(path)) assert.deepEqual(tree.read(path),bytes,path);
+        }
+        const before=snapshotNxTree(tree);
+        const reapplied=new Map(before);
+        overlay.transformNodeApplication(reapplied,'apps/api','12.0.6');
+        assert.deepEqual(reapplied,before);
+        assert.equal(await applicationGenerator(tree,options),undefined);
+        assert.deepEqual(snapshotNxTree(tree),before);
+        const preview=createTreeWithEmptyWorkspace();
+        const initial=snapshotNxTree(preview);
+        const result=await runNestSchematic(preview,{schematic:'application',options:native,httpPlatform:'node',dryRun:true});
+        assert.ok(result.changes.some(c=>c.path==='apps/api/src/main.ts'));
+        assert.deepEqual(snapshotNxTree(preview),initial);
+        await local('./dist/generators/resource/generator').default(tree,{name:'orders',project:'api',type:'rest',crud:true,skipInstall:true});
+        assert.match(tree.read('apps/api/src/app.module.ts','utf8'),/OrdersModule/);
+        assert.deepEqual(tree.read('apps/api/src/main.ts'),before.get('apps/api/src/main.ts'));
+        await local('./dist/generators/library/generator').default(tree,{name:'domain',directory:'libs/domain',skipInstall:true});
+        const domain=JSON.parse(tree.read('libs/domain/package.json','utf8'));
+        for(const section of ['dependencies','devDependencies','peerDependencies'])
+          assert.equal(domain[section]?.['@nestjs/platform-node'],undefined);
+        await local('./dist/generators/resource/generator').default(tree,{name:'events',project:'domain',type:'microservice',crud:true,skipInstall:true});
+        assert.doesNotMatch(tree.read('libs/domain/package.json','utf8'),/platform-node/);
+      `);
+    }
+  );
+
+  it.each([
+    { spec: false, packageManager: 'pnpm' },
+    { specFileSuffix: 'http-test', packageManager: 'npm' },
+    { format: true, packageManager: 'yarn' },
+  ])('preserves optional native output and skipInstall: %j', (options) => {
+    runApplication(String.raw`
+        const options={name:'api',platform:'node',skipInstall:true,...${JSON.stringify(
+          options
+        )}};
+        assert.equal(await applicationGenerator(tree,options),undefined);
+        const tests=[...snapshotNxTree(tree)].filter(([path])=>path.startsWith('api/test/')&&path.endsWith('.ts'));
+        assert.equal(tests.length,options.spec===false?0:1);
+        for(const [path,bytes] of tests) {
+          assert.match(bytes.toString(),/createNestApplication<NestNodeApplication>\(new NodeAdapter\(\)\)/);
+          if(options.specFileSuffix) assert.ok(path.includes(options.specFileSuffix));
+        }
+        const before=snapshotNxTree(tree);
+        await applicationGenerator(tree,options);
+        assert.deepEqual(snapshotNxTree(tree),before);
+      `);
+  });
+
+  it('rejects unsupported selections, language and conflicting destinations atomically', () => {
+    runApplication(String.raw`
+      for(const platform of [null,'',false,true,'express','fastify','unknown']) {
+        const before=snapshotNxTree(tree);
+        await assert.rejects(applicationGenerator(tree,{name:'api',platform}),/Unsupported HTTP platform/);
+        assert.deepEqual(snapshotNxTree(tree),before);
+      }
+      await assert.rejects(applicationGenerator(tree,{name:'api',platform:'node',language:'js'}),/requires TypeScript/);
+      const options={name:'api',platform:'node',skipInstall:true};
+      await applicationGenerator(tree,options);
+      tree.write('api/src/main.ts',tree.read('api/src/main.ts','utf8')+'\n// user change\n');
+      const before=snapshotNxTree(tree);
+      await assert.rejects(applicationGenerator(tree,options),/conflicting file api\/src\/main.ts/);
+      assert.deepEqual(snapshotNxTree(tree),before);
+      const native=createTreeWithEmptyWorkspace();
+      await applicationGenerator(native,{name:'api',skipInstall:true});
+      const original=snapshotNxTree(native);
+      await assert.rejects(applicationGenerator(native,options),/conflicting file/);
+      assert.deepEqual(snapshotNxTree(native),original);
     `);
   });
 });

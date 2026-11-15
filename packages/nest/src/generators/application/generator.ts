@@ -46,6 +46,18 @@ export async function applicationGenerator(
   tree: Tree,
   options: ApplicationGeneratorSchema
 ): Promise<GeneratorCallback | undefined> {
+  if (options.platform !== undefined && options.platform !== 'node') {
+    throw new Error(
+      'Unsupported HTTP platform. Use --platform=node or omit platform for native Nest generation.'
+    );
+  }
+  if (
+    options.platform === 'node' &&
+    options.language !== undefined &&
+    options.language !== 'ts'
+  ) {
+    throw new Error('--platform=node requires TypeScript (--language=ts).');
+  }
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error(
       'Generate the Nest application inside an existing Nx workspace.'
@@ -69,9 +81,10 @@ export async function applicationGenerator(
   const before = dependencyState(tree, ['', root]);
   const beforeWorkspaces = tree.read('package.json', 'utf8');
   const beforePnpm = tree.read('pnpm-workspace.yaml', 'utf8');
-  const { skipInstall, ...nativeOptions } = options;
+  const { skipInstall, platform, ...nativeOptions } = options;
   const result = await runNestSchematic(tree, {
     schematic: 'application',
+    httpPlatform: platform,
     options: { ...nativeOptions, directory: root },
     postTransform: (guard) => {
       guard.addJsonProperties(`${root}/project.json`, {

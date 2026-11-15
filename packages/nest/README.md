@@ -60,6 +60,10 @@ Host framework dependencies and CLI declarations must stay within stable v12;
 tags such as `latest`, prereleases, and unresolved local protocols are not
 accepted as version guarantees.
 
+`@nestjs/platform-node` has a narrower initial rule: declarations must select
+exactly 12.3.0. The general Nest 11/12 library-peer allowance below does not apply
+to this adapter.
+
 Published libraries may retain bounded Nest 11/12 runtime peer ranges such as
 `^11 || ^12` or `>=11 <13`. These describe library compatibility, while the
 plugin still runs against Nest 12 only. When broader peers are present, `init`
@@ -201,6 +205,7 @@ yarn nx g @anarchitects/nest:application legacy-api --directory=packages/legacy-
 | `--packageManager`           | Forwarded to Nest; the containing workspace determines actual installation.                     |
 | `--spec`, `--specFileSuffix` | Native generated test options.                                                                  |
 | `--observe`                  | Opt into native Nest observe instrumentation.                                                   |
+| `--platform=node`            | Explicit NodeAdapter for an independent TypeScript HTTP application; no platform default.       |
 | `--format`                   | Opt into native source formatting.                                                              |
 | `--skipInstall`              | Write the package and workspace changes without installing.                                     |
 
@@ -208,6 +213,47 @@ Generation registers the package in the workspace and installs required
 changes automatically after successful generation. `--dry-run` previews without
 writing files or installing. After an intentional `--skipInstall`, run your normal
 workspace install before executing tasks.
+
+### Explicit Node HTTP applications
+
+```sh
+yarn nx g @anarchitects/nest:application api --directory=packages/api --platform=node --type=esm
+```
+
+This opt-in selects `NodeAdapter` in both the application and generated HTTP
+tests. It pins `@nestjs/common`, `@nestjs/core`, `@nestjs/testing` and
+`@nestjs/platform-node` to **12.3.0**. ESM/CJS, Observe and native Nest tooling
+are preserved. Express dependencies remain available for generated tooling;
+Fastify is not required. Without platform selection, native Nest generation
+continues to use its implicit Express adapter.
+
+The initial selection is limited to fresh independent TypeScript applications.
+It does not select an adapter for sub-apps, libraries, resources or non-HTTP
+transports. JavaScript and explicit `express`/`fastify` selections are rejected.
+Identical output can be generated again; conflicting files are rejected without
+overwriting the existing application. This command is not an adapter migration.
+Basic generated HTTP execution is checked; optional integrations and production
+HTTP/security parity require their own validation.
+
+To configure the option, use Nx generator defaults in `nx.json`:
+
+```json
+{
+  "generators": {
+    "@anarchitects/nest:application": { "platform": "node" }
+  }
+}
+```
+
+Explicit command options take precedence over Nx's applicable project defaults,
+then workspace defaults. Fully qualified generator keys take precedence over
+nested collection keys at each level. Direct programmatic calls use their
+supplied options. To return to native generation, remove the applicable platform
+default; the initial node-only selection has no per-command reset value.
+Inference plugin options, `targetDefaults` and `nest-cli.json` do not select an
+HTTP platform.
+
+### Native sub-apps
 
 Use `sub-app` (alias **`app`**) to add an application inside an existing Nest owner:
 

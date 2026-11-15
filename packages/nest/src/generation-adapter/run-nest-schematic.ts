@@ -7,6 +7,7 @@ import {
 import { runNativeSchematic } from './run-native-schematic';
 import { runIsolatedSchematic } from './run-isolated-schematic';
 import { aliasResourceModuleImports } from './alias-resource-module-imports';
+import { transformNodeApplication } from './node-application';
 import {
   applySnapshot,
   diffSnapshots,
@@ -16,6 +17,8 @@ import {
 } from './tree-snapshot';
 
 export interface RunNestSchematicOptions {
+  /** Bounded overlay for independent HTTP applications, not a general rewrite hook. */
+  httpPlatform?: 'node';
   schematic: string;
   options: Record<string, unknown>;
   /** Preview changes without even mutating the supplied Nx Tree. */
@@ -41,6 +44,17 @@ export async function runNestSchematic(
   tree: Tree,
   options: RunNestSchematicOptions
 ): Promise<NestSchematicResult> {
+  if (
+    options.httpPlatform !== undefined &&
+    (options.httpPlatform !== 'node' ||
+      options.schematic !== 'application' ||
+      options.workingDirectory ||
+      options.isolateHostReads)
+  ) {
+    throw new Error(
+      'The Node HTTP overlay requires an independent application.'
+    );
+  }
   const before = snapshotNxTree(tree);
   const directory =
     options.workingDirectory && options.workingDirectory !== '.'
@@ -54,7 +68,27 @@ export async function runNestSchematic(
   );
   const result = options.isolateHostReads
     ? await runIsolatedSchematic(scoped, options)
-    : await runNativeSchematic(scoped, options);
+    : await runNativeSchematic(
+        options.httpPlatform ? new Map() : scoped,
+        options
+      );
+  if (options.httpPlatform) {
+    transformNodeApplication(
+      result.after,
+      treePath(String(options.options.directory)),
+      result.schematicVersion
+    );
+    // Compare final overlay bytes, never native templates, on a repeat invocation.
+    for (const [path, content] of result.after) {
+      const previous = before.get(path);
+      if (previous && !previous.equals(content))
+        throw new Error(
+          `Cannot generate Node application: conflicting file ${path}. Choose an empty destination; existing applications are not migrated.`
+        );
+    }
+    for (const [path, content] of before)
+      if (!result.after.has(path)) result.after.set(path, content);
+  }
   if (options.schematic === 'resource' && options.aliasResourceImports)
     aliasResourceModuleImports(scoped, result.after);
   const after = new Map(
