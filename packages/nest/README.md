@@ -227,9 +227,9 @@ are preserved. Express dependencies remain available for generated tooling;
 Fastify is not required. Without platform selection, native Nest generation
 continues to use its implicit Express adapter.
 
-The initial selection is limited to fresh independent TypeScript applications.
-It does not select an adapter for sub-apps, libraries, resources or non-HTTP
-transports. JavaScript and explicit `express`/`fastify` selections are rejected.
+The selection is limited to new TypeScript HTTP applications and the verified
+sub-app path below. It does not select an adapter for libraries, resources or
+non-HTTP transports. JavaScript and explicit `express`/`fastify` selections are rejected.
 Identical output can be generated again; conflicting files are rejected without
 overwriting the existing application. This command is not an adapter migration.
 Basic generated HTTP execution is checked; optional integrations and production
@@ -269,6 +269,42 @@ original standalone application into a native monorepo; its application member
 then becomes `api-api`. Members share the owner's package, Nest configuration,
 and tooling. New member Nx names are `<owner>-<member>`; existing explicit names
 are preserved. `app` is **not** an alias for independent `application` generation.
+
+### Explicit Node sub-apps
+
+```sh
+yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node --dry-run
+yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node
+```
+
+The selected TypeScript owner must already declare and resolve common/core/testing
+**12.3.0**, plus **12.3.0** for any declared platform-express/platform-fastify
+adapter, and resolve a stable Nest 12 CLI. Compatible declaration ranges are
+preserved; checks use each owner's installed packages, so a newer root install
+cannot hide an older nested host. Missing, incompatible or unverified hosts fail
+before mutation. Upgrade/install an older owner explicitly before retrying.
+`--skipInstall` does not bypass this check.
+
+The generator adds a missing `@nestjs/platform-node` dependency at **12.3.0** to
+the owner and selects Node only in the new member's bootstrap and HTTP test.
+Existing platform-node declarations must select that exact version in owner dependencies.
+Original Express/Fastify/custom bootstrap and HTTP-test bytes are preserved,
+including when native conversion relocates them. Shared dependencies remain.
+Custom integration behavior still needs its own tests; preservation is not
+certification of arbitrary custom code. Observe in the original application is
+preserved; native sub-app generation does not expose an Observe option.
+
+Supported locations use the native `apps/<name>` layout. Custom rootDir/path
+containers and path-qualified names are rejected: the audited native compiler and
+start templates hard-code `apps` output paths and two-level relative paths. Duplicate member names
+are rejected without changes. Tooling setup and source generation are committed
+together only after all steps succeed.
+
+Omission retains native member behavior, even in a Node owner. To configure Node
+for future members, use the canonical Nx generator key
+`@anarchitects/nest:sub-app` (also used by the `app` alias). The same precedence
+and reset rules as independent applications apply. `--project` selects the Nest
+owner; it does not change which invocation project supplies Nx generator defaults.
 
 ## Choose a library model
 
