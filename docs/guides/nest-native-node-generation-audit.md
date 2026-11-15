@@ -419,7 +419,7 @@ separate release/default authority, and no Angular runtime dependency. No new
 architecture exception is needed. Sub-app selection remains separate work.
 
 The focused clean-consumer scenario is
-`nx-nest-e2e:e2e-ci--src/nest-scenarios/node-application.spec.ts`. It installs the
+`nx-nest-e2e:e2e-ci--src/nest-scenarios/http-application.spec.ts`. It installs the
 packed plugin and framework through Yarn without repository framework links,
 checks the four exact runtime versions, tests generator defaults/dry-run/install
 and repeat behavior, runs generated build/test/lint workflows, asserts the actual

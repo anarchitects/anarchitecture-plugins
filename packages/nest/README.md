@@ -197,39 +197,45 @@ yarn nx g @anarchitects/nest:application api --directory=packages/api --type=esm
 yarn nx g @anarchitects/nest:application legacy-api --directory=packages/legacy-api --type=cjs
 ```
 
-| Option                       | Behavior                                                                                        |
-| ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--type=esm` / `--type=cjs`  | ESM with Vitest is the default; CommonJS uses Jest. Both retain native Nest tooling and Oxlint. |
-| `--directory`                | Exact destination for the independent package.                                                  |
-| `--strict`                   | Strict TypeScript; enabled by default.                                                          |
-| `--packageManager`           | Forwarded to Nest; the containing workspace determines actual installation.                     |
-| `--spec`, `--specFileSuffix` | Native generated test options.                                                                  |
-| `--observe`                  | Opt into native Nest observe instrumentation.                                                   |
-| `--platform=node`            | Explicit NodeAdapter for an independent TypeScript HTTP application; no platform default.       |
-| `--format`                   | Opt into native source formatting.                                                              |
-| `--skipInstall`              | Write the package and workspace changes without installing.                                     |
+| Option                                   | Behavior                                                                                        |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--type=esm` / `--type=cjs`              | ESM with Vitest is the default; CommonJS uses Jest. Both retain native Nest tooling and Oxlint. |
+| `--directory`                            | Exact destination for the independent package.                                                  |
+| `--strict`                               | Strict TypeScript; enabled by default.                                                          |
+| `--packageManager`                       | Forwarded to Nest; the containing workspace determines actual installation.                     |
+| `--spec`, `--specFileSuffix`             | Native generated test options.                                                                  |
+| `--observe`                              | Opt into native Nest observe instrumentation.                                                   |
+| `--platform=node` / `--platform=express` | Explicit adapter for a TypeScript HTTP application; no platform default.                        |
+| `--format`                               | Opt into native source formatting.                                                              |
+| `--skipInstall`                          | Write the package and workspace changes without installing.                                     |
 
 Generation registers the package in the workspace and installs required
 changes automatically after successful generation. `--dry-run` previews without
 writing files or installing. After an intentional `--skipInstall`, run your normal
 workspace install before executing tasks.
 
-### Explicit Node HTTP applications
+### Explicit HTTP applications
 
 ```sh
 yarn nx g @anarchitects/nest:application api --directory=packages/api --platform=node --type=esm
+yarn nx g @anarchitects/nest:application web --directory=packages/web --platform=express --type=cjs
 ```
 
-This opt-in selects `NodeAdapter` in both the application and generated HTTP
+Explicit `node` selects `NodeAdapter` in both the application and generated HTTP
 tests. It pins `@nestjs/common`, `@nestjs/core`, `@nestjs/testing` and
 `@nestjs/platform-node` to **12.3.0**. ESM/CJS, Observe and native Nest tooling
 are preserved. Express dependencies remain available for generated tooling;
 Fastify is not required. Without platform selection, native Nest generation
 continues to use its implicit Express adapter.
 
+Explicit `express` constructs `ExpressAdapter` and uses `NestExpressApplication`
+in both the bootstrap and HTTP test. New Express applications pin common/core/testing
+and platform-express to **12.3.0**, keep native Express typings, and add no Node or
+Fastify adapter dependency. ESM/CJS and native Observe options are supported.
+
 The selection is limited to new TypeScript HTTP applications and the verified
 sub-app path below. It does not select an adapter for libraries, resources or
-non-HTTP transports. JavaScript and explicit `express`/`fastify` selections are rejected.
+non-HTTP transports. JavaScript and explicit `fastify` selections are rejected.
 Identical output can be generated again; conflicting files are rejected without
 overwriting the existing application. This command is not an adapter migration.
 Basic generated HTTP execution is checked; optional integrations and production
@@ -249,7 +255,10 @@ Explicit command options take precedence over Nx's applicable project defaults,
 then workspace defaults. Fully qualified generator keys take precedence over
 nested collection keys at each level. Direct programmatic calls use their
 supplied options. To return to native generation, remove the applicable platform
-default; the initial node-only selection has no per-command reset value.
+default; there is no per-command reset value. Explicit `--platform=express`
+overrides a configured Node or Fastify generator default and still generates
+an explicit adapter. A Fastify default itself is not executable until Fastify
+selection is implemented.
 Inference plugin options, `targetDefaults` and `nest-cli.json` do not select an
 HTTP platform.
 
@@ -270,25 +279,28 @@ then becomes `api-api`. Members share the owner's package, Nest configuration,
 and tooling. New member Nx names are `<owner>-<member>`; existing explicit names
 are preserved. `app` is **not** an alias for independent `application` generation.
 
-### Explicit Node sub-apps
+### Explicit HTTP sub-apps
 
 ```sh
 yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node --dry-run
 yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node
+yarn nx g @anarchitects/nest:app web --project=api --platform=express
 ```
 
 The selected TypeScript owner must already declare and resolve common/core/testing
-**12.3.0**, plus **12.3.0** for any declared platform-express/platform-fastify
+**12.3.0**, plus **12.3.0** for any declared Node, Express or Fastify
 adapter, and resolve a stable Nest 12 CLI. Compatible declaration ranges are
 preserved; checks use each owner's installed packages, so a newer root install
 cannot hide an older nested host. Missing, incompatible or unverified hosts fail
 before mutation. Upgrade/install an older owner explicitly before retrying.
 `--skipInstall` does not bypass this check.
 
-The generator adds a missing `@nestjs/platform-node` dependency at **12.3.0** to
-the owner and selects Node only in the new member's bootstrap and HTTP test.
+The generator adds the selected adapter dependency at **12.3.0** if it is missing:
+`@nestjs/platform-node` or `@nestjs/platform-express`. It selects that adapter only
+in the new member's bootstrap and HTTP test. Existing compatible Express ranges
+are retained; selecting Express does not add a Node dependency.
 Existing platform-node declarations must select that exact version in owner dependencies.
-Original Express/Fastify/custom bootstrap and HTTP-test bytes are preserved,
+Original Node/Express/Fastify/custom bootstrap and HTTP-test bytes are preserved,
 including when native conversion relocates them. Shared dependencies remain.
 Custom integration behavior still needs its own tests; preservation is not
 certification of arbitrary custom code. Observe in the original application is
@@ -300,8 +312,8 @@ start templates hard-code `apps` output paths and two-level relative paths. Dupl
 are rejected without changes. Tooling setup and source generation are committed
 together only after all steps succeed.
 
-Omission retains native member behavior, even in a Node owner. To configure Node
-for future members, use the canonical Nx generator key
+Omission retains native member behavior, even in an explicitly selected owner.
+To configure a platform for future members, use the canonical Nx generator key
 `@anarchitects/nest:sub-app` (also used by the `app` alias). The same precedence
 and reset rules as independent applications apply. `--project` selects the Nest
 owner; it does not change which invocation project supplies Nx generator defaults.

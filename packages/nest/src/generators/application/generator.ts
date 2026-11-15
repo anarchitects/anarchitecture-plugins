@@ -17,6 +17,7 @@ import {
   nativeInstallRequired,
 } from '../../utils/dependency-install';
 import type { ApplicationGeneratorSchema } from './schema';
+import { isHttpPlatform } from '../../utils/http-platform';
 
 function applicationLocation(options: ApplicationGeneratorSchema) {
   if (
@@ -46,17 +47,19 @@ export async function applicationGenerator(
   tree: Tree,
   options: ApplicationGeneratorSchema
 ): Promise<GeneratorCallback | undefined> {
-  if (options.platform !== undefined && options.platform !== 'node') {
+  if (options.platform !== undefined && !isHttpPlatform(options.platform)) {
     throw new Error(
-      'Unsupported HTTP platform. Use --platform=node or omit platform for native Nest generation.'
+      'Unsupported HTTP platform. Use --platform=node or --platform=express, or omit platform for native Nest generation.'
     );
   }
   if (
-    options.platform === 'node' &&
+    options.platform !== undefined &&
     options.language !== undefined &&
     options.language !== 'ts'
   ) {
-    throw new Error('--platform=node requires TypeScript (--language=ts).');
+    throw new Error(
+      `--platform=${options.platform} requires TypeScript (--language=ts).`
+    );
   }
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error(

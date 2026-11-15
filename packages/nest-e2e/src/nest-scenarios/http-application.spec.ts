@@ -6,10 +6,18 @@ import { usePackedPlugin } from '../packed-plugin';
 import { assertHttp } from '../rspack-consumer';
 
 const suite = usePackedPlugin();
-it.each(['esm', 'cjs'])(
-  'runs a clean installed explicit Node %s application',
-  async (type) => {
-    const root = join(suite.root, type);
+it.each(
+  ['node', 'express'].flatMap((platform) =>
+    ['esm', 'cjs'].map((type) => ({
+      platform,
+      type,
+      adapter: platform === 'node' ? 'NodeAdapter' : 'ExpressAdapter',
+    }))
+  )
+)(
+  'runs a clean installed explicit $platform $type application',
+  async ({ type, platform, adapter }) => {
+    const root = join(suite.root, platform + '-' + type);
     const { yarn, env } = createInstalledConsumer(root, suite.tarball, {});
     const json = (path: string) =>
       JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -18,7 +26,12 @@ it.each(['esm', 'cjs'])(
       join(root, 'nx.json'),
       JSON.stringify({
         ...nxJson,
-        generators: { '@anarchitects/nest:application': { platform: 'node' } },
+        generators: {
+          '@anarchitects/nest:application': {
+            platform:
+              platform === 'express' && type === 'esm' ? 'fastify' : 'node',
+          },
+        },
       })
     );
     const generate = [
@@ -29,6 +42,7 @@ it.each(['esm', 'cjs'])(
       '--directory=packages/api',
       `--type=${type}`,
       '--packageManager=yarn',
+      ...(platform === 'express' ? ['--platform=express'] : []),
       '--no-interactive',
     ];
     const lock = readFileSync(join(root, 'yarn.lock'), 'utf8');
@@ -56,7 +70,7 @@ it.each(['esm', 'cjs'])(
     const {createRequire}=require('node:module');
     const {realpathSync}=require('node:fs');
     const local=createRequire(require('node:path').resolve('packages/api/package.json'));
-    console.log(JSON.stringify(Object.fromEntries(['common','core','testing','platform-node'].map(name=>{
+    console.log(JSON.stringify(Object.fromEntries(['common','core','testing','platform-${platform}'].map(name=>{
       const path=local.resolve('@nestjs/'+name+'/package.json');
       if(!realpathSync(path).startsWith(process.cwd()+'/')) throw new Error('External framework link: '+path);
       return [name,local(path).version];
@@ -71,19 +85,24 @@ it.each(['esm', 'cjs'])(
       common: '12.3.0',
       core: '12.3.0',
       testing: '12.3.0',
-      'platform-node': '12.3.0',
+      ['platform-' + platform]: '12.3.0',
     });
+    const generatedManifest = json('packages/api/package.json');
+    if (platform === 'express')
+      expect(
+        generatedManifest.dependencies['@nestjs/platform-node']
+      ).toBeUndefined();
     const main = readFileSync(join(root, 'packages/api/src/main.ts'), 'utf8');
-    expect(main).toContain('new NodeAdapter()');
+    expect(main).toContain(`new ${adapter}()`);
     const specPath = join(root, 'packages/api/test/app.e2e-spec.ts');
     const spec = readFileSync(specPath, 'utf8');
-    expect(spec).toContain('new NodeAdapter()');
+    expect(spec).toContain(`new ${adapter}()`);
     // Assert the running adapter, alongside the native HTTP assertion and cleanup.
     writeFileSync(
       specPath,
       spec.replace(
         'await app.init();',
-        "await app.init();\n    expect(app.getHttpAdapter().getType()).toBe('node');"
+        `await app.init();\n    expect(app.getHttpAdapter().getType()).toBe('${platform}');`
       )
     );
     yarn([

@@ -20,10 +20,18 @@ function snapshotFiles(root: string, directory = ''): Record<string, string> {
   );
 }
 const suite = usePackedPlugin();
-it.each(['esm', 'cjs'])(
-  'preserves a mixed %s owner and runs its explicit Node member',
-  async (type) => {
-    const root = join(suite.root, type);
+it.each(
+  ['node', 'express'].flatMap((platform) =>
+    ['esm', 'cjs'].map((type) => ({
+      platform,
+      type,
+      adapter: platform === 'node' ? 'NodeAdapter' : 'ExpressAdapter',
+    }))
+  )
+)(
+  'preserves a mixed $type owner and runs its explicit $platform member',
+  async ({ type, platform, adapter }) => {
+    const root = join(suite.root, platform + '-' + type);
     const { yarn, env } = createInstalledConsumer(root, suite.tarball, {});
     const owner = join(root, 'services/api');
     const read = (file: string) => readFileSync(join(owner, file), 'utf8');
@@ -34,22 +42,37 @@ it.each(['esm', 'cjs'])(
       'api',
       '--directory=services/api',
       `--type=${type}`,
+      ...(platform === 'express' && type === 'esm' ? ['--platform=node'] : []),
       '--skipInstall',
       '--no-interactive',
     ]);
+    if (platform === 'express') {
+      const nxPath = join(root, 'nx.json');
+      const nxConfig = JSON.parse(readFileSync(nxPath, 'utf8'));
+      nxConfig.generators = {
+        '@anarchitects/nest:sub-app': {
+          platform: type === 'esm' ? 'node' : 'fastify',
+        },
+      };
+      writeFileSync(nxPath, JSON.stringify(nxConfig));
+    }
     const generate = [
       'nx',
       'g',
       '@anarchitects/nest:app',
       'worker',
       '--project=api',
-      '--platform=node',
+      `--platform=${platform}`,
       '--rootDir=apps',
       '--no-interactive',
     ];
     const beforeInstall = snapshotFiles(owner);
     expect(() => yarn([...generate, '--skipInstall'])).toThrow(
-      /cannot generate a Node sub-app/
+      new RegExp(
+        `cannot generate (a|an) ${
+          platform === 'node' ? 'Node' : 'Express'
+        } sub-app`
+      )
     );
     expect(snapshotFiles(owner)).toEqual(beforeInstall);
     // An explicit consumer upgrade, never a generator-side dependency upgrade.
@@ -91,18 +114,18 @@ it.each(['esm', 'cjs'])(
     }
     const next = JSON.parse(read('package.json'));
     expect(next.dependencies).toMatchObject(manifest.dependencies);
-    expect(next.dependencies['@nestjs/platform-node']).toBe('12.3.0');
+    expect(next.dependencies['@nestjs/platform-' + platform]).toBe('12.3.0');
     const stable = snapshotFiles(owner);
     expect(() => yarn(generate)).toThrow(/exists/);
     expect(snapshotFiles(owner)).toEqual(stable);
     const member = 'apps/worker';
-    expect(read(member + '/src/main.ts')).toContain('new NodeAdapter()');
+    expect(read(member + '/src/main.ts')).toContain(`new ${adapter}()`);
     const specPath = member + '/test/app.e2e-spec.ts';
     writeFileSync(
       join(owner, specPath),
       read(specPath).replace(
         'await app.init();',
-        "await app.init();\n    expect(app.getHttpAdapter().getType()).toBe('node');"
+        `await app.init();\n    expect(app.getHttpAdapter().getType()).toBe('${platform}');`
       )
     );
     for (const name of ['api-api', 'api-worker']) {
@@ -118,7 +141,7 @@ it.each(['esm', 'cjs'])(
     else {
       const config = JSON.parse(read('apps/api/test/jest-e2e.json'));
       writeFileSync(
-        join(owner, 'node-jest-e2e.json'),
+        join(owner, 'http-jest-e2e.json'),
         JSON.stringify({ ...config, rootDir: '.' })
       );
       yarn(
@@ -130,7 +153,7 @@ it.each(['esm', 'cjs'])(
           'yarn',
           'jest',
           '--config',
-          'node-jest-e2e.json',
+          'http-jest-e2e.json',
           '--runInBand',
         ],
         '--experimental-vm-modules'

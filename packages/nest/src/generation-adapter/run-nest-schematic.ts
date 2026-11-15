@@ -7,8 +7,13 @@ import {
 import { runNativeSchematic } from './run-native-schematic';
 import { runIsolatedSchematic } from './run-isolated-schematic';
 import { aliasResourceModuleImports } from './alias-resource-module-imports';
-import { transformNodeApplication } from './node-application';
-import { transformNodeMember } from './node-member';
+import { transformHttpApplication } from './http-application';
+import { transformHttpMember } from './http-member';
+import {
+  httpPlatforms,
+  isHttpPlatform,
+  type HttpPlatform,
+} from '../utils/http-platform';
 import {
   applySnapshot,
   diffSnapshots,
@@ -19,7 +24,7 @@ import {
 
 export interface RunNestSchematicOptions {
   /** Bounded overlay for HTTP applications/members, not a general rewrite hook. */
-  httpPlatform?: 'node';
+  httpPlatform?: HttpPlatform;
   schematic: string;
   options: Record<string, unknown>;
   /** Preview changes without even mutating the supplied Nx Tree. */
@@ -47,13 +52,13 @@ export async function runNestSchematic(
 ): Promise<NestSchematicResult> {
   if (
     options.httpPlatform !== undefined &&
-    (options.httpPlatform !== 'node' ||
+    (!isHttpPlatform(options.httpPlatform) ||
       !['application', 'sub-app'].includes(options.schematic) ||
       (options.schematic === 'application' &&
         (options.workingDirectory || options.isolateHostReads)))
   ) {
     throw new Error(
-      'The Node HTTP overlay requires an application or sub-app.'
+      'The HTTP overlay requires an application or sub-app and a supported platform (node or express).'
     );
   }
   const before = snapshotNxTree(tree);
@@ -76,25 +81,29 @@ export async function runNestSchematic(
         options
       );
   if (options.httpPlatform && options.schematic === 'sub-app') {
-    transformNodeMember(
+    transformHttpMember(
       scoped,
       result.after,
       String(options.options.name),
-      result.schematicVersion
+      result.schematicVersion,
+      options.httpPlatform
     );
   }
   if (options.httpPlatform && options.schematic === 'application') {
-    transformNodeApplication(
+    transformHttpApplication(
       result.after,
       treePath(String(options.options.directory)),
-      result.schematicVersion
+      result.schematicVersion,
+      options.httpPlatform
     );
     // Compare final overlay bytes, never native templates, on a repeat invocation.
     for (const [path, content] of result.after) {
       const previous = before.get(path);
       if (previous && !previous.equals(content))
         throw new Error(
-          `Cannot generate Node application: conflicting file ${path}. Choose an empty destination; existing applications are not migrated.`
+          `Cannot generate ${
+            httpPlatforms[options.httpPlatform].label
+          } application: conflicting file ${path}. Choose an empty destination; existing applications are not migrated.`
         );
     }
     for (const [path, content] of before)

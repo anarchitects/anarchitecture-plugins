@@ -8,7 +8,7 @@ import {
   validRange,
 } from 'semver';
 import type { ResolveInstalledNestPackage } from './installed-nest-package';
-import { nodeRuntimeVersion } from './node-runtime-version';
+import { httpRuntimeVersion } from './http-platform';
 
 export interface PackageManifest {
   dependencies?: Record<string, string>;
@@ -74,7 +74,7 @@ export function validateNestDependencies(
           section === 'peerDependencies' && name !== '@nestjs/cli';
         const supported =
           name === '@nestjs/platform-node'
-            ? nodeRuntimeVersion
+            ? httpRuntimeVersion
             : runtimePeer
             ? supportedPeers
             : supportedHost;
@@ -86,7 +86,7 @@ export function validateNestDependencies(
           errors.push(
             `${path} (${section}): ${name}@${String(range)} ${
               name === '@nestjs/platform-node'
-                ? `is not the audited NodeAdapter version (${nodeRuntimeVersion})`
+                ? `is not the audited NodeAdapter version (${httpRuntimeVersion})`
                 : runtimePeer
                 ? 'is not a supported library peer range (stable Nest 11/12 with Nest 12 support)'
                 : 'is not a stable Nest v12 range'
@@ -125,7 +125,7 @@ export function validateNestDependencies(
           !satisfies(
             installed.version,
             name === '@nestjs/platform-node'
-              ? nodeRuntimeVersion
+              ? httpRuntimeVersion
               : supportedHost
           ) ||
           !satisfies(installed.version, range)
