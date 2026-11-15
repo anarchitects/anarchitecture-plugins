@@ -127,54 +127,59 @@ it.each(['11.1.0', '13.0.0', '12.0.0-beta.1'])(
   }
 );
 
-describe('explicit Express owners', () => {
-  it('preserves existing ranges and bounded library peers', () => {
-    const tree = host();
-    const manifest = readJson(tree, 'services/api/package.json');
-    manifest.dependencies['@nestjs/platform-express'] = '^12.0.1';
-    manifest.peerDependencies = { '@nestjs/core': '^11 || ^12' };
-    writeJson(tree, 'services/api/package.json', manifest);
-    const before = tree.listChanges();
-    validateHttpMemberOwner(tree, 'services/api', installed, 'express');
-    expect(tree.listChanges()).toEqual(before);
-  });
-  it('permits an absent Express adapter but rejects dev-only declarations', () => {
-    const tree = host();
-    const manifest = readJson(tree, 'services/api/package.json');
-    delete manifest.dependencies['@nestjs/platform-express'];
-    writeJson(tree, 'services/api/package.json', manifest);
-    const resolver: ResolveInstalledNestPackage = (path, name) =>
-      name === '@nestjs/platform-express' ? undefined : installed(path, name);
-    expect(() =>
-      validateHttpMemberOwner(tree, 'services/api', resolver, 'express')
-    ).not.toThrow();
-    manifest.devDependencies['@nestjs/platform-express'] = '12.3.0';
-    writeJson(tree, 'services/api/package.json', manifest);
-    expect(() =>
-      validateHttpMemberOwner(tree, 'services/api', installed, 'express')
-    ).toThrow('owner dependencies');
-  });
-  it.each(['node', 'fastify'])(
-    'rejects a stale retained %s adapter before mutation',
-    (adapter) => {
+describe.each(['express', 'fastify'] as const)(
+  'explicit %s members',
+  (platform) => {
+    it('preserves existing ranges and bounded library peers', () => {
       const tree = host();
       const manifest = readJson(tree, 'services/api/package.json');
-      const name = '@nestjs/platform-' + adapter;
-      manifest.dependencies[name] = '12.3.0';
+      manifest.dependencies['@nestjs/platform-' + platform] = '^12.0.1';
+      manifest.peerDependencies = { '@nestjs/core': '^11 || ^12' };
       writeJson(tree, 'services/api/package.json', manifest);
       const before = tree.listChanges();
-      expect(() =>
-        validateHttpMemberOwner(
-          tree,
-          'services/api',
-          (path, dependency) =>
-            dependency === name
-              ? { version: '12.1.2', path }
-              : installed(path, dependency),
-          'express'
-        )
-      ).toThrow(name);
+      validateHttpMemberOwner(tree, 'services/api', installed, platform);
       expect(tree.listChanges()).toEqual(before);
-    }
-  );
-});
+    });
+    it('permits an absent selected adapter but rejects dev-only declarations', () => {
+      const tree = host();
+      const manifest = readJson(tree, 'services/api/package.json');
+      delete manifest.dependencies['@nestjs/platform-' + platform];
+      writeJson(tree, 'services/api/package.json', manifest);
+      const resolver: ResolveInstalledNestPackage = (path, name) =>
+        name === '@nestjs/platform-' + platform
+          ? undefined
+          : installed(path, name);
+      expect(() =>
+        validateHttpMemberOwner(tree, 'services/api', resolver, platform)
+      ).not.toThrow();
+      manifest.devDependencies['@nestjs/platform-' + platform] = '12.3.0';
+      writeJson(tree, 'services/api/package.json', manifest);
+      expect(() =>
+        validateHttpMemberOwner(tree, 'services/api', installed, platform)
+      ).toThrow('owner dependencies');
+    });
+    it.each(['node', 'express', 'fastify'])(
+      'rejects a stale retained %s adapter before mutation',
+      (adapter) => {
+        const tree = host();
+        const manifest = readJson(tree, 'services/api/package.json');
+        const name = '@nestjs/platform-' + adapter;
+        manifest.dependencies[name] = '12.3.0';
+        writeJson(tree, 'services/api/package.json', manifest);
+        const before = tree.listChanges();
+        expect(() =>
+          validateHttpMemberOwner(
+            tree,
+            'services/api',
+            (path, dependency) =>
+              dependency === name
+                ? { version: '12.1.2', path }
+                : installed(path, dependency),
+            platform
+          )
+        ).toThrow(name);
+        expect(tree.listChanges()).toEqual(before);
+      }
+    );
+  }
+);

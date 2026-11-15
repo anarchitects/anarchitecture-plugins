@@ -246,8 +246,8 @@ configuration and validation.
 
 The selection is limited to new TypeScript HTTP applications and the verified
 sub-app path below. It does not select an adapter for libraries, resources or
-non-HTTP transports. Explicit selection requires TypeScript. Fastify is currently
-available for independent applications only; sub-apps accept Node or Express.
+non-HTTP transports. Explicit selection requires TypeScript. Independent
+applications and native sub-apps accept Node, Express or Fastify.
 Identical output can be generated again; conflicting files are rejected without
 overwriting the existing application. This command is not an adapter migration.
 Basic generated HTTP execution is checked; optional integrations and production
@@ -298,6 +298,7 @@ are preserved. `app` is **not** an alias for independent `application` generatio
 yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node --dry-run
 yarn nx g @anarchitects/nest:sub-app worker --project=api --platform=node
 yarn nx g @anarchitects/nest:app web --project=api --platform=express
+yarn nx g @anarchitects/nest:sub-app fast-worker --project=api --platform=fastify
 ```
 
 The selected TypeScript owner must already declare and resolve common/core/testing
@@ -309,15 +310,19 @@ before mutation. Upgrade/install an older owner explicitly before retrying.
 `--skipInstall` does not bypass this check.
 
 The generator adds the selected adapter dependency at **12.3.0** if it is missing:
-`@nestjs/platform-node` or `@nestjs/platform-express`. It selects that adapter only
-in the new member's bootstrap and HTTP test. Existing compatible Express ranges
-are retained; selecting Express does not add a Node dependency.
+`@nestjs/platform-node`, `@nestjs/platform-express` or `@nestjs/platform-fastify`.
+It selects that adapter only in the new member's bootstrap and HTTP test. Existing compatible adapter ranges
+are retained; selecting Express or Fastify does not add a Node dependency.
 Existing platform-node declarations must select that exact version in owner dependencies.
 Original Node/Express/Fastify/custom bootstrap and HTTP-test bytes are preserved,
 including when native conversion relocates them. Shared dependencies remain.
 Custom integration behavior still needs its own tests; preservation is not
 certification of arbitrary custom code. Observe in the original application is
 preserved; native sub-app generation does not expose an Observe option.
+Fastify members use `NestFastifyApplication` and await Fastify readiness in their
+generated HTTP tests. Additional Fastify members reuse a compatible installed
+adapter without duplicating or replacing its dependency declaration. Optional
+multipart, static/view, Swagger and schema integrations remain separate choices.
 
 Supported locations use the native `apps/<name>` layout. Custom rootDir/path
 containers and path-qualified names are rejected: the audited native compiler and
@@ -473,7 +478,7 @@ Initialization does not upgrade a Nest 11 application, migrate legacy applicatio
 code, or select a different HTTP adapter. Upgrade and validate the host separately
 before adoption. Native Nest scaffolding owns new framework code; an existing
 application keeps its bootstrap and platform dependencies. Explicit Fastify
-selection creates new independent applications; initialization and configuration
+selection creates new applications or members; initialization and configuration
 do not migrate existing apps. Keep existing Fastify setup under the application's
 own configuration and test it separately.
 

@@ -111,7 +111,7 @@ describe('native Nest workspace members', () => {
         }
       } else {
         expect(directory).toBeUndefined();
-        expect(platform.enum).toEqual(['node', 'express']);
+        expect(platform.enum).toEqual(['node', 'express', 'fastify']);
         expect(platform.default).toBeUndefined();
       }
       expect(properties).toEqual(native.properties);
@@ -283,6 +283,11 @@ describe.each([
     adapter: 'ExpressAdapter',
     application: 'NestExpressApplication',
   },
+  {
+    platform: 'fastify',
+    adapter: 'FastifyAdapter',
+    application: 'NestFastifyApplication',
+  },
 ])('explicit $platform sub-apps', ({ platform, adapter, application }) => {
   const host = `
     const resolutions=[];
@@ -333,9 +338,10 @@ describe.each([
         )}==='esm');
         assert.doesNotMatch(tree.read(main,'utf8'),/Observe/);
         assert.match(tree.read('services/api/'+member.root+'/test/app.e2e-test.ts','utf8'),/createNestApplication<${application}>\(new ${adapter}\(\)\)/);
+        assert.equal(tree.read('services/api/'+member.root+'/test/app.e2e-test.ts','utf8').includes('await app.getHttpAdapter().getInstance().ready();'),'${platform}'==='fastify');
         const updated=JSON.parse(tree.read('services/api/package.json','utf8'));
         for(const [name,range] of Object.entries(manifest.dependencies)) assert.equal(updated.dependencies[name],range);
-        assert.equal(updated.dependencies['@nestjs/platform-${platform}'], '${platform}'==='node'?'12.3.0':manifest.dependencies['@nestjs/platform-express']);
+        assert.equal(updated.dependencies['@nestjs/platform-${platform}'], '${platform}'==='express'?manifest.dependencies['@nestjs/platform-express']:'12.3.0');
         const before=snapshotNxTree(tree);
         await assert.rejects(subAppGenerator(tree,options),/exists/);
         assert.deepEqual(snapshotNxTree(tree),before);
@@ -417,7 +423,7 @@ describe.each([
         String.raw`
       const tree=createTreeWithEmptyWorkspace();
       await applicationGenerator(tree,{name:'api',skipInstall:true});
-      for(const options of [{platform:'fastify'},{platform:null},{platform:false},{platform:'${platform}',language:'js'},{platform:'${platform}',rootDir:'members'},{platform:'${platform}',rootDir:'apps',path:'nested'}]) {
+      for(const options of [{platform:'Fastify'},{platform:''},{platform:'unknown'},{platform:null},{platform:false},{platform:true},{platform:'${platform}',language:'js'},{platform:'${platform}',rootDir:'members'},{platform:'${platform}',rootDir:'apps',path:'nested'},{platform:'${platform}',name:'nested/worker'}]) {
         const before=snapshotNxTree(tree);
         await assert.rejects(subAppGenerator(tree,{name:'worker',project:'api',...options}));
         assert.deepEqual(snapshotNxTree(tree),before);
