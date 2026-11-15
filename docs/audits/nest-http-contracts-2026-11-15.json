@@ -1,0 +1,456 @@
+{
+  "issue": 612,
+  "date": "2026-11-15",
+  "status": "local validation passed",
+  "sourceBase": "cac9db85dc5e71e551b25696ecd953c82f486d3d",
+  "architecture": {
+    "metaRevision": "4f0339d86f0ebfa073173ad307cb67c8d6042bdd",
+    "metaAdrs": [
+      "adr/0001-cooperative-governance-enrichment.md",
+      "adr/0001-two-core-implementation-styles.md",
+      "adr/0002-modulith-first-ecosystem-position.md",
+      "adr/0003-cross-repo-ai-enablement-model.md",
+      "adr/0004-meta-owns-landscape-contracts.md",
+      "adr/0005-governance-hierarchy-and-policy-inheritance.md",
+      "adr/0006-archi-as-reference-implementation-for-enterprise-architecture-governance.md",
+      "adr/0007-governance-workspace-layering-model.md",
+      "adr/0008-http-platform-independence.md",
+      "adr/0008-modern-angular-22-signal-forms.md",
+      "adr/0009-native-node-candidate-default.md",
+      "adr/0010-nest-first-runtime-and-dependency-policy.md",
+      "adr/0011-nest12-authn-authz-contracts-and-compatibility.md",
+      "adr/0012-canonical-public-api-contract-ownership.md",
+      "adr/0013-package-initial-release-and-nx-versioning.md",
+      "adr/0014-renovate-and-dependabot-dependency-management.md",
+      "adr/0015-nx-task-caching-and-distributed-execution.md",
+      "adr/0016-sdlc-ownership-and-architecture-authority.md",
+      "adr/0017-release-cadence-and-owner-authority.md",
+      "adr/0018-upstream-first-exceptions-and-cutover.md",
+      "adr/0019-repository-projects-and-organization-overview.md",
+      "adr/0020-application-infrastructure-boundary-and-migration.md",
+      "adr/0021-consumer-applications-and-public-upstream-reuse.md",
+      "adr/0022-core-framework-lifecycle-90-day-maintenance.md",
+      "adr/ADR-0001.md"
+    ],
+    "localAdrs": [
+      "docs/adr/adr-nest-generation-strategy.md",
+      "docs/adr/adr-nest-http-platform-scaffolding.md",
+      "docs/adr/adr-nest12-first-party-defaults-and-compatibility.md",
+      "docs/adr/adr-package-initial-release-and-nx-versioning.md",
+      "docs/adr/adr-public-package-documentation.md",
+      "docs/adr/modern-angular-22-signal-forms.md"
+    ],
+    "review": "Both inventories were re-enumerated and all 25 Meta and six local ADRs read in full before implementation. Accepted decisions apply; historical/proposed records do not override them. See the shared HTTP/security section of the consumer guide for constraints and conflicts."
+  },
+  "host": {
+    "node": "24.22.3",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nx": "24.0.1",
+    "yarn": "4.17.0",
+    "npm": "11.19.1",
+    "openssl": "4.1.0 (23 Oct 2026)"
+  },
+  "consumer": {
+    "node": "24.21.0",
+    "nx": "24.0.1",
+    "yarn": "4.17.0",
+    "linker": "node-modules",
+    "typescript": "6.0.3",
+    "nestRuntimeAndAdapters": "12.5.0",
+    "nestCliAndSchematics": "12.0.13",
+    "standardSchemaSpec": "1.1.0",
+    "mappedTypes": "12.0.1",
+    "webpack": "5.112.2"
+  },
+  "scenarioDefinition": {
+    "selection": ["node", "express", "fastify", "implicit"],
+    "moduleFormats": ["esm", "cjs"],
+    "modes": ["direct", "trusted", "untrusted", "https"],
+    "consumerCount": 8,
+    "applicationCount": 32,
+    "fullHttpContractModes": ["direct", "https"],
+    "configuredBodyLimitBytes": 512,
+    "proxyTrust": {
+      "direct": false,
+      "trusted": "loopback",
+      "untrusted": "192.0.2.0/24",
+      "https": false
+    }
+  },
+  "claims": [
+    "Generated CRUD routes and resource service",
+    "Standard Schema validation, coercion, async transforms and response serialization",
+    "Guard denial before pipes and handlers",
+    "Status mapping, exception redaction and security headers",
+    "JSON/form/query parsing, malformed and oversized payload rejection",
+    "Raw-body HMAC verification and tampering rejection",
+    "Plain and signed cookie attributes, tampering rejection and deletion",
+    "CSRF and CORS allowlisting",
+    "Trusted/untrusted forwarded IP, protocol and hostname",
+    "HTTPS certificate verification and security headers",
+    "HEAD, redirect, representative streaming, lifecycle and port release"
+  ],
+  "adapterDifferences": [
+    {
+      "request": "Prototype-poisoned JSON",
+      "node": 400,
+      "fastify": 400,
+      "express": 201,
+      "restriction": "Express parses it; the common Nest Standard Schema pipe removes prototype keys and the schema strips unknown input."
+    },
+    {
+      "request": "application/octet-stream to schema-validated body",
+      "node": 400,
+      "fastify": 415,
+      "express": 400,
+      "restriction": "Node/Express leave the unsupported body unparsed and schema validation rejects it; Fastify rejects the media type."
+    },
+    {
+      "configuration": "Flat query keys and repeated-value arrays",
+      "restriction": "Express explicitly selects its public simple parser; no nested query parity is claimed."
+    },
+    {
+      "configuration": "Omitted-platform native consumer",
+      "restriction": "Consumer pins the audited runtime and supplies the native CLI loader/checker Webpack peer through ordinary declarations. Strict peers remain enabled; generated bootstrap remains unchanged."
+    }
+  ],
+  "excluded": [
+    "Authentication/session/passkey and production policy product conformance",
+    "SSR production certification",
+    "Browser cookie enforcement",
+    "Production proxy/certificate deployment",
+    "HTTP/2, multipart uploads, WebSockets, SSE reconnection, backpressure/slow clients",
+    "OpenAPI and optional platform integrations",
+    "Node 22/26, npm and operating-system expansion for this security suite",
+    "Default activation, migration and publication"
+  ],
+  "handoffs": {
+    "openApiAndOptionalCapabilities": "#613",
+    "fastifyExtras": "#508",
+    "runtimePresentation": "anarchitecture-bricks-3tier#506",
+    "ssr": "anarchitecture-community#33",
+    "canonicalApplicationContracts": "Contracts owner under Meta ADR 0012",
+    "authenticationAndPolicy": "Owning runtime repositories under Meta ADR 0011"
+  },
+  "isolation": "Packed tarball in independent installed consumers; frozen registry records followed by immutable install, no links/overrides/metadata edits/forced peers. Generated application builds and checked native files are preserved. Only consumer-owned public bootstrap setup differs by adapter. Disposable local TLS identity uses explicit CA trust.",
+  "fixtureSha256": {
+    "packages/nest-e2e/src/consumer-locks/http-yarn.lock": "11fccebf120420b6b99672beedcd7a6f030fbee375003fb76f79d22407aff263",
+    "packages/nest-e2e/src/http-contract-consumer.ts": "f9ea4efad1c71f6bb7ead68c3b58fa1bff39ab0d8dc6302e740e957db6a1c18f",
+    "packages/nest-e2e/src/http-contract-fixture.ts": "c44742a60062d477c009143b6629e5bf43c49cdba1fa63e296cb8b1873b1bf0b"
+  },
+  "validation": [
+    {
+      "command": "corepack yarn nx run-many -p nx-nest-e2e -t e2e-ci--src/nest-scenarios/http-contract-node.spec.ts,e2e-ci--src/nest-scenarios/http-contract-express.spec.ts,e2e-ci--src/nest-scenarios/http-contract-fastify.spec.ts,e2e-ci--src/nest-scenarios/http-contract-implicit.spec.ts --parallel=2 --output-style=static",
+      "result": "passed: eight tests in four inferred tasks; all four ran without cache hits; dependency build cached",
+      "duration": "2m13s"
+    },
+    {
+      "command": "corepack yarn nx run-many -t build,lint,typecheck -p nx-nest,nx-nest-e2e --output-style=static",
+      "result": "passed: five applicable tasks, three cache hits; new e2e lint/typecheck executed",
+      "duration": "2.1s"
+    },
+    {
+      "command": "corepack yarn nx run nx-nest:test --runInBand --output-style=static",
+      "result": "passed: 675 tests in 35 suites; suite executed, dependency build cached",
+      "duration": "5m7s"
+    }
+  ],
+  "packedPlugin": {
+    "name": "@anarchitects/nest",
+    "developmentVersion": "0.1.0",
+    "sourceBase": "cac9db85dc5e71e551b25696ecd953c82f486d3d",
+    "publication": false
+  },
+  "consumerResults": [
+    {
+      "selection": "express",
+      "type": "cjs",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "express",
+          "mode": "direct"
+        },
+        {
+          "platform": "express",
+          "mode": "trusted"
+        },
+        {
+          "platform": "express",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "express",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "express",
+      "type": "esm",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "express",
+          "mode": "direct"
+        },
+        {
+          "platform": "express",
+          "mode": "trusted"
+        },
+        {
+          "platform": "express",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "express",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "fastify",
+      "type": "cjs",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "fastify",
+          "mode": "direct"
+        },
+        {
+          "platform": "fastify",
+          "mode": "trusted"
+        },
+        {
+          "platform": "fastify",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "fastify",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "fastify",
+      "type": "esm",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "fastify",
+          "mode": "direct"
+        },
+        {
+          "platform": "fastify",
+          "mode": "trusted"
+        },
+        {
+          "platform": "fastify",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "fastify",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "implicit",
+      "type": "cjs",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "express",
+          "mode": "direct"
+        },
+        {
+          "platform": "express",
+          "mode": "trusted"
+        },
+        {
+          "platform": "express",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "express",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "implicit",
+      "type": "esm",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "express",
+          "mode": "direct"
+        },
+        {
+          "platform": "express",
+          "mode": "trusted"
+        },
+        {
+          "platform": "express",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "express",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "node",
+      "type": "cjs",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "node",
+          "mode": "direct"
+        },
+        {
+          "platform": "node",
+          "mode": "trusted"
+        },
+        {
+          "platform": "node",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "node",
+          "mode": "https"
+        }
+      ]
+    },
+    {
+      "selection": "node",
+      "type": "esm",
+      "node": "24.21.0",
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@standard-schema/spec": "1.1.0",
+        "nx": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "modes": [
+        {
+          "platform": "node",
+          "mode": "direct"
+        },
+        {
+          "platform": "node",
+          "mode": "trusted"
+        },
+        {
+          "platform": "node",
+          "mode": "untrusted"
+        },
+        {
+          "platform": "node",
+          "mode": "https"
+        }
+      ]
+    }
+  ],
+  "executionEnvironment": {
+    "NX_DAEMON": "false",
+    "NX_ISOLATE_PLUGINS": "false",
+    "NX_NO_CLOUD": "true",
+    "NEST_E2E_TRACE": "true",
+    "SWC_NATIVE_BINDING_CACHE": "temporary writable directory"
+  },
+  "initialAttemptNotes": [
+    "Initial npm access failed in the restricted sandbox; consumer runs used network and loopback access.",
+    "Earlier install attempts timed out; normal reruns passed without changing timeouts, frozen registry records or strict-peer checks.",
+    "Native omitted generation lacks the CLI loader/checker Webpack peer; the control declares the frozen version as a consumer dependency.",
+    "The restricted-sandbox unit attempt had six subprocess timeouts; the unchanged suite passed in full with broader process access."
+  ]
+}
