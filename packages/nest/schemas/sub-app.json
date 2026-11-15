@@ -7,7 +7,7 @@
     "platform": {
       "type": "string",
       "enum": ["node", "express", "fastify"],
-      "description": "Explicit NodeAdapter, ExpressAdapter or FastifyAdapter for a TypeScript HTTP sub-app. Requires a verified installed Nest 12.3.0 owner."
+      "description": "Explicit NodeAdapter, ExpressAdapter or FastifyAdapter for a TypeScript HTTP sub-app. Requires a verified installed Nest 12.3.0 or 12.5.0 owner."
     },
     "name": {
       "type": "string",

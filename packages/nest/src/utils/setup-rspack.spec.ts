@@ -64,6 +64,22 @@ describe('native Rspack workspace setup', () => {
     expect(tree.exists(at('rspack.config.cjs'))).toBe(true);
   });
 
+  it('supplies the native checker peer without replacing an existing Webpack declaration', () => {
+    const { tree, at } = fixture();
+    writeJson(tree, at('package.json'), {
+      devDependencies: { 'fork-ts-checker-webpack-plugin': '^9.1.0' },
+    });
+    setupRspack(tree, 'packages/api');
+    expect(readJson(tree, at('package.json')).devDependencies.webpack).toBe(
+      '^5.105.4'
+    );
+    const manifest = readJson(tree, at('package.json'));
+    manifest.devDependencies.webpack = '5.109.2';
+    writeJson(tree, at('package.json'), manifest);
+    expect(setupRspack(tree, 'packages/api')).toBe(false);
+    expect(readJson(tree, at('package.json'))).toEqual(manifest);
+  });
+
   it.each(['rspack.config.js', 'custom.cjs'])(
     'preserves the existing %s configuration and its builder options',
     (file) => {

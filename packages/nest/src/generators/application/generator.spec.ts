@@ -87,6 +87,11 @@ describe('native Nest application generator', () => {
   it.each([
     { options: { name: 'MyApi' }, root: 'my-api', name: 'my-api' },
     {
+      options: { name: 'minimal', minimal: true },
+      root: 'minimal',
+      name: 'minimal',
+    },
+    {
       options: { name: 'api', directory: 'apps/backend', type: 'cjs' },
       root: 'apps/backend',
       name: 'api',
@@ -154,8 +159,10 @@ describe('native Nest application generator', () => {
       const manifest = JSON.parse(tree.read(root+'/package.json','utf8'));
       assert.equal(manifest.name, ${JSON.stringify(name)});
       assert.equal(manifest.type, options.type === 'cjs' ? undefined : 'module');
-      assert.match(manifest.scripts.test, options.type === 'cjs' ? /jest/ : /vitest/);
-      assert.match(manifest.scripts.lint, /oxlint/);
+      if(options.minimal) assert.equal(manifest.scripts.test,undefined);
+      else assert.match(manifest.scripts.test, options.type === 'cjs' ? /jest/ : /vitest/);
+      if(options.minimal) assert.equal(manifest.scripts.lint,undefined);
+      else assert.match(manifest.scripts.lint, /oxlint/);
       assert.equal(JSON.parse(tree.read(root+'/tsconfig.json','utf8')).compilerOptions.module, 'nodenext');
       if (options.observe) {
         assert.ok(manifest.dependencies['@nestjs/observe']);
@@ -194,7 +201,7 @@ describe('native Nest application generator', () => {
       assert.equal(tree.exists('apps/api/jest.config.ts'),mode==='cjs');
       if(mode==='esm') {
         assert.equal(manifest.scripts.test,'vitest run');
-        assert.match(tree.read('apps/api/vitest.config.ts','utf8'),/vite-tsconfig-paths/);
+        assert.match(tree.read('apps/api/vitest.config.ts','utf8'),/tsconfigPaths: true/);
         assert.match(tree.read('apps/api/vitest.config.e2e.ts','utf8'),/defineConfig/);
       } else {
         assert.match(manifest.scripts.test,/--experimental-vm-modules.*jest/);
@@ -216,8 +223,8 @@ describe('native Nest application generator', () => {
             if(path==='apps/api/package.json' || path==='package.json') {
               const json=JSON.parse(bytes);
               if(path==='package.json') delete json.workspaces;
-              if(json.scripts?.lint===local('./dist/utils/setup-lint').nestMemberLintScript) json.scripts.lint='oxlint --type-aware src/ test/';
-              for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin','@swc/core','unplugin-swc',...(path==='package.json'?['@nx/vitest','vite','vitest']:[])]) delete json.devDependencies?.[dep];
+              if([local('./dist/utils/setup-lint').nestMemberLintScript,'oxlint --type-aware apps/ libs/'].includes(json.scripts?.lint)) json.scripts.lint='oxlint --type-aware src/ test/';
+              for(const dep of ['webpack','@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin','@swc/core','unplugin-swc',...(path==='package.json'?['@nx/vitest','vite','vitest']:[])]) delete json.devDependencies?.[dep];
               if(path==='package.json' && json.dependencies && !Object.keys(json.dependencies).length) delete json.dependencies;
               return [path,json];
             }
@@ -359,19 +366,20 @@ describe.each([
           }
         }
         const manifest=JSON.parse(tree.read('apps/api/package.json','utf8'));
-        for(const name of ['common','core','platform-${platform}']) assert.equal(manifest.dependencies['@nestjs/'+name],'12.3.0');
-        assert.equal(manifest.devDependencies['@nestjs/testing'],'12.3.0');
-        assert.equal(manifest.dependencies['@nestjs/platform-express'], '${platform}'!=='node'?'12.3.0':'^12.0.1');
+        for(const name of ['common','core','platform-${platform}']) assert.equal(manifest.dependencies['@nestjs/'+name],'12.5.0');
+        assert.equal(manifest.devDependencies['@nestjs/testing'],'12.5.0');
+        assert.equal(manifest.devDependencies.webpack,options.type==='cjs'?'^5.105.4':undefined);
+        assert.equal(manifest.dependencies['@nestjs/platform-express'], '12.5.0');
         if('${platform}'!=='node') assert.equal(manifest.dependencies['@nestjs/platform-node'],undefined);
         assert.ok(manifest.devDependencies['@types/express']);
-        assert.equal(manifest.dependencies['@nestjs/platform-fastify'],'${platform}'==='fastify'?'12.3.0':undefined);
+        assert.equal(manifest.dependencies['@nestjs/platform-fastify'],'${platform}'==='fastify'?'12.5.0':undefined);
         for(const name of ['fastify','express','@fastify/multipart','@fastify/static','@fastify/view','@nestjs/swagger','zod']) assert.equal(manifest.dependencies[name],undefined);
         for(const [path,bytes] of snapshotNxTree(expected)) {
           if(!['nx.json','package.json','apps/api/package.json','apps/api/src/main.ts','apps/api/test/app.e2e-spec.ts'].includes(path)) assert.deepEqual(tree.read(path),bytes,path);
         }
         const before=snapshotNxTree(tree);
         const reapplied=new Map(before);
-        overlay.transformHttpApplication(reapplied,'apps/api','12.0.6','${platform}');
+        overlay.transformHttpApplication(reapplied,'apps/api','12.0.13','${platform}');
         assert.deepEqual(reapplied,before);
         assert.equal(await applicationGenerator(tree,options),undefined);
         assert.deepEqual(snapshotNxTree(tree),before);
@@ -423,6 +431,7 @@ describe.each([
         assert.deepEqual(snapshotNxTree(tree),before);
       }
       await assert.rejects(applicationGenerator(tree,{name:'api',platform:'${platform}',language:'js'}),/requires TypeScript/);
+      await assert.rejects(applicationGenerator(tree,{name:'api',platform:'${platform}',minimal:true}),/full native application template/);
       const options={name:'api',platform:'${platform}',skipInstall:true};
       await applicationGenerator(tree,options);
       tree.write('api/src/main.ts',tree.read('api/src/main.ts','utf8')+'\n// user change\n');

@@ -107,6 +107,8 @@ it.each(
     for (const name of ['common', 'core', 'platform-express'])
       manifest.dependencies['@nestjs/' + name] = '12.3.0';
     manifest.devDependencies['@nestjs/testing'] = '12.3.0';
+    if (manifest.dependencies['@nestjs/platform-node'])
+      manifest.dependencies['@nestjs/platform-node'] = '12.3.0';
     if (type === 'cjs' && platform !== 'fastify') {
       manifest.dependencies['@nestjs/platform-fastify'] = '12.3.0';
       writeFileSync(
@@ -262,11 +264,7 @@ it.each(
         '--experimental-vm-modules'
       );
     }
-    if (type === 'esm') yarn(['nx', 'run', 'api:lint']);
-    else
-      expect(() => yarn(['nx', 'run', 'api:lint'])).toThrow(
-        /floating-promises/
-      );
+    yarn(['nx', 'run', 'api:lint']);
     yarn([
       'nx',
       'g',

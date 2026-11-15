@@ -7,10 +7,28 @@ export const nestMemberLintScript =
   'oxlint --type-aware --ignore-pattern "**/dist/**" --ignore-pattern "**/coverage/**" .';
 
 /** Repair the pinned native default without taking over consumer lint tools. */
-export function setupLint(tree: Tree, ownerRoot: string): void {
+export function setupLint(
+  tree: Tree,
+  ownerRoot: string,
+  nativeMember?: { schematic: 'library' | 'sub-app'; rootDir?: string }
+): void {
   const file = posix.join(ownerRoot, 'package.json');
   const manifest = readJson(tree, file);
-  if (manifest.scripts?.lint === 'oxlint --type-aware src/ test/') {
+  if (
+    [
+      'oxlint --type-aware src/ test/',
+      'oxlint --type-aware apps/ libs/',
+      ...(nativeMember
+        ? [
+            nativeMember.schematic === 'library'
+              ? `oxlint --type-aware src/ test/ ${
+                  nativeMember.rootDir ?? 'libs'
+                }/`
+              : `oxlint --type-aware ${nativeMember.rootDir ?? 'apps'}/ libs/`,
+          ]
+        : []),
+    ].includes(manifest.scripts?.lint)
+  ) {
     manifest.scripts.lint = nestMemberLintScript;
     writeJson(tree, file, manifest);
   }

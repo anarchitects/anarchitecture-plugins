@@ -60,7 +60,7 @@ describe.each([
     const before = new Map(snapshot);
     expect(() =>
       transformHttpApplication(snapshot, 'api', '12.0.7', platform)
-    ).toThrow('audited @nestjs/schematics 12.0.6');
+    ).toThrow('audited @nestjs/schematics 12.0.13');
     expect(snapshot).toEqual(before);
   });
 
@@ -76,7 +76,7 @@ describe.each([
     ]);
     const before = new Map(snapshot);
     expect(() =>
-      transformHttpApplication(snapshot, 'api', '12.0.6', platform)
+      transformHttpApplication(snapshot, 'api', '12.0.13', platform)
     ).toThrow('does not admit');
     expect(snapshot).toEqual(before);
   });
@@ -151,7 +151,7 @@ it.each([
     ]);
     const before = new Map(snapshot);
     expect(() =>
-      transformHttpApplication(snapshot, 'api', '12.0.6', 'fastify')
+      transformHttpApplication(snapshot, 'api', '12.0.13', 'fastify')
     ).toThrow('api/test/app.e2e-spec.ts');
     expect(snapshot).toEqual(before);
   }

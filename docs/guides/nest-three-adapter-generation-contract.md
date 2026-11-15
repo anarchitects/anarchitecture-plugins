@@ -551,3 +551,47 @@ corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
 corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-sub-app.spec.ts
 corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts src/nest-scenarios/published-library-peers.spec.ts src/nest-scenarios/published-tsc-build.spec.ts src/nest-scenarios/published-custom-build.spec.ts
 ```
+
+## #611 implementation record: packed consumers and version rebaseline
+
+Re-enumerated all 25 Meta ADRs at
+`4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local ADRs at Plugins
+`39001c1`. Both inventories and their contents were unchanged from the full
+preflight review retained for #622; reviewed those complete records against this
+expanded certification scope. Revisited the adapter/Node audits, library guide,
+package/contributor instructions and proposed Meta Nest engineering guide.
+
+Accepted HTTP independence/native-preference gates, native schematic ownership,
+Nest-first/lifecycle policy, Project Crystal caching, portable MIT boundaries and
+library preservation apply. Historical pending/default wording does not override
+accepted decisions. Meta 0012 owns canonical public contracts; Meta 0013 owns
+zero-major release policy. Proposed engineering guidance does not override these
+records. Angular runtime policies add no Angular application dependency here.
+The previously assigned rebaseline now applies consistently to fresh explicit
+applications; no existing owner, default activation or release is authorized by it.
+
+Fresh Node/Express/Fastify output pins common/core/testing/selected adapter and
+retained Express to 12.5.0. Explicit members accept coherent installed 12.3.0 or
+12.5.0 sets and add a missing adapter at that owner's version. The schematic
+engine and Angular Devkit move to 12.0.13 and 22.2.6. Native Vite path resolution,
+CommonJS bootstrap handling and Rspack dependencies are retained. The bounded
+integration supplies the native loader/checker's missing Webpack peer and preserves
+member-wide lint coverage across native custom-root rewrites. Native minimal
+output is forwarded without a platform; the explicit transform requires the full
+TypeScript template.
+
+The [packed consumer matrix](nest-http-consumer-matrix.md) and versioned evidence
+record document exact lanes, frozen dependency graphs, alias/default precedence,
+all owner/member pairs, root/nested owners, Observe, negative checks and library
+regressions. Node 22 CommonJS Jest is an explicit upstream exclusion: build,
+real HTTP/resource startup and lint remain exercised, while the generated Jest
+workflow's specific ESM-loading failure is asserted. No replacement native Jest
+template, optional Fastify integration or production-readiness claim is added.
+
+Final local validation passed 675 unit tests and 96 E2E tests, including all
+24 frozen HTTP scenarios, the admitted legacy-owner regressions and all six clean
+published-library controls. Build, typecheck and lint pass (16 existing plugin
+warnings, no errors). The [versioned evidence](../audits/nest-http-consumers-2026-11-15.json)
+records the commands, exact combinations, lock hashes, cache-input proof and
+explicit Node 22 CJS/Jest exclusion. These are macOS arm64 results, not a claim
+of remote CI completion or multi-OS certification.

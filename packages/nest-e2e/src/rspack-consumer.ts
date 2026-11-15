@@ -64,16 +64,27 @@ export async function assertHttp(
   env: NodeJS.ProcessEnv,
   target: string,
   path: string,
-  expected: string
+  expected: string,
+  manager: 'yarn' | 'npm' = 'yarn'
 ) {
   const port = String(await freePort());
-  const child = spawn('yarn', ['nx', 'run', target, '--output-style=stream'], {
-    cwd: root,
-    // Native application and sub-app templates currently use different casing.
-    env: { ...env, PORT: port, port },
-    detached: process.platform !== 'win32',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const child = spawn(
+    manager === 'yarn' ? 'corepack' : 'npm',
+    [
+      ...(manager === 'yarn' ? ['yarn'] : ['exec', '--']),
+      'nx',
+      'run',
+      target,
+      '--output-style=stream',
+    ],
+    {
+      cwd: root,
+      // Native application and sub-app templates currently use different casing.
+      env: { ...env, PORT: port, port },
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
   let output = '';
   try {
     await new Promise<void>((accept, reject) => {
@@ -123,6 +134,14 @@ export async function assertHttp(
     expect(await response.text()).toBe(expected);
   } finally {
     await stop(child);
+    // A successful shutdown must release the actual listening port.
+    const probe = createServer();
+    await new Promise<void>((accept, reject) => {
+      probe.once('error', reject);
+      probe.listen(Number(port), '127.0.0.1', () =>
+        probe.close((error) => (error ? reject(error) : accept()))
+      );
+    });
   }
 }
 
@@ -159,7 +178,8 @@ export async function assertRspackConsumer(
     yarn(generate);
     expect(readFileSync(join(root, '.yarnrc.yml'), 'utf8')).toBe(yarnConfig);
     if (schematic === 'sub-app') {
-      expect(readFileSync(join(root, 'yarn.lock'), 'utf8')).not.toBe(lock);
+      // Native 12.0.13 already supplies Rspack dependencies in the application;
+      // conversion need not change the dependency graph when they are present.
       expect(
         existsSync(join(root, 'node_modules/@rspack/core/package.json'))
       ).toBe(true);

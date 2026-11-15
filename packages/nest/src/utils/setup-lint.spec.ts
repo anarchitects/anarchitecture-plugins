@@ -4,15 +4,47 @@ import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { nestMemberLintScript, setupLint } from './setup-lint';
 
 describe('Nest member lint setup', () => {
-  it.each(['', 'packages/api'])(
+  it.each([
+    {
+      schematic: 'library' as const,
+      rootDir: 'modules',
+      script: 'oxlint --type-aware src/ test/ modules/',
+    },
+    {
+      schematic: 'sub-app' as const,
+      rootDir: 'services',
+      script: 'oxlint --type-aware services/ libs/',
+    },
+  ])(
+    'recognizes the exact native $schematic rewrite for a custom root',
+    ({ schematic, rootDir, script }) => {
+      const tree = createTreeWithEmptyWorkspace();
+      writeJson(tree, 'package.json', { scripts: { lint: script } });
+      setupLint(tree, '', { schematic, rootDir });
+      expect(readJson(tree, 'package.json').scripts.lint).toBe(
+        nestMemberLintScript
+      );
+      writeJson(tree, 'package.json', {
+        scripts: { lint: script + ' --deny-warnings' },
+      });
+      const before = tree.listChanges();
+      setupLint(tree, '', { schematic, rootDir });
+      expect(tree.listChanges()).toEqual(before);
+    }
+  );
+  it.each(
+    ['', 'packages/api'].flatMap((root) =>
+      ['src/ test/', 'apps/ libs/'].map((paths) => ({ root, paths }))
+    )
+  )(
     'repairs the native script at %j once and includes nested project inputs',
-    (root) => {
+    ({ root, paths }) => {
       const tree = createTreeWithEmptyWorkspace();
       const at = (file: string) => (root ? `${root}/${file}` : file);
       const manifest = {
         name: 'api',
         scripts: {
-          lint: 'oxlint --type-aware src/ test/',
+          lint: `oxlint --type-aware ${paths}`,
           build: 'nest build',
         },
       };

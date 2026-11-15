@@ -341,7 +341,7 @@ describe('NodeAdapter candidate declarations', () => {
             peerDependencies: { '@nestjs/platform-node': range },
           },
         })
-      ).toThrow('audited NodeAdapter version (12.3.0)');
+      ).toThrow('audited NodeAdapter version (12.3.0 || 12.5.0)');
     }
   );
   it('accepts the exact candidate without broadening library adapter peers', () => {

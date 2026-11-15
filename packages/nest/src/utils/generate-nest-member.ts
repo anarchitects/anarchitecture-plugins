@@ -75,7 +75,7 @@ export async function generateNestMember(
       `--platform=${options.platform} requires TypeScript (--language=ts).`
     );
   if (options.platform !== undefined) {
-    // Native 12.0.6 member tsconfigs hard-code ../../tsconfig.json and rootDir.
+    // Native member tsconfigs hard-code ../../tsconfig.json and rootDir.
     // Do not commit an unbuildable nested layout or rewrite compiler templates.
     const container = posix.join(options.rootDir ?? 'apps', options.path ?? '');
     if (container !== 'apps' || /[/\\]/.test(options.name))
@@ -136,8 +136,10 @@ async function generateMember(
     );
   }
   const nxJson = readNxJson(tree)!;
-  if (options.platform !== undefined)
-    validateHttpMemberOwner(tree, ownerRoot, undefined, options.platform);
+  const httpRuntimeVersion =
+    options.platform !== undefined
+      ? validateHttpMemberOwner(tree, ownerRoot, undefined, options.platform)
+      : undefined;
   const plugins = registerNestPlugin(nxJson.plugins, {});
   const previousConfig = readJson<NestWorkspace>(tree, at('nest-cli.json'));
   if (
@@ -161,6 +163,7 @@ async function generateMember(
   const result = await runNestSchematic(tree, {
     schematic,
     httpPlatform: platform,
+    httpRuntimeVersion,
     options: nativeOptions,
     workingDirectory: ownerRoot,
     isolateHostReads: true,
@@ -224,7 +227,7 @@ async function generateMember(
   }
   if (JSON.stringify(nxJson.plugins) !== JSON.stringify(plugins))
     updateNxJson(tree, { ...nxJson, plugins });
-  setupLint(tree, ownerRoot);
+  setupLint(tree, ownerRoot, { schematic, rootDir: options.rootDir });
   const nativeDependenciesChanged =
     before !== dependencyState(tree, ['', ownerRoot]);
   const rspackInstall = setupRspack(tree, ownerRoot);

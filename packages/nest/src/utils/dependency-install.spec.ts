@@ -19,7 +19,7 @@ describe('Nx dependency-install lifecycle', () => {
     const tree = createTreeWithEmptyWorkspace();
     const native = nativeInstallRequired({
       changes: [],
-      schematicVersion: '12.0.6',
+      schematicVersion: '12.0.13',
       deferredTasks: [
         {
           name: 'node-package',
@@ -44,7 +44,7 @@ describe('Nx dependency-install lifecycle', () => {
     expect(
       nativeInstallRequired({
         changes: [],
-        schematicVersion: '12.0.6',
+        schematicVersion: '12.0.13',
         deferredTasks: [{ name: 'repo-init' }],
       })
     ).toBe(false);

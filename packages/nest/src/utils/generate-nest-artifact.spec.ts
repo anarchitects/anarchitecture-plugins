@@ -68,7 +68,7 @@ describe.each(['service', 'resource'] as const)(
             deferredTasks: task
               ? [{ name: 'node-package' }, { name: 'node-package' }]
               : [],
-            schematicVersion: '12.0.6',
+            schematicVersion: '12.0.13',
           };
         });
         const callback = await generateNestArtifact(

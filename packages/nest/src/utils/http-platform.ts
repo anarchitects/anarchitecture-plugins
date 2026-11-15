@@ -31,4 +31,8 @@ export function isHttpPlatform(value: unknown): value is HttpPlatform {
 }
 
 /** Exact audited runtime set; rebaseline separately from adding a selection. */
-export const httpRuntimeVersion = '12.3.0';
+export const httpRuntimeVersion = '12.5.0';
+export const httpRuntimeVersions = ['12.3.0', httpRuntimeVersion] as const;
+export type HttpRuntimeVersion = (typeof httpRuntimeVersions)[number];
+export const httpRuntimeRange = httpRuntimeVersions.join(' || ');
+export const httpSchematicVersion = '12.0.13';

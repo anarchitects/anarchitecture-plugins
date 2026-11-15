@@ -12,6 +12,7 @@ import {
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 import { consumerEnvironment } from './consumer-environment';
+import { registryRecords } from './consumer-locks';
 import { fixtures } from './fixtures';
 import { snapshotFiles, usePackedPlugin, write } from './packed-plugin';
 import { writePublishableLibrary } from './published-build-consumer';
@@ -84,27 +85,6 @@ function authoredFiles(root: string) {
   }
   visit('');
   return result;
-}
-
-/** Yarn lock blocks have stable registry metadata, independent of local tarballs.
- * Checksums may be added when another OS fetches an optional native package.
- */
-function registryRecords(lock: string) {
-  const records = new Map<string, string>();
-  for (const block of lock.split('\n\n')) {
-    const resolution = block.match(
-      /^ {2}resolution: "([^"]+@npm:[^"]+)"$/m
-    )?.[1];
-    if (resolution)
-      records.set(
-        resolution,
-        block
-          .slice(block.indexOf('\n') + 1)
-          .replace(/^ {2}checksum:.*\n?/m, '')
-          .trim()
-      );
-  }
-  return records;
 }
 
 function pack(root: string, destination: string, node: string) {

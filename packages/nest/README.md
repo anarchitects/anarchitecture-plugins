@@ -18,7 +18,7 @@ and task tooling. The runtime contract is **NestJS 12 only**.
 | Node.js                | `^22.22.3` or `^24.15.0` or `>=26.0.0`.                                                                                                                                                                                                          |
 | TypeScript             | The generation runtime requires `>=6.0.0 <7`. Generated TypeScript projects use Nest 12 compiler conventions.                                                                                                                                    |
 | Module systems         | Independent applications and native members support ESM and CommonJS. New Nx-native libraries are TypeScript, ESM, and source-only.                                                                                                              |
-| Package managers       | Workspace registration supports npm, Yarn, Bun, and pnpm. The complete installation/build/test workflows documented here use Yarn 4 with `nodeLinker: node-modules`; equivalent end-to-end support for every manager or Yarn PnP is not claimed. |
+| Package managers       | Workspace registration supports npm, Yarn, Bun, and pnpm. Verified HTTP workflows use Yarn 4 with `nodeLinker: node-modules` and npm 11.19.1; equivalent end-to-end support for every manager or Yarn PnP is not claimed. |
 
 The supported ranges are broader than the verified combinations. Clean installed
 publishable-library consumers are checked with Node 22.22.3 / Nx 23.2.0,
@@ -61,7 +61,7 @@ tags such as `latest`, prereleases, and unresolved local protocols are not
 accepted as version guarantees.
 
 `@nestjs/platform-node` has a narrower initial rule: declarations must select
-exactly 12.3.0. The general Nest 11/12 library-peer allowance below does not apply
+an audited version: 12.3.0 or 12.5.0. The general Nest 11/12 library-peer allowance below does not apply
 to this adapter.
 
 Published libraries may retain bounded Nest 11/12 runtime peer ranges such as
@@ -224,21 +224,21 @@ yarn nx g @anarchitects/nest:application fast-api --directory=packages/fast-api 
 
 Explicit `node` selects `NodeAdapter` in both the application and generated HTTP
 tests. It pins `@nestjs/common`, `@nestjs/core`, `@nestjs/testing` and
-`@nestjs/platform-node` to **12.3.0**. ESM/CJS, Observe and native Nest tooling
+`@nestjs/platform-node` and retained `@nestjs/platform-express` to **12.5.0**. ESM/CJS, Observe and native Nest tooling
 are preserved. Express dependencies remain available for generated tooling;
 Fastify is not required. Without platform selection, native Nest generation
 continues to use its implicit Express adapter.
 
 Explicit `express` constructs `ExpressAdapter` and uses `NestExpressApplication`
 in both the bootstrap and HTTP test. New Express applications pin common/core/testing
-and platform-express to **12.3.0**, keep native Express typings, and add no Node or
+and platform-express to **12.5.0**, keep native Express typings, and add no Node or
 Fastify adapter dependency. ESM/CJS and native Observe options are supported.
 
 Explicit `fastify` constructs `FastifyAdapter` and uses `NestFastifyApplication`.
 Its generated HTTP test awaits Fastify readiness after application initialization
 before running native Supertest assertions. New Fastify applications pin
 common/core/testing/platform-fastify and the retained platform-express dependency
-to **12.3.0**. Express typings stay available for native tooling. The Nest adapter
+to **12.5.0**. Express typings stay available for native tooling. The Nest adapter
 supplies its Fastify server dependency; no direct `fastify`, multipart, Swagger,
 static/view or schema-library dependency is added. ESM/CJS and native Observe
 instrumentation are supported. Optional platform features need their own explicit
@@ -246,7 +246,7 @@ configuration and validation.
 
 The selection is limited to new TypeScript HTTP applications and the verified
 sub-app path below. It does not select an adapter for libraries, resources or
-non-HTTP transports. Explicit selection requires TypeScript. Independent
+non-HTTP transports. Explicit selection requires the full TypeScript template; `--minimal` and JavaScript are not supported with an explicit platform. Independent
 applications and native sub-apps accept Node, Express or Fastify.
 Identical output can be generated again; conflicting files are rejected without
 overwriting the existing application. This command is not an adapter migration.
@@ -302,14 +302,15 @@ yarn nx g @anarchitects/nest:sub-app fast-worker --project=api --platform=fastif
 ```
 
 The selected TypeScript owner must already declare and resolve common/core/testing
-**12.3.0**, plus **12.3.0** for any declared Node, Express or Fastify
-adapter, and resolve a stable Nest 12 CLI. Compatible declaration ranges are
+one coherent audited set: **12.3.0** or **12.5.0**, including any declared Node,
+Express or Fastify adapter, and resolve a stable Nest 12 CLI. Versions from the
+two sets cannot be mixed. Existing 12.3.0 owners remain valid without an upgrade. Compatible declaration ranges are
 preserved; checks use each owner's installed packages, so a newer root install
 cannot hide an older nested host. Missing, incompatible or unverified hosts fail
 before mutation. Upgrade/install an older owner explicitly before retrying.
 `--skipInstall` does not bypass this check.
 
-The generator adds the selected adapter dependency at **12.3.0** if it is missing:
+The generator adds the selected adapter dependency at the owner's audited version if it is missing:
 `@nestjs/platform-node`, `@nestjs/platform-express` or `@nestjs/platform-fastify`.
 It selects that adapter only in the new member's bootstrap and HTTP test. Existing compatible adapter ranges
 are retained; selecting Express or Fastify does not add a Node dependency.
@@ -745,7 +746,10 @@ yarn nx run-many -p api -t compile,test,lint
 Generated ESM applications retain Nest's Vitest conventions; CJS uses Jest.
 When generating native members, the plugin completes the native Rspack setup
 for hoisted dependencies, configures Nest-compatible Vitest/SWC integration for
-ESM owners, and expands the unchanged default Oxlint scope to include members.
+ESM owners, and expands the native default Oxlint scope to include members, including custom
+member roots. When native conversion adds the forked TypeScript checker, the
+plugin supplies its missing Webpack peer while preserving existing declarations;
+Nest still selects Rspack as the compiler.
 Custom configurations remain yours to maintain. Tests/lint normally run on the
 owner (`api:test`, `api:lint`), while member builds/servers use member Nx names.
 
@@ -786,6 +790,15 @@ bypass these diagnostics.
 | A gateway/resolver cannot resolve its framework package | Install and configure the chosen transport in the owning package; scaffolding does not imply transport setup.                                                                                                                      |
 | Native member is addressed incorrectly                  | `api-internal` is an Nx name; `internal` is a Nest member key used with `--project=api --nestProject=internal`. Independent `users` needs only `--project=users`.                                                                  |
 
+### Verified HTTP consumer combinations
+
+The [packed HTTP matrix](../../docs/guides/nest-http-consumer-matrix.md) records
+exact Node/Nx/TypeScript/package-manager combinations, resolved dependency versions
+and exclusions. All three adapters have real independent/member HTTP coverage.
+Native CommonJS Jest tests require Node 24.9 or newer to load Nest's ESM packages;
+Node 22 CommonJS build/start/lint is covered, but its generated Jest workflow is
+explicitly unsupported. ESM Vitest is covered on Node 22, 24 and 26.
+
 ### CommonJS Jest with Yarn hoisting
 
 Native CJS scripts refer to local `node_modules/jest/bin/jest.js`. With default
@@ -801,8 +814,9 @@ Alternatively merge `"installConfig": { "hoistingLimits": "workspaces" }` into
 that application's `package.json` and run `yarn install`. Native scripts then
 resolve their local Jest installation. Neither policy is imposed on other packages.
 
-For a generated CJS sub-app, Oxlint may report the native `bootstrap();` call as
-an unhandled promise. Use `void bootstrap();` or attach your startup error handler.
+Native schematics 12.0.13 now emits `void bootstrap();` for CJS sub-apps, so
+fresh members pass the native floating-promise rule. Older generated code may
+still need `void bootstrap();` or an explicit startup error handler.
 For a custom Vitest config that cannot be updated automatically, configure SWC
 and include the native members in your test scope explicitly.
 

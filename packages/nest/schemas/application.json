@@ -105,6 +105,11 @@
       "default": false,
       "description": "Preconfigure the application with @nestjs/observe."
     },
+    "minimal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Generate an application whose code is one file, src/main.ts."
+    },
     "skipInstall": {
       "type": "boolean",
       "default": false,

@@ -183,3 +183,46 @@ describe.each(['express', 'fastify'] as const)(
     );
   }
 );
+
+it.each(['12.3.0', '12.5.0'] as const)(
+  'selects the installed %s owner baseline without upgrading declarations',
+  (version) => {
+    const tree = host();
+    const manifest = readJson(tree, 'services/api/package.json');
+    manifest.dependencies['@nestjs/core'] = version;
+    manifest.dependencies['@nestjs/platform-express'] = version;
+    manifest.devDependencies['@nestjs/testing'] = version;
+    writeJson(tree, 'services/api/package.json', manifest);
+    const before = tree.listChanges();
+    expect(
+      validateHttpMemberOwner(
+        tree,
+        'services/api',
+        (path, name) => ({
+          path,
+          version: name === '@nestjs/cli' ? '12.0.13' : version,
+        }),
+        'fastify'
+      )
+    ).toBe(version);
+    expect(tree.listChanges()).toEqual(before);
+    expect(() =>
+      validateHttpMemberOwner(
+        tree,
+        'services/api',
+        (path, name) => ({
+          path,
+          version:
+            name === '@nestjs/cli'
+              ? '12.0.13'
+              : name === '@nestjs/core'
+              ? version
+              : version === '12.3.0'
+              ? '12.5.0'
+              : '12.3.0',
+        }),
+        'fastify'
+      )
+    ).toThrow('instead of');
+  }
+);

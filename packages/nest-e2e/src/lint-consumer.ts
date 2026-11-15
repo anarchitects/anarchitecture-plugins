@@ -65,18 +65,8 @@ export function assertLintConsumer(
   expect(existsSync(join(owner, 'src'))).toBe(false);
   expect(existsSync(join(owner, 'test'))).toBe(false);
   expect(readFileSync(join(owner, '.oxlintrc.json'), 'utf8')).toBe(config);
-  if (type === 'cjs') {
-    // The pinned CJS sub-app template has a real unhandled bootstrap promise.
-    // Detect it before applying the documented, consumer-owned source repair.
-    expect(() => yarn(lint)).toThrow(/no-floating-promises/);
-    const main = join(owner, 'services/worker/src/main.ts');
-    const source = readFileSync(main, 'utf8');
-    expect(source).toMatch(/^bootstrap\(\);$/m);
-    writeFileSync(
-      main,
-      source.replace(/^bootstrap\(\);$/m, 'void bootstrap();')
-    );
-  }
+  // The audited 12.0.13 native CJS member awaits/discards bootstrap explicitly.
+  yarn(lint);
   for (const path of [
     'services/api/src/app.service.ts',
     'services/worker/src/worker.controller.spec.ts',
