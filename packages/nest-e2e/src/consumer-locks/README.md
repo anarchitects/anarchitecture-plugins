@@ -55,3 +55,21 @@ Never change installed metadata, use force installs, or disable peer checks.
 The older library fixture received only an additional exact schematics 12.0.13
 descriptor for its already-pinned registry record. Its existing resolutions,
 including Nest 12.1.2 and CLI 12.0.0 controls, are unchanged.
+
+## Optional HTTP capability fixture (#613)
+
+`http-capabilities-yarn.lock` extends the HTTP registry union with the optional
+packages in `http-capability-consumer.ts`, resolved on 2026-11-15. The baseline
+HTTP lock is unchanged. It is a complete seed for clean installs, including
+Swagger's and Fastify's optional peers; Node/Express consumers add only Swagger
+and EJS. The same strict record comparison and immutable-install checks apply.
+
+To refresh, seed a disposable Yarn 4.17.0 workspace with `http-yarn.lock`, add
+the exact optional packages and their declared Nest/reflect-metadata/RxJS peers,
+and run an ordinary install with scripts disabled. Union its registry blocks
+with the baseline by resolution, combining descriptor keys and preserving
+metadata/checksums; reject conflicting records or duplicate descriptors. Review
+the delta, then run all three `http-capability-*.spec.ts` inferred Nx tasks.
+Update `docs/audits/nest-http-capabilities-2026-11-15.json` with the verified
+versions and hashes. This fixture never changes consumer manifests, registry
+metadata or generator defaults to force an incompatible integration to install.
