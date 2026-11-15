@@ -143,27 +143,31 @@ export async function assertHttp(
     expect(await response.text()).toBe(expected);
   } finally {
     await stop(child);
-    // A successful shutdown must release the actual listening port.
-    const released = Date.now() + 5_000;
-    for (;;) {
-      const probe = createServer();
-      try {
-        await new Promise<void>((accept, reject) => {
-          probe.once('error', reject);
-          probe.listen(Number(port), '127.0.0.1', () =>
-            probe.close((error) => (error ? reject(error) : accept()))
-          );
-        });
-        break;
-      } catch (error) {
-        if (
-          (error as NodeJS.ErrnoException).code !== 'EADDRINUSE' ||
-          Date.now() >= released
-        ) {
-          throw error;
-        }
-        await new Promise((done) => setTimeout(done, 100));
+    await assertPortReleased(port);
+  }
+}
+
+// A successful shutdown must release the actual listening port.
+async function assertPortReleased(port: string) {
+  const released = Date.now() + 5_000;
+  for (;;) {
+    const probe = createServer();
+    try {
+      await new Promise<void>((accept, reject) => {
+        probe.once('error', reject);
+        probe.listen(Number(port), '127.0.0.1', () =>
+          probe.close((error) => (error ? reject(error) : accept()))
+        );
+      });
+      return;
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code !== 'EADDRINUSE' ||
+        Date.now() >= released
+      ) {
+        throw error;
       }
+      await new Promise((done) => setTimeout(done, 100));
     }
   }
 }
