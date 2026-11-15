@@ -7,7 +7,10 @@ Reviewed on 2026-11-15 against Plugins
 `3899558482b615aa46dd5004eae440d62cd2e222`.
 
 The original audit below records that baseline. The final section records the
-subsequent independent-application implementation under #609.
+subsequent independent-application and sub-app implementations under #609/#610.
+The [three-adapter generation contract](nest-three-adapter-generation-contract.md)
+extends this evidence under #620, distinguishing this baseline from newer
+released candidates without changing the completed Node slice.
 
 **Explicit NodeAdapter generation is feasible with the released API, but is not
 implemented or certified by this audit.** The implementation must change the

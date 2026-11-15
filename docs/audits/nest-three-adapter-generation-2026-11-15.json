@@ -1,0 +1,830 @@
+{
+  "date": "2026-11-15",
+  "pluginsRevision": "0388420",
+  "metaRevision": "4f0339d86f0ebfa073173ad307cb67c8d6042bdd",
+  "runtime": {
+    "node": "v24.22.3",
+    "os": "darwin",
+    "architecture": "arm64",
+    "nx": "24.0.1"
+  },
+  "fixtures": {
+    "baseline": {
+      "manifest": {
+        "name": "nest-620-baseline",
+        "private": true,
+        "dependencies": {
+          "@nestjs/common": "12.3.0",
+          "@nestjs/core": "12.3.0",
+          "@nestjs/testing": "12.3.0",
+          "@nestjs/platform-node": "12.3.0",
+          "@nestjs/platform-express": "12.3.0",
+          "@nestjs/platform-fastify": "12.3.0",
+          "@nestjs/schematics": "12.0.6",
+          "@nestjs/cli": "12.0.0",
+          "reflect-metadata": "0.2.2",
+          "rxjs": "7.8.2",
+          "typescript": "6.0.3",
+          "supertest": "7.1.4",
+          "@types/supertest": "6.0.3",
+          "@types/node": "24.10.1",
+          "prettier": "3.6.2"
+        }
+      },
+      "lockfileSha256": "2502bda4db79e250b94b1467ef48a9475f1df19a4686237fe9ce3c0b36141369",
+      "schematicEngine": {
+        "core": "22.2.0",
+        "schematics": "22.2.0"
+      },
+      "optionalFastifyPeersInstalled": []
+    },
+    "current": {
+      "manifest": {
+        "name": "nest-620-current",
+        "private": true,
+        "dependencies": {
+          "@nestjs/cli": "12.0.13",
+          "@nestjs/common": "12.5.0",
+          "@nestjs/core": "12.5.0",
+          "@nestjs/platform-express": "12.5.0",
+          "@nestjs/platform-fastify": "12.5.0",
+          "@nestjs/platform-node": "12.5.0",
+          "@nestjs/schematics": "12.0.13",
+          "@nestjs/swagger": "12.1.2",
+          "@nestjs/testing": "12.5.0",
+          "@types/node": "24.10.1",
+          "@types/supertest": "6.0.3",
+          "prettier": "3.6.2",
+          "reflect-metadata": "0.2.2",
+          "rxjs": "7.8.2",
+          "supertest": "7.1.4",
+          "typescript": "6.0.3"
+        }
+      },
+      "lockfileSha256": "f7e85e6819ba9710b56fecf4318d39fa86f56b3fa8e15fdd0b274ba85599dfe2",
+      "schematicEngine": {
+        "core": "22.2.6",
+        "schematics": "22.2.6"
+      },
+      "optionalFastifyPeersInstalled": []
+    }
+  },
+  "results": {
+    "baseline": {
+      "versions": {
+        "common": "12.3.0",
+        "core": "12.3.0",
+        "testing": "12.3.0",
+        "platform-node": "12.3.0",
+        "platform-express": "12.3.0",
+        "platform-fastify": "12.3.0",
+        "schematics": "12.0.6",
+        "cli": "12.0.0"
+      },
+      "generation": [
+        {
+          "type": "esm",
+          "observe": false,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "8932eb3eff13f7326c2cb7ff9a4d1b4f22b3d93bad3f3d04ff23d71e9eedddb4",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 32,
+          "bootstrapSha256": "d3b9a9b2ae0c11eb57d52723c14f3d2a503b041073603f809ca39ba732008da0",
+          "httpTestSha256": "2ad3ddfdb4c558ad85a8816a7fe618138a9c05aa8743c6e7a83c277a83bab82f",
+          "memberBootstrapSha256": "c184147d22e7303247f4c8c98cf6d1a04f0a98e0f7a1c95af55157106f8f234b"
+        },
+        {
+          "type": "esm",
+          "observe": true,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "8932eb3eff13f7326c2cb7ff9a4d1b4f22b3d93bad3f3d04ff23d71e9eedddb4",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 32,
+          "bootstrapSha256": "1c987e4d6e77a8cbb6c5ddb817888d5156059f7fbdad83f3b746b5d915e771bf",
+          "httpTestSha256": "2ad3ddfdb4c558ad85a8816a7fe618138a9c05aa8743c6e7a83c277a83bab82f",
+          "memberBootstrapSha256": "c184147d22e7303247f4c8c98cf6d1a04f0a98e0f7a1c95af55157106f8f234b"
+        },
+        {
+          "type": "cjs",
+          "observe": false,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "11e120fc715351345736e1cedc46fd51d177637b2e433e0e33d7cbbc2c413e95",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 32,
+          "bootstrapSha256": "35e55b10447d8968ce8242f1906d2546c320b35d23fcba9c3be9e4a91709d906",
+          "httpTestSha256": "c875e581ca1c51e3c2c99108c599d6f015c6ab9320aed9a23eb7bbcd3f5c8969",
+          "memberBootstrapSha256": "3f19365d4f3265a3ec5d40c2aa3bffa91bd0ca3458554db02af3b7c60bfe9ef6"
+        },
+        {
+          "type": "cjs",
+          "observe": true,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "11e120fc715351345736e1cedc46fd51d177637b2e433e0e33d7cbbc2c413e95",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 32,
+          "bootstrapSha256": "e5e0c6cab9d881df273ce76d32115c9b26dd4437e0c1f31556dc4d40eeddd38e",
+          "httpTestSha256": "c875e581ca1c51e3c2c99108c599d6f015c6ab9320aed9a23eb7bbcd3f5c8969",
+          "memberBootstrapSha256": "3f19365d4f3265a3ec5d40c2aa3bffa91bd0ca3458554db02af3b7c60bfe9ef6"
+        }
+      ],
+      "runtime": {
+        "cjs": [
+          {
+            "platform": "node",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "express",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "fastify",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          }
+        ],
+        "mjs": [
+          {
+            "platform": "node",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "express",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "fastify",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          }
+        ]
+      }
+    },
+    "current": {
+      "versions": {
+        "common": "12.5.0",
+        "core": "12.5.0",
+        "testing": "12.5.0",
+        "platform-node": "12.5.0",
+        "platform-express": "12.5.0",
+        "platform-fastify": "12.5.0",
+        "schematics": "12.0.13",
+        "cli": "12.0.13"
+      },
+      "generation": [
+        {
+          "type": "esm",
+          "observe": false,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "8932eb3eff13f7326c2cb7ff9a4d1b4f22b3d93bad3f3d04ff23d71e9eedddb4",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 35,
+          "bootstrapSha256": "d3b9a9b2ae0c11eb57d52723c14f3d2a503b041073603f809ca39ba732008da0",
+          "httpTestSha256": "2ad3ddfdb4c558ad85a8816a7fe618138a9c05aa8743c6e7a83c277a83bab82f",
+          "memberBootstrapSha256": "c184147d22e7303247f4c8c98cf6d1a04f0a98e0f7a1c95af55157106f8f234b"
+        },
+        {
+          "type": "esm",
+          "observe": true,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "8932eb3eff13f7326c2cb7ff9a4d1b4f22b3d93bad3f3d04ff23d71e9eedddb4",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 35,
+          "bootstrapSha256": "1c987e4d6e77a8cbb6c5ddb817888d5156059f7fbdad83f3b746b5d915e771bf",
+          "httpTestSha256": "2ad3ddfdb4c558ad85a8816a7fe618138a9c05aa8743c6e7a83c277a83bab82f",
+          "memberBootstrapSha256": "c184147d22e7303247f4c8c98cf6d1a04f0a98e0f7a1c95af55157106f8f234b"
+        },
+        {
+          "type": "cjs",
+          "observe": false,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "11e120fc715351345736e1cedc46fd51d177637b2e433e0e33d7cbbc2c413e95",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 35,
+          "bootstrapSha256": "35e55b10447d8968ce8242f1906d2546c320b35d23fcba9c3be9e4a91709d906",
+          "httpTestSha256": "c875e581ca1c51e3c2c99108c599d6f015c6ab9320aed9a23eb7bbcd3f5c8969",
+          "memberBootstrapSha256": "ce49cb1298e9656b6e95a7a758977f5b8eebcec167c10d2c8d5f0bc38faa2127"
+        },
+        {
+          "type": "cjs",
+          "observe": true,
+          "memberTsconfig": {
+            "extends": "../../tsconfig.json",
+            "compilerOptions": {
+              "declaration": false,
+              "rootDir": "../..",
+              "outDir": "../../dist/apps/worker"
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+          },
+          "sharedResourceSha256": "11e120fc715351345736e1cedc46fd51d177637b2e433e0e33d7cbbc2c413e95",
+          "resourceFiles": 8,
+          "nativeOwnerPreservation": "pass",
+          "files": 35,
+          "bootstrapSha256": "e5e0c6cab9d881df273ce76d32115c9b26dd4437e0c1f31556dc4d40eeddd38e",
+          "httpTestSha256": "c875e581ca1c51e3c2c99108c599d6f015c6ab9320aed9a23eb7bbcd3f5c8969",
+          "memberBootstrapSha256": "ce49cb1298e9656b6e95a7a758977f5b8eebcec167c10d2c8d5f0bc38faa2127"
+        }
+      ],
+      "runtime": {
+        "cjs": [
+          {
+            "platform": "node",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "express",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "fastify",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          }
+        ],
+        "mjs": [
+          {
+            "platform": "node",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "express",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          },
+          {
+            "platform": "fastify",
+            "factoryHttp": "pass",
+            "testingHttp": "pass",
+            "schemaValidationAndSerialization": "pass",
+            "shutdown": "pass"
+          }
+        ]
+      }
+    }
+  },
+  "registry": [
+    {
+      "name": "@nestjs/common",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:13:16.062Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/common/12.5.0",
+      "dependencies": {
+        "uid": "2.0.2",
+        "tslib": "2.9.1",
+        "iterare": "1.2.1",
+        "load-esm": "1.0.3",
+        "file-type": "22.3.0",
+        "@standard-schema/spec": "1.1.0"
+      },
+      "peerDependencies": {
+        "rxjs": "^7.1.0",
+        "class-validator": ">=0.13.2",
+        "reflect-metadata": "^0.1.12 || ^0.2.0",
+        "class-transformer": ">=0.4.1"
+      },
+      "peerDependenciesMeta": {
+        "class-validator": {
+          "optional": true
+        },
+        "class-transformer": {
+          "optional": true
+        }
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/common/-/common-12.5.0.tgz",
+      "integrity": "sha512-3pid0u/4ILXS7fvliSZp5lvPxAqGVTgbQQ06qv6zZdyqaofhpTeQbWjZjdpbsBhNm5BhEaMh38JKBE2p0hoCJQ=="
+    },
+    {
+      "name": "@nestjs/core",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:13:48.145Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/core/12.5.0",
+      "engines": {
+        "node": ">= 20"
+      },
+      "dependencies": {
+        "uid": "2.0.2",
+        "tslib": "2.9.1",
+        "iterare": "1.2.1",
+        "path-to-regexp": "8.4.2",
+        "fast-safe-stringify": "2.1.1"
+      },
+      "peerDependencies": {
+        "rxjs": "^7.1.0",
+        "@nestjs/common": "^12.0.0",
+        "reflect-metadata": "^0.1.12 || ^0.2.0",
+        "@nestjs/websockets": "^12.0.0",
+        "@nestjs/microservices": "^12.0.0",
+        "@nestjs/platform-express": "^12.0.0"
+      },
+      "peerDependenciesMeta": {
+        "@nestjs/websockets": {
+          "optional": true
+        },
+        "@nestjs/microservices": {
+          "optional": true
+        },
+        "@nestjs/platform-express": {
+          "optional": true
+        }
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/core/-/core-12.5.0.tgz",
+      "integrity": "sha512-o6auZGZNwIhc0NT7YDxK3j9EKt3k651moerLD5NSsU0EY2fqTRO8PBBJXIprVHVLnzYNWwFfgsUUzDFSPo0vAg=="
+    },
+    {
+      "name": "@nestjs/testing",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:14:15.811Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/testing/12.5.0",
+      "dependencies": {
+        "tslib": "2.9.1"
+      },
+      "peerDependencies": {
+        "@nestjs/core": "^12.0.0",
+        "@nestjs/common": "^12.0.0",
+        "@nestjs/microservices": "^12.0.0",
+        "@nestjs/platform-express": "^12.0.0"
+      },
+      "peerDependenciesMeta": {
+        "@nestjs/microservices": {
+          "optional": true
+        },
+        "@nestjs/platform-express": {
+          "optional": true
+        }
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/testing/-/testing-12.5.0.tgz",
+      "integrity": "sha512-4zppUy+q+dmqdQBm/Q9KyTDeq0hsa/we6E0VtSaT1Dnewo/FkbcczCrrtivuIWIuZ7KNJ0U8UGYCgozFZJ2+zQ=="
+    },
+    {
+      "name": "@nestjs/platform-node",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:13:01.792Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/platform-node/12.5.0",
+      "dependencies": {
+        "qs": "6.17.1",
+        "cors": "2.8.6",
+        "send": "1.2.1",
+        "tslib": "2.9.1",
+        "cookie": "0.7.2",
+        "multer": "2.5.0",
+        "type-is": "2.1.0",
+        "encodeurl": "2.0.1",
+        "mime-types": "3.0.2",
+        "find-my-way": "9.10.0",
+        "on-finished": "2.4.2",
+        "content-type": "2.1.0",
+        "serve-static": "2.2.1",
+        "path-to-regexp": "8.4.2",
+        "cookie-signature": "1.2.2",
+        "fast-querystring": "1.1.2",
+        "light-my-request": "6.8.0",
+        "secure-json-parse": "4.1.1",
+        "@fastify/proxy-addr": "5.1.2"
+      },
+      "peerDependencies": {
+        "rxjs": "^7.1.0",
+        "@nestjs/core": "^12.0.0",
+        "@nestjs/common": "^12.0.0"
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/platform-node/-/platform-node-12.5.0.tgz",
+      "integrity": "sha512-hlsEGk7OMAYmp7Eiv5cKbCajNpcsGZo7M+MdWrgdnDdz+QDUu6jfsz6t1234W43Mgi7Aqc7mSdh2suJO+lf+CQ=="
+    },
+    {
+      "name": "@nestjs/platform-express",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:13:50.593Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/platform-express/12.5.0",
+      "dependencies": {
+        "cors": "2.8.6",
+        "tslib": "2.9.1",
+        "multer": "2.5.0",
+        "express": "5.3.0",
+        "path-to-regexp": "8.4.2"
+      },
+      "peerDependencies": {
+        "rxjs": "^7.1.0",
+        "@nestjs/core": "^12.0.0",
+        "@nestjs/common": "^12.0.0"
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/platform-express/-/platform-express-12.5.0.tgz",
+      "integrity": "sha512-wTPC2Eixk5Y0acgZuepl55pwoVwaJvMQhLm0AoerkRnZlYBox27/XDpGEiNZJRWPOUxSEqWEWuGWrFym1V0MZw=="
+    },
+    {
+      "name": "@nestjs/platform-fastify",
+      "version": "12.5.0",
+      "published": "2026-11-12T13:13:43.854Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/platform-fastify/12.5.0",
+      "dependencies": {
+        "tslib": "2.9.1",
+        "fastify": "5.12.8",
+        "find-my-way": "9.10.0",
+        "@fastify/cors": "11.4.1",
+        "path-to-regexp": "8.4.2",
+        "@fastify/middie": "9.3.6",
+        "fast-querystring": "1.1.2",
+        "light-my-request": "6.8.0",
+        "@fastify/formbody": "9.0.1"
+      },
+      "peerDependencies": {
+        "rxjs": "^7.1.0",
+        "@nestjs/core": "^12.0.0",
+        "@fastify/view": "^10.0.0 || ^11.0.0 || ^12.0.0",
+        "@nestjs/common": "^12.0.0",
+        "@fastify/static": "^10.1.10",
+        "@fastify/multipart": "^10.1.0"
+      },
+      "peerDependenciesMeta": {
+        "@fastify/view": {
+          "optional": true
+        },
+        "@fastify/static": {
+          "optional": true
+        },
+        "@fastify/multipart": {
+          "optional": true
+        }
+      },
+      "gitHead": "3a1c9ac570a822ce92e2b7f35b79b5391ca393e3",
+      "tarball": "https://registry.npmjs.org/@nestjs/platform-fastify/-/platform-fastify-12.5.0.tgz",
+      "integrity": "sha512-u0R9z1FbgrSjoQTsufHrcZ5As2XDhjmQ2eejpWodYEPZXZAahT5sEoGPd03AusEvlX5Bh89hiavLWxeglpR6mg=="
+    },
+    {
+      "name": "@nestjs/schematics",
+      "version": "12.0.13",
+      "published": "2026-11-06T10:21:07.032Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/schematics/12.0.13",
+      "engines": {
+        "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+      },
+      "dependencies": {
+        "pluralize": "8.0.0",
+        "comment-json": "5.0.0",
+        "jsonc-parser": "3.3.1",
+        "@angular-devkit/core": "22.2.6",
+        "@angular-devkit/schematics": "22.2.6"
+      },
+      "peerDependencies": {
+        "prettier": "^3.0.0",
+        "typescript": ">=6.0.0"
+      },
+      "peerDependenciesMeta": {
+        "prettier": {
+          "optional": true
+        }
+      },
+      "gitHead": "b15cfffef005d51443c8b40b7913bc883084b7eb",
+      "tarball": "https://registry.npmjs.org/@nestjs/schematics/-/schematics-12.0.13.tgz",
+      "integrity": "sha512-Z9Xtp67fO5NuU7FgB/u44peK3XQnrL4qLxkf1dp6fqUk9l3ATBQneRNrWaC8e+HaimX8olxq2mH2ZXhhfalDhQ=="
+    },
+    {
+      "name": "@nestjs/cli",
+      "version": "12.0.13",
+      "published": "2026-11-13T13:12:57.949Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/cli/12.0.13",
+      "engines": {
+        "node": ">= 20.11"
+      },
+      "dependencies": {
+        "ora": "9.4.1",
+        "ansis": "4.5.0",
+        "chokidar": "5.0.0",
+        "commander": "15.0.0",
+        "minimatch": "11.0.5",
+        "cli-table3": "0.6.5",
+        "node-emoji": "2.2.0",
+        "typescript": "~6.0.2",
+        "jsonc-parser": "3.3.1",
+        "tsconfig-paths": "4.2.0",
+        "@inquirer/prompts": "8.7.5",
+        "@nestjs/schematics": "^12.0.13",
+        "@angular-devkit/core": "22.2.6",
+        "@angular-devkit/schematics": "22.2.6",
+        "@angular-devkit/schematics-cli": "22.2.6"
+      },
+      "peerDependencies": {
+        "webpack": "^5.105.4",
+        "@swc/cli": "^0.8.0",
+        "@swc/core": "^1.15.18",
+        "ts-loader": "^9.5.4",
+        "@rspack/core": "^1.7.7 || ^2.1.10",
+        "webpack-node-externals": "^3.0.0",
+        "tsconfig-paths-webpack-plugin": "^4.2.0",
+        "fork-ts-checker-webpack-plugin": "^9.1.0"
+      },
+      "peerDependenciesMeta": {
+        "webpack": {
+          "optional": true
+        },
+        "@swc/cli": {
+          "optional": true
+        },
+        "@swc/core": {
+          "optional": true
+        },
+        "ts-loader": {
+          "optional": true
+        },
+        "@rspack/core": {
+          "optional": true
+        },
+        "webpack-node-externals": {
+          "optional": true
+        },
+        "tsconfig-paths-webpack-plugin": {
+          "optional": true
+        },
+        "fork-ts-checker-webpack-plugin": {
+          "optional": true
+        }
+      },
+      "gitHead": "827f2a7574a73a6669fb2e01f30b5b78c84e4742",
+      "tarball": "https://registry.npmjs.org/@nestjs/cli/-/cli-12.0.13.tgz",
+      "integrity": "sha512-dfb9zbM4VRUQnkjt0IyhYWxiScDq/4j8m6Y5f6PKvg6LK47XbzBeWKCBdqVFQV85uAHdJiMa8nyemAu0xvujRQ=="
+    },
+    {
+      "name": "@nestjs/swagger",
+      "version": "12.1.2",
+      "published": "2026-11-13T13:13:17.349Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/swagger/12.1.2",
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "dependencies": {
+        "js-yaml": "5.5.0",
+        "es-toolkit": "1.53.1",
+        "path-to-regexp": "8.4.2",
+        "swagger-ui-dist": "5.34.1",
+        "@microsoft/tsdoc": "0.17.1",
+        "@nestjs/mapped-types": "12.0.1",
+        "@standard-schema/spec": "1.1.0"
+      },
+      "peerDependencies": {
+        "typescript": "^5.5.0 || ^6.0.0",
+        "@nestjs/core": "^12.0.0",
+        "@nestjs/common": "^12.0.0",
+        "@fastify/static": "^8.0.0 || ^9.0.0 || ^10.0.0",
+        "class-validator": "*",
+        "reflect-metadata": "^0.1.12 || ^0.2.0",
+        "class-transformer": "*"
+      },
+      "peerDependenciesMeta": {
+        "typescript": {
+          "optional": true
+        },
+        "@fastify/static": {
+          "optional": true
+        },
+        "class-validator": {
+          "optional": true
+        },
+        "class-transformer": {
+          "optional": true
+        }
+      },
+      "gitHead": "49ace31c3ea82d44287e8749f8eeafadc91243be",
+      "tarball": "https://registry.npmjs.org/@nestjs/swagger/-/swagger-12.1.2.tgz",
+      "integrity": "sha512-MHQcw9eoO6crcOuBsdUXB/o4yV4OORtU/UNXELAc6WpQ6lxxwgl/CoVCILnRGWeDOxk4/E2s6Ftqu7xvb15X+A=="
+    },
+    {
+      "name": "@nestjs/observe",
+      "version": "0.3.26",
+      "published": "2026-11-12T13:15:41.826Z",
+      "metadataUrl": "https://registry.npmjs.org/@nestjs/observe/0.3.26",
+      "engines": {
+        "node": ">= 20.19.0"
+      },
+      "dependencies": {
+        "@jridgewell/trace-mapping": "0.3.31"
+      },
+      "peerDependencies": {
+        "bull": "^3.3.0 || ^4.0.0",
+        "rxjs": "^7.0.0",
+        "bullmq": "^5.0.0 || ^6.0.0",
+        "@nestjs/bull": "^11.0.0 || ^12.0.0",
+        "@nestjs/core": "^11.0.0 || ^12.0.0",
+        "@nestjs/bullmq": "^11.0.0 || ^12.0.0",
+        "@nestjs/common": "^11.0.0 || ^12.0.0",
+        "@nestjs/graphql": "^13.0.0 || ^14.0.0",
+        "@nestjs/schedule": "^4.0.0 || ^5.0.0 || ^6.0.0 || ^12.0.0",
+        "reflect-metadata": "^0.1.12 || ^0.2.0",
+        "@nestjs/websockets": "^11.0.0 || ^12.0.0",
+        "@opentelemetry/api": "^1.0.0",
+        "@nestjs/microservices": "^11.0.0 || ^12.0.0",
+        "@taskforcesh/bullmq-pro": "^7.0.0"
+      },
+      "peerDependenciesMeta": {
+        "bull": {
+          "optional": true
+        },
+        "bullmq": {
+          "optional": true
+        },
+        "@nestjs/bull": {
+          "optional": true
+        },
+        "@nestjs/bullmq": {
+          "optional": true
+        },
+        "@nestjs/graphql": {
+          "optional": true
+        },
+        "@nestjs/schedule": {
+          "optional": true
+        },
+        "@nestjs/websockets": {
+          "optional": true
+        },
+        "@opentelemetry/api": {
+          "optional": true
+        },
+        "@nestjs/microservices": {
+          "optional": true
+        },
+        "@taskforcesh/bullmq-pro": {
+          "optional": true
+        }
+      },
+      "gitHead": "908c515ddfcc661b5badc982ac2ffa7b3e1639d3",
+      "tarball": "https://registry.npmjs.org/@nestjs/observe/-/observe-0.3.26.tgz",
+      "integrity": "sha512-6gzgrGAmo7Cq0Y5nnrid1lmb6rSqbsEQ+0P90a8r4Vxj9/VzSy5Ak3posTInkmQqTRtkYwQsOvz7Mj1GEDU0ZQ=="
+    }
+  ],
+  "nxPrecedenceProbe": [
+    {
+      "name": "workspace",
+      "expected": "node",
+      "actual": "node"
+    },
+    {
+      "name": "context",
+      "expected": "express",
+      "actual": "express"
+    },
+    {
+      "name": "explicit",
+      "expected": "fastify",
+      "actual": "fastify"
+    },
+    {
+      "name": "different-owner",
+      "expected": "express",
+      "actual": "express"
+    },
+    {
+      "name": "omitted",
+      "actual": "undefined"
+    },
+    {
+      "name": "invalid-explicit",
+      "actual": "rejected"
+    }
+  ],
+  "validation": {
+    "packageTasks": "4 succeeded; build/lint/typecheck cached; test executed: 588 tests in 35 suites passed",
+    "auditHarness": "ESLint, node --check and both isolated audit runs passed",
+    "scope": "API/native-output audit, not packed-plugin or production certification"
+  },
+  "adrInventory": {
+    "meta": [
+      "adr/0001-cooperative-governance-enrichment.md",
+      "adr/0001-two-core-implementation-styles.md",
+      "adr/0002-modulith-first-ecosystem-position.md",
+      "adr/0003-cross-repo-ai-enablement-model.md",
+      "adr/0004-meta-owns-landscape-contracts.md",
+      "adr/0005-governance-hierarchy-and-policy-inheritance.md",
+      "adr/0006-archi-as-reference-implementation-for-enterprise-architecture-governance.md",
+      "adr/0007-governance-workspace-layering-model.md",
+      "adr/0008-http-platform-independence.md",
+      "adr/0008-modern-angular-22-signal-forms.md",
+      "adr/0009-native-node-candidate-default.md",
+      "adr/0010-nest-first-runtime-and-dependency-policy.md",
+      "adr/0011-nest12-authn-authz-contracts-and-compatibility.md",
+      "adr/0012-canonical-public-api-contract-ownership.md",
+      "adr/0013-package-initial-release-and-nx-versioning.md",
+      "adr/0014-renovate-and-dependabot-dependency-management.md",
+      "adr/0015-nx-task-caching-and-distributed-execution.md",
+      "adr/0016-sdlc-ownership-and-architecture-authority.md",
+      "adr/0017-release-cadence-and-owner-authority.md",
+      "adr/0018-upstream-first-exceptions-and-cutover.md",
+      "adr/0019-repository-projects-and-organization-overview.md",
+      "adr/0020-application-infrastructure-boundary-and-migration.md",
+      "adr/0021-consumer-applications-and-public-upstream-reuse.md",
+      "adr/0022-core-framework-lifecycle-90-day-maintenance.md",
+      "adr/ADR-0001.md"
+    ],
+    "local": [
+      "docs/adr/adr-nest-generation-strategy.md",
+      "docs/adr/adr-package-initial-release-and-nx-versioning.md",
+      "docs/adr/adr-public-package-documentation.md",
+      "docs/adr/modern-angular-22-signal-forms.md",
+      "docs/adr/adr-nest-http-platform-scaffolding.md",
+      "docs/adr/adr-nest12-first-party-defaults-and-compatibility.md"
+    ]
+  }
+}
