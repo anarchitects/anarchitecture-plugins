@@ -8,6 +8,7 @@ import { runNativeSchematic } from './run-native-schematic';
 import { runIsolatedSchematic } from './run-isolated-schematic';
 import { aliasResourceModuleImports } from './alias-resource-module-imports';
 import { transformNodeApplication } from './node-application';
+import { transformNodeMember } from './node-member';
 import {
   applySnapshot,
   diffSnapshots,
@@ -17,7 +18,7 @@ import {
 } from './tree-snapshot';
 
 export interface RunNestSchematicOptions {
-  /** Bounded overlay for independent HTTP applications, not a general rewrite hook. */
+  /** Bounded overlay for HTTP applications/members, not a general rewrite hook. */
   httpPlatform?: 'node';
   schematic: string;
   options: Record<string, unknown>;
@@ -47,12 +48,12 @@ export async function runNestSchematic(
   if (
     options.httpPlatform !== undefined &&
     (options.httpPlatform !== 'node' ||
-      options.schematic !== 'application' ||
-      options.workingDirectory ||
-      options.isolateHostReads)
+      !['application', 'sub-app'].includes(options.schematic) ||
+      (options.schematic === 'application' &&
+        (options.workingDirectory || options.isolateHostReads)))
   ) {
     throw new Error(
-      'The Node HTTP overlay requires an independent application.'
+      'The Node HTTP overlay requires an application or sub-app.'
     );
   }
   const before = snapshotNxTree(tree);
@@ -69,10 +70,20 @@ export async function runNestSchematic(
   const result = options.isolateHostReads
     ? await runIsolatedSchematic(scoped, options)
     : await runNativeSchematic(
-        options.httpPlatform ? new Map() : scoped,
+        options.httpPlatform && options.schematic === 'application'
+          ? new Map()
+          : scoped,
         options
       );
-  if (options.httpPlatform) {
+  if (options.httpPlatform && options.schematic === 'sub-app') {
+    transformNodeMember(
+      scoped,
+      result.after,
+      String(options.options.name),
+      result.schematicVersion
+    );
+  }
+  if (options.httpPlatform && options.schematic === 'application') {
     transformNodeApplication(
       result.after,
       treePath(String(options.options.directory)),

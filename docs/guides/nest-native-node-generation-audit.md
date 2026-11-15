@@ -445,3 +445,64 @@ default user-cache write was denied. No repository cache/CI policy changed. The
 workspace was installed immutably from its lockfile, resolving schematics 12.0.6;
 no dependency manifest/lockfile or installed version metadata was rewritten to
 manufacture compatibility. Existing unrelated lint/module warnings remain.
+
+## Shared-owner sub-app implementation (#610)
+
+Explicit `sub-app --platform=node` (including the `app` alias) now applies the
+bounded bootstrap/HTTP-spec overlay only to the requested new member. Native
+12.0.6 still owns member layout, conversion and templates. The existing owner's
+source and tests retain their bytes through native relocation, including custom
+adapters and Observe setup. Subsequent members without platform selection retain
+native behavior. Libraries and their bounded Nest 11/12 peer contracts are
+unchanged.
+
+The preflight re-enumerated all 25 Meta ADRs at
+`4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local ADRs at Plugins
+`51cef57`. Unchanged records retain the complete review above; changed Meta
+0008–0012 and new 0022, local amendments, this audit, the published-library guide
+and contributor/package guidance were read for this implementation. Accepted
+source-ownership and HTTP decisions require explicit opt-in, native templates,
+platform-neutral inference and preservation of existing consumers. Meta 0022's
+latest-stable-first and time-bounded previous-major maintenance rules do not
+silently upgrade owners or withdraw the existing #585 compatibility evidence;
+no end-of-maintenance date or release/default activation is asserted here.
+
+The selected owner's installed common/core/testing and retained HTTP adapters
+must resolve to the audited 12.3.0 runtime; CLI must resolve to stable v12 and
+satisfy its owner declaration. The CLI has its own release sequence: the clean
+consumer resolves 12.0.13, while the original API audit used 12.0.0. Runtime
+versions are not inferred from the CLI version. Existing manifest declarations
+are preserved and must admit the installed host; bounded library peer ranges
+remain supported. A missing platform-node dependency is added at exactly 12.3.0.
+Conflicts, stale or missing installed evidence and unsupported languages fail
+without caller Tree changes, including with skip-install. Native generation and
+subsequent Nx tooling updates are staged together so late failures also roll back.
+
+Clean installed probes found native 12.0.6 sub-app compiler/start templates
+hard-code `../../tsconfig.json` and `dist/apps/<name>` while the custom Rspack
+container output differs. Consequently the Node path supports the native
+`apps/<name>` layout; custom rootDir/path containers and path-qualified names
+reject before mutation. The native path schema also rejects `rootDir=.`. This
+bounded restriction avoids shipping broken compiler/start paths or extending the
+reviewed source/dependency overlay into compiler-template rewrites. Omitted-platform
+behavior is unchanged. Repeating a member name retains native rejection; the
+transform itself is idempotent.
+
+Focused installed coverage uses the packed plugin in clean ESM and CJS owners,
+including an explicitly configured Fastify owner, CLI dry-run, normal and skipped
+installation, retained source/test bytes, inferred owner build/start targets,
+real HTTP responses, adapter identity in the generated HTTP test, REST resource
+registration and native library builds. CJS retains the previously documented
+package-manager Jest invocation and upstream floating-promise lint limitation.
+Observe preservation is tested in memory across ESM/CJS; telemetry certification,
+the complete packed version/capability matrix and default activation remain
+#611–#615 work.
+
+Validation on 2026-11-15 used Node 24.22.3, Nx 24.0.1 and TypeScript 6.0.3:
+all 588 unit tests (35 suites), plugin build, plugin/E2E lint and typecheck,
+both packed Node sub-app consumers, all 13 published-library peer regressions,
+and the existing TypeScript/custom publication and member-build scenarios passed.
+The repository lint tasks retain 16 existing warnings and no errors. Local runs
+used the same daemon/isolation/cloud and temporary SWC-cache settings described
+above. No dependency manifest, lockfile, release setting or platform default was
+changed.
