@@ -8,6 +8,7 @@ import {
   validRange,
 } from 'semver';
 import type { ResolveInstalledNestPackage } from './installed-nest-package';
+import { nodeRuntimeVersion } from './node-runtime-version';
 
 export interface PackageManifest {
   dependencies?: Record<string, string>;
@@ -23,6 +24,7 @@ const nestPackages = new Set([
   '@nestjs/core',
   '@nestjs/platform-express',
   '@nestjs/platform-fastify',
+  '@nestjs/platform-node',
   '@nestjs/microservices',
   '@nestjs/websockets',
   '@nestjs/testing',
@@ -70,7 +72,12 @@ export function validateNestDependencies(
           hasCli = true;
         const runtimePeer =
           section === 'peerDependencies' && name !== '@nestjs/cli';
-        const supported = runtimePeer ? supportedPeers : supportedHost;
+        const supported =
+          name === '@nestjs/platform-node'
+            ? nodeRuntimeVersion
+            : runtimePeer
+            ? supportedPeers
+            : supportedHost;
         if (
           !stableRange(range) ||
           !subset(range, supported) ||
@@ -78,7 +85,9 @@ export function validateNestDependencies(
         ) {
           errors.push(
             `${path} (${section}): ${name}@${String(range)} ${
-              runtimePeer
+              name === '@nestjs/platform-node'
+                ? `is not the audited NodeAdapter version (${nodeRuntimeVersion})`
+                : runtimePeer
                 ? 'is not a supported library peer range (stable Nest 11/12 with Nest 12 support)'
                 : 'is not a stable Nest v12 range'
             }. Use a semver version/range fully within "${supported}"; upgrade older Nest packages together and replace prereleases, tags, or unresolved protocols before retrying.`
@@ -113,7 +122,12 @@ export function validateNestDependencies(
         }
         if (
           !valid(installed.version) ||
-          !satisfies(installed.version, supportedHost) ||
+          !satisfies(
+            installed.version,
+            name === '@nestjs/platform-node'
+              ? nodeRuntimeVersion
+              : supportedHost
+          ) ||
           !satisfies(installed.version, range)
         ) {
           errors.push(

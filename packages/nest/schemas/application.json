@@ -4,6 +4,11 @@
   "title": "Nest Application Options Schema",
   "type": "object",
   "properties": {
+    "platform": {
+      "type": "string",
+      "enum": ["node"],
+      "description": "Explicit NodeAdapter for a TypeScript HTTP application. Omit to retain native Nest behavior."
+    },
     "name": {
       "oneOf": [
         {

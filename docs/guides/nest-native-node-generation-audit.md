@@ -1,10 +1,13 @@
 # Native Node generation audit and implementation contract
 
-Status: review candidate for [#608](https://github.com/anarchitects/anarchitecture-plugins/issues/608)
+Status: reviewed audit for [#608](https://github.com/anarchitects/anarchitecture-plugins/issues/608)
 under [#607](https://github.com/anarchitects/anarchitecture-plugins/issues/607).
 Reviewed on 2026-11-15 against Plugins
 `3f20fd6f47d4d8b8786c88489c85bf76bc2226fb` and Meta
 `3899558482b615aa46dd5004eae440d62cd2e222`.
+
+The original audit below records that baseline. The final section records the
+subsequent independent-application implementation under #609.
 
 **Explicit NodeAdapter generation is feasible with the released API, but is not
 implemented or certified by this audit.** The implementation must change the
@@ -389,3 +392,56 @@ build emitted existing unrelated Jest-config module warnings; audit checks passe
 The source repository's full test/lint suites were not rerun for this
 documentation-only change, and its stale local schematic install is not a green
 consumer baseline. No release, migration or default activation was performed.
+
+## Independent application implementation (#609)
+
+The explicit independent-application path now implements the reviewed candidate
+contract: `platform: 'node'` is consumed by the wrapper, while omission retains
+the original native path. Native 12.0.6 output is staged independently, the
+bootstrap and HTTP spec receive bounded TypeScript edits, and final bytes are
+compared before any caller Tree mutation. Conflicts reject instead of migrating
+existing applications. The ordinary additive guard is unchanged. Runtime
+common/core/testing/platform-node are pinned to 12.3.0; adapter validation does
+not inherit the older adapters' Nest 11/12 peer allowance. Dependencies are
+ordered deterministically so Yarn installation does not break repeat generation.
+
+For this implementation preflight, all 24 Meta ADRs and all six local ADRs were
+re-enumerated against Meta `3899558482b615aa46dd5004eae440d62cd2e222` and Plugins
+`7daaef6ad9b293fbf373f296d0b19975e89d6a8c`. Their contents are unchanged from the
+complete review above. The audit, contributor rules, package documentation and
+published-library guide were reviewed for this scope. The same accepted
+constraints and conflict reconciliations apply: explicit selection, native
+schematic ownership, platform-neutral inference, preserved compatibility,
+separate release/default authority, and no Angular runtime dependency. No new
+architecture exception is needed. Sub-app selection remains separate work.
+
+The focused clean-consumer scenario is
+`nx-nest-e2e:e2e-ci--src/nest-scenarios/node-application.spec.ts`. It installs the
+packed plugin and framework through Yarn without repository framework links,
+checks the four exact runtime versions, tests generator defaults/dry-run/install
+and repeat behavior, runs generated build/test/lint workflows, asserts the actual
+Node adapter in the HTTP test, starts the application over HTTP, and exercises a
+subsequently generated REST resource. CommonJS uses the already documented
+package-manager-resolved Jest invocation with default Yarn hoisting; the native
+local-Jest script limitation is not changed by this overlay. Native unit and HTTP
+tests and lifecycle cleanup remain authoritative.
+
+This is focused implementation evidence, not the full packed version matrix,
+production/security conformance, Observe telemetry certification, optional
+capability matrix or default activation. Those gates remain with #611–#615.
+
+Validation on 2026-11-15 used Node 24.22.3, Nx 24.0.1 and TypeScript 6.0.3:
+Nx build, all 561 unit tests (33 suites), lint/typecheck for the plugin and E2E
+package, both clean installed Node consumer cases, and all 13 existing
+published-library-peer regression cases passed. The application suite also
+checks ESM/CJS × Observe, whole-transform idempotency, native byte parity outside
+the overlay, rejection/atomicity, custom spec suffixes, spec-disabled generation,
+formatting, skip-install and dry-run safety, and adapter-free libraries and
+microservice resources. Final added application assertions passed separately.
+
+Local execution disabled Nx daemon/plugin isolation/cloud for sandbox sockets;
+SWC's native cache was redirected to a writable temporary directory after its
+default user-cache write was denied. No repository cache/CI policy changed. The
+workspace was installed immutably from its lockfile, resolving schematics 12.0.6;
+no dependency manifest/lockfile or installed version metadata was rewritten to
+manufacture compatibility. Existing unrelated lint/module warnings remain.

@@ -329,3 +329,33 @@ describe('published peers and selected Nest hosts', () => {
     expect(JSON.stringify(input)).toBe(before);
   });
 });
+
+describe('NodeAdapter candidate declarations', () => {
+  it.each(['^11 || ^12', '^12', '^12.3.0', '12.2.0', '12.3.1', 'next'])(
+    'rejects an unverified adapter range %s',
+    (range) => {
+      expect(() =>
+        validateNestDependencies({
+          'package.json': {
+            devDependencies: { '@nestjs/cli': '12.0.0' },
+            peerDependencies: { '@nestjs/platform-node': range },
+          },
+        })
+      ).toThrow('audited NodeAdapter version (12.3.0)');
+    }
+  );
+  it('accepts the exact candidate without broadening library adapter peers', () => {
+    expect(() =>
+      validateNestDependencies({
+        'package.json': {
+          devDependencies: { '@nestjs/cli': '12.0.0' },
+          dependencies: {
+            '@nestjs/common': '12.3.0',
+            '@nestjs/core': '12.3.0',
+            '@nestjs/platform-node': '12.3.0',
+          },
+        },
+      })
+    ).not.toThrow();
+  });
+});
