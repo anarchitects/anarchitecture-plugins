@@ -22,6 +22,10 @@ Prioritize native Node as the **first new platform-specific generator integratio
 6. Upstream `NodeAdapter` availability is established in Nest 12.3+, but plugin support is **not**. Admit a `node` generator option only after exact supported Nest/Node/adapter dependencies and end-to-end generated/installed running-app tests are verified. Explicitly bootstrap `NodeAdapter`; do not infer native Node from a default Nest app (which uses Express in Nest 12). Verify native HTTP, Standard Schema, Swagger, raw bodies, static assets, proxy trust, error mapping, instrumentation, ESM/CJS and relevant optional Fastify-equivalent features independently.
 7. Update dependency validator and generator schemas when implementing support, and document only actually shipped options and supported defaults in the package README. Version-breaking default changes need explicit SemVer and migration review.
 
+## Framework lifecycle amendment — 2026-11-15 (proposed)
+
+[Meta ADR-0022](https://github.com/anarchitects/anarchitecture-meta/blob/main/adr/0022-core-framework-lifecycle-90-day-maintenance.md) establishes latest-stable Nest/Angular feature development and a prospective 90-day previous-major maintenance window. This ADR continues to govern separate, tested NodeAdapter selection and default activation. The plugin's currently shipped Nest 12 support, native schematic ownership and optional Fastify/Express overlay guarantees are unchanged by policy approval. A future major needs implementation/consumer evidence before a support claim. Nx is outside the automatically covered framework list.
+
 ## Consequences
 
 - The plugin avoids maintenance-heavy Nest template drift and maintains upstream ownership boundaries.
