@@ -105,6 +105,24 @@ corepack yarn nx run nx-nest-e2e:e2e --runTestsByPath src/nest-scenarios/http-no
 Optional Fastify integrations remain #508. Broader HTTP/security and schema
 conformance remain #612; default activation and releases retain their own gates.
 
+## CI execution budget
+
+[Main CI run 43748853192](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/43748853192)
+on 2026-11-15 reached the affected step's 15-minute deadline after 37 successful
+task completions. The Node 24 and Node 22 matrix tasks completed at 9m41s and
+10m05s after the affected command started; further successful completions
+continued through 14m54s. No Nx task failure was reported. The coordinator log
+does not distinguish queued from running tasks for the unfinished Node 26/npm
+lanes, so it does not establish their required execution time.
+
+Main CI now allows 45 minutes for affected tasks and 50 minutes for the whole
+job, including setup, TypeScript compatibility and diagnostics. These are initial
+bounds for the expanded workload, to be reassessed against a completed Linux
+run. The three agents, inferred task splitting, affected selection, caching,
+individual test/subprocess deadlines and failure propagation remain in place.
+The previous 15/20-minute bounds were based on the smaller workload documented
+in the [PR #570 investigation](../ci/pr-570-stall.md).
+
 ## Recorded validation
 
 Local validation on 2026-11-15 passed **675 unit tests in 35 suites** and

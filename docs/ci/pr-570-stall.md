@@ -77,7 +77,9 @@ in the original CI stall. See [Node's synchronous subprocess documentation](http
 
 ## Safeguards and follow-up
 
-Main CI now has a 15-minute affected-step deadline and a 20-minute job deadline.
+This investigation introduced a 15-minute affected-step deadline and a 20-minute
+job deadline. The expanded HTTP matrix later required a measured budget review;
+see the [current CI execution budget](../guides/nest-http-consumer-matrix.md#ci-execution-budget).
 These bounds allow substantially more than the observed healthy run and the
 longest six-minute E2E test, while reserving time for the existing `fix-ci` step.
 They stop the coordinator from waiting an hour without progress; they do not
