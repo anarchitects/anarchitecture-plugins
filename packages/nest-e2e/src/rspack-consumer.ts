@@ -45,18 +45,27 @@ async function stop(child: ChildProcess) {
       if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
     }
   };
+  // The direct child (npm/corepack) can exit before the nx and Nest processes
+  // in its group have released the listening port, so wait for the group.
+  const groupAlive = () => {
+    if (process.platform === 'win32' || !child.pid) return false;
+    try {
+      process.kill(-child.pid, 0);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+      throw error;
+    }
+  };
   signal('SIGTERM');
-  if (child.exitCode !== null || child.signalCode !== null) return;
-  await new Promise<void>((done) => {
-    const timer = setTimeout(() => {
-      signal('SIGKILL');
-      done();
-    }, 5_000);
-    child.once('exit', () => {
-      clearTimeout(timer);
-      done();
-    });
-  });
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const exited = child.exitCode !== null || child.signalCode !== null;
+    if (exited && !groupAlive()) return;
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  signal('SIGKILL');
+  while (groupAlive()) await new Promise((done) => setTimeout(done, 100));
 }
 
 export async function assertHttp(
@@ -135,13 +144,27 @@ export async function assertHttp(
   } finally {
     await stop(child);
     // A successful shutdown must release the actual listening port.
-    const probe = createServer();
-    await new Promise<void>((accept, reject) => {
-      probe.once('error', reject);
-      probe.listen(Number(port), '127.0.0.1', () =>
-        probe.close((error) => (error ? reject(error) : accept()))
-      );
-    });
+    const released = Date.now() + 5_000;
+    for (;;) {
+      const probe = createServer();
+      try {
+        await new Promise<void>((accept, reject) => {
+          probe.once('error', reject);
+          probe.listen(Number(port), '127.0.0.1', () =>
+            probe.close((error) => (error ? reject(error) : accept()))
+          );
+        });
+        break;
+      } catch (error) {
+        if (
+          (error as NodeJS.ErrnoException).code !== 'EADDRINUSE' ||
+          Date.now() >= released
+        ) {
+          throw error;
+        }
+        await new Promise((done) => setTimeout(done, 100));
+      }
+    }
   }
 }
 
