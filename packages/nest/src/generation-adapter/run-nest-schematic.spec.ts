@@ -66,6 +66,21 @@ function runNative(assertions: string): void {
 }
 
 describe('stable native Nest schematic adapter', () => {
+  it('bounds Fastify to independent applications and rolls back late post-processing failures', () => {
+    runNative(`
+      const before = snapshotNxTree(tree);
+      for (const schematic of ['sub-app','app','library','resource']) {
+        await assert.rejects(runNestSchematic(tree, {schematic,httpPlatform:'fastify',options:{name:'worker'}}), /HTTP overlay/);
+        assert.deepEqual(snapshotNxTree(tree), before);
+      }
+      await assert.rejects(runNestSchematic(tree, {
+        schematic:'application', httpPlatform:'fastify', options:{name:'api',directory:'api'},
+        postTransform: () => { throw new Error('late Fastify failure'); }
+      }), /late Fastify failure/);
+      assert.deepEqual(snapshotNxTree(tree), before);
+    `);
+  });
+
   it('runs the real ESM collection with native defaults, aliases, and unchanged framework output', () => {
     runNative(`
       const options = {name:'sample',sourceRoot:'src'};

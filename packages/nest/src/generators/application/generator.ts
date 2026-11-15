@@ -49,7 +49,7 @@ export async function applicationGenerator(
 ): Promise<GeneratorCallback | undefined> {
   if (options.platform !== undefined && !isHttpPlatform(options.platform)) {
     throw new Error(
-      'Unsupported HTTP platform. Use --platform=node or --platform=express, or omit platform for native Nest generation.'
+      'Unsupported HTTP platform. Use --platform=node, --platform=express or --platform=fastify, or omit platform for native Nest generation.'
     );
   }
   if (

@@ -6,8 +6,8 @@
   "properties": {
     "platform": {
       "type": "string",
-      "enum": ["node", "express"],
-      "description": "Explicit NodeAdapter or ExpressAdapter for a TypeScript HTTP application. Omit to retain native Nest behavior."
+      "enum": ["node", "express", "fastify"],
+      "description": "Explicit NodeAdapter, ExpressAdapter or FastifyAdapter for a TypeScript HTTP application. Omit to retain native Nest behavior."
     },
     "name": {
       "oneOf": [
