@@ -25,17 +25,9 @@ export const httpPlatforms = {
 } as const;
 
 export type HttpPlatform = keyof typeof httpPlatforms;
-/** Fastify member generation has its own implementation/consumer gate (#622). */
-export type MemberHttpPlatform = Exclude<HttpPlatform, 'fastify'>;
 
 export function isHttpPlatform(value: unknown): value is HttpPlatform {
-  return isMemberHttpPlatform(value) || value === 'fastify';
-}
-
-export function isMemberHttpPlatform(
-  value: unknown
-): value is MemberHttpPlatform {
-  return value === 'node' || value === 'express';
+  return value === 'node' || value === 'express' || value === 'fastify';
 }
 
 /** Exact audited runtime set; rebaseline separately from adding a selection. */

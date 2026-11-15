@@ -12,7 +12,6 @@ import { transformHttpMember } from './http-member';
 import {
   httpPlatforms,
   isHttpPlatform,
-  isMemberHttpPlatform,
   type HttpPlatform,
 } from '../utils/http-platform';
 import {
@@ -55,13 +54,11 @@ export async function runNestSchematic(
     options.httpPlatform !== undefined &&
     (!isHttpPlatform(options.httpPlatform) ||
       !['application', 'sub-app'].includes(options.schematic) ||
-      (options.schematic === 'sub-app' &&
-        !isMemberHttpPlatform(options.httpPlatform)) ||
       (options.schematic === 'application' &&
         (options.workingDirectory || options.isolateHostReads)))
   ) {
     throw new Error(
-      'The HTTP overlay requires an application or sub-app and a supported platform (node/express for members; node/express/fastify for applications).'
+      'The HTTP overlay requires an application or sub-app and a supported platform (node, express or fastify).'
     );
   }
   const before = snapshotNxTree(tree);

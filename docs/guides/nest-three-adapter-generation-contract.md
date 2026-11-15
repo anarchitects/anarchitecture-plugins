@@ -12,9 +12,9 @@ test transformation.** This contract extends the
 the original #620 audit did not reopen #608–#610 or implement Express/Fastify
 selection. #620 was reviewed and merged in [#623](https://github.com/anarchitects/anarchitecture-plugins/pull/623).
 The #621 implementation below adds explicit Express alongside Node. Omission
-remains native Nest generation. #509 adds independent Fastify applications below;
-Fastify members, runtime rebaselining, defaults, production certification and
-releases retain their separate gates.
+remains native Nest generation. #509 adds independent Fastify applications and
+#622 adds Fastify members below. Runtime rebaselining, defaults, production
+certification and releases retain their separate gates.
 
 ## Evidence and version boundaries
 
@@ -440,10 +440,11 @@ controllers/resources remain shared. Libraries and published peer compatibility
 remain unchanged. Node's previously recorded retained-Express range gap stays
 with #611.
 
-Fastify members are still rejected by the public sub-app/app schema, programmatic
-member generator and schematic boundary before caller mutation. The shared
-metadata/readiness logic is reusable by #622 after its member-specific validation.
-Only independent applications are enabled here. Existing applications are never
+At completion of #509, Fastify members were still rejected by the public
+sub-app/app schema, programmatic member generator and schematic boundary before
+caller mutation. The shared metadata/readiness logic is reused by #622 below
+after member-specific validation. #509 enabled independent applications only.
+Existing applications are never
 converted through platform selection; conflicting source or a different adapter
 at the same destination still rejects atomically.
 
@@ -479,4 +480,74 @@ corepack yarn nx run nx-nest:test --runInBand
 corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
 corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts
 corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-sub-app.spec.ts src/nest-scenarios/published-library-peers.spec.ts
+```
+
+## #622 implementation record: Fastify members and mixed owners
+
+Before implementation, re-enumerated and read all 25 Meta ADRs at
+`4f0339d86f0ebfa073173ad307cb67c8d6042bdd` and all six local ADRs at Plugins
+`d085b51883ff3668c8aa74d8ef9ea59d620cc372`, including proposed and historical
+records. Revisited this contract, the Node audit, published-library compatibility
+guide, package/contributor instructions and proposed Meta Nest development guide.
+The accepted constraints and historical/local conflicts recorded above apply
+unchanged: native schematic ownership, explicit selection, portable MIT core,
+platform-neutral contracts/inference, preserved library guarantees and separate
+release/default authority. Angular runtime rules do not add Angular dependencies.
+Meta 0012 supplies canonical Contracts ownership despite older local wording;
+Meta 0013 supplies the zero-major release rule. No architecture exception,
+publication, owner upgrade or default activation is introduced.
+
+`sub-app` and its `app` alias now accept Fastify through the same shared metadata,
+owner validation, staged native conversion and bootstrap/HTTP-test transform as
+the other adapters. Only the requested new member selects Fastify; its HTTP test
+awaits readiness. Existing owner and sibling source/tests, including Observe and
+custom adapters, are preserved. Native library/resource generation and Nx target
+ownership remain unchanged. The native `apps/<single-segment-name>` constraint
+applies within root or nested owners; unsupported containers and JavaScript
+selection reject before mutation.
+
+Owners must resolve the already audited coherent 12.3.0 framework/adapter set and
+stable v12 CLI. Existing compatible declarations remain unchanged. A missing
+Fastify adapter is added once at 12.3.0; later members reuse it. Dev-only selected
+adapters, stale/missing installations, incompatible declarations and malformed
+evidence fail without changing the caller Tree. The same transaction includes
+post-generation Nx tooling, so late failures also roll back. Duplicate members
+retain native rejection, while the transform itself is idempotent. Omission and
+Nx's canonical `sub-app` default/explicit-option precedence are unchanged.
+
+Coverage extends the shared member scenarios with Fastify under Express, Node
+and a custom Express-derived adapter, in both ESM and CommonJS. These clean
+packed consumers preserve and execute the original Observe application, verify
+the new member's actual Fastify adapter and HTTP readiness, exercise owner/member
+build/start, resource registration, dependency reuse, dry-run/skip-install and
+duplicate rejection. The custom-owner cases resolve a Fastify `sub-app` default
+through the `app` alias; the other cases explicitly override Node/Express defaults.
+In-memory cases also cover root owners, custom test suffixes, native omission,
+idempotent transforms, invalid layouts and late-failure rollback. The full host
+matrix/version rebaseline remains #611; optional Fastify features remain #508.
+
+Validation on 2026-11-15 used Node 24.22.3 (macOS arm64), Nx 24.0.1,
+TypeScript 6.0.3 and Yarn 4.17.0. The plugin still resolves schematics 12.0.6;
+clean Fastify member owners resolved common/core/testing/platform-fastify and
+retained platform-express 12.3.0, CLI/schematics 12.0.13 and Observe 0.3.26.
+Node owners additionally resolve platform-node 12.3.0. Runtime versions are
+asserted from consumer-local installations. Registry resolution is not a frozen
+lockfile matrix; the separate published-library fixtures retain their documented
+versions and linked/clean installation boundaries.
+
+Passed: plugin build, **666 unit tests in 35 suites**, plugin/e2e lint and
+typecheck, **10 packed member cases**, **eight packed application cases**,
+**13 published-library peer checks**, and **two published-library build/ownership
+cases**. The focused member/owner/schematic suites passed 68 tests before
+the full suite. Lint retains 16 existing warnings and no errors. The generated
+CommonJS checks retain the documented Yarn/Jest invocation workaround and
+expected native-member floating-promise lint failure. These results verify basic
+HTTP, resource registration and preservation/execution of Observe owners, not
+exporter delivery, arbitrary custom-adapter semantics or production conformance.
+
+```sh
+corepack yarn nx run nx-nest:test --runInBand
+corepack yarn nx run-many -t lint,typecheck -p nx-nest,nx-nest-e2e
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-sub-app.spec.ts
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-application.spec.ts src/nest-scenarios/published-library-peers.spec.ts src/nest-scenarios/published-tsc-build.spec.ts src/nest-scenarios/published-custom-build.spec.ts
 ```

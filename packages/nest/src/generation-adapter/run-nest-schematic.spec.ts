@@ -66,10 +66,10 @@ function runNative(assertions: string): void {
 }
 
 describe('stable native Nest schematic adapter', () => {
-  it('bounds Fastify to independent applications and rolls back late post-processing failures', () => {
+  it('bounds Fastify to HTTP applications/members and rolls back late post-processing failures', () => {
     runNative(`
       const before = snapshotNxTree(tree);
-      for (const schematic of ['sub-app','app','library','resource']) {
+      for (const schematic of ['app','library','resource']) {
         await assert.rejects(runNestSchematic(tree, {schematic,httpPlatform:'fastify',options:{name:'worker'}}), /HTTP overlay/);
         assert.deepEqual(snapshotNxTree(tree), before);
       }

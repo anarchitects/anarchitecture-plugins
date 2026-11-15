@@ -24,8 +24,8 @@ import { stageTree } from '../generation-adapter/staged-tree';
 import { validateHttpMemberOwner } from './http-member-dependencies';
 import {
   httpPlatforms,
-  isMemberHttpPlatform,
-  type MemberHttpPlatform,
+  isHttpPlatform,
+  type HttpPlatform,
 } from './http-platform';
 
 export interface NestMemberOptions {
@@ -57,14 +57,14 @@ interface NestWorkspace {
 export async function generateNestMember(
   tree: Tree,
   schematic: 'sub-app' | 'library',
-  options: NestMemberOptions & { platform?: MemberHttpPlatform }
+  options: NestMemberOptions & { platform?: HttpPlatform }
 ): Promise<GeneratorCallback | undefined> {
   if (
     options.platform !== undefined &&
-    (!isMemberHttpPlatform(options.platform) || schematic !== 'sub-app')
+    (!isHttpPlatform(options.platform) || schematic !== 'sub-app')
   )
     throw new Error(
-      'Use --platform=node or --platform=express only for a sub-app, or omit platform for native member generation.'
+      'Use --platform=node, --platform=express or --platform=fastify only for a sub-app, or omit platform for native member generation.'
     );
   if (
     options.platform !== undefined &&
@@ -93,7 +93,7 @@ export async function generateNestMember(
 async function generateMember(
   tree: Tree,
   schematic: 'sub-app' | 'library',
-  options: NestMemberOptions & { platform?: MemberHttpPlatform }
+  options: NestMemberOptions & { platform?: HttpPlatform }
 ): Promise<GeneratorCallback | undefined> {
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error('Generate Nest members inside an existing Nx workspace.');
