@@ -292,33 +292,33 @@
   "fixtures": [
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-express-cjs.json",
-      "bytes": 402610,
-      "sha256": "5809d6a452a6af18f528fb1c6b2ea89bfbabb79f8a6f569259aedbff37497cc2"
+      "bytes": 399394,
+      "sha256": "57d660423dfabe90578c11cac8223bfab87bda3bce4c53f12d9fa244be1b0542"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-express-esm.json",
-      "bytes": 407629,
-      "sha256": "078921fff83d9cbbbf747ad74189aea06285bcba669dc6072a458736fa2f3f16"
+      "bytes": 404237,
+      "sha256": "9b467e51da71f615700dbbfad30535cb94a6da250f4f683ecd638b9f72f9237e"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-fastify-cjs.json",
-      "bytes": 405010,
-      "sha256": "e8a3573016efcd8f5c3d22d240f6b71b2fc0f72533465ddf7726aa7111f4a73a"
+      "bytes": 401794,
+      "sha256": "218eb541e3abfba8167b3eae07c2e92bb99024d2670397fb263e4724572754f0"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-fastify-esm.json",
-      "bytes": 409763,
-      "sha256": "e8153717106bfc48efe6b59b696a61b64a5ebd6d26416dcbff0ad5516e4cd30b"
+      "bytes": 406371,
+      "sha256": "757439f23a73a544d34d42d35cd827318be6e7b711eae24bb8c09e7ea44f15d7"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-node-cjs.json",
-      "bytes": 386711,
-      "sha256": "69671fd40985f48fcb4779c49641c936e5b365938e5e586a673ad739fdd2edd3"
+      "bytes": 383495,
+      "sha256": "86bafb599e27ee401c3e31e4c4d6d59ed5be6e882a9cfd078b938c9857c70fba"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-npm-node-esm.json",
-      "bytes": 391730,
-      "sha256": "dadb8e38bebaa89d99521bd3b73d7a3df73ea46884f1b60e923aa58e5c46cbbf"
+      "bytes": 388338,
+      "sha256": "93258b8d660a6d9ca6bf6e3d9c797aa00de22ee488403932e403634cb200749c"
     },
     {
       "path": "packages/nest-e2e/src/consumer-locks/http-yarn.lock",
