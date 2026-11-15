@@ -2,9 +2,11 @@
 import * as ts from 'typescript';
 import { satisfies } from 'semver';
 import type { TreeSnapshot } from './tree-snapshot';
+import { missingNativeToolPeers } from '../utils/native-tool-peers';
 import {
   httpPlatforms,
   httpRuntimeVersion,
+  httpSchematicVersion,
   type HttpPlatform,
 } from '../utils/http-platform';
 
@@ -297,9 +299,9 @@ export function transformHttpApplication(
   platform: HttpPlatform = 'node'
 ): void {
   const { packageName: adapterPackage, label } = httpPlatforms[platform];
-  if (schematicVersion !== '12.0.6')
+  if (schematicVersion !== httpSchematicVersion)
     throw new Error(
-      `${label} application generation requires audited @nestjs/schematics 12.0.6; found ${schematicVersion}. Reinstall the plugin's pinned dependencies.`
+      `${label} application generation requires audited @nestjs/schematics ${httpSchematicVersion}; found ${schematicVersion}. Reinstall the plugin's pinned dependencies.`
     );
   const manifestPath = `${root}/package.json`;
   const bytes = snapshot.get(manifestPath);
@@ -309,11 +311,7 @@ export function transformHttpApplication(
   for (const [section, names] of [
     [
       'dependencies',
-      [
-        '@nestjs/common',
-        '@nestjs/core',
-        ...(platform !== 'node' ? ['@nestjs/platform-express'] : []),
-      ],
+      ['@nestjs/common', '@nestjs/core', '@nestjs/platform-express'],
     ],
     ['devDependencies', ['@nestjs/testing']],
   ] as const) {
@@ -329,6 +327,9 @@ export function transformHttpApplication(
     }
   }
   manifest.dependencies[adapterPackage] = httpRuntimeVersion;
+  // The native CommonJS template declares ts-loader without its Webpack peer.
+  // npm supplies it implicitly; strict Yarn consumers need the owner declaration.
+  Object.assign(manifest.devDependencies, missingNativeToolPeers(manifest));
   // Yarn normalizes dependency order on install. Emit that order up front so
   // installation alone does not turn a repeated generation into a conflict.
   manifest.dependencies = Object.fromEntries(

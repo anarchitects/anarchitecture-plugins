@@ -1909,7 +1909,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/schematics@npm:^12.0.0":
+"@nestjs/schematics@npm:12.0.13, @nestjs/schematics@npm:^12.0.0":
   version: 12.0.13
   resolution: "@nestjs/schematics@npm:12.0.13"
   dependencies:

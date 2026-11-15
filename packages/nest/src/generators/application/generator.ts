@@ -61,6 +61,11 @@ export async function applicationGenerator(
       `--platform=${options.platform} requires TypeScript (--language=ts).`
     );
   }
+  if (options.platform !== undefined && options.minimal) {
+    throw new Error(
+      'Explicit HTTP platforms require the full native application template; omit --minimal.'
+    );
+  }
   if (!tree.exists('nx.json') || !tree.exists('package.json')) {
     throw new Error(
       'Generate the Nest application inside an existing Nx workspace.'

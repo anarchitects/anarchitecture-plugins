@@ -113,6 +113,38 @@ export function addNestTransform(source: string): string | undefined {
       ts.isPropertyAssignment(property) &&
       property.name.getText(file).replace(/['"]/g, '') === 'plugins'
   );
+  // Schematics 12.0.13 uses Vite 8's native path resolution and no plugins array.
+  // Admit that static shape; do not overwrite dynamic consumer configuration.
+  if (
+    !plugins &&
+    config.properties.every(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        !ts.isComputedPropertyName(property.name)
+    )
+  ) {
+    const resolution = config.properties.find(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        property.name.getText(file) === 'resolve'
+    );
+    if (
+      resolution &&
+      ts.isPropertyAssignment(resolution) &&
+      ts.isObjectLiteralExpression(resolution.initializer) &&
+      resolution.initializer.properties.some(
+        (property) =>
+          ts.isPropertyAssignment(property) &&
+          property.name.getText(file) === 'tsconfigPaths' &&
+          property.initializer.kind === ts.SyntaxKind.TrueKeyword
+      )
+    ) {
+      const position = config.getStart(file) + 1;
+      return addNestTransform(
+        source.slice(0, position) + '\n  plugins: [],' + source.slice(position)
+      );
+    }
+  }
   if (
     !plugins ||
     !ts.isPropertyAssignment(plugins) ||

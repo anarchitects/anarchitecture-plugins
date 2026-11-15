@@ -25,6 +25,7 @@ export function consumerEnvironment(
   // Editor auto-attach and outer Jest/ts-node options must not alter consumers
   // or keep a synchronous child alive waiting for its debugger to disconnect.
   delete env.NODE_OPTIONS;
+  delete env.NODE_PATH;
   delete env.VSCODE_INSPECTOR_OPTIONS;
   delete env.TS_NODE_COMPILER_OPTIONS;
   delete env.NODE_ENV;

@@ -86,7 +86,7 @@ describe('stable native Nest schematic adapter', () => {
       const options = {name:'sample',sourceRoot:'src'};
       const before = structuredClone(options);
       const result = await runNestSchematic(tree, {schematic:'cl',options});
-      assert.equal(result.schematicVersion, '12.0.6');
+      assert.equal(result.schematicVersion, '12.0.13');
       assert.deepEqual(options, before);
       assert.deepEqual(result.deferredTasks, []);
       assert.equal(tree.read('src/sample.ts','utf8'), 'export class Sample {}\\n');

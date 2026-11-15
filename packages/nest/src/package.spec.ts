@@ -97,7 +97,7 @@ describe('published Nest plugin', () => {
       readFileSync(join(packageRoot, 'package.json'), 'utf8')
     );
     const native = require('@nestjs/schematics/package.json');
-    expect(native.version).toBe('12.0.6');
+    expect(native.version).toBe('12.0.13');
     expect(native.type).toBe('module');
     expect(manifest.engines.node).toBe(native.engines.node);
     expect(manifest.dependencies['@nestjs/schematics']).toBe(native.version);

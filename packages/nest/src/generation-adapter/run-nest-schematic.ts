@@ -13,6 +13,7 @@ import {
   httpPlatforms,
   isHttpPlatform,
   type HttpPlatform,
+  type HttpRuntimeVersion,
 } from '../utils/http-platform';
 import {
   applySnapshot,
@@ -25,6 +26,8 @@ import {
 export interface RunNestSchematicOptions {
   /** Bounded overlay for HTTP applications/members, not a general rewrite hook. */
   httpPlatform?: HttpPlatform;
+  /** Installed and validated owner runtime; never upgrade an existing owner. */
+  httpRuntimeVersion?: HttpRuntimeVersion;
   schematic: string;
   options: Record<string, unknown>;
   /** Preview changes without even mutating the supplied Nx Tree. */
@@ -86,7 +89,8 @@ export async function runNestSchematic(
       result.after,
       String(options.options.name),
       result.schematicVersion,
-      options.httpPlatform
+      options.httpPlatform,
+      options.httpRuntimeVersion
     );
   }
   if (options.httpPlatform && options.schematic === 'application') {

@@ -1,0 +1,1576 @@
+{
+  "issue": 611,
+  "date": "2026-11-15",
+  "status": "local validation passed",
+  "sourceBase": "39001c1c092fa4b99efdc8f5a624e1a8a402ee42",
+  "architecture": {
+    "metaRevision": "4f0339d86f0ebfa073173ad307cb67c8d6042bdd",
+    "metaAdrs": [
+      "adr/0001-cooperative-governance-enrichment.md",
+      "adr/0001-two-core-implementation-styles.md",
+      "adr/0002-modulith-first-ecosystem-position.md",
+      "adr/0003-cross-repo-ai-enablement-model.md",
+      "adr/0004-meta-owns-landscape-contracts.md",
+      "adr/0005-governance-hierarchy-and-policy-inheritance.md",
+      "adr/0006-archi-as-reference-implementation-for-enterprise-architecture-governance.md",
+      "adr/0007-governance-workspace-layering-model.md",
+      "adr/0008-http-platform-independence.md",
+      "adr/0008-modern-angular-22-signal-forms.md",
+      "adr/0009-native-node-candidate-default.md",
+      "adr/0010-nest-first-runtime-and-dependency-policy.md",
+      "adr/0011-nest12-authn-authz-contracts-and-compatibility.md",
+      "adr/0012-canonical-public-api-contract-ownership.md",
+      "adr/0013-package-initial-release-and-nx-versioning.md",
+      "adr/0014-renovate-and-dependabot-dependency-management.md",
+      "adr/0015-nx-task-caching-and-distributed-execution.md",
+      "adr/0016-sdlc-ownership-and-architecture-authority.md",
+      "adr/0017-release-cadence-and-owner-authority.md",
+      "adr/0018-upstream-first-exceptions-and-cutover.md",
+      "adr/0019-repository-projects-and-organization-overview.md",
+      "adr/0020-application-infrastructure-boundary-and-migration.md",
+      "adr/0021-consumer-applications-and-public-upstream-reuse.md",
+      "adr/0022-core-framework-lifecycle-90-day-maintenance.md",
+      "adr/ADR-0001.md"
+    ],
+    "localAdrs": [
+      "docs/adr/adr-nest-generation-strategy.md",
+      "docs/adr/adr-nest-http-platform-scaffolding.md",
+      "docs/adr/adr-nest12-first-party-defaults-and-compatibility.md",
+      "docs/adr/adr-package-initial-release-and-nx-versioning.md",
+      "docs/adr/adr-public-package-documentation.md",
+      "docs/adr/modern-angular-22-signal-forms.md"
+    ],
+    "review": "Re-enumerated both unchanged inventories and reviewed the full records retained from the immediately preceding preflight; applied accepted decisions, preserving historical/proposed status. See the contract's #611 implementation record."
+  },
+  "host": {
+    "node": "24.22.3",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nx": "24.0.1",
+    "yarn": "4.17.0",
+    "npm": "11.19.1"
+  },
+  "generated": {
+    "common": "12.5.0",
+    "core": "12.5.0",
+    "testing": "12.5.0",
+    "adapters": "12.5.0",
+    "cli": "12.0.13",
+    "schematics": "12.0.13",
+    "angularDevkit": "22.2.6",
+    "typescript": "6.0.3",
+    "observe": "0.3.26"
+  },
+  "retainedOwnerRuntime": "12.3.0",
+  "lanes": [
+    {
+      "name": "node22",
+      "node": "22.22.3",
+      "nx": "23.2.0",
+      "manager": "yarn@4.17.0",
+      "observe": false,
+      "memberRotation": 0
+    },
+    {
+      "name": "node24",
+      "node": "24.21.0",
+      "nx": "24.0.1",
+      "manager": "yarn@4.17.0",
+      "observe": true,
+      "memberRotation": 1
+    },
+    {
+      "name": "node26",
+      "node": "26.0.0",
+      "nx": "24.0.1",
+      "manager": "yarn@4.17.0",
+      "observe": false,
+      "memberRotation": 2
+    },
+    {
+      "name": "npm",
+      "node": "24.21.0",
+      "nx": "24.0.1",
+      "manager": "npm@11.19.1",
+      "observe": true,
+      "memberRotation": 1
+    }
+  ],
+  "scenarioDefinition": {
+    "adapters": ["node", "express", "fastify"],
+    "formats": ["esm", "cjs"],
+    "total": 24,
+    "ownerLayouts": "Nested packages/api; node24 Fastify ESM uses a root owner under both package managers",
+    "mixedPairs": "All nine owner/member adapter pairs in both formats across the Yarn lanes",
+    "assertions": [
+      "exact consumer-local resolved versions",
+      "real package-manager installation and locked reinstall",
+      "explicit defaults and invocation-project precedence via app alias",
+      "dry-run and repeated-generation preservation",
+      "unchanged relocated owner bootstrap/test bytes and dependency declarations",
+      "actual runtime adapter identity before listen and in supported generated HTTP tests",
+      "build, unit/HTTP tests where supported, lint, loopback HTTP and generated REST resource",
+      "duplicate/incompatible-owner rejection",
+      "native implicit sibling without inherited adapter selection",
+      "process-group shutdown and port rebinding"
+    ]
+  },
+  "exclusions": [
+    {
+      "combination": "Node 22.22.3 + native CommonJS Jest",
+      "reason": "Jest cannot require Nest's ESM testing package on this Node release",
+      "verification": "Specific ESM-loading failure asserted for independent and converted unit/HTTP tests; real build/start/resource/lint and bootstrap adapter assertions still required",
+      "source": "https://jestjs.io/docs/ecmascript-modules#require-of-esm"
+    },
+    {
+      "combination": "Untested Node/Nx/OS/package-manager combinations",
+      "reason": "Sampled lanes do not certify every public semver combination; no Linux/Windows result is claimed by this local run"
+    },
+    {
+      "combination": "JavaScript/minimal explicit adapter generation, custom nested member containers, Yarn PnP",
+      "reason": "Outside the bounded generation/installation contract"
+    },
+    {
+      "combination": "Optional Fastify features, broader HTTP/security/OpenAPI semantics, Observe exporters, production/default/release approval",
+      "reason": "Separate gates and issues; baseline selection is not certification of those capabilities"
+    }
+  ],
+  "isolation": {
+    "frameworkLinks": false,
+    "forceInstalls": false,
+    "peerOverrides": false,
+    "lifecycleScripts": "Disabled for framework/tool consumers; exact Node/npm bootstrap tools are installed separately",
+    "packageManagerChecks": "Reject dependency/engine conflicts; compare frozen registry metadata, then Yarn immutable install or npm ci",
+    "nodeResolution": "Each asserted framework/tool package resolves within the fresh consumer; NODE_PATH, debugger and outer Nx state removed"
+  },
+  "cache": {
+    "targets": "Four Project Crystal-inferred e2e-ci--src/nest-scenarios/http-*.spec.ts tasks; existing e2e-ci wildcard and ^build dependency",
+    "inputs": [
+      "project files including locks and lane definitions",
+      "^production plugin dependencies",
+      "repository yarn.lock and package.json",
+      ".nvmrc",
+      "outer Node/OS/architecture",
+      "outer npm version"
+    ],
+    "probe": {
+      "target": "nx-nest-e2e:e2e-ci--src/nest-scenarios/consumer-locks.spec.ts",
+      "initial": "miss",
+      "repeat": "hit",
+      "httpFixtureChanged": "miss",
+      "httpFixtureRestored": "hit",
+      "note": "This small inferred task shares the matrix's input definition; it tests cache sensitivity without replaying every consumer."
+    }
+  },
+  "ci": {
+    "execution": "local atomized tasks",
+    "runUrl": null,
+    "claim": "No remote CI result or release is claimed."
+  },
+  "commands": [
+    {
+      "argv": [
+        "corepack",
+        "yarn",
+        "nx",
+        "run",
+        "nx-nest:test",
+        "--maxWorkers=2",
+        "--output-style=static"
+      ],
+      "result": {
+        "passed": true,
+        "suites": 35,
+        "tests": 675
+      }
+    },
+    {
+      "argv": [
+        "corepack",
+        "yarn",
+        "nx",
+        "run-many",
+        "-p",
+        "nx-nest,nx-nest-e2e",
+        "-t",
+        "lint,typecheck",
+        "--parallel=2",
+        "--output-style=static"
+      ],
+      "result": {
+        "passed": true,
+        "lintErrors": 0,
+        "existingPluginLintWarnings": 16
+      }
+    },
+    {
+      "argv": [
+        "corepack",
+        "yarn",
+        "nx",
+        "run",
+        "nx-nest-e2e:e2e",
+        "--runTestsByPath",
+        "src/nest-scenarios/angular-coexistence.spec.ts",
+        "src/nest-scenarios/application-workspace.spec.ts",
+        "src/nest-scenarios/cjs-jest.spec.ts",
+        "src/nest-scenarios/cjs-lint.spec.ts",
+        "src/nest-scenarios/cjs-members.spec.ts",
+        "src/nest-scenarios/cjs-owners.spec.ts",
+        "src/nest-scenarios/cjs-rspack.spec.ts",
+        "src/nest-scenarios/configuration.spec.ts",
+        "src/nest-scenarios/consumer-environment.spec.ts",
+        "src/nest-scenarios/consumer-locks.spec.ts",
+        "src/nest-scenarios/contracts.spec.ts",
+        "src/nest-scenarios/dependency-installs.spec.ts",
+        "src/nest-scenarios/discovery.spec.ts",
+        "src/nest-scenarios/esm-lint.spec.ts",
+        "src/nest-scenarios/esm-members.spec.ts",
+        "src/nest-scenarios/esm-owners.spec.ts",
+        "src/nest-scenarios/esm-rspack.spec.ts",
+        "src/nest-scenarios/http-application.spec.ts",
+        "src/nest-scenarios/http-sub-app.spec.ts",
+        "src/nest-scenarios/nx-library-artifacts.spec.ts",
+        "src/nest-scenarios/nx-library-consumption.spec.ts",
+        "src/nest-scenarios/nx-library-linking.spec.ts",
+        "src/nest-scenarios/nx-library-resources.spec.ts",
+        "src/nest-scenarios/nx-library.spec.ts",
+        "src/nest-scenarios/published-custom-build.spec.ts",
+        "src/nest-scenarios/published-library-peers.spec.ts",
+        "src/nest-scenarios/published-tsc-build.spec.ts",
+        "src/nest-scenarios/standard-schema.spec.ts",
+        "src/nest-scenarios/vitest.spec.ts",
+        "--output-style=static"
+      ],
+      "result": {
+        "passed": true,
+        "suites": 29,
+        "tests": 66
+      }
+    },
+    {
+      "argv": [
+        "corepack",
+        "yarn",
+        "nx",
+        "run",
+        "nx-nest-e2e:e2e",
+        "--runTestsByPath",
+        "src/nest-scenarios/packed-library-node22.spec.ts",
+        "src/nest-scenarios/packed-library-node24.spec.ts",
+        "src/nest-scenarios/packed-library-node26.spec.ts",
+        "--output-style=static"
+      ],
+      "result": {
+        "passed": true,
+        "suites": 3,
+        "tests": 6
+      }
+    },
+    {
+      "argv": [
+        "corepack",
+        "yarn",
+        "nx",
+        "run-many",
+        "-p",
+        "nx-nest-e2e",
+        "-t",
+        "e2e-ci--src/nest-scenarios/http-node22.spec.ts,e2e-ci--src/nest-scenarios/http-node24.spec.ts,e2e-ci--src/nest-scenarios/http-node26.spec.ts,e2e-ci--src/nest-scenarios/http-npm.spec.ts",
+        "--parallel=2",
+        "--output-style=static"
+      ],
+      "result": {
+        "passed": true,
+        "suites": 4,
+        "tests": 24,
+        "localCacheHits": 0,
+        "elapsed": "17m 15s"
+      }
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-express-cjs.json",
+      "bytes": 399394,
+      "sha256": "57d660423dfabe90578c11cac8223bfab87bda3bce4c53f12d9fa244be1b0542"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-express-esm.json",
+      "bytes": 404237,
+      "sha256": "9b467e51da71f615700dbbfad30535cb94a6da250f4f683ecd638b9f72f9237e"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-fastify-cjs.json",
+      "bytes": 401794,
+      "sha256": "218eb541e3abfba8167b3eae07c2e92bb99024d2670397fb263e4724572754f0"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-fastify-esm.json",
+      "bytes": 406371,
+      "sha256": "757439f23a73a544d34d42d35cd827318be6e7b711eae24bb8c09e7ea44f15d7"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-node-cjs.json",
+      "bytes": 383495,
+      "sha256": "86bafb599e27ee401c3e31e4c4d6d59ed5be6e882a9cfd078b938c9857c70fba"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-npm-node-esm.json",
+      "bytes": 388338,
+      "sha256": "93258b8d660a6d9ca6bf6e3d9c797aa00de22ee488403932e403634cb200749c"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/http-yarn.lock",
+      "bytes": 401075,
+      "sha256": "11fccebf120420b6b99672beedcd7a6f030fbee375003fb76f79d22407aff263"
+    },
+    {
+      "path": "packages/nest-e2e/src/consumer-locks/yarn.lock",
+      "bytes": 200472,
+      "sha256": "ecffb0dbdc2354f85af7dbad61a032921699751f4f68155cd4f646644f016865"
+    }
+  ],
+  "resolvedConsumerRecords": [
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node22",
+      "manager": "yarn",
+      "node": "22.22.3",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "23.2.0",
+        "@nx/devkit": "23.2.0",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": ".",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": ".",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "yarn",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": ".",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "esm",
+      "owner": ".",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node24",
+      "manager": "npm",
+      "node": "24.21.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": true,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "@nestjs/observe": "0.3.26",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "fastify",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "node",
+      "memberAdapter": "fastify",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "node",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-node": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "express",
+      "memberAdapter": "node",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "esm",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "express",
+      "phase": "independent"
+    },
+    {
+      "lane": "node26",
+      "manager": "yarn",
+      "node": "26.0.0",
+      "type": "cjs",
+      "owner": "packages/api",
+      "observe": false,
+      "versions": {
+        "@nestjs/common": "12.5.0",
+        "@nestjs/core": "12.5.0",
+        "@nestjs/testing": "12.5.0",
+        "@nestjs/platform-express": "12.5.0",
+        "@nestjs/platform-fastify": "12.5.0",
+        "@nestjs/cli": "12.0.13",
+        "@nestjs/schematics": "12.0.13",
+        "nx": "24.0.1",
+        "@nx/devkit": "24.0.1",
+        "typescript": "6.0.3"
+      },
+      "ownerAdapter": "fastify",
+      "memberAdapter": "express",
+      "phase": "converted owner"
+    }
+  ],
+  "environmentOverrides": {
+    "NX_DAEMON": "false",
+    "NX_ISOLATE_PLUGINS": "false",
+    "NX_NO_CLOUD": "true",
+    "SWC_NATIVE_BINDING_CACHE": "dedicated temporary directory",
+    "PATH": "Corepack-backed yarn command available; consumers select their own pinned Node/npm PATH"
+  },
+  "exclusionObservations": [
+    {
+      "lane": "node22",
+      "platform": "node",
+      "type": "cjs",
+      "members": false,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "node",
+      "type": "cjs",
+      "members": false,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "node",
+      "type": "cjs",
+      "members": true,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "node",
+      "type": "cjs",
+      "members": true,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "express",
+      "type": "cjs",
+      "members": false,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "express",
+      "type": "cjs",
+      "members": false,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "express",
+      "type": "cjs",
+      "members": true,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "express",
+      "type": "cjs",
+      "members": true,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "fastify",
+      "type": "cjs",
+      "members": false,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "fastify",
+      "type": "cjs",
+      "members": false,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "fastify",
+      "type": "cjs",
+      "members": true,
+      "test": "unit",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    },
+    {
+      "lane": "node22",
+      "platform": "fastify",
+      "type": "cjs",
+      "members": true,
+      "test": "http",
+      "reason": "Native CJS Jest cannot require Nest ESM on Node 22"
+    }
+  ],
+  "validatedAt": "2026-11-15",
+  "results": {
+    "unitTests": 675,
+    "unitSuites": 35,
+    "e2eTests": 96,
+    "e2eSuites": 36,
+    "httpMatrixScenarios": 24,
+    "httpMatrixLanes": 4,
+    "unsupportedGeneratedJestCombinations": 3
+  },
+  "recordAnnotation": "Owner/member adapter and phase annotate the logged records using the shared scenario's deterministic it.each order; both runtime bootstrap and supported generated HTTP tests assert adapter identity."
+}

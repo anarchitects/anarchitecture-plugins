@@ -6,6 +6,8 @@ import { treePath, type TreeSnapshot } from './tree-snapshot';
 import {
   httpPlatforms,
   httpRuntimeVersion,
+  httpSchematicVersion,
+  type HttpRuntimeVersion,
   type HttpPlatform,
 } from '../utils/http-platform';
 
@@ -22,12 +24,13 @@ export function transformHttpMember(
   after: TreeSnapshot,
   requested: string,
   version: string,
-  platform: HttpPlatform = 'node'
+  platform: HttpPlatform = 'node',
+  runtimeVersion: HttpRuntimeVersion = httpRuntimeVersion
 ): void {
   const { packageName: adapterPackage, label } = httpPlatforms[platform];
-  if (version !== '12.0.6')
+  if (version !== httpSchematicVersion)
     throw new Error(
-      `${label} member generation requires audited @nestjs/schematics 12.0.6; found ${version}.`
+      `${label} member generation requires audited @nestjs/schematics ${httpSchematicVersion}; found ${version}.`
     );
   const read = <T extends object>(snapshot: TreeSnapshot, path: string): T => {
     const content = snapshot.get(path);
@@ -85,7 +88,7 @@ export function transformHttpMember(
     manifest.dependencies = Object.fromEntries(
       Object.entries({
         ...manifest.dependencies,
-        [adapterPackage]: httpRuntimeVersion,
+        [adapterPackage]: runtimeVersion,
       }).sort(([a], [b]) => a.localeCompare(b))
     );
     updates.set(

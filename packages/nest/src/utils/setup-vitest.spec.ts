@@ -44,6 +44,32 @@ describe('Nest Vitest setup', () => {
     expect(addNestTransform(source)).toBeUndefined();
   });
 
+  it('supports native Vite 8 path resolution without replacing it', () => {
+    const native =
+      "import { defineConfig } from 'vitest/config';\nexport default defineConfig({ resolve: { tsconfigPaths: true }, test: { globals: true } });";
+    const updated = addNestTransform(native);
+    expect(updated).toContain('resolve: { tsconfigPaths: true }');
+    expect(updated).toContain('legacyDecorator: true, decoratorMetadata: true');
+    expect(addNestTransform(updated ?? '')).toBe(updated);
+    expect(
+      addNestTransform(
+        native.replace('tsconfigPaths: true', 'tsconfigPaths: custom')
+      )
+    ).toBeUndefined();
+    expect(
+      addNestTransform(native.replace('test: { globals: true }', '...shared'))
+    ).toBeUndefined();
+    for (const custom of [
+      'plugins',
+      'get plugins() { return custom; }',
+      '[key]: custom',
+    ]) {
+      expect(
+        addNestTransform(native.replace('test: { globals: true }', custom))
+      ).toBeUndefined();
+    }
+  });
+
   it('preserves an existing SWC integration and avoids import-name collisions', () => {
     const custom =
       "import swc from 'unplugin-swc';\nexport default custom(swc);";

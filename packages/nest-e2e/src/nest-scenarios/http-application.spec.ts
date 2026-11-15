@@ -100,11 +100,11 @@ it.each(
       )
     );
     expect(versions).toEqual({
-      common: '12.3.0',
-      core: '12.3.0',
-      testing: '12.3.0',
-      ['platform-' + platform]: '12.3.0',
-      ...(platform === 'fastify' ? { 'platform-express': '12.3.0' } : {}),
+      common: '12.5.0',
+      core: '12.5.0',
+      testing: '12.5.0',
+      ['platform-' + platform]: '12.5.0',
+      ...(platform === 'fastify' ? { 'platform-express': '12.5.0' } : {}),
     });
     const generatedManifest = json('packages/api/package.json');
     if (platform !== 'node')

@@ -31,3 +31,27 @@ The npm-installed exact Node binaries are separate from these consumer graphs.
 The harness verifies their versions before use. OS/architecture, outer Node/npm,
 package manager and all fixture files are Nx task inputs. No registry publication
 or repository-wide dependency upgrade is part of refreshing this fixture.
+
+## HTTP adapter fixtures (#611)
+
+`http-yarn.lock` is the registry union for the four HTTP specs' Yarn scenarios.
+`http-npm-<adapter>-<format>.json` contains each npm scenario's final dependency
+tree. These were resolved on 2026-11-15; their exact versions and hashes are
+recorded in `docs/audits/nest-http-consumers-2026-11-15.json`. The shared harness
+seeds each install, verifies registry identity, integrity and dependency/peer
+metadata, then runs Yarn immutable install or npm ci. The local plugin tarball
+path/integrity is replaced with the artifact built by the current run; registry
+integrity is preserved. npm fixtures retain workspace records so npm can
+reconcile the graph against each phase's actual manifests.
+
+To refresh, capture the normal package-manager lock after the HTTP scenario's
+resource install in each disposable consumer. For Yarn, combine registry blocks
+by resolution, combining descriptor keys without duplicating a descriptor;
+retain the package manager's metadata and checksums. For npm, retain each
+scenario's tree and replace only local plugin paths with `file:./packed-nest.tgz`.
+Review changes and rerun all four atomized HTTP tasks with fixture enforcement.
+Never change installed metadata, use force installs, or disable peer checks.
+
+The older library fixture received only an additional exact schematics 12.0.13
+descriptor for its already-pinned registry record. Its existing resolutions,
+including Nest 12.1.2 and CLI 12.0.0 controls, are unchanged.

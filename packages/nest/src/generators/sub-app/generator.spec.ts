@@ -144,11 +144,12 @@ describe('native Nest workspace members', () => {
       for(const [p,b] of expected.after) {
         if(p==='package.json') {
           const actual=JSON.parse(tree.read(prefix+p,'utf8'));
-          for(const dep of ['@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin',...(${JSON.stringify(
+          for(const dep of ['webpack','@rspack/core','webpack-node-externals','tsconfig-paths-webpack-plugin',...(${JSON.stringify(
             type
           )}==='esm'?['@swc/core','unplugin-swc']:[])]) {
             assert.ok(actual.devDependencies[dep]);
-            delete actual.devDependencies[dep];
+            if(JSON.parse(b).devDependencies[dep]) actual.devDependencies[dep]=JSON.parse(b).devDependencies[dep];
+            else delete actual.devDependencies[dep];
           }
           assert.equal(actual.scripts.lint,local('./dist/utils/setup-lint').nestMemberLintScript);
           actual.scripts.lint=JSON.parse(b).scripts.lint;
@@ -293,7 +294,7 @@ describe.each([
     const resolutions=[];
     local('./dist/utils/installed-nest-package').installedNestPackageResolver=()=> (path,name)=>{
       resolutions.push([path,name]);
-      return {version:name==='@nestjs/cli'?'12.0.0':'12.3.0',path:path+'/node_modules/'+name+'/package.json'};
+      return {version:name==='@nestjs/cli'?'12.0.0':'12.5.0',path:path+'/node_modules/'+name+'/package.json'};
     };
   `;
   it.each(
@@ -314,7 +315,7 @@ describe.each([
         // verified separately by real installed consumers, never by these mocks.
         tree.write('services/api/src/main.ts',tree.read('services/api/src/main.ts','utf8')+'\n// existing custom adapter integration\n');
         const manifest=JSON.parse(tree.read('services/api/package.json','utf8'));
-        manifest.dependencies['@nestjs/platform-fastify']='12.3.0';
+        manifest.dependencies['@nestjs/platform-fastify']='12.5.0';
         tree.write('services/api/package.json',JSON.stringify(manifest));
         const original=[...snapshotNxTree(tree)].filter(([p])=>p.startsWith('services/api/src/')||p.startsWith('services/api/test/'));
         const options={name:'NodeWorker',project:'api',platform:'${platform}',rootDir:'apps',specFileSuffix:'test'};
@@ -323,7 +324,7 @@ describe.each([
         const install=await subAppGenerator(tree,options);
         const again=scopedSnapshot();
         const expectedAgain=new Map(again);
-        local('./dist/generation-adapter/http-member').transformHttpMember(beforeNative,again,'NodeWorker','12.0.6','${platform}');
+        local('./dist/generation-adapter/http-member').transformHttpMember(beforeNative,again,'NodeWorker','12.0.13','${platform}');
         assert.deepEqual(again,expectedAgain);
         assert.equal(typeof install,'function');
         assert.ok(resolutions.every(([path])=>path==='services/api/package.json'));
@@ -341,7 +342,7 @@ describe.each([
         assert.equal(tree.read('services/api/'+member.root+'/test/app.e2e-test.ts','utf8').includes('await app.getHttpAdapter().getInstance().ready();'),'${platform}'==='fastify');
         const updated=JSON.parse(tree.read('services/api/package.json','utf8'));
         for(const [name,range] of Object.entries(manifest.dependencies)) assert.equal(updated.dependencies[name],range);
-        assert.equal(updated.dependencies['@nestjs/platform-${platform}'], '${platform}'==='express'?manifest.dependencies['@nestjs/platform-express']:'12.3.0');
+        assert.equal(updated.dependencies['@nestjs/platform-${platform}'], '${platform}'==='express'?manifest.dependencies['@nestjs/platform-express']:'12.5.0');
         const before=snapshotNxTree(tree);
         await assert.rejects(subAppGenerator(tree,options),/exists/);
         assert.deepEqual(snapshotNxTree(tree),before);
@@ -365,7 +366,7 @@ describe.each([
       await applicationGenerator(tree,{name:'api',platform:'${platform}',skipInstall:true});
       await subAppGenerator(tree,{name:'native',project:'api',skipInstall:true});
       // This fixture now has the adapter declared and installed.
-      local('./dist/utils/installed-nest-package').installedNestPackageResolver=()=> (path,name)=>({version:name==='@nestjs/cli'?'12.0.0':'12.3.0',path});
+      local('./dist/utils/installed-nest-package').installedNestPackageResolver=()=> (path,name)=>({version:name==='@nestjs/cli'?'12.0.0':'12.5.0',path});
       const original=tree.read('api/apps/api/src/main.ts');
       const before=snapshotNxTree(tree);
       const result=await local('./dist/generation-adapter/run-nest-schematic').runNestSchematic(tree,{schematic:'sub-app',options:{name:'one'},httpPlatform:'${platform}',workingDirectory:'api',isolateHostReads:true,dryRun:true});
@@ -374,7 +375,7 @@ describe.each([
       for(const name of ['one','two']) assert.equal(await subAppGenerator(tree,{name,project:'api',platform:'${platform}',skipInstall:true}),undefined);
       assert.deepEqual(tree.read('api/apps/api/src/main.ts'),original);
       const manifest=JSON.parse(tree.read('api/package.json','utf8'));
-      assert.equal(manifest.dependencies['@nestjs/platform-${platform}'],'12.3.0');
+      assert.equal(manifest.dependencies['@nestjs/platform-${platform}'],'12.5.0');
       assert.equal(manifest.devDependencies['@nestjs/platform-${platform}'],undefined);
     `
     );
@@ -393,8 +394,8 @@ describe.each([
       tree.write('api/package.json',JSON.stringify(manifest));
       await subAppGenerator(tree,{name:'worker',project:'api',platform:'${platform}',skipInstall:true});
       const result=JSON.parse(tree.read('api/package.json','utf8'));
-      assert.equal(result.dependencies['@nestjs/platform-${platform}'],'12.3.0');
-      assert.equal(result.dependencies['@nestjs/platform-node'],'12.3.0');
+      assert.equal(result.dependencies['@nestjs/platform-${platform}'],'12.5.0');
+      assert.equal(result.dependencies['@nestjs/platform-node'],'12.5.0');
       assert.deepEqual(tree.read('api/apps/api/src/main.ts'),original);
       assert.match(tree.read('api/apps/worker/src/main.ts','utf8'),/new ${adapter}\(\)/);
     `

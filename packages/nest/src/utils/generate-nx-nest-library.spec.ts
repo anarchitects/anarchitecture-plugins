@@ -61,7 +61,7 @@ describe('Nx-native library transaction and install lifecycle', () => {
             ['src/users.module.ts', Buffer.from('native module fixture')],
           ]),
           deferredTasks: [],
-          schematicVersion: '12.0.6',
+          schematicVersion: '12.0.13',
         }));
       const callback = await generateNxNestLibrary(
         tree,

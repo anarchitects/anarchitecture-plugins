@@ -17,8 +17,9 @@ concurrency:
 jobs:
   main-ci:
     runs-on: ubuntu-latest
-    # Bound coordinator/agent stalls, including failures outside Jest's timers.
-    timeout-minutes: 20
+    # Bound stalls while allowing the full packed-consumer matrix to complete.
+    # Timing evidence: docs/guides/nest-http-consumer-matrix.md#ci-execution-budget
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v6
         with:
@@ -44,8 +45,8 @@ jobs:
         run: yarn nx-cloud record -- yarn nx run @anarchitecture-plugins/source:test-release-workflows
       - name: Run affected tasks on Nx Agents
         run: yarn nx affected -t lint test build typecheck e2e-ci
-        # Leave time for fix-ci diagnostics before the overall job deadline.
-        timeout-minutes: 15
+        # Keep setup, TS compatibility and fix-ci within the overall job budget.
+        timeout-minutes: 45
       - run: yarn dlx -q -p typescript@5.9.3 tsc --project tsconfig.ts5.json --pretty false
       - run: yarn nx fix-ci
         if: always()

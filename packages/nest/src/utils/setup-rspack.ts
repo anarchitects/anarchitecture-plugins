@@ -7,6 +7,7 @@ import {
 } from '@nx/devkit';
 import { posix } from 'node:path';
 import { dependencyState } from './dependency-install';
+import { missingNativeToolPeers } from './native-tool-peers';
 
 interface CompilerConfig {
   compilerOptions?: {
@@ -44,6 +45,10 @@ export function setupRspack(tree: Tree, ownerRoot: string): boolean {
   const missing = Object.fromEntries(
     Object.entries(compilerDependencies).filter(([name]) => !declared[name])
   );
+  // Native 12.0.13 adds this checker during member conversion. Its Webpack
+  // peer is required even when Nest selects Rspack; npm supplies it implicitly,
+  // while Yarn requires the owner to declare it. Preserve consumer versions.
+  Object.assign(missing, missingNativeToolPeers(manifest));
   addDependenciesToPackageJson(tree, {}, missing, at('package.json'), true);
 
   // Nest automatically loads rspack.config.js. An explicit configPath wins.

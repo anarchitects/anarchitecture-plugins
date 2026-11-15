@@ -20,4 +20,5 @@ export interface ApplicationGeneratorSchema {
   specFileSuffix?: string;
   format?: boolean;
   observe?: boolean;
+  minimal?: boolean;
 }
