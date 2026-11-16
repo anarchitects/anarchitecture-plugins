@@ -50,7 +50,9 @@ jobs:
           filter: tree:0
 
       - name: Attach approved revision to local main
-        run: git switch --force-create main "$GITHUB_SHA"
+        run: |
+          git switch --force-create main "$GITHUB_SHA"
+          git branch --set-upstream-to=origin/main main
 
       - name: Enable Corepack
         run: corepack enable

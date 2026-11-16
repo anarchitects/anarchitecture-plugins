@@ -380,42 +380,71 @@ test('release inputs remain literal shell arguments and cannot supply Nx options
   assert.notEqual(run('--publish').status, 0);
 });
 
-test('Nx releases use local main pinned to the approved SHA despite a newer main', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'release-approved-sha-'));
-  const env = {
-    ...process.env,
-    GIT_CONFIG_GLOBAL: '/dev/null',
-    GIT_CONFIG_SYSTEM: '/dev/null',
-  };
-  const git = (...args) => {
-    const result = spawnSync('git', args, {
-      cwd: directory,
-      env,
-      encoding: 'utf8',
-    });
-    assert.equal(result.status, 0, result.stderr);
-    return result.stdout.trim();
-  };
-  try {
-    git('init', '--initial-branch=main');
-    git('config', 'user.name', 'Release fixture');
-    git('config', 'user.email', 'fixture@example.invalid');
-    git('commit', '--allow-empty', '-m', 'chore: approved');
-    const approved = git('rev-parse', 'HEAD');
-    git('commit', '--allow-empty', '-m', 'chore: later main');
-    git('checkout', '--detach', approved);
-    const step = release.jobs.release.steps.find(
-      (s) => s.name === 'Attach approved revision to local main'
-    );
-    const result = spawnSync('bash', ['-e', '-c', step.run], {
-      cwd: directory,
-      env: { ...env, GITHUB_SHA: approved },
-      encoding: 'utf8',
-    });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(git('branch', '--show-current'), 'main');
-    assert.equal(git('rev-parse', 'HEAD'), approved);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
+for (const remoteAdvanced of [false, true]) {
+  test(`Nx release tracks main without replacing the approved SHA (remote advanced: ${remoteAdvanced})`, () => {
+    const directory = mkdtempSync(join(tmpdir(), 'release-approved-sha-'));
+    const env = {
+      ...process.env,
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_CONFIG_SYSTEM: '/dev/null',
+    };
+    const git = (...args) => {
+      const result = spawnSync('git', args, {
+        cwd: directory,
+        env,
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, result.stderr);
+      return result.stdout.trim();
+    };
+    try {
+      git('init', '--initial-branch=main');
+      git('config', 'user.name', 'Release fixture');
+      git('config', 'user.email', 'fixture@example.invalid');
+      git('commit', '--allow-empty', '-m', 'chore: approved');
+      const approved = git('rev-parse', 'HEAD');
+      git('init', '--bare', join(directory, 'origin.git'));
+      git('remote', 'add', 'origin', join(directory, 'origin.git'));
+      git('push', 'origin', 'main');
+      if (remoteAdvanced) {
+        git('commit', '--allow-empty', '-m', 'chore: later main');
+        git('push', 'origin', 'main');
+      }
+      const remoteBefore = git('rev-parse', 'origin/main');
+      git('checkout', '--detach', approved);
+      const step = release.jobs.release.steps.find(
+        (s) => s.name === 'Attach approved revision to local main'
+      );
+      const result = spawnSync('bash', ['-e', '-c', step.run], {
+        cwd: directory,
+        env: { ...env, GITHUB_SHA: approved },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(git('branch', '--show-current'), 'main');
+      assert.equal(git('rev-parse', 'HEAD'), approved);
+      assert.equal(
+        git('rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'),
+        'origin/main'
+      );
+      git('commit', '--allow-empty', '-m', 'chore: release version');
+      const push = spawnSync('git', ['push'], {
+        cwd: directory,
+        env,
+        encoding: 'utf8',
+      });
+      if (remoteAdvanced) {
+        assert.notEqual(push.status, 0);
+        assert.match(push.stderr, /non-fast-forward|fetch first/);
+      } else {
+        assert.equal(push.status, 0, push.stderr);
+      }
+      assert.equal(
+        git('ls-remote', 'origin', 'refs/heads/main').split(/\s+/)[0],
+        remoteAdvanced ? remoteBefore : git('rev-parse', 'HEAD')
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+}
