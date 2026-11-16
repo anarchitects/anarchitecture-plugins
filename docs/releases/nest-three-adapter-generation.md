@@ -223,6 +223,8 @@ Milestone 1 covers all three explicit adapters and does **not** depend on
 separate evidence/decision gate for future default activation. Node remains the
 strategic candidate; Express remains the omitted-platform behavior. This record
 does not satisfy performance/SSR/default-activation gates by implication.
+The [16 November default review](nest-node-default-decision.md) records a
+deferred/no-go disposition and the concrete evidence required for reconsideration.
 
 [#508](https://github.com/anarchitects/anarchitecture-plugins/issues/508) retains
 optional Fastify presets and integration work. Baseline Fastify generation is
