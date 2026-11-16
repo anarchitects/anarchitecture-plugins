@@ -155,6 +155,11 @@ allowed, administrator approval bypass disabled and only branch `main` (no tag
 policy). Put `ANARCHITECTS_BOT_APP_ID` and the replacement
 `ANARCHITECTS_BOT_PRIVATE_KEY` in that environment only.
 
+The release checkout attaches local `main` to the approved dispatch SHA and sets
+`origin/main` as its upstream for Nx's normal push. Tracking the remote does not
+advance the approved checkout. If remote `main` advances incompatibly before the
+push, the release fails without force-pushing; review and dispatch a fresh run.
+
 The coordinated credential cutover is tracked in [Community #722](https://github.com/anarchitects/anarchitecture-community/issues/722).
 Merge and verify the protected route before removing organization key allocations
 and revoking the old App keys. Johan retains a protected recovery copy. Failed
