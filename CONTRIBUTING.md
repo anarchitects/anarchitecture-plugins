@@ -83,8 +83,7 @@ yarn nx affected -t build,test,lint
 ### 5. Keep the Nest Core Portable
 
 For `@anarchitects/nest`, first read its
-[ownership boundaries](packages/nest/README.md#architecture-and-ownership) and
-[portable-core contributor constraints](packages/nest/README.md#contributor-constraints-for-the-portable-core).
+[consumer and contribution guide](packages/nest/README.md).
 Nest owns framework behavior, Nx owns orchestration, and test/lint integrations
 own their targets. Keep Anarchitects-specific policies in separate optional
 tooling. The Nest package and its E2E fixtures are MIT-licensed exceptions to the
@@ -95,6 +94,10 @@ For HTTP-platform generation work, read the
 and the [three-adapter generation contract](docs/guides/nest-three-adapter-generation-contract.md).
 They separate current schematic behavior from implementation contracts and the
 consumer evidence required before support or default activation.
+The [installed HTTP consumer matrix](docs/guides/nest-http-consumer-matrix.md)
+records exact versions, security assertions and optional-feature restrictions.
+Use the [three-adapter release readiness record](docs/releases/nest-three-adapter-generation.md)
+for milestone-1 traceability, regression gates and the separate publication handoff.
 
 ## Testing Expectations
 

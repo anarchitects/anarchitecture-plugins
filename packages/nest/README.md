@@ -9,6 +9,13 @@ owns workspace integration, the project graph, task orchestration, and caching.
 Choose this package when you want native Nest CLI conventions with Nx's workspace
 and task tooling. The runtime contract is **NestJS 12 only**.
 
+> **Unreleased candidate documentation:** the three-adapter generation and
+> installed-host library adoption described here are on the development branch.
+> Registry `latest` is still **0.1.0** as checked on 15 November 2026 and does not
+> include these changes. `nx add` installs the published package; use its bundled
+> README for that version. The commands below describe the candidate once installed.
+> No Node-default activation is included: omission still selects native Express.
+
 ## Compatibility
 
 | Component              | Supported contract                                                                                                                                                                                                        |
@@ -28,6 +35,33 @@ These samples do not certify every version combination or every custom builder.
 Independently versioned integrations, such as Swagger, follow their own
 compatibility requirements. Your application owns its framework dependencies and
 platform adapter.
+
+### Verified HTTP generation
+
+| Selection                                     | Independent application            | Native sub-app (`app` alias)                         | Default behavior |
+| --------------------------------------------- | ---------------------------------- | ---------------------------------------------------- | ---------------- |
+| `--platform=node`                             | Explicit `NodeAdapter`, ESM/CJS    | Selected new member only, owner's module format      | Opt-in           |
+| `--platform=express`                          | Explicit `ExpressAdapter`, ESM/CJS | Selected new member only, owner's module format      | Opt-in           |
+| `--platform=fastify`                          | Explicit `FastifyAdapter`, ESM/CJS | Selected new member only, owner's module format      | Opt-in           |
+| Omitted, with no applicable generator default | Native Express bootstrap           | Native Express member, regardless of owner's adapter | Unchanged        |
+
+The installed-consumer baseline tests all three explicit adapters in both module
+formats in these lanes. New explicit applications use Nest **12.5.0**, CLI and
+schematics **12.0.13**, and TypeScript **6.0.3**:
+
+| Node    | Nx     | Package manager           | Observe |
+| ------- | ------ | ------------------------- | ------- |
+| 22.22.3 | 23.2.0 | Yarn 4.17.0, node-modules | Off     |
+| 24.21.0 | 24.0.1 | Yarn 4.17.0, node-modules | On      |
+| 26.0.0  | 24.0.1 | Yarn 4.17.0, node-modules | Off     |
+| 24.21.0 | 24.0.1 | npm 11.19.1               | On      |
+
+These are sampled combinations, not every combination of the supported ranges.
+Native CJS Jest needs Node 24.9 or newer to load Nest's ESM packages; Node 22 CJS
+build/start/lint and real HTTP are verified, but generated Jest execution is
+unsupported there. ESM Vitest is verified in all four lanes. Existing audited
+12.3.0 owners retain member-generation coverage; they are not silently upgraded.
+Optional capabilities use a narrower matrix below.
 
 ## Installation
 
@@ -186,6 +220,27 @@ package metadata. This command adds Nest CLI configuration, not an application,
 TypeScript setup, dependencies, or a package-manager workspace link. Existing
 conflicting configuration is not overwritten; edit it explicitly.
 
+### Manual adoption and rollback
+
+Start from a clean version-control checkpoint and preview generation with
+`--dry-run`. `init` and `configuration` adopt tooling; they do not replace an
+existing adapter or upgrade Nest. Explicit platform selection applies to a new
+application/member only. Changing an existing bootstrap is a manual application
+change: align its adapter dependency, HTTP tests and consumer-owned integration
+configuration, then validate build, tests and real HTTP behavior.
+
+A native owner can contain Node, Express and Fastify members simultaneously.
+Their adapter dependencies belong in the shared owner's manifest, not separate
+member packages. Retain dependencies needed by existing members or native tooling;
+the generator does not prune them. Native monorepo conversion can relocate the
+original application while preserving its bootstrap and HTTP-test contents.
+
+To roll back generation, restore the coherent checkpoint for source, Nest/Nx
+configuration, workspace registration, manifests and lockfile, then install with
+the workspace package manager and rerun its checks. Review intervening changes
+before restoring files. Removing a generator default affects future generation
+only; it does not switch or undo an existing application's adapter.
+
 ## Applications and native sub-apps
 
 `application` creates an independent Nest package. `--directory` is the complete
@@ -208,6 +263,12 @@ yarn nx g @anarchitects/nest:application legacy-api --directory=packages/legacy-
 | `--platform=node` / `--platform=express` / `--platform=fastify` | Explicit adapter for a TypeScript HTTP application; no platform default.                        |
 | `--format`                                                      | Opt into native source formatting.                                                              |
 | `--skipInstall`                                                 | Write the package and workspace changes without installing.                                     |
+
+For native Observe instrumentation on a new independent application:
+
+```sh
+yarn nx g @anarchitects/nest:application observed-api --directory=packages/observed-api --platform=node --type=esm --observe
+```
 
 Generation registers the package in the workspace and installs required
 changes automatically after successful generation. `--dry-run` previews without
@@ -261,6 +322,20 @@ dependencies; the generator does not provide feature presets. Standard Schema
 validation alone does not supply an OpenAPI schema. Fastify uploads use Nest's
 Fastify interceptor, and Fastify static/view setup uses its adapter-specific
 options. Consult the matrix for exact tested versions and remaining restrictions.
+
+| Optional capability | Verified on all three adapters                              | Important boundary                                                                                                                                                                    |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Swagger/OpenAPI     | `@nestjs/swagger` 12.1.2; JSON and UI assets                | Standard Schema needs JSON-schema conversion or an explicit converter; validation alone is insufficient. Browser execution and production documentation access policy are unverified. |
+| Multipart uploads   | Native adapter `FileInterceptor`; bounded memory upload     | One 64-byte file, one 16-byte text field, three parts. No disk/cloud storage, content-safety or streaming-upload claim.                                                               |
+| Static files        | Public adapter API, GET/HEAD and hidden/traversal rejection | Fastify requires explicit `dotfiles: 'ignore'`; alongside Swagger use `decorateReply: false` for the application static directory.                                                    |
+| Server views        | EJS 5.0.1 and escaped template data                         | Other engines and frontend SSR are unverified.                                                                                                                                        |
+
+These optional checks use independent ESM/CJS applications on Node 24.21.0,
+Nx 24.0.1 and Yarn 4.17.0 with Nest 12.5.0. Fastify additionally uses
+`@fastify/static` 10.1.11, `@fastify/multipart` 10.1.8 and `@fastify/view` 12.0.1.
+Its native upload interceptor registers multipart automatically. Optional-feature
+composition in native members, with Observe/Rspack, or in other runtime lanes
+remains unverified. No optional-feature generator presets are provided.
 
 To configure the option, use Nx generator defaults in `nx.json`:
 
@@ -345,6 +420,8 @@ To configure a platform for future members, use the canonical Nx generator key
 `@anarchitects/nest:sub-app` (also used by the `app` alias). The same precedence
 and reset rules as independent applications apply. `--project` selects the Nest
 owner; it does not change which invocation project supplies Nx generator defaults.
+The invocation project's defaults come from Nx's working-directory context.
+Defaults for `@anarchitects/nest:application` are not inherited by `sub-app`.
 
 ## Choose a library model
 
@@ -764,6 +841,16 @@ owner (`api:test`, `api:lint`), while member builds/servers use member Nx names.
 
 ## Troubleshooting
 
+### HTTP generation
+
+| Symptom                                                               | What to check                                                                                                                                                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `platform` is unknown or the generated output differs from this guide | Check the installed plugin version. These candidate features are unreleased; registry 0.1.0 does not include them.                                                                                     |
+| A member's host is rejected                                           | Install one coherent audited 12.3.0 or 12.5.0 set in the declaring owner. Root hoisting and `--skipInstall` do not bypass installed-host validation.                                                   |
+| Explicit platform rejects a template or location                      | Use full TypeScript templates and native `apps/<name>` members; JavaScript, minimal applications and custom member path/rootDir layouts are outside this contract.                                     |
+| An unexpected adapter is selected                                     | Check explicit options, the invocation project's defaults, then workspace defaults. Use canonical `sub-app` defaults for `app`; the owner's existing adapter does not select the new member's adapter. |
+| CJS Jest fails on Node 22                                             | Use a verified Node 24/26 lane for generated Jest, or use ESM/Vitest. Node 22 CJS runtime coverage does not include Jest.                                                                              |
+
 ### Published-library initialization failures
 
 Read the diagnostic's manifest path and dependency section first. A root Nest 12
@@ -801,7 +888,7 @@ bypass these diagnostics.
 
 ### Verified HTTP consumer combinations
 
-The [packed HTTP matrix](../../docs/guides/nest-http-consumer-matrix.md) records
+The [packed HTTP matrix](https://github.com/anarchitects/anarchitecture-plugins/blob/main/docs/guides/nest-http-consumer-matrix.md) records
 exact Node/Nx/TypeScript/package-manager combinations, resolved dependency versions
 and exclusions. All three adapters have real independent/member HTTP coverage.
 Native CommonJS Jest tests require Node 24.9 or newer to load Nest's ESM packages;
