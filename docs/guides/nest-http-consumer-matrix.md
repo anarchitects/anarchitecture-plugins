@@ -6,6 +6,9 @@ The shared scenario is `packages/nest-e2e/src/http-consumer-matrix.ts`; its four
 small spec files use the existing packed-plugin and installed-consumer harnesses.
 This complements the [adapter API audit](nest-three-adapter-generation-contract.md)
 and retains the [published-library gates](nest-published-library-compatibility.md).
+The [milestone-1 readiness record](../releases/nest-three-adapter-generation.md)
+consolidates these results with the security, optional-capability and regression
+gates, and distinguishes local certification from release authorization.
 
 ## Version and selection boundaries
 
