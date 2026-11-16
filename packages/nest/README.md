@@ -9,11 +9,6 @@ owns workspace integration, the project graph, task orchestration, and caching.
 Choose this package when you want native Nest CLI conventions with Nx's workspace
 and task tooling. The runtime contract is **NestJS 12 only**.
 
-> **Available from version 0.1.1:** explicit Node, Express and Fastify generation
-> and installed-host library adoption. Earlier versions do not include these
-> features; use the README bundled with your installed version.
-> Omission follows native Nest's default, which remains Express on Nest 12.
-
 ## Compatibility
 
 | Component              | Supported contract                                                                                                                                                                                                        |
@@ -843,7 +838,7 @@ owner (`api:test`, `api:lint`), while member builds/servers use member Nx names.
 
 | Symptom                                                               | What to check                                                                                                                                                                                          |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `platform` is unknown or the generated output differs from this guide | Check the installed plugin version. These features require version 0.1.1 or later; 0.1.0 does not include them.                                                                                        |
+| `platform` is unknown or the generated output differs from this guide | Use the README bundled with your installed plugin version. Upgrade the plugin if it does not provide the option you need.                                                                              |
 | A member's host is rejected                                           | Install one coherent audited 12.3.0 or 12.5.0 set in the declaring owner. Root hoisting and `--skipInstall` do not bypass installed-host validation.                                                   |
 | Explicit platform rejects a template or location                      | Use full TypeScript templates and native `apps/<name>` members; JavaScript, minimal applications and custom member path/rootDir layouts are outside this contract.                                     |
 | An unexpected adapter is selected                                     | Check explicit options, the invocation project's defaults, then workspace defaults. Use canonical `sub-app` defaults for `app`; the owner's existing adapter does not select the new member's adapter. |
