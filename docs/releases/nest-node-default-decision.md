@@ -1,6 +1,6 @@
 # Native Node default activation review
 
-**Disposition: deferred — no-go for default activation on the reviewed baseline.**
+**Accepted disposition: defer a plugin-owned Node default; align with Nest's native default.**
 This is the decision review for [#615](https://github.com/anarchitects/anarchitecture-plugins/issues/615)
 under [#607](https://github.com/anarchitects/anarchitecture-plugins/issues/607),
 dated **16 November 2026**, against Plugins `29fabda` and Meta
@@ -13,10 +13,14 @@ Node default by this review, and existing applications remain unchanged.
 
 **Review owner: Johan**, Nx Plugins capability owner and technical maintainer,
 per the [ownership register](https://github.com/anarchitects/anarchitecture-meta/blob/4f0339d86f0ebfa073173ad307cb67c8d6042bdd/docs/ownership.md).
-Maintainer acceptance of this deferral is pending PR review; no named activation
-approval has been recorded. The accepted native-first preference is not that
-approval. A later go decision, implementation and publication require separate
-authorization.
+**Accepted by Johan on 16 November 2026:** deferring Node-default activation and
+aligning with Nest is a continuing principle, not only a temporary response to
+missing evidence. It is recorded in the
+[HTTP scaffolding ADR](../adr/adr-nest-http-platform-scaffolding.md#default-alignment-principle--2026-11-16-accepted).
+The plugin follows the native default of its supported Nest version; it does not
+switch ahead of Nest. Explicit choices and configured Nx defaults remain available.
+Adopting a later upstream default is part of a separately verified framework
+upgrade, subject to the existing compatibility, evidence and release gates.
 
 ## Evidence supporting the outcome
 
@@ -46,7 +50,9 @@ restricted to the Node 24 Yarn lane. No broader version or platform claim follow
 
 ## Unresolved gates and accountable owners
 
-These gates block default activation, not explicit Node generation. Ownership is
+These gates apply when adopting a framework version with a different native
+default; they do not call for a separate plugin-owned default ahead of Nest or
+block explicit Node generation. Ownership is
 accountability from the central register, not a new implementation assignment or
 deadline. The linked issues were read on 16 November 2026; remote CI was not queried.
 
@@ -57,7 +63,7 @@ deadline. The linked issues were read on 16 November 2026; remote CI was not que
 | Authentication and policy     | Sessions, rotation/revocation, cookie/CSRF/recovery/JWT semantics, passkey challenge/replay/counter/credential handling and fail-closed tenant/field/deny policy parity on the proposed host              | Johan, Auth domain owner; [Bricks #503](https://github.com/anarchitects/anarchitecture-bricks-3tier/issues/503) and [#504](https://github.com/anarchitects/anarchitecture-bricks-3tier/issues/504), coordinated with #506                                                                                                                                                                 |
 | SSR behavior                  | Distinct Node bridge, API bypass, GET/HEAD, redirects/cookies, secure assets, null/not-found, host/proxy validation, streaming/backpressure, abort/error cleanup and dependency-isolated packed consumers | Johan, SSR capability owner; [Community #33](https://github.com/anarchitects/anarchitecture-community/issues/33), concrete bridge [#744](https://github.com/anarchitects/anarchitecture-community/issues/744), routing [#745](https://github.com/anarchitects/anarchitecture-community/issues/745), conformance [#43](https://github.com/anarchitects/anarchitecture-community/issues/43) |
 | Representative performance    | Comparable application API and SSR workloads, raw repeatable results and all metrics below; none is supplied by the reviewed Plugins evidence or linked runtime gate records                              | Johan coordinates the Nx Plugins, SSR and relevant domain evidence under [#607](https://github.com/anarchitects/anarchitecture-plugins/issues/607) and this #615 review                                                                                                                                                                                                                   |
-| Default contract and approval | Exact eligible versions/templates, opt-outs, precedence, dependency policy, breaking-release impact and rollout/rollback accepted for a concrete candidate                                                | Johan, Nx Plugins owner/maintainer; reconsider #615 after the preceding gates, then separately authorize activation work                                                                                                                                                                                                                                                                  |
+| Default contract and approval | Exact eligible versions/templates, opt-outs, precedence, dependency policy, breaking-release impact and rollout/rollback accepted for a concrete candidate                                                | Johan, Nx Plugins owner/maintainer; review a framework-adoption follow-up under #607 after the preceding gates                                                                                                                                                                                                                                                                            |
 
 Bricks #506/#503/#504 remain open. Community #744/#745/#43 explicitly record
 unstarted implementation and unresolved dependencies; architectural acceptance
@@ -74,7 +80,7 @@ claim. Do not silently waive Meta ADR-0009's SSR/auth/security gates by describi
 a bare-controller result as an API-only default approval. Any narrower proposal
 needs an explicit scope decision from the relevant owners.
 
-## Benchmark evidence required for reconsideration
+## Benchmark evidence required for future default adoption
 
 Use the same representative application behavior for native Node and Nest/Fastify.
 Include API requests with the actual validation, serialization, authentication,
@@ -110,11 +116,11 @@ not choose a new member's platform.
 Explicit `--platform=express` and `--platform=fastify` are the implemented
 alternatives for independent apps and members. Removing a configured Node default
 currently restores native omission; no `auto`, `native`, `none` or null reset
-exists. If the plugin's own default changes, deleting workspace configuration
-would no longer restore Express. The approved guidance and real CLI tests must
+exists. If the supported Nest version's native default changes, deleting workspace
+configuration would no longer restore Express. The approved guidance and real CLI tests must
 make that distinction clear, including explicit overrides from a different cwd.
 
-A future activation proposal must resolve these compatibility cases before code:
+A future framework upgrade that changes the default must resolve these cases:
 
 - **Scope and eligibility:** name the exact released plugin/framework/schematic
   set and whether independent applications, native members or both change. The
@@ -165,12 +171,13 @@ while the package is on 0.x and a major increment on 1.x+. Nx derives the actual
 version from the then-current published baseline. #614's additive 0.1.1 preview
 is not permission to hide a default change in that candidate or publish it.
 
-After a go decision, the owning PR must amend the local HTTP scaffolding decision's
-Express-omission clause for the exact approved scope, preserving the historical
-decision and Meta constraints. Only then create a separately scoped activation
-follow-up under #607 with implementation, installed-consumer, release and rollback
-gates. A change to ecosystem policy or a waiver belongs with Meta's architecture
-authority; this deferred outcome needs no policy amendment.
+The local HTTP scaffolding ADR now records the accepted Nest-alignment principle.
+A future framework-adoption decision must identify its actual native default and
+the exact approved version/scope. Only after that decision should a separately
+authorized implementation follow-up track the changed default's installed-consumer,
+release and rollback gates. No independent early Node-default activation is
+planned. Any departure from the alignment principle needs an explicit ADR amendment;
+a change to ecosystem policy or a waiver belongs with Meta's architecture authority.
 
 Roll out through an explicitly reviewed release and documented new-app selection.
 Consumers can pin an explicit supported alternative before upgrading tooling.

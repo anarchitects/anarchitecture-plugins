@@ -99,8 +99,8 @@ records exact versions, security assertions and optional-feature restrictions.
 Use the [three-adapter release readiness record](docs/releases/nest-three-adapter-generation.md)
 for milestone-1 traceability, regression gates and the separate publication handoff.
 The [native Node default review](docs/releases/nest-node-default-decision.md)
-records the separate activation decision, external evidence gates and migration
-constraints; it does not change omitted-platform behavior.
+records the accepted principle of following Nest's native default, external
+evidence gates and migration constraints; it does not change current behavior.
 
 ## Testing Expectations
 
