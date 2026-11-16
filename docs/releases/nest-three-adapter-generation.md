@@ -2,17 +2,20 @@
 
 Preparation record for [#614](https://github.com/anarchitects/anarchitecture-plugins/issues/614)
 under [#607](https://github.com/anarchitects/anarchitecture-plugins/issues/607),
-prepared **15–16 November 2026**. The implementation baseline is merged main
-`08d2ad6` after the optional-capability slice. Consumer commands and restrictions
-live in the [package README](../../packages/nest/README.md); exact versions and
+prepared **15–16 November 2026**. Final local validation on **16 November 2026**
+used merged main `f22f0af` after the accepted Nest-default alignment decision.
+The implementation baseline was `08d2ad6` after the optional-capability slice.
+Consumer commands and restrictions live in the [package README](../../packages/nest/README.md); exact versions and
 request assertions live in the [HTTP consumer matrix](../guides/nest-http-consumer-matrix.md).
 
-This record consolidates the bounded milestone-1 implementation and its prior
-installed-consumer evidence. **Fresh combined validation is pending:** system
-sleep interrupted the current candidate's unit and consumer runs. It prepares an
-unreleased candidate, not a publication or a claim of unrestricted production
-parity. Review, successful validation and CI for this documentation PR remain
-release gates; CI is not monitored or asserted here.
+This record consolidates the bounded milestone-1 implementation and its
+installed-consumer evidence. **Local case coverage is complete with one isolated
+rerun:** all 675 unit tests passed; the full consumer invocation passed 109/110,
+and all six cases in the affected Node 22 lane then passed in isolation. The
+full invocation itself was not green; its port collision is recorded below.
+Review, required CI, the final release preview and publication authorization
+remain release gates. CI is not monitored or asserted here, and this candidate
+is unreleased. These results do not establish unrestricted production parity.
 
 ## Delivered behavior
 
@@ -126,22 +129,35 @@ manager or Yarn PnP combination. The existing CI `e2e-ci` wildcard discovers the
 Local host: macOS arm64, Node **24.22.3**, Yarn **4.17.0**, Nx **24.0.1**.
 The consumer lanes verify their separately installed exact Node binaries.
 
-| Gate                                           | Observed result                                                                                                                                                                                                      |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plugin build and both projects' lint/typecheck | Passed: five tasks, two local cache hits; 16 existing plugin lint warnings, no errors.                                                                                                                               |
-| Unit suite                                     | Pending a clean rerun: initial run passed 674/675 tests in 34/35 suites; one subprocess timed out. The affected 33-test suite subsequently passed 29 and 32 tests in two attempts, with timeouts in different cases. |
-| Full installed-consumer suite                  | Pending a clean rerun: 46/110 tests and 24/43 suites passed; remaining suites reported subprocess/install/test timeouts during repeated system sleep. The follow-up run was stopped for draft review.                |
-| Package inspection                             | 188 files; README matches source; MIT license and public runtime/type exports present; no source, specs or build-info files.                                                                                         |
-| Version and full release preview               | Passed in dry-run mode; derived 0.1.1 without an explicit specifier.                                                                                                                                                 |
+| Gate                                           | Observed result                                                                                                                                                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plugin build and both projects' lint/typecheck | Passed: five tasks, Nx cache bypassed; 16 existing plugin lint warnings, no errors.                                                                                                                        |
+| Unit suite                                     | Passed: 675/675 tests in 35/35 suites, 309.103 seconds; Nx cache bypassed.                                                                                                                                 |
+| Full installed-consumer invocation             | 109/110 tests passed in 42/43 suites, 2058.438 seconds; one Node 22 CommonJS member hit `EADDRINUSE`. Nx cache bypassed; no subprocess timeout reported.                                                   |
+| Isolated Node 22 lane rerun                    | Passed: all six Node/Express/Fastify ESM/CJS cases, including the failed member startup, in 426.121 seconds. Sequential execution with Nx cache bypassed; no code, fixture, assertion or deadline changes. |
+| Package inspection                             | 188 files; README matches source; MIT license and public runtime/type exports present; no source, specs or build-info files.                                                                               |
+| Version and full release preview               | Passed in dry-run mode; derived 0.1.1 without an explicit specifier.                                                                                                                                       |
 
-The macOS power log confirms repeated system sleep and dark wakes during these
-runs, including 15–17-minute sleep intervals. Command-scoped idle-sleep prevention
-did not stop those interruptions. No assertion, deadline, dependency or source
-was changed to obtain a pass. The original failing unit case passed on retry,
-but the interrupted runs are **not** recorded as successful full validation.
-The owner requested draft review with validation pending. Re-run the unit and
-consumer commands below on an awake host before completing candidate certification;
-the earlier #611–#613 records remain dated evidence for their respective baselines.
+The original draft-review runs were interrupted by repeated system sleep: the
+unit run reached 674/675 tests and the consumer run 46/110. Those runs remain
+historical incomplete evidence. The final runs above used `caffeinate -i` and
+completed on the same unchanged candidate, with no timeout or test relaxation.
+
+The full consumer invocation's only failure was
+`node22/yarn: runs node cjs applications and mixed members`: the generated member
+compiled and initialized, then its listener failed with `EADDRINUSE` on port 54322.
+The harness probes a free port and releases it before starting Nest, so
+another process can claim it during startup. The collision's competing process
+was not identified. A fresh isolated run of the entire six-case Node 22 spec
+passed without modifying the harness or generated application. All 110 distinct
+consumer cases therefore have passing evidence across the full run and this
+rerun; do not describe that as one successful full-suite invocation or as a fix
+for the port-allocation race. Required CI remains a separate gate.
+
+Package inspection and version previews below retain their earlier preparation
+results; neither is a new publication check. Recompute the release preview on
+the final merged release candidate. The #611–#613 records remain dated evidence
+for their respective baselines and exact support limits.
 
 The inspected local archive retains development version 0.1.0. Its identity is
 recorded here for reproducibility, not as the registry artifact or a future
@@ -163,15 +179,17 @@ Reproduce from the repository root with registry access, Corepack/npm, OpenSSL
 `req -addext`, and permission to bind loopback HTTP/HTTPS ports:
 
 ```sh
-corepack yarn nx run-many -t build,lint,typecheck -p nx-nest,nx-nest-e2e --output-style=static
-corepack yarn nx run nx-nest:test --runInBand --output-style=static
-corepack yarn nx run nx-nest-e2e:e2e --output-style=static
+corepack yarn nx run-many -t build,lint,typecheck -p nx-nest,nx-nest-e2e --skipNxCache --output-style=static
+corepack yarn nx run nx-nest:test --runInBand --skipNxCache --output-style=static
+corepack yarn nx run nx-nest-e2e:e2e --skipNxCache --output-style=stream
+corepack yarn nx run nx-nest-e2e:e2e --runInBand --runTestsByPath src/nest-scenarios/http-node22.spec.ts --skipNxCache --output-style=stream
 corepack yarn nx release version --projects=nx-nest --dry-run
 corepack yarn nx release --projects=nx-nest --dry-run --skip-publish
 ```
 
 Local execution disables daemon/plugin isolation/cloud with `NX_DAEMON=false`,
 `NX_ISOLATE_PLUGINS=false`, `NX_NO_CLOUD=true` and uses a temporary SWC cache.
+Final consumer runs also used `NEST_E2E_TRACE=true` for subprocess diagnostics.
 This changes local execution only, not the repository's CI distribution strategy.
 The full E2E target runs two Jest workers; CI infers individual spec targets.
 
@@ -243,6 +261,11 @@ as one coherent change and retains shared adapter dependencies. The
 library guarantees remain regression gates, not replaced by HTTP certification.
 
 ## Architecture preflight
+
+The final validation re-enumerated the same Meta revision and six local ADRs,
+retaining their full prior review and the accepted Nest-alignment amendment in
+PR #631. Native scaffold ownership, exact compatibility evidence, library
+preservation and separate publication authority apply unchanged.
 
 All **25 Meta ADRs** were enumerated and read at
 `4f0339d86f0ebfa073173ad307cb67c8d6042bdd`, along with **all six local ADRs**,
