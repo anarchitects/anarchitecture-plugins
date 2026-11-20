@@ -5,6 +5,9 @@ import {
   Tree,
 } from '@nx/devkit';
 import * as devkit from '@nx/devkit';
+import * as path from 'node:path';
+import { runInNewContext } from 'node:vm';
+import { ts } from 'ts-morph';
 import bootstrapGenerator from './generator.js';
 
 let createTreeWithEmptyWorkspace: typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace'];
@@ -445,10 +448,161 @@ export class AppModule {}
     ).toContain('...AppDataSource.options');
     expect(
       tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
-    ).toContain(
-      "AppDataSource.options.migrations ?? ['dist/tools/typeorm/migrations/*.js']"
+    ).toContain('AppDataSource.options.migrations ?? defaultMigrations');
+  });
+
+  it.each(['module', 'commonjs'])(
+    'creates a separate migration build for nested %s apps',
+    async (type) => {
+      const root = 'apps/blueprint/api';
+      addProjectConfiguration(tree, 'api', {
+        root,
+        sourceRoot: `${root}/src`,
+        projectType: 'application',
+      });
+      tree.write(`${root}/package.json`, JSON.stringify({ type }));
+      const hostConfig = JSON.stringify({
+        compilerOptions: { rootDir: './src', outDir: './dist' },
+        include: ['src'],
+      });
+      tree.write(`${root}/tsconfig.build.json`, hostConfig);
+      const options = {
+        project: 'api',
+        migrationDatasource: true,
+        skipInstall: true,
+      };
+      await bootstrapGenerator(tree, options);
+      const source = tree.read(
+        `${root}/tools/typeorm/datasource.migrations.ts`,
+        'utf-8'
+      );
+      expect(source).toContain(
+        type === 'module' ? 'fileURLToPath(import.meta.url)' : '__filename'
+      );
+      expect(source).toContain('dirname(datasourceFile)');
+      expect(source).toContain(
+        "extname(datasourceFile) === '.ts' ? '{ts,js}' : 'js'"
+      );
+      const configPath = `${root}/tools/typeorm/tsconfig.migrations.json`;
+      const config = readJson(tree, configPath);
+      expect(config.extends).toBe('../../tsconfig.build.json');
+      expect(config.compilerOptions).toMatchObject({
+        rootDir: '../..',
+        outDir: '../../dist/typeorm',
+        allowJs: true,
+        noEmit: false,
+      });
+      expect(config.include).toContain('./datasource.migrations.ts');
+      expect(config.include).toContain('./migrations/**/*.ts');
+      const before = tree.listChanges();
+      await bootstrapGenerator(tree, options);
+      expect(tree.listChanges()).toEqual(before);
+      expect(tree.read(`${root}/tsconfig.build.json`, 'utf-8')).toBe(
+        hostConfig
+      );
+    }
+  );
+
+  it('preserves custom runtime migrations and migration compiler configuration', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      projectType: 'application',
+    });
+    const runtime =
+      "import { DataSource } from 'typeorm';\nexport const AppDataSource = new DataSource({ type: 'postgres', migrations: [], migrationsTableName: 'custom_ledger' });\n";
+    const configPath = 'apps/api/tools/typeorm/tsconfig.migrations.json';
+    const config =
+      '{ "extends": "../../custom.json", "compilerOptions": { "outDir": "../../custom-output" } }\n';
+    tree.write('apps/api/src/data-source.ts', runtime);
+    tree.write(configPath, config);
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      migrationDatasource: true,
+      skipInstall: true,
+    });
+    expect(tree.read('apps/api/src/data-source.ts', 'utf-8')).toBe(runtime);
+    expect(tree.read(configPath, 'utf-8')).toBe(config);
+    expect(
+      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
+    ).toContain('AppDataSource.options.migrations ?? defaultMigrations');
+  });
+
+  it('does not generate migration build config without migrationDatasource', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      projectType: 'application',
+    });
+    await bootstrapGenerator(tree, { project: 'api', skipInstall: true });
+    expect(tree.exists('apps/api/tools/typeorm/tsconfig.migrations.json')).toBe(
+      false
     );
   });
+
+  it.each([undefined, [], ['custom/*.js']])(
+    'resolves default paths by entry point and honors custom migrations: %j',
+    async (migrations) => {
+      addProjectConfiguration(tree, 'api', {
+        root: 'apps/api',
+        projectType: 'application',
+      });
+      await bootstrapGenerator(tree, {
+        project: 'api',
+        migrationDatasource: true,
+        skipInstall: true,
+      });
+      const source = tree.read(
+        'apps/api/tools/typeorm/datasource.migrations.ts',
+        'utf-8'
+      );
+      if (!source) throw new Error('Missing migration datasource');
+      const javascript = ts.transpileModule(source, {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      }).outputText;
+      for (const [file, glob] of [
+        ['tools/typeorm/datasource.migrations.ts', 'migrations/*.{ts,js}'],
+        [
+          'dist/typeorm/tools/typeorm/datasource.migrations.js',
+          'migrations/*.js',
+        ],
+      ]) {
+        const filename = path.resolve('/consumer/apps/blueprint/api', file);
+        const options = {
+          migrations,
+          migrationsTableName: 'custom_ledger',
+          synchronize: true,
+          schema: 'custom',
+        };
+        const exports: { default?: { options: Record<string, unknown> } } = {};
+        runInNewContext(javascript, {
+          exports,
+          __filename: filename,
+          require(id: string) {
+            if (id === 'node:path') return path;
+            if (id === 'typeorm')
+              return {
+                DataSource: class {
+                  constructor(public options: Record<string, unknown>) {}
+                },
+              };
+            if (id === '../../src/data-source')
+              return { AppDataSource: { options } };
+            throw new Error(`Unexpected import: ${id}`);
+          },
+        });
+        expect(exports.default?.options).toMatchObject({
+          migrations: migrations ?? [
+            path.join(path.dirname(filename), glob).replace(/\\/g, '/'),
+          ],
+          migrationsTableName: 'custom_ledger',
+          schema: 'custom',
+          synchronize: false,
+        });
+      }
+    }
+  );
 
   it('reuses an existing named data source and preserves the compatibility factory', async () => {
     addProjectConfiguration(tree, 'api', {

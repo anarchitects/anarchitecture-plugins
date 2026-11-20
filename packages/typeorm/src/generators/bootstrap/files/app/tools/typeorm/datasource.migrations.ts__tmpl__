@@ -1,8 +1,19 @@
 import { DataSource } from 'typeorm';
+import { dirname, extname, join } from 'node:path';
+<% if (migrationEsm) { %>import { fileURLToPath } from 'node:url';
+<% } %>
 import { AppDataSource } from '<%= migrationRuntimeImport %>';
+
+const datasourceFile = <%= migrationEsm ? 'fileURLToPath(import.meta.url)' : '__filename' %>;
+// Resolve alongside this entry point, independently of the CLI working directory.
+// Source execution accepts TS and authored JS; the separate build loads only JS.
+const migrationExtension = extname(datasourceFile) === '.ts' ? '{ts,js}' : 'js';
+const defaultMigrations = [
+  join(dirname(datasourceFile), `migrations/*.${migrationExtension}`).replace(/\\/g, '/'),
+];
 
 export default new DataSource({
   ...AppDataSource.options,
-  migrations: AppDataSource.options.migrations ?? ['dist/tools/typeorm/migrations/*.js'],
+  migrations: AppDataSource.options.migrations ?? defaultMigrations,
   synchronize: false,
 });

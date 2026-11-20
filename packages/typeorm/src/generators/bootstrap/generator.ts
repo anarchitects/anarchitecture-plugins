@@ -58,6 +58,7 @@ const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
 const APP_DATASOURCE_PATH = 'src/data-source.ts';
 const APP_DATASOURCE_REEXPORT_PATH = 'src/typeorm.datasource.ts';
 const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
+const APP_MIGRATIONS_TSCONFIG_PATH = 'tools/typeorm/tsconfig.migrations.json';
 const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
   ', '
 );
@@ -273,6 +274,11 @@ function prepareApplication(
   const existingMigrationsDatasource = tree.exists(migrationsDatasourcePath)
     ? tree.read(migrationsDatasourcePath)
     : null;
+  const migrationsTsConfigPath = joinPathFragments(
+    projectRoot,
+    APP_MIGRATIONS_TSCONFIG_PATH
+  );
+  const existingMigrationsTsConfig = tree.read(migrationsTsConfigPath);
 
   generateFiles(
     tree,
@@ -283,6 +289,12 @@ function prepareApplication(
       database,
       appDatabase: projectName,
       hasRuntimeFactory: existingRuntimeDataSource?.hasFactory ?? true,
+      migrationEsm: usesEsModules(tree, migrationsDatasourcePath),
+      migrationTsConfig: [
+        'tsconfig.app.json',
+        'tsconfig.build.json',
+        'tsconfig.json',
+      ].find((file) => tree.exists(joinPathFragments(projectRoot, file))),
       runtimeDataSourceImport: importPathFrom(
         tree,
         joinPathFragments(projectRoot, APP_DATASOURCE_REEXPORT_PATH),
@@ -307,6 +319,12 @@ function prepareApplication(
     tree.exists(migrationsDatasourcePath)
   ) {
     tree.delete(migrationsDatasourcePath);
+  }
+
+  if (existingMigrationsTsConfig) {
+    tree.write(migrationsTsConfigPath, existingMigrationsTsConfig);
+  } else if (!options.migrationDatasource) {
+    tree.delete(migrationsTsConfigPath);
   }
 
   if (!options.withCompose) {
