@@ -136,9 +136,9 @@ function moduleSystemFromNearestPackageJson(
           type?: string;
         };
 
-        if (packageJson.type === 'module') {
-          return 'esm';
-        }
+        // The nearest manifest starts a package scope, including when it has
+        // no type field. NodeNext does not make a CommonJS package ESM.
+        return packageJson.type === 'module' ? 'esm' : 'commonjs';
       } catch {
         // best effort: ignore malformed package.json files
       }
@@ -216,6 +216,13 @@ function tsConfigCandidates(
   }
 
   return [...candidates].filter((pathValue) => existsSync(pathValue));
+}
+
+export function resolveTypeormTsConfig(
+  context: ExecutorContext,
+  absoluteProjectRoot: string
+): string | undefined {
+  return tsConfigCandidates(context, absoluteProjectRoot)[0];
 }
 
 function collectTsConfigPathsFromObject(

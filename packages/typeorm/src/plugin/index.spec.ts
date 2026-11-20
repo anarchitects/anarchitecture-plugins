@@ -88,6 +88,28 @@ export class AppModule {}
     expect(api?.targets?.['db:migrate:show']).toBeDefined();
   });
 
+  it.each(['module', 'commonjs'])(
+    'leaves runner selection automatic for %s projects and all aliases',
+    async (type) => {
+      writeFile('apps/api/package.json', JSON.stringify({ type }));
+      writeFile(
+        'apps/api/tools/typeorm/datasource.migrations.ts',
+        'export default {};\n'
+      );
+      const projects = mergeProjects(
+        await createNodes(['apps/api/tools/typeorm/datasource.migrations.ts'])
+      );
+      const targets = projects['apps/api'].targets!;
+      const datasourceTargets = Object.values(targets).filter(
+        (target) => target.options?.dataSource
+      );
+      expect(datasourceTargets).toHaveLength(16);
+      for (const target of datasourceTargets) {
+        expect(target.options).not.toHaveProperty('moduleSystem');
+      }
+    }
+  );
+
   it('supports legacy runtime datasource names', async () => {
     writeFile(
       'apps/api/tools/typeorm/datasource.migrations.ts',

@@ -90,6 +90,22 @@
           ]
         }
       },
+      "test-inferred-consumer": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          {
+            "projects": [
+              "nx-nest"
+            ],
+            "target": "build"
+          }
+        ],
+        "cache": false,
+        "options": {
+          "command": "node tools/testing/typeorm-inferred-consumer.mjs"
+        }
+      },
       "test-postgres": {
         "executor": "nx:run-commands",
         "dependsOn": [

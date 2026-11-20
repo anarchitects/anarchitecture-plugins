@@ -1,7 +1,11 @@
 import { relative } from 'node:path';
 import type { ExecutorContext } from '@nx/devkit';
 import { getPackageManagerCommand } from '@nx/devkit';
-import { ensureProjectRoot, resolveTypeormCliRunner } from './shared.js';
+import {
+  ensureProjectRoot,
+  resolveTypeormCliRunner,
+  resolveTypeormTsConfig,
+} from './shared.js';
 import { spawn } from './spawn.js';
 
 type CliOptions = {
@@ -77,6 +81,12 @@ export async function runDataSourceTypeormCommand(
     context,
     paths.absoluteProjectRoot
   );
+  // The CLI cwd remains the workspace root for existing relative CLI paths.
+  // Select the app's compiler settings without mutating the parent environment.
+  const tsconfig =
+    !process.env.TS_NODE_PROJECT && /\.[cm]?ts$/.test(paths.dataSource)
+      ? resolveTypeormTsConfig(context, paths.absoluteProjectRoot)
+      : undefined;
   const [command, baseArgs] = packageManagerCommand();
   const args = [
     ...baseArgs,
@@ -89,5 +99,8 @@ export async function runDataSourceTypeormCommand(
     ...ensureArgs(options.args),
   ];
 
-  return spawn(command, args, { cwd: context.root });
+  return spawn(command, args, {
+    cwd: context.root,
+    ...(tsconfig ? { env: { TS_NODE_PROJECT: tsconfig } } : {}),
+  });
 }

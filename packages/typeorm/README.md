@@ -196,6 +196,11 @@ Compatibility aliases are also inferred:
 - `typeorm:ensure-schema`
 - `typeorm:seed` (applications)
 
+Datasource-backed targets and their aliases leave module selection automatic.
+The executor selects the runner when the target executes; inference does not
+force CommonJS. Explicit `moduleSystem` values in Nx target defaults, project
+target options or command-line options retain their normal Nx precedence.
+
 ## Executor Usage
 
 Run inferred targets:
@@ -219,10 +224,23 @@ Datasource-backed CLI executors (`generate`, `run`, `revert`,
 `migration-show`, `schema-sync`, `schema-log`, `schema-drop`, `query`,
 `cache-clear`) select the TypeORM runner at runtime:
 
-- `moduleSystem=auto` (default): detect by nearest `package.json` `type`,
-  then project tsconfig module mode, then fall back to CommonJS.
+- `moduleSystem=auto` (default): use the nearest `package.json` scope (`"type":
+"module"` selects ESM; `"commonjs"` or an omitted `type` selects CommonJS).
+  When no readable package scope exists within the workspace, use the project
+  tsconfig module mode, then fall back to CommonJS.
 - `moduleSystem=commonjs`: force `typeorm-ts-node-commonjs`.
 - `moduleSystem=esm`: force `typeorm-ts-node-esm`.
+
+For TypeScript datasources, the CLI uses the first existing project config in
+this order: `tsconfig.app.json`, `tsconfig.lib.json`, `tsconfig.build.json`,
+`tsconfig.json`, then a `tsConfig` path declared in project targets. An explicit
+`TS_NODE_PROJECT` environment value takes precedence. CLI paths and migration
+globs remain relative to the workspace root.
+
+Updating the plugin fixes automatically inferred targets without rerunning
+bootstrap or editing generated imports. Explicitly configured `moduleSystem`
+overrides are preserved; remove an obsolete override or set it to `auto` to
+restore detection. Keep emitted `.js` imports in NodeNext ESM source files.
 
 When `dataSource` is omitted, datasource-backed executors (`generate`, `run`,
 `revert`, `migration-show`, `schema-sync`, `schema-log`, `schema-drop`,
