@@ -225,6 +225,12 @@ Publish run per GitHub Release in the next authorized multi-package release and
 manually replaying an existing published tag. Offline fixtures do not establish
 GitHub event delivery or npm OIDC success.
 
+For `nx-typeorm`, keep the package's `LICENSE` and `NOTICE` in sync with the
+repository copies. Run `yarn nx run nx-typeorm:test-package` to build and pack
+the plugin and verify the files in the resulting archive. The TypeORM test
+target requires this check, so it runs in CI and in the Publish workflow before
+publication.
+
 See GitHub's [release and push event documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
 and [workflow triggering rules](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow).
 

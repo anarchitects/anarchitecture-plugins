@@ -10,6 +10,8 @@
   "files": [
     "dist",
     "README.md",
+    "LICENSE",
+    "NOTICE",
     "!**/*.tsbuildinfo"
   ],
   "publishConfig": {
@@ -50,8 +52,42 @@
         }
       },
       "test": {
+        "dependsOn": [
+          "^build",
+          "test-package"
+        ],
         "options": {
           "passWithNoTests": false
+        }
+      },
+      "test-package": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "inputs": [
+          "default",
+          "{workspaceRoot}/LICENSE",
+          "{workspaceRoot}/NOTICE",
+          "{workspaceRoot}/tools/testing/typeorm-package.mjs",
+          {
+            "dependentTasksOutputFiles": "**/dist/**/*"
+          },
+          {
+            "runtime": "node -p 'process.version + process.platform'"
+          },
+          {
+            "runtime": "npm --version"
+          }
+        ],
+        "options": {
+          "commands": [
+            {
+              "command": "node tools/testing/typeorm-package.mjs",
+              "forwardAllArgs": false
+            }
+          ]
         }
       },
       "test-postgres": {
