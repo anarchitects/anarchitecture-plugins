@@ -442,7 +442,70 @@ export class AppModule {}
     );
     expect(
       tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
-    ).toContain("migrations: ['dist/tools/typeorm/migrations/*.js']");
+    ).toContain('...AppDataSource.options');
+    expect(
+      tree.read('apps/api/tools/typeorm/datasource.migrations.ts', 'utf-8')
+    ).toContain(
+      "AppDataSource.options.migrations ?? ['dist/tools/typeorm/migrations/*.js']"
+    );
+  });
+
+  it('reuses an existing named data source and preserves the compatibility factory', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      projectType: 'application',
+      targets: {},
+    });
+    tree.write('apps/api/package.json', '{"type":"module"}');
+    const runtimePath = 'apps/api/src/data-source.ts';
+    const source =
+      "import { DataSource } from 'typeorm';\n" +
+      "export const AppDataSource = new DataSource({ type: 'postgres', database: 'custom' });\n";
+    tree.write(runtimePath, source);
+    const legacyPath = 'apps/api/tools/typeorm/connection-options.ts';
+    tree.write(legacyPath, 'export const customOptions = {};\n');
+
+    await bootstrapGenerator(tree, {
+      project: 'api',
+      migrationDatasource: true,
+      skipInstall: true,
+    });
+
+    expect(tree.read(runtimePath, 'utf-8')).toBe(source);
+    expect(tree.read(legacyPath, 'utf-8')).toBe(
+      'export const customOptions = {};\n'
+    );
+    const compatibilitySource = tree.read(
+      'apps/api/src/typeorm.datasource.ts',
+      'utf-8'
+    );
+    expect(compatibilitySource).toContain(
+      "import { AppDataSource } from './data-source.js';"
+    );
+    expect(compatibilitySource).toContain('function makeRuntimeDataSource()');
+    const migrationSource = tree.read(
+      'apps/api/tools/typeorm/datasource.migrations.ts',
+      'utf-8'
+    );
+    expect(migrationSource).toContain(
+      "import { AppDataSource } from '../../src/data-source.js';"
+    );
+    expect(migrationSource).toContain('...AppDataSource.options');
+  });
+
+  it('fails before changes when an existing source lacks the named bootstrap export', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      projectType: 'application',
+      targets: {},
+    });
+    tree.write('apps/api/src/data-source.ts', 'export default {};\n');
+    const changesBefore = tree.listChanges();
+
+    await expect(
+      bootstrapGenerator(tree, { project: 'api', skipInstall: true })
+    ).rejects.toThrow('must export a named AppDataSource');
+    expect(tree.listChanges()).toEqual(changesBefore);
   });
 
   it('removes migration datasource for applications when migrationDatasource is false', async () => {
@@ -545,7 +608,7 @@ export class AppModule {}
       const envSource = tree.read('apps/api/env.example', 'utf-8');
       expect(envSource).toContain(envSnippet);
       expect(envSource).toContain('DATABASE_URL=');
-      expect(envSource).toContain('Mixed mode is rejected.');
+      expect(envSource).toContain('Choose one connection mode');
     }
   );
 

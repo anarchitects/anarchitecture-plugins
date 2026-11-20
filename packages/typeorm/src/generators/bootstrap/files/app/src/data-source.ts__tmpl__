@@ -1,40 +1,63 @@
 import { DataSource } from 'typeorm';
 
+const databaseUrl = process.env.DATABASE_URL?.trim();
+const discreteConnectionKeys = [
+<% if (database !== 'better-sqlite3') { %>  'TYPEORM_HOST',
+  'TYPEORM_PORT',
+  'TYPEORM_USERNAME',
+  'TYPEORM_PASSWORD',
+<% } %>  'TYPEORM_DATABASE',
+<% if (database === 'mysql' || database === 'mariadb') { %>  'TYPEORM_SOCKET_PATH',
+<% } %>];
+
+if (databaseUrl) {
+  const conflictingKeys = discreteConnectionKeys.filter((key) => process.env[key] !== undefined);
+  if (conflictingKeys.length > 0) {
+    throw new Error(`Use either DATABASE_URL or discrete connection settings. Remove: ${conflictingKeys.join(', ')}.`);
+  }
+}
+
 export const AppDataSource = new DataSource({
 <% if (database === 'postgres') { %>  type: 'postgres',
-  host: process.env.TYPEORM_HOST ?? 'localhost',
-  port: Number.parseInt(process.env.TYPEORM_PORT ?? '5432', 10) || 5432,
-  username: process.env.TYPEORM_USERNAME ?? 'postgres',
-  password: process.env.TYPEORM_PASSWORD ?? 'postgres',
-  database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+  ...(databaseUrl ? { url: databaseUrl } : {
+    host: process.env.TYPEORM_HOST ?? 'localhost',
+    port: Number.parseInt(process.env.TYPEORM_PORT ?? '5432', 10) || 5432,
+    username: process.env.TYPEORM_USERNAME ?? 'postgres',
+    password: process.env.TYPEORM_PASSWORD ?? 'postgres',
+    database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+  }),
   schema: process.env.TYPEORM_SCHEMA ?? 'public',
   ssl: process.env.TYPEORM_SSL === 'true',
   applicationName: process.env.TYPEORM_APPLICATION_NAME ?? '<%= appDatabase %>-service',
   connectTimeoutMS: Number.parseInt(process.env.TYPEORM_CONNECT_TIMEOUT_MS ?? '5000', 10) || 5000,
 <% } %><% if (database === 'mysql' || database === 'mariadb') { %>  type: '<%= database %>',
-  host: process.env.TYPEORM_HOST ?? 'localhost',
-  port: Number.parseInt(process.env.TYPEORM_PORT ?? '3306', 10) || 3306,
-  username: process.env.TYPEORM_USERNAME ?? 'root',
-  password: process.env.TYPEORM_PASSWORD ?? 'root',
-  database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+  ...(databaseUrl ? { url: databaseUrl } : {
+    host: process.env.TYPEORM_HOST ?? 'localhost',
+    port: Number.parseInt(process.env.TYPEORM_PORT ?? '3306', 10) || 3306,
+    username: process.env.TYPEORM_USERNAME ?? 'root',
+    password: process.env.TYPEORM_PASSWORD ?? 'root',
+    database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+    socketPath: process.env.TYPEORM_SOCKET_PATH?.trim() || undefined,
+  }),
   ssl: process.env.TYPEORM_SSL === 'true',
-  socketPath: process.env.TYPEORM_SOCKET_PATH?.trim() || undefined,
   charset: process.env.TYPEORM_CHARSET ?? 'utf8mb4',
   timezone: process.env.TYPEORM_TIMEZONE ?? 'Z',
   connectTimeout: Number.parseInt(process.env.TYPEORM_CONNECT_TIMEOUT ?? '10000', 10) || 10000,
 <% } %><% if (database === 'better-sqlite3') { %>  type: 'better-sqlite3',
-  database: process.env.TYPEORM_DATABASE ?? './tmp/<%= appDatabase %>.sqlite',
+  database: databaseUrl || (process.env.TYPEORM_DATABASE ?? './tmp/<%= appDatabase %>.sqlite'),
   enableWAL: process.env.TYPEORM_ENABLE_WAL === undefined ? true : process.env.TYPEORM_ENABLE_WAL === 'true',
   timeout: Number.parseInt(process.env.TYPEORM_TIMEOUT ?? '5000', 10) || 5000,
   readonly: process.env.TYPEORM_READONLY === 'true',
   fileMustExist: process.env.TYPEORM_FILE_MUST_EXIST === 'true',
   statementCacheSize: Number.parseInt(process.env.TYPEORM_STATEMENT_CACHE_SIZE ?? '100', 10) || 100,
 <% } %><% if (database === 'mssql') { %>  type: 'mssql',
-  host: process.env.TYPEORM_HOST ?? 'localhost',
-  port: Number.parseInt(process.env.TYPEORM_PORT ?? '1433', 10) || 1433,
-  username: process.env.TYPEORM_USERNAME ?? 'sa',
-  password: process.env.TYPEORM_PASSWORD ?? 'StrongPassword!123',
-  database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+  ...(databaseUrl ? { url: databaseUrl } : {
+    host: process.env.TYPEORM_HOST ?? 'localhost',
+    port: Number.parseInt(process.env.TYPEORM_PORT ?? '1433', 10) || 1433,
+    username: process.env.TYPEORM_USERNAME ?? 'sa',
+    password: process.env.TYPEORM_PASSWORD ?? 'StrongPassword!123',
+    database: process.env.TYPEORM_DATABASE ?? '<%= appDatabase %>',
+  }),
   domain: process.env.TYPEORM_DOMAIN?.trim() || undefined,
   connectionTimeout: Number.parseInt(process.env.TYPEORM_CONNECTION_TIMEOUT ?? '15000', 10) || 15000,
   requestTimeout: Number.parseInt(process.env.TYPEORM_REQUEST_TIMEOUT ?? '15000', 10) || 15000,

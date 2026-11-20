@@ -363,6 +363,20 @@ try {
           '--skipInstall'
         );
         const projects = ['api', 'api-cjs'];
+        // Use the versions from the #642 reproduction for this compile fixture.
+        for (const name of projects) {
+          const appRoot = join('apps', name);
+          const manifest = read(root, join(appRoot, 'package.json'));
+          for (const dependency of [
+            '@nestjs/common',
+            '@nestjs/core',
+            '@nestjs/platform-express',
+          ]) {
+            manifest.dependencies[dependency] = '12.5.1';
+          }
+          manifest.devDependencies['@nestjs/testing'] = '12.5.1';
+          write(root, join(appRoot, 'package.json'), manifest);
+        }
         const compilerConfigs = projects.map((name) =>
           readFileSync(join(root, 'apps', name, 'tsconfig.json'), 'utf8')
         );
@@ -388,6 +402,52 @@ try {
         );
         for (const name of projects) {
           nx('run', `${name}:compile`);
+          const appRoot = join(root, 'apps', name);
+          const esm = read(appRoot, 'package.json').type === 'module';
+          for (const mode of ['url', 'discrete', 'mixed']) {
+            run(
+              process.execPath,
+              [
+                ...(esm
+                  ? ['--loader', 'ts-node/esm']
+                  : ['-r', 'ts-node/register']),
+                '--input-type=module',
+                '-e',
+                `import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const load = ${
+                  esm
+                    ? '(path) => import(path)'
+                    : 'createRequire(import.meta.url)'
+                };
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('TYPEORM_')) delete process.env[key];
+}
+delete process.env.DATABASE_URL;
+const url = 'postgresql://probe:test@localhost:5432/typeorm_probe';
+const mode = process.argv[1];
+if (mode !== 'discrete') process.env.DATABASE_URL = url;
+if (mode !== 'url') process.env.TYPEORM_HOST = '127.0.0.1';
+process.env.TYPEORM_SCHEMA = 'probe';
+if (mode === 'mixed') {
+  await assert.rejects(async () => load('./tools/typeorm/datasource.migrations.ts'), /Remove: TYPEORM_HOST/);
+} else {
+  const { AppDataSource } = await load('./src/data-source.ts');
+  const { default: migration } = await load('./tools/typeorm/datasource.migrations.ts');
+  const { migrations, ...connection } = migration.options;
+  assert.deepEqual(connection, AppDataSource.options);
+  assert.equal(connection.schema, 'probe');
+  assert.equal(connection.synchronize, false);
+  assert.deepEqual(migrations, ['dist/tools/typeorm/migrations/*.js']);
+  assert.equal(migration.isInitialized, false);
+  assert.equal(connection.url, mode === 'url' ? url : undefined);
+  assert.equal(connection.host, mode === 'discrete' ? '127.0.0.1' : undefined);
+}`,
+                mode,
+              ],
+              appRoot
+            );
+          }
         }
       }
       const nxJson = read(root, 'nx.json');

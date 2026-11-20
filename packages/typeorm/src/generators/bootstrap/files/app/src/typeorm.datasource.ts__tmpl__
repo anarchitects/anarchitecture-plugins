@@ -1,2 +1,11 @@
-export { AppDataSource, makeRuntimeDataSource } from '<%= runtimeDataSourceImport %>';
+<% if (hasRuntimeFactory) { %>export { AppDataSource, makeRuntimeDataSource } from '<%= runtimeDataSourceImport %>';
+<% } else { %>import { DataSource } from 'typeorm';
+import { AppDataSource } from '<%= runtimeDataSourceImport %>';
+
+export { AppDataSource };
+
+export function makeRuntimeDataSource(): DataSource {
+  return new DataSource(AppDataSource.options);
+}
+<% } %>
 export { AppDataSource as default } from '<%= runtimeDataSourceImport %>';

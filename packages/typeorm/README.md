@@ -49,14 +49,19 @@ nx g @anarchitects/nx-typeorm:bootstrap --project=api
 
 For applications:
 
-- generates runtime datasource in `src/data-source.ts`.
-- generates compatibility re-export `src/typeorm.datasource.ts`.
-- generates shared connection helper `tools/typeorm/connection-options.ts`.
-- generates TypeORM CLI migration datasource
-  `tools/typeorm/datasource.migrations.ts` and seeds under `tools/typeorm`.
-- preserves an existing `tools/typeorm/datasource.migrations.ts` file.
+- generates the connection options and runtime data source in
+  `src/data-source.ts`. An existing file is reused if it exposes a named
+  `AppDataSource` instance without connecting on import.
+- generates `src/typeorm.datasource.ts` as a compatibility entry point.
+- with `--migrationDatasource`, generates a CLI entry point in
+  `tools/typeorm/datasource.migrations.ts` that reuses the runtime options
+  and leaves schema synchronization off. An existing migration entry point
+  is preserved when this option is enabled.
 - generates a DB-specific `env.example` with URL/discrete modes.
 - patches `app.module.ts` only when the app has a Nest module file.
+
+The CLI loads entities and migrations declared in the data source options.
+Nest's `autoLoadEntities` registration only applies inside the Nest app.
 
 For libraries:
 
@@ -79,14 +84,14 @@ only for Nest applications. TypeORM 1.x provides the
 Supported `--db` values: `postgres`, `postgresql` (normalized to `postgres`),
 `mysql`, `mariadb`, `better-sqlite3`, `mssql`.
 
-Generated app datasources support two connection modes:
-
-- `DATABASE_URL`
-- discrete `TYPEORM_*` variables
-
-The generated helper rejects mixed mode (setting `DATABASE_URL` together with
-`TYPEORM_*` connection variables) and throws clear validation errors when
-required variables are missing.
+For the generated `src/data-source.ts`, use `DATABASE_URL` (a file path or
+`:memory:` for SQLite), or set the discrete connection fields
+`TYPEORM_HOST`, `TYPEORM_PORT`, `TYPEORM_USERNAME`, `TYPEORM_PASSWORD`,
+and `TYPEORM_DATABASE` as applicable. MySQL and MariaDB also accept
+`TYPEORM_SOCKET_PATH` in discrete mode. Setting both modes throws an error
+that lists the conflicting variable names. Driver settings such as
+`TYPEORM_SCHEMA` and `TYPEORM_SSL` can accompany a URL. See the generated
+`env.example` for driver defaults.
 
 ### Scaffolding generators
 

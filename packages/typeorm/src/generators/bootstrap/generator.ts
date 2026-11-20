@@ -58,7 +58,6 @@ const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
 const APP_DATASOURCE_PATH = 'src/data-source.ts';
 const APP_DATASOURCE_REEXPORT_PATH = 'src/typeorm.datasource.ts';
 const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
-const APP_CONNECTION_OPTIONS_PATH = 'tools/typeorm/connection-options.ts';
 const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
   ', '
 );
@@ -97,6 +96,10 @@ export default async function bootstrapGenerator(
         )
       : 'plain';
   const isNestApplication = applicationBootstrapMode === 'nest';
+  const existingRuntimeDataSource =
+    project.projectType === 'library'
+      ? undefined
+      : readExistingRuntimeDataSource(tree, project.root);
 
   const tasks: GeneratorCallback[] = [];
   const dependencyTask = addDependenciesToPackageJson(
@@ -120,7 +123,8 @@ export default async function bootstrapGenerator(
         ...options,
         db: database,
       },
-      isNestApplication
+      isNestApplication,
+      existingRuntimeDataSource
     );
   }
 
@@ -228,12 +232,33 @@ function prepareLibrary(
   });
 }
 
+function readExistingRuntimeDataSource(tree: Tree, projectRoot: string) {
+  const path = joinPathFragments(projectRoot, APP_DATASOURCE_PATH);
+  const contents = tree.read(path);
+  if (!contents) {
+    return undefined;
+  }
+
+  const project = new Project({ useInMemoryFileSystem: true });
+  const source = project.createSourceFile(path, contents.toString('utf8'));
+  const exports = new Set(
+    source.getExportSymbols().map((symbol) => symbol.getName())
+  );
+  if (!exports.has('AppDataSource')) {
+    throw new Error(
+      `Existing data source "${path}" must export a named AppDataSource to use bootstrap. The file has been preserved.`
+    );
+  }
+  return { contents, hasFactory: exports.has('makeRuntimeDataSource') };
+}
+
 function prepareApplication(
   tree: Tree,
   projectRoot: string,
   sourceRoot: string | undefined,
   options: BootstrapGeneratorSchema,
-  isNestApplication: boolean
+  isNestApplication: boolean,
+  existingRuntimeDataSource: ReturnType<typeof readExistingRuntimeDataSource>
 ) {
   const database = normalizeDatabase(options.db);
   const projectName = names(options.project).fileName.replace(/-/g, '_');
@@ -241,9 +266,9 @@ function prepareApplication(
     projectRoot,
     APP_MIGRATIONS_DATASOURCE_PATH
   );
-  const connectionOptionsPath = joinPathFragments(
+  const runtimeDataSourcePath = joinPathFragments(
     projectRoot,
-    APP_CONNECTION_OPTIONS_PATH
+    APP_DATASOURCE_PATH
   );
   const existingMigrationsDatasource = tree.exists(migrationsDatasourcePath)
     ? tree.read(migrationsDatasourcePath)
@@ -257,13 +282,23 @@ function prepareApplication(
       tmpl: '',
       database,
       appDatabase: projectName,
+      hasRuntimeFactory: existingRuntimeDataSource?.hasFactory ?? true,
       runtimeDataSourceImport: importPathFrom(
         tree,
         joinPathFragments(projectRoot, APP_DATASOURCE_REEXPORT_PATH),
-        joinPathFragments(projectRoot, APP_DATASOURCE_PATH)
+        runtimeDataSourcePath
+      ),
+      migrationRuntimeImport: importPathFrom(
+        tree,
+        migrationsDatasourcePath,
+        runtimeDataSourcePath
       ),
     }
   );
+
+  if (existingRuntimeDataSource) {
+    tree.write(runtimeDataSourcePath, existingRuntimeDataSource.contents);
+  }
 
   if (options.migrationDatasource && existingMigrationsDatasource) {
     tree.write(migrationsDatasourcePath, existingMigrationsDatasource);
@@ -272,11 +307,6 @@ function prepareApplication(
     tree.exists(migrationsDatasourcePath)
   ) {
     tree.delete(migrationsDatasourcePath);
-  }
-
-  // Legacy helper template is no longer generated; clean up when re-running.
-  if (tree.exists(connectionOptionsPath)) {
-    tree.delete(connectionOptionsPath);
   }
 
   if (!options.withCompose) {
