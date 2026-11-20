@@ -156,6 +156,38 @@ describe('run executor', () => {
     const [, args] = spawnMock.mock.calls[0];
     expect(args[1]).toBe('typeorm-ts-node-commonjs');
   });
+
+  it('loads the project tsconfig while preserving workspace-relative CLI paths', async () => {
+    const projectRoot = join(tempDir, 'apps/api');
+    mkdirSync(projectRoot, { recursive: true });
+    writeFileSync(join(projectRoot, 'tsconfig.json'), '{}');
+    await runMigrations({ dataSource: 'tools/typeorm/datasource.ts' }, context);
+    const [, args, options] = spawnMock.mock.calls[0];
+    expect(args).toContain('apps/api/tools/typeorm/datasource.ts');
+    expect(options).toEqual({
+      cwd: tempDir,
+      env: { TS_NODE_PROJECT: join(projectRoot, 'tsconfig.json') },
+    });
+  });
+
+  it('preserves an explicit TS_NODE_PROJECT override', async () => {
+    const previous = process.env.TS_NODE_PROJECT;
+    try {
+      process.env.TS_NODE_PROJECT = 'custom/tsconfig.json';
+      const projectRoot = join(tempDir, 'apps/api');
+      mkdirSync(projectRoot, { recursive: true });
+      writeFileSync(join(projectRoot, 'tsconfig.json'), '{}');
+      await runMigrations(
+        { dataSource: 'tools/typeorm/datasource.ts' },
+        context
+      );
+      expect(spawnMock.mock.calls[0][2]).toEqual({ cwd: tempDir });
+      expect(process.env.TS_NODE_PROJECT).toBe('custom/tsconfig.json');
+    } finally {
+      if (previous === undefined) delete process.env.TS_NODE_PROJECT;
+      else process.env.TS_NODE_PROJECT = previous;
+    }
+  });
 });
 
 function ensureRunnerPackage(workspaceRoot: string, packageName: string) {

@@ -199,7 +199,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
         outputPath: facts.migrationsDirectory,
       },
       outputs: [facts.migrationsDirectory],
@@ -209,7 +208,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
     targets['db:migrate:revert'] = {
@@ -217,7 +215,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
     targets['db:migrate:show'] = {
@@ -225,7 +222,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
     targets['db:schema:sync'] = {
@@ -233,7 +229,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
     targets['db:schema:log'] = {
@@ -241,7 +236,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
     targets['db:cache:clear'] = {
@@ -249,7 +243,6 @@ function createTargets(
       options: {
         projectRoot,
         dataSource: facts.dataSource,
-        moduleSystem: 'commonjs',
       },
     };
 
@@ -268,7 +261,6 @@ function createTargets(
       projectRoot,
       schema: facts.schema,
       dataSource: facts.dataSource,
-      moduleSystem: 'commonjs',
     },
   };
   targets['typeorm:ensure-schema'] = cloneTarget(targets['db:ensure-schema']);

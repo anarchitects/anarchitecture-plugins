@@ -239,6 +239,15 @@ the plugin and verify the files in the resulting archive. The TypeORM test
 target requires this check, so it runs in CI and in the Publish workflow before
 publication.
 
+Run `yarn nx run nx-typeorm:test-inferred-consumer` for fresh packed Nest ESM
+and CJS consumers on Nx 24. It installs exact direct dependency versions with
+Yarn, bootstraps TypeORM, and runs inferred migration status before and after
+compilation against a closed local port. Set `PG_COMPAT_DATABASE_URL` to a
+disposable loopback PostgreSQL database to also exercise status, run, repeated
+run and revert with isolated schemas. This target is uncached because it
+installs registry dependencies and checks live database state. The PostgreSQL
+compatibility workflow runs it on its disposable database service.
+
 See GitHub's [release and push event documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
 and [workflow triggering rules](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow).
 

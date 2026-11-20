@@ -87,6 +87,41 @@ describe('resolveTypeormCliRunner', () => {
     expect(runner).toBe('typeorm-ts-node-esm');
   });
 
+  it.each([{ type: 'commonjs' }, {}])(
+    'respects the nearest CommonJS package boundary %j over parent ESM and NodeNext',
+    (manifest) => {
+      writeFileSync(
+        join(workspaceRoot, 'package.json'),
+        JSON.stringify({ type: 'module' })
+      );
+      writeFileSync(
+        join(absoluteProjectRoot, 'package.json'),
+        JSON.stringify(manifest)
+      );
+      writeFileSync(
+        join(absoluteProjectRoot, 'tsconfig.json'),
+        JSON.stringify({ compilerOptions: { module: 'NodeNext' } })
+      );
+      expect(resolveTypeormCliRunner({}, context, absoluteProjectRoot)).toBe(
+        'typeorm-ts-node-commonjs'
+      );
+    }
+  );
+
+  it('honors an explicit CommonJS override in an ESM package', () => {
+    writeFileSync(
+      join(absoluteProjectRoot, 'package.json'),
+      JSON.stringify({ type: 'module' })
+    );
+    expect(
+      resolveTypeormCliRunner(
+        { moduleSystem: 'commonjs' },
+        context,
+        absoluteProjectRoot
+      )
+    ).toBe('typeorm-ts-node-commonjs');
+  });
+
   it('defaults to CommonJS when no signal is present', () => {
     const runner = resolveTypeormCliRunner(
       { moduleSystem: 'auto' },

@@ -5,7 +5,9 @@ on:
   pull_request:
     paths:
       - 'packages/typeorm/**'
+      - 'packages/nest/**'
       - 'tools/testing/typeorm-postgres-compatibility.mjs'
+      - 'tools/testing/typeorm-inferred-consumer.mjs'
       - '.github/workflows/typeorm-postgres-compatibility.yml'
       - 'package.json'
       - 'yarn.lock'
@@ -58,3 +60,4 @@ jobs:
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn nx run nx-typeorm:test-postgres --skip-nx-cache
+      - run: yarn nx run nx-typeorm:test-inferred-consumer --output-style=static
