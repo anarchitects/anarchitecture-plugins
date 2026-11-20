@@ -30,7 +30,7 @@ nx g @anarchitects/nx-typeorm:init
 ## Generators
 
 Compatibility: supports Nx `>=19.2.0 <25`, including Nx 23 and 24, TypeScript 5.9.x and
-6.x, and TypeORM 1.x. See the [plugin support matrix](../../docs/support-matrix.md).
+6.x, and TypeORM 1.x. See the [plugin support matrix](https://github.com/anarchitects/anarchitecture-plugins/blob/main/docs/support-matrix.md#plugin-support-matrix).
 
 ### `init`
 
@@ -282,7 +282,10 @@ Example manual targets:
 
 Copyright © 2026 Optimalist BV and Anarchitects contributors.
 
-Licensed under the Apache License, Version 2.0. See the repository [LICENSE](../../LICENSE) and [NOTICE](../../NOTICE) files.
+Licensed under the Apache License, Version 2.0. The npm archive includes
+`LICENSE` and `NOTICE` alongside this README. You can also read the
+[license](https://github.com/anarchitects/anarchitecture-plugins/blob/main/LICENSE)
+and [notice](https://github.com/anarchitects/anarchitecture-plugins/blob/main/NOTICE) online.
 
 ### Nx host dependencies
 
