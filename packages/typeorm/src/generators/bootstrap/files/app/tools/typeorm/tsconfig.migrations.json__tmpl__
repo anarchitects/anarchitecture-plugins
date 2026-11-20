@@ -1,0 +1,24 @@
+{
+<% if (migrationTsConfig) { %>  "extends": "../../<%= migrationTsConfig %>",
+<% } %>  "compilerOptions": {
+<% if (!migrationTsConfig) { %>    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+<% } %>    "rootDir": "../..",
+    "outDir": "../../dist/typeorm",
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "declaration": false,
+    "declarationMap": false,
+    "composite": false,
+    "incremental": false,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["./datasource.migrations.ts", "./migrations/**/*.ts", "./migrations/**/*.js"],
+  "exclude": ["../../node_modules", "../../dist", "./**/*.spec.ts", "./**/*.test.ts"]
+}

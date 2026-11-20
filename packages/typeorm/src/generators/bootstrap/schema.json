@@ -36,7 +36,7 @@
     },
     "migrationDatasource": {
       "type": "boolean",
-      "description": "Create a separate migration datasource file for CLI commands.",
+      "description": "Create a migration datasource with module-relative discovery and a separate tsconfig.migrations.json build configuration; preserve existing files.",
       "default": false
     },
     "skipInstall": {

@@ -1,13 +1,22 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import pg from 'pg';
 
 // Use installed archives and public generators/targets, without patching the
-// generated datasource, module mode, or compiler configuration.
+// generated datasource, module mode, or compiler configuration. The migration
+// lifecycle uses unedited output from the public migration-create generator.
 const repository = process.cwd();
 const temporary = mkdtempSync(join(tmpdir(), 'typeorm-inferred-'));
 const root = join(temporary, 'consumer');
@@ -69,10 +78,10 @@ function generate(...args) {
   nx('g', ...args, '--no-interactive', '--dry-run');
   nx('g', ...args, '--no-interactive');
 }
-function show(name, extraEnv) {
+function show(name, extraEnv, flags = []) {
   return run(
     'yarn',
-    ['nx', 'run', `${name}:db:migrate:show`, '--skipNxCache'],
+    ['nx', 'run', `${name}:db:migrate:show`, '--skipNxCache', ...flags],
     root,
     extraEnv
   );
@@ -155,7 +164,7 @@ try {
     generate(
       '@anarchitects/nest:application',
       `api-${mode}`,
-      `--directory=apps/api-${mode}`,
+      `--directory=apps/blueprint/api-${mode}`,
       `--type=${mode}`,
       '--packageManager=yarn',
       '--skipInstall'
@@ -171,8 +180,16 @@ try {
   run('yarn', ['install']);
   for (const mode of ['esm', 'cjs']) {
     const name = `api-${mode}`;
+    const projectRoot = `apps/blueprint/${name}`;
+    const migrationName = 'ToolingProbe1795219200000';
+    const migrationFile = '1795219200000-tooling-probe';
+    generate(
+      '@anarchitects/nx-typeorm:migration-create',
+      `--project=${name}`,
+      '--name=tooling-probe',
+      '--timestamp=1795219200000'
+    );
     const project = JSON.parse(nx('show', 'project', name, '--json'));
-    probeClosedPort(name);
     for (const target of [
       'db:migrate:show',
       'db:migrate:run',
@@ -185,97 +202,122 @@ try {
         'tools/typeorm/datasource.migrations.ts'
       );
     }
-    nx('run', `${name}:compile`);
-    probeClosedPort(name);
-    console.log(
-      `PASS ${mode}: inferred datasource loads before and after compile`
-    );
-    if (!database) continue;
-
-    const client = new pg.Client({ connectionString: database });
+    const client = database
+      ? new pg.Client({ connectionString: database })
+      : undefined;
     const schema = `inferred_${randomUUID().replaceAll('-', '')}`;
-    const migration = `Probe1700000000000`;
     const dbEnv = { DATABASE_URL: database, TYPEORM_SCHEMA: schema };
     try {
-      await client.connect();
-      await client.query(`CREATE SCHEMA "${schema}"`);
-      // The generated datasource's documented default is workspace-relative
-      // dist/tools/typeorm/migrations/*.js. Supply a consumer-owned migration.
-      write('dist/tools/typeorm/migrations/package.json', { type: 'commonjs' });
-      write(
-        'dist/tools/typeorm/migrations/1700000000000-probe.js',
-        `exports.${migration} = class ${migration} {
-  async up(q) { await q.query('CREATE TABLE "${schema}".probe (id integer PRIMARY KEY)'); }
-  async down(q) { await q.query('DROP TABLE "${schema}".probe'); }
-};\n`
-      );
-      assert.match(show(name, dbEnv), new RegExp(`\\[ \\].*${migration}`));
-      for (let attempt = 0; attempt < 2; attempt++) {
-        run(
-          'yarn',
-          ['nx', 'run', `${name}:db:migrate:run`, '--skipNxCache'],
-          root,
-          dbEnv
-        );
+      if (client) {
+        await client.connect();
+        await client.query(`CREATE SCHEMA "${schema}"`);
       }
-      assert.match(show(name, dbEnv), new RegExp(`\\[X\\].*${migration}`));
-      assert.match(
-        run(
-          'yarn',
-          ['nx', 'run', `${name}:typeorm:show`, '--skipNxCache'],
-          root,
-          dbEnv
-        ),
-        new RegExp(`\\[X\\].*${migration}`)
+      probeClosedPort(name);
+      if (client) await verifyLifecycle('before host build');
+      nx('run', `${name}:compile`);
+      probeClosedPort(name);
+      if (client) await verifyLifecycle('after host build');
+
+      // Native Nest builds only src. Compile the generated migration config
+      // separately; no fixture-written tsconfig or migration glob is involved.
+      nx(
+        'exec',
+        `--projects=${name}`,
+        '--',
+        'tsc',
+        '-p',
+        'tools/typeorm/tsconfig.migrations.json'
       );
-      assert.equal(
-        (
-          await client.query(
-            `SELECT count(*)::int AS count FROM "${schema}".migrations`
+      const compiledDatasource =
+        'dist/typeorm/tools/typeorm/datasource.migrations.js';
+      assert(existsSync(join(root, projectRoot, compiledDatasource)));
+      assert(
+        existsSync(join(root, projectRoot, 'dist/typeorm/src/data-source.js'))
+      );
+      assert(
+        existsSync(
+          join(
+            root,
+            projectRoot,
+            `dist/typeorm/tools/typeorm/migrations/${migrationFile}.js`
           )
-        ).rows[0].count,
-        1
+        )
       );
-      assert.notEqual(
-        (
-          await client.query('SELECT to_regclass($1) AS relation', [
-            `${schema}.probe`,
-          ])
-        ).rows[0].relation,
-        null
+      const sourceMigration = join(
+        root,
+        projectRoot,
+        `tools/typeorm/migrations/${migrationFile}.ts`
       );
-      run(
+      const compiledMigration = join(
+        root,
+        projectRoot,
+        `dist/typeorm/tools/typeorm/migrations/${migrationFile}.js`
+      );
+      assert(readFileSync(sourceMigration, 'utf8').includes(migrationName));
+      assert(readFileSync(compiledMigration, 'utf8').includes(migrationName));
+      if (client) {
+        // Both trees coexist: source discovery must still find exactly one.
+        await verifyLifecycle('source with compiled copies present');
+        const savedRuntime = join(temporary, `runtime-${mode}.ts`);
+        const savedMigration = join(temporary, `migration-${mode}.ts`);
+        const runtime = join(root, projectRoot, 'src/data-source.ts');
+        renameSync(runtime, savedRuntime);
+        renameSync(sourceMigration, savedMigration);
+        try {
+          await verifyLifecycle(
+            'compiled with source runtime and migration unavailable',
+            [`--dataSource=${compiledDatasource}`]
+          );
+        } finally {
+          renameSync(savedRuntime, runtime);
+          renameSync(savedMigration, sourceMigration);
+        }
+      }
+      console.log(
+        `PASS ${mode}: nested generated source and compiled migration discovery`
+      );
+    } finally {
+      if (client) {
+        try {
+          await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+        } finally {
+          await client.end();
+        }
+      }
+    }
+
+    async function verifyLifecycle(phase, flags = []) {
+      const pending = new RegExp(`\\[ \\].*${migrationName}`);
+      const applied = new RegExp(`\\[X\\].*${migrationName}`);
+      assert.match(show(name, dbEnv, flags), pending);
+      assert.match(runTarget('typeorm:show', flags), pending);
+      runTarget('db:migrate:run', flags);
+      runTarget('typeorm:run', flags);
+      assert.match(show(name, dbEnv, flags), applied);
+      assert.match(runTarget('typeorm:show', flags), applied);
+      const rows = (
+        await client.query(
+          `SELECT name FROM "${schema}".migrations ORDER BY id`
+        )
+      ).rows;
+      assert.deepEqual(rows, [{ name: migrationName }]);
+      runTarget('db:migrate:revert', flags);
+      assert.match(show(name, dbEnv, flags), pending);
+      assert.deepEqual(
+        (await client.query(`SELECT name FROM "${schema}".migrations`)).rows,
+        []
+      );
+      console.log(
+        `PASS ${mode}: ${phase}: pending, run, second-run, aliases, exact ledger and revert`
+      );
+    }
+    function runTarget(target, flags) {
+      return run(
         'yarn',
-        ['nx', 'run', `${name}:db:migrate:revert`, '--skipNxCache'],
+        ['nx', 'run', `${name}:${target}`, '--skipNxCache', ...flags],
         root,
         dbEnv
       );
-      assert.match(show(name, dbEnv), new RegExp(`\\[ \\].*${migration}`));
-      assert.equal(
-        (
-          await client.query('SELECT to_regclass($1) AS relation', [
-            `${schema}.probe`,
-          ])
-        ).rows[0].relation,
-        null
-      );
-      assert.equal(
-        (
-          await client.query(
-            `SELECT count(*)::int AS count FROM "${schema}".migrations`
-          )
-        ).rows[0].count,
-        0
-      );
-      console.log(
-        `PASS ${mode}: inferred PostgreSQL status, run, idempotence, revert`
-      );
-    } finally {
-      try {
-        await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-      } finally {
-        await client.end();
-      }
     }
   }
   if (!database)

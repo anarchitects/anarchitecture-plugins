@@ -57,11 +57,76 @@ For applications:
   `tools/typeorm/datasource.migrations.ts` that reuses the runtime options
   and leaves schema synchronization off. An existing migration entry point
   is preserved when this option is enabled.
+- with `--migrationDatasource`, generates
+  `tools/typeorm/tsconfig.migrations.json` for a separate migration build.
+  Existing migration compiler configuration is preserved. The host's Nest/TS
+  build configuration is not changed.
 - generates a DB-specific `env.example` with URL/discrete modes.
 - patches `app.module.ts` only when the app has a Nest module file.
 
 The CLI loads entities and migrations declared in the data source options.
 Nest's `autoLoadEntities` registration only applies inside the Nest app.
+
+#### Application migration workflow
+
+For an existing app named `blueprint-api` at `apps/blueprint/api`:
+
+```bash
+nx g @anarchitects/nx-typeorm:bootstrap --project=blueprint-api --db=postgres --migrationDatasource
+nx g @anarchitects/nx-typeorm:migration-create --project=blueprint-api --name=add-users
+nx run blueprint-api:db:migrate:show
+nx run blueprint-api:db:migrate:run
+nx run blueprint-api:db:migrate:revert
+```
+
+Supply the database connection settings described below before running the
+targets. `show` lists the generated migration as pending; `run` records it in
+the migration ledger, and a second run does not apply it again. The generated
+migration initially has empty `up`/`down` methods; implement them before using
+it for a schema change. The `typeorm:show`, `typeorm:run` and `typeorm:revert`
+aliases use the same datasource.
+
+The new CLI datasource discovers migrations beside itself in `migrations/`,
+independently of the workspace or project working directory. Source execution
+loads `.ts` and authored `.js` files. An explicit
+`AppDataSource.options.migrations` value, including an empty array, takes
+precedence; custom migrations and other runtime options are not replaced.
+If you use a different scaffold `--directory`, configure your own migration
+paths and compiler includes accordingly.
+
+Native Nest builds compile the host's `src` tree; they do not compile the
+separate `tools/typeorm` tree. Source migration commands work before and after
+the host build. To produce JavaScript migrations, run the separate compiler
+after the host build (which may clean `dist`):
+
+```bash
+nx exec --projects=blueprint-api -- tsc -p tools/typeorm/tsconfig.migrations.json
+nx run blueprint-api:db:migrate:show --dataSource=dist/typeorm/tools/typeorm/datasource.migrations.js
+nx run blueprint-api:db:migrate:run --dataSource=dist/typeorm/tools/typeorm/datasource.migrations.js
+nx run blueprint-api:db:migrate:revert --dataSource=dist/typeorm/tools/typeorm/datasource.migrations.js
+```
+
+The compiler emits the migration entry point, its imported runtime datasource
+and migrations beneath the app's `dist/typeorm`. The compiled entry point
+loads only adjacent `.js` migrations; it never combines this output with the
+source migration tree. Inferred targets continue using the source entry point
+unless `dataSource` is explicitly overridden. For deployment, retain the whole
+`dist/typeorm` subtree, the app's `package.json` module type, required runtime/CLI
+dependencies and connection environment. Custom datasource imports, external
+assets or output layouts may require adapting the separate compiler/package
+configuration; a normal Nest build alone is not a migration package. The commands
+above run in the Nx workspace. A standalone deployment must provide a runner
+pointing at the compiled datasource; the compiler does not generate deployment
+configuration.
+
+**Upgrading existing bootstrap output:** updating the plugin does not rewrite
+consumer-owned datasource files. If an older generated entry point still uses
+`dist/tools/typeorm/migrations/*.js`, save it outside the project, then rerun
+`bootstrap --migrationDatasource` for that project to generate the new entry
+point and missing compiler configuration. Compare the files and reapply any
+custom migration options deliberately. Existing `src/data-source.ts` options
+are preserved. Review the dry run first; do not remove custom migration arrays
+or point source and compiled globs at the same migrations simultaneously.
 
 For libraries:
 
@@ -257,11 +322,14 @@ Datasource-backed CLI executors (`generate`, `run`, `revert`,
 For TypeScript datasources, the CLI uses the first existing project config in
 this order: `tsconfig.app.json`, `tsconfig.lib.json`, `tsconfig.build.json`,
 `tsconfig.json`, then a `tsConfig` path declared in project targets. An explicit
-`TS_NODE_PROJECT` environment value takes precedence. CLI paths and migration
-globs remain relative to the workspace root.
+`TS_NODE_PROJECT` environment value takes precedence. The CLI runs from the
+workspace root, so consumer-authored relative migration globs resolve there.
+The generated migration datasource uses absolute module-relative paths instead.
 
-Updating the plugin fixes automatically inferred targets without rerunning
-bootstrap or editing generated imports. Explicitly configured `moduleSystem`
+Updating the plugin fixes module detection in automatically inferred targets
+without rerunning bootstrap or editing generated imports. Updating older
+migration discovery defaults requires the bootstrap-output upgrade above.
+Explicitly configured `moduleSystem`
 overrides are preserved; remove an obsolete override or set it to `auto` to
 restore detection. Keep emitted `.js` imports in NodeNext ESM source files.
 

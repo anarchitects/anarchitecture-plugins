@@ -241,10 +241,14 @@ publication.
 
 Run `yarn nx run nx-typeorm:test-inferred-consumer` for fresh packed Nest ESM
 and CJS consumers on Nx 24. It installs exact direct dependency versions with
-Yarn, bootstraps TypeORM, and runs inferred migration status before and after
-compilation against a closed local port. Set `PG_COMPAT_DATABASE_URL` to a
-disposable loopback PostgreSQL database to also exercise status, run, repeated
-run and revert with isolated schemas. This target is uncached because it
+Yarn, bootstraps TypeORM, creates migrations through the public generator, and
+runs inferred migration status before and after compilation against a closed
+local port. Set `PG_COMPAT_DATABASE_URL` to a disposable loopback PostgreSQL
+database to also verify pending/applied migration names, exact ledger rows,
+aliases, repeated runs and revert with isolated schemas. It covers native host
+builds, the separate generated migration build, coexistence of source/compiled
+copies and compiled execution with the source runtime datasource and migration files removed.
+This target is uncached because it
 installs registry dependencies and checks live database state. The PostgreSQL
 compatibility workflow runs it on its disposable database service.
 
