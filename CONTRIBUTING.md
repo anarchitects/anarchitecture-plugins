@@ -148,6 +148,14 @@ Use clear, conventional commit messages when possible:
 
 ## Release publication and recovery
 
+Main CI and Publish use Nx Cloud by default. The repository Actions variable
+`NX_CLOUD_ENABLED=false` temporarily runs both workflows on GitHub runners
+without Nx Cloud while Nx reviews the Anarchitects OSS request and partner
+allowance. The maintainer can set it to `true` when Nx confirms usable access.
+After restoring access, verify the checked-out commit and author in Nx Cloud
+for a Main CI pull request and for Publish from a release tag. Required checks
+and release approval still apply in both modes.
+
 Release jobs require Johan's approval through `shared-bot-release`, execute only
 the immutable dispatch revision on `main`, and reject reruns. Dispatch a fresh
 run for a new approval. Configure reviewer `vrxj81` (`5003361`), self-review

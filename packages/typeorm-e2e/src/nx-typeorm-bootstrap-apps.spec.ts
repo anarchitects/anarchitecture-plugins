@@ -120,8 +120,8 @@ export class AppModule {}
     );
 
     const plainEnvExample = readProjectFile(plainProjectRoot, 'env.example');
-    expect(plainEnvExample).toContain('TYPEORM_DATABASE=');
-    expect(plainEnvExample).toContain('Mixed mode is rejected.');
+    expect(plainEnvExample).toMatch(/^TYPEORM_DATABASE=/m);
+    expect(plainEnvExample).toMatch(/^# DATABASE_URL=/m);
     expect(readProjectFile(plainProjectRoot, 'src/main.ts')).toContain(
       "return 'ok';"
     );

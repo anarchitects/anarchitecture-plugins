@@ -11,7 +11,8 @@ on:
         type: string
 
 env:
-  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_NO_CLOUD: ${{ vars.NX_CLOUD_ENABLED == 'false' && 'true' || 'false' }}
+  NX_CLOUD_ACCESS_TOKEN: ${{ vars.NX_CLOUD_ENABLED != 'false' && secrets.NX_CLOUD_ACCESS_TOKEN || '' }}
 
 permissions:
   contents: read
@@ -56,6 +57,13 @@ jobs:
           ref: ${{ steps.tag.outputs.ref }}
           fetch-depth: 0
           filter: tree:0
+
+      - name: Set Nx Cloud commit SHA from release tag
+        if: env.NX_NO_CLOUD != 'true'
+        shell: bash
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          echo "NX_COMMIT_SHA=$source_sha" >> "$GITHUB_ENV"
 
       - name: Enable Corepack
         run: corepack enable
