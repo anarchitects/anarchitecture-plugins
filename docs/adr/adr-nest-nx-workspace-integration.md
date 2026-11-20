@@ -19,7 +19,12 @@ consumption, deployable output or upgrade safety.
 The review was prompted by a consumer, but the contract is generic. It covers
 empty and established Nx workspaces, mixed frameworks, independent projects and
 native Nest monorepos. It does not make Blueprint's product, DDD, database or
-hosting choices defaults for unrelated consumers.
+hosting choices defaults for unrelated consumers. Within Anarchitects, accepted
+[Meta ADR-0026](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0026-product-grouped-application-host-layout.md)
+requires new product hosts at `apps/<product>/<host>`. Preserve explicit nested
+roots and stable project identities; portability does not waive that consumer
+policy or impose it on unrelated public consumers. No bulk layout migration is
+part of this proposal.
 
 The [accepted first-party scaffolding ADR](adr-nest12-first-party-defaults-and-compatibility.md)
 keeps native Nest schematics authoritative for framework code and assigns Nx
@@ -74,54 +79,93 @@ selection and documented opt-outs; do not install a second formatter implicitly.
 
 ### 2a. Proposed shared ESLint integration for new applications
 
-The first bounded lint slice is
-[SI-646.1 / #652](https://github.com/anarchitects/anarchitecture-plugins/issues/652).
-It is a proposal for later implementation, not a shipped option or authorization
-to change plugin code. Initial scope is new independent TypeScript ESM/CJS
-applications in an established, supported ESLint workspace.
+[SI-646.1 / #652](https://github.com/anarchitects/anarchitecture-plugins/issues/652)
+is a bounded proposal, not a shipped option or implementation authorization.
 
-Resolve explicit invocation choice, applicable Nx generator defaults, compatible
-workspace policy, then a documented and visibly reported native fallback.
-Recognized shared ESLint policy selects ESLint; conflicting or incomplete setup
-must fail before writes rather than silently choose Oxlint. Review exact public
-option names, detection rules and admitted configuration forms before implementation.
-An explicit choice never authorizes overwriting existing consumer configuration.
+#### Architecture reconciliation required
 
-Keep official Nest schematics as the framework source. Propose a bounded,
-structure-aware lint transform staged with the new application before any output
-is committed: omit the fresh scaffold's Oxlint script, configuration and tooling
-dependencies when ESLint is selected. Preserve unrelated source and dependencies,
-and diagnose explicit/custom additions instead of silently deleting them. The
-existing additive-transform guard must not become a general template-rewrite
-escape hatch; any lint-specific transform needs narrow checks and regression proof.
+The accepted [first-party scaffolding ADR](adr-nest12-first-party-defaults-and-compatibility.md)
+permits Nx integration and additive overlays. Omitting generated Oxlint artifacts
+is **not additive** and is not enabled by the current additive transform API.
+Before implementing it, the repository architecture decision must explicitly
+accept a lint-specific refinement: only identified artifacts of a fresh scaffold
+may be omitted, with exact-version regression evidence; existing consumer files,
+working dependencies and framework source remain untouched. Preserve the general
+guard. Do not assume the earlier HTTP overlay authorizes a lint overlay. If this
+cannot be accepted within local authority, escalate the actual conflict under
+[Meta ADR-0016](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0016-sdlc-ownership-and-architecture-authority.md);
+this proposal does not amend accepted policy.
 
-Use actual ESLint resolution for ancestor configuration and imported shared
-packages. Do not copy shared rules or require a root config in every workspace.
-Create a local config only for necessary, documented project-specific scope or
-overrides. Preserve architecture-boundary rules, type-aware checking and the
-selected source/test/tooling coverage.
+Automatic selection of shared ESLint changes current generation behavior even
+without migrating existing files. Review compatibility, opt-out/default behavior,
+upgrade notes and Conventional Commit/SemVer impact under
+[Meta ADR-0013](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0013-package-initial-release-and-nx-versioning.md).
+No package version or release is selected here.
 
-Lint inference and execution remain with `@nx/eslint`, never Nest-owned inference
-or a new executor. Preserve custom target names and plugin include/exclude scopes;
-the new package script must not shadow the selected task. Validate the resolved
-task and real lint failures, not just plugin registration. Keep lint tooling in
-the appropriate consumer development dependencies, with `@nx/eslint` aligned to
-consumer Nx. Do not silently widen scopes or install a second linter.
+#### Minimum proposed admission profile
 
-Missing workspace setup gets actionable Nx setup guidance in this first slice.
-Automatic setup, root-host generation, arbitrary dynamic/legacy configuration,
-new library lint setup and existing-project conversion require separately admitted
-scope. Native member conversion after an ESLint app must either preserve proven
-lint scope/task/cache ownership or reject unsupported conversion before mutation.
+Start with full, independent TypeScript ESM/CJS applications at empty, non-root
+destinations. The consumer already has installed compatible ESLint tooling,
+`@nx/eslint/plugin` registration covering the intended root, and an effective
+ancestor flat config (`eslint.config.js`, `.mjs` or `.cjs`). An imported shared
+package is allowed only where its resolution and cache dependencies are proven.
+No shared rules, plugin scopes, target defaults, dependency versions or TypeScript
+policy are repaired or upgraded automatically. No local ESLint config is created
+in this first slice. A config elsewhere in the workspace is not sufficient evidence
+that it applies here.
 
-Existing-app conversion remains with
+Initial candidate proof is bounded to one Nx 24 lane with matching `@nx/eslint`,
+ESLint 9, a supported Node 24 lane and one node-modules package-manager layout,
+covering ESM and CJS. Record exact versions before implementation; the observed
+24.0.6 is a candidate, not verified support. Other lanes need separate evidence.
+Preserve the plugin's existing support contract and native path; a narrower new
+ESLint capability must not silently narrow existing Nx peers or generation support.
+
+Resolve explicit invocation choice, applicable Nx defaults, compatible destination
+policy, then visible native fallback. Explicit ESLint requires this profile or
+fails with guidance. Explicit native selection is reported as such and leaves
+workspace policy intact; it does not certify compliance with that policy. In
+automatic mode, applicable but incomplete, ambiguous or unsupported ESLint setup
+fails rather than silently choosing Oxlint. With no applicable ESLint signals,
+retain native behavior and report the selection. Unrelated excluded projects do
+not select a linter for the destination. Exact option spelling and detection
+boundaries must be recorded in the bounded W1/W2 review, not implemented as a
+generic policy engine. Record durable identification of apps generated by the new
+ESLint mode for later member guards; a filename heuristic must not reclassify
+unrelated existing custom owners.
+
+Keep official schematics as the framework source. Subject to the refinement above,
+stage the new scaffold and omit only its known Oxlint script/config/tooling entries.
+Explicit extra dependencies and unfamiliar upstream output are diagnosed, never
+silently stripped. Do not use a minimal template to obtain different framework or
+test output. The selected effective Nx task remains owned by `@nx/eslint`, with
+its existing custom name and scopes; remove fresh script shadowing, not consumer
+targets. Executor-only setups or unresolved target collisions receive guidance.
+
+Preserve the consumer's selected rules and scope; do not introduce type-aware or
+architecture-boundary rules where none were selected. Fixtures must nevertheless
+prove those policies are retained when enabled, including shared imports and
+parser/tsconfig resolution. Preflight checks bounded configuration/version and
+ownership prerequisites; it is not a general evaluator or proof of arbitrary
+JavaScript config behavior. Run actual rule and cache checks during acceptance.
+Imported shared helpers/packages must be represented in effective cache inputs;
+config presence alone cannot prove this. If correctness needs an upstream fix or
+consumer configuration change, diagnose and track it rather than creating competing
+Nest inference or silently changing shared policy.
+
+For initial delivery, plugin-mediated native-member generation into an app created by this new
+ESLint mode is rejected before mutation. Full member support is deferred; this guard
+does not change native/Oxlint owners or existing custom-owner behavior unrelated
+to this capability. Document that direct Nest CLI usage is outside that safeguard.
+
+Missing setup gets guidance. Minimal/JavaScript ESLint generation, root hosts,
+new library lint setup, config migration/automatic setup and existing-app conversion
+are excluded. Existing native behavior for those routes is not removed.
+Existing Nx-to-native conversion stays with
 [#558](https://github.com/anarchitects/anarchitecture-plugins/issues/558) and
-[#565](https://github.com/anarchitects/anarchitecture-plugins/issues/565).
-The slice depends on review of its W1 policy and W2 collision/preflight decisions,
-not completion of the entire integration epic or migration epic. Its own delivery
-requires a subsequent explicit implementation instruction, fresh architecture
-preflight, packed acceptance and public documentation. Schematics upgrades,
-HTTP/test-runner/formatter changes, publication and consumer adoption are separate.
+[#565](https://github.com/anarchitects/anarchitecture-plugins/issues/565);
+neither is a blanket dependency for fresh generation. Review only the lint-specific
+W1/W2 decisions, with W7/W8 evidence accompanying later delivery.
 
 ### 3. Compose projects and TypeScript deliberately
 
@@ -187,13 +231,19 @@ remain explicit and independently tested.
 
 Keep `init`, new-project generation, adoption and versioned migration distinct.
 Initialization must not regenerate source or convert existing projects. Plan and
-validate supported transforms before writes; dry-run and rejected preflight must
-leave the Tree, filesystem, manifests and lockfile unchanged. Re-running supported
+validate supported transforms before committing changes. Rejected preflight or a
+failed staged transform must preserve the caller's Tree and persistent workspace.
+A public Nx dry-run may stage virtual Tree changes for its preview, but must not
+persist files/manifests/lockfiles or run installs. The adapter's separate `dryRun`
+preview contract also preserves its supplied Tree. Re-running supported
 setup must be idempotent; new-project generation may reject an occupied destination.
 Install callbacks run only after successful generation and honor skip-install.
 
 Provide reviewed migrations when plugin-owned configuration or public behavior
-changes, with documented rollback and consumer customization boundaries. Reuse
+changes, with documented rollback and consumer customization boundaries. Assess
+new-generation default changes even when no migration is needed; state explicitly
+when existing applications require no file migration. An install failure after
+files are committed is recoverable failure, not transactional filesystem rollback. Reuse
 [epic #558](https://github.com/anarchitects/anarchitecture-plugins/issues/558)
 for legacy Nx-to-native conversion; this proposal does not create a competing
 converter or activate its separately deferred bulk migration.

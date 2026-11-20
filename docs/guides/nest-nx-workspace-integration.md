@@ -5,7 +5,7 @@ Date: 2026-11-20. Status: proposed delivery contract; expanded acceptance is pen
 - [Proposed architecture decision](../adr/adr-nest-nx-workspace-integration.md)
 - Delivery epic: [Epic #646](https://github.com/anarchitects/anarchitecture-plugins/issues/646)
 - Capability owner / technical maintainer: Johan; no implementation assignees or dates are allocated here.
-- Document executor: Codex at the maintainer's request. Review and acceptance are not claimed.
+- Document executor: Codex at the maintainer's request. Critical design review is recorded below; owner acceptance and implementation evidence remain pending.
 
 ## Review baseline and evidence limits
 
@@ -50,7 +50,8 @@ and public-documentation decisions with their recorded statuses. Meta ADRs
 0008 HTTP independence, 0009 native defaults, 0010 Nest-first, 0013 versioning,
 0014 dependency maintenance, 0015 Nx caching, 0016 ownership, 0017 release authority,
 0018 upstream-first, 0022 framework lifecycle and 0024 public documentation apply
-within their scopes. Meta ownership records identify Johan as Nx Plugins capability
+within their scopes. Accepted Meta ADR-0026 additionally governs Anarchitects product-host
+paths; generic plugin portability is not a waiver. Meta ownership records identify Johan as Nx Plugins capability
 owner and technical maintainer; ecosystem policy authority remains separate.
 
 This is a documentation/design review, not a substitute for the mandatory complete
@@ -84,7 +85,7 @@ None of these labels means the new acceptance scenarios have passed.
 | C09 | Dependency ownership and linking — Partial (E05)                                       | Correct runtime/tooling/peer placement under admitted installation layouts; no accidental parent/global dependency resolution                                            | S01/S05/S06/S13; W4       |
 | C10 | Library consumption and boundaries — Partial (E04)                                     | Declare supported source/buildable/publishable modes; prove transitive runtime consumption; preserve existing external build/release owners and workspace tags/rules     | S05/S06/S10; W4           |
 | C11 | Production artifact contract — Audit (E01/E04)                                         | Entry/module format, runtime dependencies, assets and packaging proven in clean runtime; custom builders supported explicitly or classified for manual review            | S06/S08/S11; W5           |
-| C12 | Safe generation/adoption — Present mechanisms (E05/E07)                                | Dry-run/rejection zero mutation; setup reruns idempotent; atomic planned edits and deferred installs; existing source preserved during adoption                          | S01/S04/S11; W2/W6        |
+| C12 | Safe generation/adoption — Present mechanisms (E05/E07)                                | Public dry-run has no persistent writes/install; rejection preserves caller Tree; setup reruns idempotent; staged edits and deferred installs                            | S01/S04/S11; W2/W6        |
 | C13 | Upgrade/migration lifecycle — Gap for new integration policy (E06)                     | Versioned migration path and rollback for plugin-owned changes; preserve customization and delegate legacy conversion to #558                                            | S11/S13; W6               |
 | C14 | Public UX and documentation — Partial (E02/E06/E08)                                    | Accurate schemas/Nx Console options, diagnostics, workspace commands and support boundaries; no accidental deployment/telemetry commitment in generated guides           | S01/S03/S13; W7           |
 | C15 | Portable plugin/runtime/distribution — Present mechanisms, further Audit (E01/E06/E07) | Public APIs, deterministic fast inference, packed exports/licenses/schemas, reviewed dependency strategy and truthful compatibility matrix                               | S12/S13; W7/W8            |
@@ -109,7 +110,7 @@ appearing in a task graph does not pass execution acceptance.
 | S08 | Build/test/check miss then hit; delete outputs and restore in clean checkout                                            | Eligible tasks replay; required outputs byte-match prior result; restored production artifact runs; report outputs restored                                             | Undeclared/missing outputs fail the check; mutating database/deploy/publish tasks remain uncached                                                              |
 | S09 | Change source, transitive dependency, shared config, compiler/builder version and declared environment input separately | Each relevant change invalidates/selects expected consumer tasks; unchanged repeat reuses eligible results                                                              | Unrelated project change does not select unrelated work unless a documented conservative owner scope requires it; missing base fails safely                    |
 | S10 | Tags and dependency constraints, source/test/tooling scopes and concurrent tasks                                        | Valid architecture passes; prohibited dependency fails via selected workspace mechanism; independent tasks run without report/output/port collisions                    | Plugin preserves tag taxonomy and exceptions; no invented business layers; tests/tooling cannot evade their declared checks                                    |
-| S11 | Customized configs, malformed files, occupied destinations, install failure and migration rerun/rollback                | Supported transforms preserve custom content; repeat setup has zero diff; unsupported state has exact file/option diagnosis; install failure documented and recoverable | Dry-run/rejected preflight has no Tree/filesystem/lockfile/install mutation; migration rollback restores fixture; no partial failed transform                  |
+| S11 | Customized configs, malformed files, occupied destinations, install failure and migration rerun/rollback                | Supported transforms preserve custom content; repeat setup has zero diff; unsupported state has exact file/option diagnosis; install failure documented and recoverable | Dry-run has no persistent writes/install; rejected preflight preserves caller Tree; migration rollback restores fixture; no partial failed transform           |
 | S12 | Root/nested/owner-member layouts, include/exclude scopes, symlink/path cases; cold/warm graph load                      | Stable project/edge/task result with no inference subprocesses or writes; measured graph cost stays within a reviewed budget                                            | Excluded projects stay excluded; unrelated directories not scanned as projects; unsafe paths rejected; Windows cases required if claimed                       |
 | S13 | Install packed plugin and upgrade previous supported configuration in clean supported lanes                             | Public exports, schemas, migration metadata and license files resolve; nx add/list/help and representative generation work; exact versions/OS/manager recorded          | Missing peers and unsupported framework/module/layout combinations fail honestly; no unbuilt sibling checkout dependency or implicit new support claim         |
 | S14 | Nest plus Angular/JS/test/lint and optional TypeORM integration                                                         | Each plugin retains target/config/dependency ownership; Nest builds/tests and supported persistence commands execute through resolved inferred targets                  | Separate plugin defects stay separately reported; no direct CLI bypass counted as inferred-target success; no database/tool dependency added to every Nest app |
@@ -166,9 +167,8 @@ No schedule or implementation assignee is implied.
 
 Tracking: [#652](https://github.com/anarchitects/anarchitecture-plugins/issues/652),
 under [#646](https://github.com/anarchitects/anarchitecture-plugins/issues/646).
-The maintainer requested analysis, planning and documentation only. Implementation
-is explicitly deferred; all acceptance below remains pending. The ADR remains
-Proposed.
+The maintainer requested design review and documentation only. Implementation and
+all acceptance remain pending; the ADR remains Proposed.
 
 ### Dated source evidence
 
@@ -198,51 +198,106 @@ completed repair of native-member Oxlint scope, not an ESLint integration.
 [#506](https://github.com/anarchitects/anarchitecture-plugins/issues/506) is
 completed native-tooling baseline coverage. Neither is reopened by this proposal.
 
-### Scope, dependency order and review decisions
+### Critical review: policy and feasibility
 
-The proposed contract is [ADR section 2a](../adr/adr-nest-nx-workspace-integration.md#2a-proposed-shared-eslint-integration-for-new-applications).
-Start with new independent TypeScript ESM/CJS apps using established shared ESLint
-policy. Resolve explicit choice, Nx defaults, compatible workspace policy, then a
-visible native fallback. Partial/conflicting ESLint setup fails before changes.
-Select exact option names, admitted config forms and version/layout lanes during
-review; none is an available plugin feature today.
+The follow-up review used Plugins main
+`6b7c09a0269c894ee00aaae03d4bd6d9db43506b`, PR head
+`e35803a9bb35277ea5fe7fca7c9ab28b3e0c72a2`, and Meta
+`665fe6b4761e9ec6a8ec47f82d8059474bf28641`. This is a focused design/source
+review, not a claim to have completed the later all-ADR implementation preflight.
 
-Review the lint-specific W1 contract and W2 preflight/target ownership decisions
-before implementation. These decisions can be bounded to #652 without completing
-all W2 or all #646. W7 documentation and W8 packed evidence accompany this slice.
-A separate implementation instruction is still required.
+| Finding                                                                                                 | Required disposition                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Removing fresh Oxlint artifacts is non-additive; the current guard exposes no deletion/replacement API. | Explicit local reconciliation with the accepted first-party ADR before implementation; retain the generic guard. HTTP precedent is not lint authorization.                                          |
+| Automatic shared-policy selection changes current generator output.                                     | Record compatibility/default opt-out and SemVer impact even though existing apps are not migrated. No release version is assigned.                                                                  |
+| “Established ESLint workspace” was too broad.                                                           | Use the minimum admission profile in ADR 2a; defer automatic setup, local config creation, legacy/config-loader conversion and executor-only setups.                                                |
+| Member support could turn this into another integration epic.                                           | Initial path rejects plugin-mediated member generation into an app created by this new ESLint mode before mutation; full support is separate. Preserve unrelated existing native behavior.          |
+| Dry-run and failed preflight were conflated.                                                            | Nx public dry-run may populate its virtual Tree, with no persisted files or installs. Failed preflight/staging preserves the caller Tree. Adapter preview additionally preserves its supplied Tree. |
+| Shared config imports and rules do not automatically have correct cache inputs.                         | Prove local helper/shared-package invalidation; unsupported dependency tracking needs a diagnosis/upstream issue or separately reviewed consumer setup, not Nest-owned inference.                   |
+| Generic layout freedom omitted accepted ecosystem host policy.                                          | Include `apps/<product>/<host>` with an independent stable Nx identity; no hardcoded organization layout in the generic generator.                                                                  |
 
-Coordinate existing-project adoption with #558/#565, without duplicating their
-converter or making either epic a blanket fresh-generation blocker. Member
-conversion from a newly generated ESLint app needs preservation evidence or an
-actionable pre-mutation rejection. Automatic empty-workspace setup, root hosts,
-arbitrary dynamic/legacy configs, new library lint setup and existing-app
-conversion remain outside the initial slice unless separately admitted. Do not
-couple it to a schematics update, formatter/test/TS overhaul or HTTP-default change.
+Applicable authority:
+[local accepted scaffolding ADR](../adr/adr-nest12-first-party-defaults-and-compatibility.md),
+[Meta ADR-0013](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0013-package-initial-release-and-nx-versioning.md),
+[ADR-0015](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0015-nx-task-caching-and-distributed-execution.md),
+[ADR-0016](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0016-sdlc-ownership-and-architecture-authority.md),
+[ADR-0024](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0024-public-package-documentation.md)
+and [ADR-0026](https://github.com/anarchitects/anarchitecture-meta/blob/665fe6b4761e9ec6a8ec47f82d8059474bf28641/adr/0026-product-grouped-application-host-layout.md).
+Meta ADR-0024 is accepted; the local public-documentation ADR remains Proposed.
+Shared-config reuse does not accept the proposed governance hierarchy model or
+authorize a private cross-product shared package under Meta ADR-0021.
+
+### Bounded delivery and review gates
+
+[ADR section 2a](../adr/adr-nest-nx-workspace-integration.md#2a-proposed-shared-eslint-integration-for-new-applications)
+defines the proposal: full TS ESM/CJS independent apps, empty non-root destination,
+installed compatible tooling, existing applicable `@nx/eslint/plugin` inference,
+and ancestor JS/MJS/CJS flat config. Reuse configuration unchanged; no new local
+ESLint config or root/toolchain migration. Shared imports require resolved-policy
+and cache evidence. Preserve enabled type-aware/boundary rules without imposing
+them on consumers who did not choose them.
+
+The first candidate matrix is one Nx 24 / matching Nx ESLint / ESLint 9 /
+supported Node 24 / node-modules package-manager lane, for both ESM and CJS.
+The inspected Nx 24.0.6 is a candidate only. Fix exact versions and package manager
+before code work. Existing plugin peers remain `>=23.2.0 <25`; narrower new-feature
+admission must be documented and diagnosed without silently withdrawing native
+support on existing lanes. Additional ESLint/OS/package-manager lanes need evidence,
+not a Cartesian-product test obligation.
+
+Before implementation, record: (1) acceptance of the bounded non-additive refinement,
+(2) exact option/default and destination-policy detection semantics, (3) exact
+candidate lane and effective task/config/cache contract, and (4) generation-behavior
+compatibility impact. These are lint-specific W1/W2 decisions, not completion of
+all #646. W7/W8 accompany the slice. This review records proposals, not their
+owner acceptance or a new instruction to implement.
+
+No automatic ESLint setup/installation, alignment upgrade, plugin-scope widening, TypeScript
+policy rewrite or shared-config repair is part of admission. Ordinary installation
+of the new app's native dependencies retains existing deferred/skip-install behavior. Missing/incompatible
+setup gets guidance; explicit native choice and no-applicable-policy fallback are
+visible. Partial applicable ESLint setup fails. Existing unrelated lint projects
+must not trigger a global rejection. Effective rules are established by ESLint's
+supported resolution and acceptance checks, not a home-grown JavaScript evaluator.
+
+For the first delivery, test the narrow pre-mutation guard for plugin member routes;
+do not implement full member lint support or an existing-app converter. Direct
+Nest CLI conversion is outside that safeguard and must be documented. Keep
+#558/#565 ownership and closed #536/#506 intact. Schematics updates, formatter/test
+overhauls, HTTP changes, CI rollout and release/adoption remain separate.
 
 ### Focused acceptance plan
 
-Use the parent scenario IDs; #652 supplies the detailed checklist.
+These are **selected assertions** from parent scenarios, not completion of all
+S01–S14. In particular, no new build packaging, transitive library integration,
+migration engine, performance programme or TypeORM acceptance is required here.
 
-| Parent scenarios | Required evidence for this slice                                                                                                                                                                                |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S01–S03, S13     | Packed public generation for ESM/CJS at nested roots, shared policy and mixed Angular/JS coexistence; second app preserves shared config and existing app bytes; missing setup is diagnosed.                    |
-| S04, S07, S12    | Effective custom/default lint target, cwd, plugin scopes and exclusions; no package-script shadowing or duplicate Nest-owned target; member conversion preserves coverage or rejects before mutation.           |
-| S07, S10         | Deliberate shared-rule, type-aware and module-boundary violations fail; source, tests, tools and config are checked as selected; build/report outputs are ignored appropriately.                                |
-| S08–S09          | Cache hit and invalidation for shared config/rules and relevant source/dependency changes; accurate inputs across nested projects; check cache cannot falsely satisfy fix operations.                           |
-| S11              | Dry-run/rejected setup/conflicts/occupied destinations leave Tree, files, manifests and lockfile unchanged; callbacks are deferred and skip-install honored; no implicit existing-app migration.                |
-| S13–S14          | No scaffold-added Oxlint artifacts/dependencies when ESLint is selected; unrelated consumer declarations and framework/test/format behavior preserved; schemas, README and rollback match the packed candidate. |
+| Parent scenarios | Minimum evidence for this slice                                                                                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S02–S03, S12–S14 | Packed public ESM/CJS generation in the single admitted lane; nested product/host root with independent project name; second app and existing Angular/JS source/config unchanged.                                                                                                                |
+| S04, S07         | Resolved default/custom lint task, cwd, scopes and precedence; excluded destination and conflicting targets diagnosed; no shadowing or duplicate Nest-owned lint target.                                                                                                                         |
+| S07, S10         | A fixture with selected shared, type-aware and boundary rules rejects deliberate violations; one simpler policy remains unchanged. Check declared src/test/tool/config scope, parser resolution and ignored outputs. No new rule mandate.                                                        |
+| S08–S09          | Local cache hit plus invalidation for source, ancestor config, imported helper/shared package and relevant rule/type dependencies. Fix mode must execute rather than replay a check result. No remote-cache rollout.                                                                             |
+| S11              | Public dry-run shows planned changes without persistent writes/install; failed preflight/staging preserves caller Tree; occupied/custom destinations rejected; deferred install/skip-install behavior retained. Post-commit install failure has recovery guidance, not a false rollback promise. |
+| S04, S11         | Plugin member generation into an app created by the new ESLint mode rejects before mutation; representative native/Oxlint owner behavior stays intact. Direct CLI limit is documented.                                                                                                           |
+| S07, S13         | Exact pinned scaffold comparison: only approved lint artifacts/metadata differ; no added Oxlint in ESLint mode; explicit/custom entries preserved or diagnosed; native and minimal/JS baseline behavior retained.                                                                                |
+| S13              | Schemas and package/generated docs match the packed candidate; executable quick start and archive contents checked per ADR-0024. Relevant build/test smoke checks preserve existing documented limitations; this is not a whole-suite compatibility claim.                                       |
 
-Record exact artifact integrity, resolved versions, OS/manager/linker, command
-exit codes and positive/negative assertions. Native fallback must be visible and
-retain evidence for its admitted lane. Do not infer native-member support from
-independent-app tests, or all-version support from one Nx sample. All rows are
-pending; documentation checks cannot close the implementation issue.
+Initial scope excludes minimal/JavaScript ESLint generation, root hosts, new-library
+lint setup, missing-policy setup and existing-project conversion. Unsupported ESLint
+requests must not break the established native routes.
+
+Record exact artifact integrity, versions, OS/manager/linker, command exit codes,
+before/after diff and positive/negative assertions. Keep existing limitations
+(such as CJS/Jest installation and Node-version constraints) visible. An upstream
+or pre-existing failure remains separately recorded; do not silently weaken the
+acceptance assertion or patch a different integration to make this slice pass.
 
 Sources: [Nest CLI reference](https://docs.nestjs.com/cli/usages),
 [Nx ESLint integration](https://nx.dev/docs/technologies/eslint/introduction),
-[inspected application generator](https://github.com/anarchitects/anarchitecture-plugins/blob/ef118bebcba1cdacbe69111265ce4346bf325ba7/packages/nest/src/generators/application/generator.ts)
-and [member lint helper](https://github.com/anarchitects/anarchitecture-plugins/blob/ef118bebcba1cdacbe69111265ce4346bf325ba7/packages/nest/src/utils/setup-lint.ts).
+[ESLint configuration resolution](https://eslint.org/docs/latest/use/configure/configuration-files),
+[staged adapter](https://github.com/anarchitects/anarchitecture-plugins/blob/6b7c09a0269c894ee00aaae03d4bd6d9db43506b/packages/nest/src/generation-adapter/run-nest-schematic.ts)
+and [additive guard](https://github.com/anarchitects/anarchitecture-plugins/blob/6b7c09a0269c894ee00aaae03d4bd6d9db43506b/packages/nest/src/generation-adapter/additive-transform.ts).
 
 ## Existing work and closure boundaries
 
