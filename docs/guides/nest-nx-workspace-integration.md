@@ -146,9 +146,10 @@ and library fixtures are reusable baselines, with their original limitations.
 
 ## Workstreams and sequencing
 
-These are epic checklist items, not newly created native child issues. Split into
-bounded implementation issues after contract review; reuse existing issues where
-they already own the work. No schedule or implementation assignee is implied.
+W1–W8 remain epic workstreams rather than eight native child issues. The bounded
+shared ESLint proposal now has child issue #652, with implementation deferred.
+Split remaining work after contract review and reuse existing owners/issues.
+No schedule or implementation assignee is implied.
 
 | ID  | Deliverable                                                                          | Depends on / boundary                                                               |
 | --- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -160,6 +161,88 @@ they already own the work. No schedule or implementation assignee is implied.
 | W6  | Versioned upgrade path and customization/rollback evidence                           | W2 plus affected W3–W5 changes; legacy conversion remains #558                      |
 | W7  | Schemas, generated/public guides, compatibility/distribution decision                | W1 then accompany every shipped slice; no future capabilities advertised as current |
 | W8  | Focused packed consumer acceptance and technical readiness report                    | Evidence accumulates per slice; final review after admitted W2–W7 capabilities      |
+
+## Bounded shared ESLint slice: SI-646.1
+
+Tracking: [#652](https://github.com/anarchitects/anarchitecture-plugins/issues/652),
+under [#646](https://github.com/anarchitects/anarchitecture-plugins/issues/646).
+The maintainer requested analysis, planning and documentation only. Implementation
+is explicitly deferred; all acceptance below remains pending. The ADR remains
+Proposed.
+
+### Dated source evidence
+
+The 2026-11-20 follow-up inspected the application generator and member lint
+helper at Plugins `ef118bebcba1cdacbe69111265ce4346bf325ba7`, the 0.1.1
+manifest's pinned schematics 12.0.13, and published package sources for Nest CLI
+12.0.15, schematics 12.0.16 and `@nx/eslint` 24.0.6 (Nx registry version
+24.0.6). These are source/registry observations, not fresh scaffold execution,
+installed-consumer acceptance or a supported-version expansion.
+
+Neither the current CLI options nor application schema provides an ESLint
+selector. Full TypeScript ESM/CJS templates add Oxlint; minimal templates omit
+linting. The plugin invokes schematics directly, so upgrading only the CLI does
+not establish shared ESLint integration. Schematics 12.0.16 also changes test
+omission and adds skills: any pin upgrade needs its own compatibility review.
+
+Nx ESLint can infer tasks from ancestor configuration and lintable files, including
+a config importing a shared package. Mere presence of a config does not prove
+coverage: exclusions, parser/type-aware scope, plugin scopes and resolved target
+precedence still matter. The current lint-project generator can create local
+config and migrate root configuration; invoking it unconditionally is not proof
+of non-destructive reuse. Verify the public integration API at each admitted Nx
+version and preserve consumer configuration.
+
+[#536](https://github.com/anarchitects/anarchitecture-plugins/issues/536) is a
+completed repair of native-member Oxlint scope, not an ESLint integration.
+[#506](https://github.com/anarchitects/anarchitecture-plugins/issues/506) is
+completed native-tooling baseline coverage. Neither is reopened by this proposal.
+
+### Scope, dependency order and review decisions
+
+The proposed contract is [ADR section 2a](../adr/adr-nest-nx-workspace-integration.md#2a-proposed-shared-eslint-integration-for-new-applications).
+Start with new independent TypeScript ESM/CJS apps using established shared ESLint
+policy. Resolve explicit choice, Nx defaults, compatible workspace policy, then a
+visible native fallback. Partial/conflicting ESLint setup fails before changes.
+Select exact option names, admitted config forms and version/layout lanes during
+review; none is an available plugin feature today.
+
+Review the lint-specific W1 contract and W2 preflight/target ownership decisions
+before implementation. These decisions can be bounded to #652 without completing
+all W2 or all #646. W7 documentation and W8 packed evidence accompany this slice.
+A separate implementation instruction is still required.
+
+Coordinate existing-project adoption with #558/#565, without duplicating their
+converter or making either epic a blanket fresh-generation blocker. Member
+conversion from a newly generated ESLint app needs preservation evidence or an
+actionable pre-mutation rejection. Automatic empty-workspace setup, root hosts,
+arbitrary dynamic/legacy configs, new library lint setup and existing-app
+conversion remain outside the initial slice unless separately admitted. Do not
+couple it to a schematics update, formatter/test/TS overhaul or HTTP-default change.
+
+### Focused acceptance plan
+
+Use the parent scenario IDs; #652 supplies the detailed checklist.
+
+| Parent scenarios | Required evidence for this slice                                                                                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S01–S03, S13     | Packed public generation for ESM/CJS at nested roots, shared policy and mixed Angular/JS coexistence; second app preserves shared config and existing app bytes; missing setup is diagnosed.                    |
+| S04, S07, S12    | Effective custom/default lint target, cwd, plugin scopes and exclusions; no package-script shadowing or duplicate Nest-owned target; member conversion preserves coverage or rejects before mutation.           |
+| S07, S10         | Deliberate shared-rule, type-aware and module-boundary violations fail; source, tests, tools and config are checked as selected; build/report outputs are ignored appropriately.                                |
+| S08–S09          | Cache hit and invalidation for shared config/rules and relevant source/dependency changes; accurate inputs across nested projects; check cache cannot falsely satisfy fix operations.                           |
+| S11              | Dry-run/rejected setup/conflicts/occupied destinations leave Tree, files, manifests and lockfile unchanged; callbacks are deferred and skip-install honored; no implicit existing-app migration.                |
+| S13–S14          | No scaffold-added Oxlint artifacts/dependencies when ESLint is selected; unrelated consumer declarations and framework/test/format behavior preserved; schemas, README and rollback match the packed candidate. |
+
+Record exact artifact integrity, resolved versions, OS/manager/linker, command
+exit codes and positive/negative assertions. Native fallback must be visible and
+retain evidence for its admitted lane. Do not infer native-member support from
+independent-app tests, or all-version support from one Nx sample. All rows are
+pending; documentation checks cannot close the implementation issue.
+
+Sources: [Nest CLI reference](https://docs.nestjs.com/cli/usages),
+[Nx ESLint integration](https://nx.dev/docs/technologies/eslint/introduction),
+[inspected application generator](https://github.com/anarchitects/anarchitecture-plugins/blob/ef118bebcba1cdacbe69111265ce4346bf325ba7/packages/nest/src/generators/application/generator.ts)
+and [member lint helper](https://github.com/anarchitects/anarchitecture-plugins/blob/ef118bebcba1cdacbe69111265ce4346bf325ba7/packages/nest/src/utils/setup-lint.ts).
 
 ## Existing work and closure boundaries
 

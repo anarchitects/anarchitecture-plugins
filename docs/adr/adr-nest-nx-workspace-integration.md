@@ -72,6 +72,57 @@ and generated documentation. In particular, a generated local Prettier config
 must not accidentally shadow a selected shared policy. Respect existing formatter
 selection and documented opt-outs; do not install a second formatter implicitly.
 
+### 2a. Proposed shared ESLint integration for new applications
+
+The first bounded lint slice is
+[SI-646.1 / #652](https://github.com/anarchitects/anarchitecture-plugins/issues/652).
+It is a proposal for later implementation, not a shipped option or authorization
+to change plugin code. Initial scope is new independent TypeScript ESM/CJS
+applications in an established, supported ESLint workspace.
+
+Resolve explicit invocation choice, applicable Nx generator defaults, compatible
+workspace policy, then a documented and visibly reported native fallback.
+Recognized shared ESLint policy selects ESLint; conflicting or incomplete setup
+must fail before writes rather than silently choose Oxlint. Review exact public
+option names, detection rules and admitted configuration forms before implementation.
+An explicit choice never authorizes overwriting existing consumer configuration.
+
+Keep official Nest schematics as the framework source. Propose a bounded,
+structure-aware lint transform staged with the new application before any output
+is committed: omit the fresh scaffold's Oxlint script, configuration and tooling
+dependencies when ESLint is selected. Preserve unrelated source and dependencies,
+and diagnose explicit/custom additions instead of silently deleting them. The
+existing additive-transform guard must not become a general template-rewrite
+escape hatch; any lint-specific transform needs narrow checks and regression proof.
+
+Use actual ESLint resolution for ancestor configuration and imported shared
+packages. Do not copy shared rules or require a root config in every workspace.
+Create a local config only for necessary, documented project-specific scope or
+overrides. Preserve architecture-boundary rules, type-aware checking and the
+selected source/test/tooling coverage.
+
+Lint inference and execution remain with `@nx/eslint`, never Nest-owned inference
+or a new executor. Preserve custom target names and plugin include/exclude scopes;
+the new package script must not shadow the selected task. Validate the resolved
+task and real lint failures, not just plugin registration. Keep lint tooling in
+the appropriate consumer development dependencies, with `@nx/eslint` aligned to
+consumer Nx. Do not silently widen scopes or install a second linter.
+
+Missing workspace setup gets actionable Nx setup guidance in this first slice.
+Automatic setup, root-host generation, arbitrary dynamic/legacy configuration,
+new library lint setup and existing-project conversion require separately admitted
+scope. Native member conversion after an ESLint app must either preserve proven
+lint scope/task/cache ownership or reject unsupported conversion before mutation.
+
+Existing-app conversion remains with
+[#558](https://github.com/anarchitects/anarchitecture-plugins/issues/558) and
+[#565](https://github.com/anarchitects/anarchitecture-plugins/issues/565).
+The slice depends on review of its W1 policy and W2 collision/preflight decisions,
+not completion of the entire integration epic or migration epic. Its own delivery
+requires a subsequent explicit implementation instruction, fresh architecture
+preflight, packed acceptance and public documentation. Schematics upgrades,
+HTTP/test-runner/formatter changes, publication and consumer adoption are separate.
+
 ### 3. Compose projects and TypeScript deliberately
 
 Support and document each admitted workspace model: package workspaces with
