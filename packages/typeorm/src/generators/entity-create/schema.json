@@ -20,7 +20,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Additional CLI arguments passed through to TypeORM."
+      "description": "Reserved for compatibility; non-empty CLI arguments require the corresponding executor."
     }
   },
   "required": ["project", "name"],

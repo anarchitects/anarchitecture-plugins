@@ -95,8 +95,31 @@ that lists the conflicting variable names. Driver settings such as
 
 ### Scaffolding generators
 
-These are convenience wrappers around existing executors. They are invoked
-manually via `nx g` and are not inferred targets.
+These generators are invoked manually via `nx g` and are not inferred targets.
+`migration-create`, `entity-create`, and `subscriber-create` stage files through
+Nx, so `--dry-run` previews the intended files without writing them or running
+TypeORM commands. Omit `--dry-run` to create the files. Existing destination
+files are preserved and cause an error, including during a preview; choose a new
+name or migration timestamp. Names accept identifiers and words separated by
+spaces, hyphens or underscores; use `--directory` for a project-relative path.
+
+```bash
+nx g @anarchitects/nx-typeorm:migration-create --project=api --name=add-users --timestamp=1795219200000 --dry-run
+```
+
+The preview lists a `CREATE` for the timestamped migration. Running the same
+command without `--dry-run` creates it. TypeScript is the default output;
+`--outputJs` selects CommonJS JavaScript, and adding `--esm` selects ESM
+JavaScript. Without `--timestamp`, the current time is used.
+
+For migration scaffolds, `--args` accepts only `--outputJs`/`-o`, `--esm`, and
+`--timestamp`/`-t` (including explicit boolean values and `--no-outputJs`/
+`--no-esm`). These trailing arguments override the corresponding named options.
+Entity and subscriber generators accept no additional CLI arguments. Unsupported
+arguments fail before any files are staged. If you previously used other CLI
+passthrough arguments, use the corresponding executor instead; executors invoke
+TypeORM directly and do not provide Nx generator previews. No configuration or
+existing-file migration is required.
 
 `migration-create` (alias: `migration`)
 

@@ -1,139 +1,87 @@
 import { addProjectConfiguration, type Tree } from '@nx/devkit';
-import entityCreateExecutor from '../../executors/entity-create/executor.js';
-import entityCreateGenerator from './generator.js';
+import { runTypeormCommand } from '../../utils/cli.js';
+import generator from './generator.js';
 
 let createTreeWithEmptyWorkspace: typeof import('@nx/devkit/testing')['createTreeWithEmptyWorkspace'];
-
-jest.mock('../../executors/entity-create/executor.js', () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
-
-describe('entity-create generator', () => {
-  let tree: Tree;
-  let executorMock: jest.MockedFunction<typeof entityCreateExecutor>;
-
-  beforeEach(() => {
-    if (!createTreeWithEmptyWorkspace) {
-      throw new Error('createTreeWithEmptyWorkspace was not loaded.');
-    }
-
-    tree = createTreeWithEmptyWorkspace();
-    executorMock = jest.mocked(entityCreateExecutor);
-    executorMock.mockResolvedValue({ success: true });
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('uses application entity defaults when directory is omitted', async () => {
-    addProjectConfiguration(tree, 'api', {
-      root: 'apps/api',
-      projectType: 'application',
-      targets: {},
-    });
-
-    await entityCreateGenerator(tree, {
-      project: 'api',
-      name: 'user profile',
-    });
-
-    expect(executorMock).toHaveBeenCalledWith(
-      {
-        projectRoot: 'apps/api',
-        path: 'src/entities/UserProfileEntity',
-        args: undefined,
-      },
-      expect.objectContaining({ projectName: 'api' })
-    );
-  });
-
-  it('uses library entity defaults when directory is omitted', async () => {
-    addProjectConfiguration(tree, 'data-access', {
-      root: 'libs/data-access',
-      projectType: 'library',
-      targets: {},
-    });
-
-    await entityCreateGenerator(tree, {
-      project: 'data-access',
-      name: 'audit log',
-    });
-
-    expect(executorMock).toHaveBeenCalledWith(
-      {
-        projectRoot: 'libs/data-access',
-        path: 'src/infrastructure-persistence/entities/AuditLogEntity',
-        args: undefined,
-      },
-      expect.objectContaining({ projectName: 'data-access' })
-    );
-  });
-
-  it('applies directory override and forwards args', async () => {
-    addProjectConfiguration(tree, 'api', {
-      root: 'apps/api',
-      projectType: 'application',
-      targets: {},
-    });
-
-    await entityCreateGenerator(tree, {
-      project: 'api',
-      name: 'order item',
-      directory: 'src/domain/entities',
-      args: ['--bar'],
-    });
-
-    expect(executorMock).toHaveBeenCalledWith(
-      {
-        projectRoot: 'apps/api',
-        path: 'src/domain/entities/OrderItemEntity',
-        args: ['--bar'],
-      },
-      expect.objectContaining({ projectName: 'api' })
-    );
-  });
-
-  it('validates required project and name options', async () => {
-    addProjectConfiguration(tree, 'api', {
-      root: 'apps/api',
-      projectType: 'application',
-      targets: {},
-    });
-
-    await expect(
-      entityCreateGenerator(tree, {
-        project: '',
-        name: 'valid',
-      })
-    ).rejects.toThrow('project');
-
-    await expect(
-      entityCreateGenerator(tree, {
-        project: 'api',
-        name: '',
-      })
-    ).rejects.toThrow('name');
-  });
-
-  it('fails when wrapped executor reports unsuccessful execution', async () => {
-    addProjectConfiguration(tree, 'api', {
-      root: 'apps/api',
-      projectType: 'application',
-      targets: {},
-    });
-    executorMock.mockResolvedValueOnce({ success: false });
-
-    await expect(
-      entityCreateGenerator(tree, {
-        project: 'api',
-        name: 'user profile',
-      })
-    ).rejects.toThrow('TypeORM entity:create failed.');
-  });
-});
+jest.mock('../../utils/cli.js', () => ({ runTypeormCommand: jest.fn() }));
 
 beforeAll(async () => {
   ({ createTreeWithEmptyWorkspace } = await import('@nx/devkit/testing'));
+});
+
+describe('entity-create generator', () => {
+  let tree: Tree;
+  beforeEach(() => {
+    tree = createTreeWithEmptyWorkspace();
+    jest.clearAllMocks();
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/blueprint/api',
+      projectType: 'application',
+    });
+    addProjectConfiguration(tree, 'data-access', {
+      root: 'libs/data-access',
+      projectType: 'library',
+    });
+  });
+
+  it.each([
+    ['api', undefined, 'apps/blueprint/api/src/entities'],
+    [
+      'data-access',
+      undefined,
+      'libs/data-access/src/infrastructure-persistence/entities',
+    ],
+    ['api', 'src/custom', 'apps/blueprint/api/src/custom'],
+  ])(
+    'stages a scaffold for %s in %s',
+    async (project, directory, destination) => {
+      await generator(tree, { project, name: 'user profile', directory });
+      const path = `${destination}/user-profile.entity.ts`;
+      expect(tree.read(path, 'utf-8')).toContain(
+        'export class UserProfileEntity'
+      );
+      expect(tree.listChanges()).toContainEqual(
+        expect.objectContaining({ path, type: 'CREATE' })
+      );
+      expect(runTypeormCommand).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not repeat a class suffix', async () => {
+    await generator(tree, { project: 'api', name: 'user Entity' });
+    const content = tree.read(
+      'apps/blueprint/api/src/entities/user-Entity.entity.ts',
+      'utf-8'
+    );
+    expect(content).toContain('class UserEntity');
+    expect(content).not.toContain('UserEntityEntity');
+  });
+
+  it('preserves an existing destination and stages no other changes', async () => {
+    const path = 'apps/blueprint/api/src/entities/user.entity.ts';
+    tree.write(path, '// custom implementation');
+    const changes = tree.listChanges();
+    await expect(
+      generator(tree, { project: 'api', name: 'user' })
+    ).rejects.toThrow('already exists');
+    expect(tree.read(path, 'utf-8')).toBe('// custom implementation');
+    expect(tree.listChanges()).toEqual(changes);
+  });
+
+  it.each([
+    { project: ' ', name: 'valid' },
+    { project: 'api', name: ' ' },
+    { project: 'api', name: '../escape' },
+    { project: 'api', name: 'valid', directory: '../escape' },
+    { project: 'api', name: 'valid', directory: '/absolute' },
+    { project: 'api', name: 'valid', args: ['--path=elsewhere'] },
+  ])(
+    'rejects unsafe or unsupported options before staging files: %j',
+    async (options) => {
+      const changes = tree.listChanges();
+      await expect(generator(tree, options)).rejects.toThrow();
+      expect(tree.listChanges()).toEqual(changes);
+      expect(runTypeormCommand).not.toHaveBeenCalled();
+    }
+  );
 });
