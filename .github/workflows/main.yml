@@ -1,6 +1,8 @@
 name: Main CI
 env:
-  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NX_NO_CLOUD: ${{ vars.NX_CLOUD_ENABLED == 'false' && 'true' || 'false' }}
+  NX_CLOUD_ACCESS_TOKEN: ${{ vars.NX_CLOUD_ENABLED != 'false' && secrets.NX_CLOUD_ACCESS_TOKEN || '' }}
+  NX_COMMIT_SHA: ${{ github.sha }}
 
 on:
   pull_request:
@@ -26,6 +28,10 @@ jobs:
           filter: tree:0
           fetch-depth: 0
 
+      - name: Verify Nx Cloud commit SHA
+        if: env.NX_NO_CLOUD != 'true'
+        run: test "$(git rev-parse HEAD)" = "$NX_COMMIT_SHA"
+
       # setup-node invokes Yarn while restoring its cache.
       - run: corepack enable
 
@@ -36,17 +42,33 @@ jobs:
 
       - run: corepack enable
 
-      - run: yarn dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js-workspace-node" --stop-agents-after="lint,test,build,typecheck,e2e-ci"
+      - name: Start Nx Cloud agents
+        if: env.NX_NO_CLOUD != 'true'
+        run: yarn dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js-workspace-node" --stop-agents-after="lint,test,build,typecheck,e2e-ci"
 
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v5
-      - run: yarn nx-cloud record -- yarn nx format:check
-      - name: Test release workflow handoff
-        run: yarn nx-cloud record -- yarn nx run @anarchitecture-plugins/source:test-release-workflows
-      - name: Run affected tasks on Nx Agents
-        run: yarn nx affected -t lint test build typecheck e2e-ci
+      - name: Check formatting and release workflow handoff
+        shell: bash
+        run: |
+          record=()
+          if [[ "$NX_NO_CLOUD" != 'true' ]]; then
+            record=(yarn nx-cloud record --)
+          fi
+          "${record[@]}" yarn nx format:check
+          "${record[@]}" yarn nx run @anarchitecture-plugins/source:test-release-workflows
+      - name: Run affected tasks
+        shell: bash
+        run: |
+          if [[ "$NX_NO_CLOUD" == 'true' ]]; then
+            yarn nx affected -t lint test build typecheck
+            # E2E fixtures such as TypeORM's share workspace files on this runner.
+            yarn nx affected -t e2e-ci --parallel=1
+          else
+            yarn nx affected -t lint test build typecheck e2e-ci
+          fi
         # Keep setup, TS compatibility and fix-ci within the overall job budget.
         timeout-minutes: 45
       - run: yarn dlx -q -p typescript@5.9.3 tsc --project tsconfig.ts5.json --pretty false
       - run: yarn nx fix-ci
-        if: always()
+        if: always() && env.NX_NO_CLOUD != 'true'
