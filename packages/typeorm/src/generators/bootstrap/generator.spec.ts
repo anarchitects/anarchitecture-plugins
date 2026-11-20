@@ -174,6 +174,70 @@ export async function bootstrap() {
     expect(mainSource).not.toContain('AppDataSource.initialize().catch');
   });
 
+  it('generates NodeNext imports in an ESM Nest app and repairs an older import on rerun', async () => {
+    addProjectConfiguration(tree, 'api', {
+      root: 'apps/api',
+      sourceRoot: 'apps/api/src',
+      projectType: 'application',
+      targets: {},
+    });
+    tree.write('apps/api/package.json', '{"type":"module"}');
+    const modulePath = 'apps/api/src/app/app.module.ts';
+    tree.write(
+      modulePath,
+      `import { Module } from '@nestjs/common';
+import { AppController } from './app.controller.js';
+
+@Module({ controllers: [AppController] })
+export class AppModule {}
+`
+    );
+    const options = {
+      project: 'api',
+      migrationDatasource: true,
+      skipInstall: true,
+    };
+    await bootstrapGenerator(tree, options);
+
+    const patched = tree.read(modulePath, 'utf-8') ?? '';
+    expect(patched).toContain('from "../data-source.js"');
+    expect(patched).toContain("from './app.controller.js'");
+    const reexport = tree.read('apps/api/src/typeorm.datasource.ts', 'utf-8');
+    expect(reexport?.match(/from '\.\/data-source\.js'/g)).toHaveLength(2);
+
+    tree.write(
+      modulePath,
+      patched.replace('../data-source.js', '../data-source')
+    );
+    await bootstrapGenerator(tree, options);
+    expect(tree.read(modulePath, 'utf-8')).toBe(patched);
+  });
+
+  it.each([
+    ['inherits the workspace ESM scope', undefined, '.js'],
+    ['starts a CommonJS package scope', '{}', ''],
+  ])('%s when wiring a plain app', async (_name, manifest, extension) => {
+    tree.write('package.json', '{"type":"module"}');
+    if (manifest) {
+      tree.write('apps/worker/package.json', manifest);
+    }
+    addProjectConfiguration(tree, 'worker', {
+      root: 'apps/worker',
+      projectType: 'application',
+      targets: {},
+    });
+    tree.write('apps/worker/src/main.ts', 'export {};\n');
+
+    await bootstrapGenerator(tree, { project: 'worker', skipInstall: true });
+
+    expect(tree.read('apps/worker/src/main.ts', 'utf-8')).toContain(
+      `from "./typeorm.datasource${extension}"`
+    );
+    expect(
+      tree.read('apps/worker/src/typeorm.datasource.ts', 'utf-8')
+    ).toContain(`from './data-source${extension}'`);
+  });
+
   it('does not patch non-Nest applications', async () => {
     addProjectConfiguration(tree, 'worker', {
       root: 'apps/worker',
@@ -537,41 +601,56 @@ export class AppModule {}
     });
   });
 
-  it('supports overriding library schema and migrations paths', async () => {
-    addProjectConfiguration(tree, 'data-access', {
-      root: 'libs/data-access',
-      sourceRoot: 'libs/data-access/src',
-      projectType: 'library',
-      targets: {},
-    });
+  it.each([
+    ['commonjs', ''],
+    ['module', '.js'],
+  ])(
+    'supports overriding library paths in a %s package',
+    async (type, extension) => {
+      addProjectConfiguration(tree, 'data-access', {
+        root: 'libs/data-access',
+        sourceRoot: 'libs/data-access/src',
+        projectType: 'library',
+        targets: {},
+      });
+      tree.write('libs/data-access/package.json', JSON.stringify({ type }));
 
-    await bootstrapGenerator(tree, {
-      project: 'data-access',
-      domain: 'Billing',
-      schemaPath: 'src/persistence/schema.ts',
-      migrationsDir: 'src/persistence/migrations',
-      skipInstall: true,
-    });
+      await bootstrapGenerator(tree, {
+        project: 'data-access',
+        domain: 'Billing',
+        schemaPath: 'src/schema/catalog.ts',
+        migrationsDir: 'src/persistence/migrations',
+        skipInstall: true,
+      });
 
-    const schemaPath = 'libs/data-access/src/persistence/schema.ts';
-    const migrationPath =
-      'libs/data-access/src/persistence/migrations/1700000000000_init_schema.ts';
-    expect(tree.exists(schemaPath)).toBe(true);
-    expect(tree.exists(migrationPath)).toBe(true);
+      const schemaPath = 'libs/data-access/src/schema/catalog.ts';
+      const migrationPath =
+        'libs/data-access/src/persistence/migrations/1700000000000_init_schema.ts';
+      expect(tree.exists(schemaPath)).toBe(true);
+      expect(tree.exists(migrationPath)).toBe(true);
 
-    const migrationSource = tree.read(migrationPath, 'utf-8');
-    expect(migrationSource).toContain("from '../schema';");
-    expect(migrationSource).toContain('queryRunner.createSchema(SCHEMA, true)');
-    expect(migrationSource).toContain('nx-typeorm:migration-api:up:start');
+      const migrationSource = tree.read(migrationPath, 'utf-8');
+      expect(migrationSource).toContain(
+        "import type { MigrationInterface, QueryRunner } from 'typeorm';"
+      );
+      expect(migrationSource).toContain("TableUnique } from 'typeorm';");
+      expect(migrationSource).toContain(
+        `{ Billing_SCHEMA as SCHEMA } from '../../schema/catalog${extension}';`
+      );
+      expect(migrationSource).toContain(
+        'queryRunner.createSchema(SCHEMA, true)'
+      );
+      expect(migrationSource).toContain('nx-typeorm:migration-api:up:start');
 
-    const projectConfig = readProjectConfiguration(tree, 'data-access');
-    expect(projectConfig.metadata?.typeorm).toEqual({
-      schema: 'billing',
-      domain: 'Billing',
-      schemaPath: 'src/persistence/schema.ts',
-      migrationsDir: 'src/persistence/migrations',
-    });
-  });
+      const projectConfig = readProjectConfiguration(tree, 'data-access');
+      expect(projectConfig.metadata?.typeorm).toEqual({
+        schema: 'billing',
+        domain: 'Billing',
+        schemaPath: 'src/schema/catalog.ts',
+        migrationsDir: 'src/persistence/migrations',
+      });
+    }
+  );
 
   it('throws when library domain is omitted', async () => {
     addProjectConfiguration(tree, 'data-access', {

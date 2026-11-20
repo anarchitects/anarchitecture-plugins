@@ -4,6 +4,7 @@ import {
   generateFiles,
   joinPathFragments,
   names,
+  readJson,
   readProjectConfiguration,
   runTasksInSerial,
   Tree,
@@ -54,6 +55,8 @@ const SUPPORTED_DATABASES = [
 const DEFAULT_SCHEMA_PATH = 'src/infrastructure-persistence/schema.ts';
 const DEFAULT_MIGRATIONS_DIR = 'src/infrastructure-persistence/migrations';
 const DEFAULT_MIGRATION_FILE = '1700000000000_init_schema.ts';
+const APP_DATASOURCE_PATH = 'src/data-source.ts';
+const APP_DATASOURCE_REEXPORT_PATH = 'src/typeorm.datasource.ts';
 const APP_MIGRATIONS_DATASOURCE_PATH = 'tools/typeorm/datasource.migrations.ts';
 const APP_CONNECTION_OPTIONS_PATH = 'tools/typeorm/connection-options.ts';
 const SUPPORTED_DATABASE_DISPLAY = [...SUPPORTED_DATABASES, 'postgresql'].join(
@@ -168,12 +171,23 @@ function prepareLibrary(
   const migrationsDirRelative = normalizeProjectRelative(
     options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR
   );
+  const targetSchemaPath = joinPathFragments(projectRoot, schemaPathRelative);
+  const targetMigrationPath = joinPathFragments(
+    projectRoot,
+    migrationsDirRelative,
+    DEFAULT_MIGRATION_FILE
+  );
   const templateOptions = {
     tmpl: '',
     schema: schemaName,
     domain: options.domain,
     schemaPath: schemaPathRelative,
     migrationsDir: migrationsDirRelative,
+    schemaImportPath: importPathFrom(
+      tree,
+      targetMigrationPath,
+      targetSchemaPath
+    ),
     ...names(options.domain),
   };
 
@@ -190,16 +204,8 @@ function prepareLibrary(
     DEFAULT_MIGRATIONS_DIR,
     DEFAULT_MIGRATION_FILE
   );
-  const targetSchemaPath = joinPathFragments(projectRoot, schemaPathRelative);
-  const targetMigrationPath = joinPathFragments(
-    projectRoot,
-    migrationsDirRelative,
-    DEFAULT_MIGRATION_FILE
-  );
-
   moveGeneratedFile(tree, defaultSchemaPath, targetSchemaPath);
   moveGeneratedFile(tree, defaultMigrationPath, targetMigrationPath);
-  patchMigrationSchemaImport(tree, targetSchemaPath, targetMigrationPath);
 
   const partial = consumeProjectJsonPartial(tree, projectRoot);
   const projectConfig = readProjectConfiguration(tree, projectName);
@@ -251,6 +257,11 @@ function prepareApplication(
       tmpl: '',
       database,
       appDatabase: projectName,
+      runtimeDataSourceImport: importPathFrom(
+        tree,
+        joinPathFragments(projectRoot, APP_DATASOURCE_REEXPORT_PATH),
+        joinPathFragments(projectRoot, APP_DATASOURCE_PATH)
+      ),
     }
   );
 
@@ -341,39 +352,34 @@ function moveGeneratedFile(tree: Tree, from: string, to: string) {
   tree.delete(from);
 }
 
-function patchMigrationSchemaImport(
+function importPathFrom(
   tree: Tree,
-  schemaPath: string,
-  migrationPath: string
-) {
-  if (!tree.exists(schemaPath) || !tree.exists(migrationPath)) {
-    return;
-  }
-
-  const migrationContents = tree.read(migrationPath, 'utf-8');
-  if (!migrationContents) {
-    return;
-  }
-
-  const schemaImportPath = importPathFrom(migrationPath, schemaPath);
-  const updatedContents = migrationContents.replace(
-    /from\s+['"][^'"]+['"];/,
-    `from '${schemaImportPath}';`
-  );
-
-  tree.write(migrationPath, updatedContents);
-}
-
-function importPathFrom(fromFile: string, targetFile: string): string {
+  fromFile: string,
+  targetFile: string
+): string {
   const relativePath = relative(dirname(fromFile), targetFile).replace(
     /\\/g,
     '/'
   );
-  const withoutExtension = relativePath.replace(/\.ts$/, '');
-  if (withoutExtension.startsWith('.')) {
-    return withoutExtension;
+  const emittedPath = usesEsModules(tree, fromFile)
+    ? relativePath.replace(/\.([mc]?)ts$/, '.$1js')
+    : relativePath.replace(/\.ts$/, '');
+  return emittedPath.startsWith('../') ? emittedPath : `./${emittedPath}`;
+}
+
+function usesEsModules(tree: Tree, fromFile: string): boolean {
+  // A nearer package.json defines a new Node package scope even without "type".
+  let directory = dirname(fromFile);
+  while (true) {
+    const manifest = joinPathFragments(directory, 'package.json');
+    if (tree.exists(manifest)) {
+      return readJson<{ type?: string }>(tree, manifest).type === 'module';
+    }
+    if (directory === '.') {
+      return false;
+    }
+    directory = dirname(directory);
   }
-  return `./${withoutExtension}`;
 }
 
 function normalizeProjectRelative(pathValue: string): string {
@@ -517,12 +523,6 @@ function patchAppModule(
     return;
   }
 
-  const runtimeDataSourcePath = joinPathFragments(
-    resolvedSourceRoot,
-    'data-source.ts'
-  );
-  const runtimeImportPath = importPathFrom(modulePath, runtimeDataSourcePath);
-
   const project = new Project({
     useInMemoryFileSystem: true,
     skipAddingFilesFromTsConfig: true,
@@ -532,7 +532,12 @@ function patchAppModule(
   });
 
   ensureImport(sourceFile, '@nestjs/typeorm', 'TypeOrmModule');
-  ensureImport(sourceFile, runtimeImportPath, 'AppDataSource');
+  ensureDataSourceImport(
+    tree,
+    sourceFile,
+    modulePath,
+    joinPathFragments(projectRoot, APP_DATASOURCE_PATH)
+  );
 
   const moduleDecorator = sourceFile
     .getDescendantsOfKind(SyntaxKind.Decorator)
@@ -619,7 +624,12 @@ function patchMainFile(
     overwrite: true,
   });
 
-  ensureImport(sourceFile, './typeorm.datasource', 'AppDataSource');
+  ensureDataSourceImport(
+    tree,
+    sourceFile,
+    mainPath,
+    joinPathFragments(projectRoot, APP_DATASOURCE_REEXPORT_PATH)
+  );
 
   const hasDataSourceInit = sourceFile
     .getDescendantsOfKind(SyntaxKind.CallExpression)
@@ -649,6 +659,30 @@ function patchMainFile(
   }
 
   tree.write(mainPath, sourceFile.getFullText());
+}
+
+function ensureDataSourceImport(
+  tree: Tree,
+  sourceFile: SourceFile,
+  fromFile: string,
+  targetFile: string
+) {
+  const specifier = importPathFrom(tree, fromFile, targetFile);
+  const extensionless = specifier.replace(/\.js$/, '');
+  // Repair the previous bootstrap's import on rerun without adding a duplicate.
+  if (extensionless !== specifier) {
+    const legacyImport = sourceFile.getImportDeclaration(
+      (declaration) =>
+        declaration.getModuleSpecifierValue() === extensionless &&
+        declaration
+          .getNamedImports()
+          .some((name) => name.getName() === 'AppDataSource')
+    );
+    if (legacyImport) {
+      legacyImport.setModuleSpecifier(specifier);
+    }
+  }
+  ensureImport(sourceFile, specifier, 'AppDataSource');
 }
 
 function ensureImport(

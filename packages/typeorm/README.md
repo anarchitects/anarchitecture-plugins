@@ -67,6 +67,10 @@ For libraries:
   - `--migrationsDir=<relative-dir>`
 - patches project metadata (`metadata.typeorm`) with schema/domain and paths.
 
+For NodeNext projects, bootstrap uses emitted `.js` paths in ESM packages
+(`"type": "module"`) and extensionless imports in CommonJS packages. This
+applies to the app datasource imports and the library migration's schema import.
+
 Additional bootstrap dependencies are installed during bootstrap:
 `ts-node`, the DB driver package for selected `--db`, and `@nestjs/typeorm`
 only for Nest applications. TypeORM 1.x provides the

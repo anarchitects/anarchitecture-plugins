@@ -351,6 +351,45 @@ try {
         'nest build'
       );
       assert.equal(api.targets.serve.continuous, true);
+      if (version === '24.0.1') {
+        console.log(
+          `[Nx ${version}] Compile Nest ESM and CJS with TypeORM bootstrap`
+        );
+        generate(
+          '@anarchitects/nest:application',
+          'api-cjs',
+          '--directory=apps/api-cjs',
+          '--type=cjs',
+          '--skipInstall'
+        );
+        const projects = ['api', 'api-cjs'];
+        const compilerConfigs = projects.map((name) =>
+          readFileSync(join(root, 'apps', name, 'tsconfig.json'), 'utf8')
+        );
+        for (const name of projects) {
+          generate(
+            '@anarchitects/nx-typeorm:bootstrap',
+            `--project=${name}`,
+            '--db=postgres',
+            '--migrationDatasource',
+            '--skipInstall'
+          );
+        }
+        assert.deepEqual(
+          projects.map((name) =>
+            readFileSync(join(root, 'apps', name, 'tsconfig.json'), 'utf8')
+          ),
+          compilerConfigs
+        );
+        run(
+          'npm',
+          ['install', '--ignore-scripts', '--no-audit', '--no-fund'],
+          root
+        );
+        for (const name of projects) {
+          nx('run', `${name}:compile`);
+        }
+      }
       const nxJson = read(root, 'nx.json');
       nxJson.plugins.push(
         { plugin: '@nx/vite/plugin', options: { buildTargetName: 'build' } },
