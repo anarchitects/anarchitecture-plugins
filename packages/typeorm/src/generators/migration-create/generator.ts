@@ -1,15 +1,12 @@
-import {
-  readProjectConfiguration,
-  type ProjectConfiguration,
-  type ExecutorContext,
-  type Tree,
-} from '@nx/devkit';
+import { readProjectConfiguration, type Tree } from '@nx/devkit';
 import { isAbsolute, join, posix } from 'node:path';
-import createMigration from '../../executors/migration-create/executor.js';
+import { defaultMigrationsDirectory } from '../../utils/shared.js';
 import {
-  defaultMigrationsDirectory,
-  normalizeName,
-} from '../../utils/shared.js';
+  migrationScaffold,
+  migrationScaffoldOptions,
+  scaffoldName,
+  writeNewScaffold,
+} from '../../utils/scaffold.js';
 import type { MigrationCreateGeneratorSchema } from './schema.js';
 
 export default async function migrationCreateGenerator(
@@ -17,30 +14,28 @@ export default async function migrationCreateGenerator(
   options: MigrationCreateGeneratorSchema
 ) {
   const projectName = requireOption(options.project, 'project');
-  const migrationName = normalizeName(requireOption(options.name, 'name'));
+  const migrationName = scaffoldName(requireOption(options.name, 'name'));
   const projectConfig = readProjectConfiguration(tree, projectName);
   const targetDirectory = resolveMigrationDirectory(
     projectConfig.root,
     projectConfig.projectType,
     options.directory
   );
-  const targetPath = join(targetDirectory, migrationName);
-  const context = createExecutorContext(tree, projectName);
-
-  const result = await createMigration(
-    {
-      path: targetPath,
-      outputJs: options.outputJs,
-      esm: options.esm,
-      timestamp: options.timestamp,
-      args: options.args,
-    },
-    context
+  const scaffoldOptions = migrationScaffoldOptions(options);
+  const { timestamp, outputJs } = scaffoldOptions;
+  const className = migrationName.replace(
+    /(?:^|[-_])(\w)/g,
+    (_, letter: string) => letter.toUpperCase()
   );
-
-  if (!result.success) {
-    throw new Error('TypeORM migration:create failed.');
-  }
+  const targetPath = join(
+    targetDirectory,
+    `${timestamp}-${migrationName}.${outputJs ? 'js' : 'ts'}`
+  );
+  writeNewScaffold(
+    tree,
+    targetPath,
+    migrationScaffold(`${className}${timestamp}`, scaffoldOptions)
+  );
 }
 
 function resolveMigrationDirectory(
@@ -95,26 +90,4 @@ function requireOption(value: string | undefined, optionName: string): string {
   }
 
   return trimmed;
-}
-
-function createExecutorContext(
-  tree: Tree,
-  projectName: string
-): ExecutorContext {
-  const projectConfig = readProjectConfiguration(tree, projectName);
-
-  return {
-    root: tree.root,
-    projectName,
-    projectsConfigurations: {
-      version: 2,
-      projects: {
-        [projectName]: {
-          root: projectConfig.root,
-          projectType: projectConfig.projectType,
-          targets: projectConfig.targets ?? {},
-        } satisfies Partial<ProjectConfiguration>,
-      },
-    },
-  } as ExecutorContext;
 }
