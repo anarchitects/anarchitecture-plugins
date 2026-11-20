@@ -62,8 +62,9 @@ jobs:
         run: |
           if [[ "$NX_NO_CLOUD" == 'true' ]]; then
             yarn nx affected -t lint test build typecheck
-            # E2E fixtures such as TypeORM's share workspace files on this runner.
-            yarn nx affected -t e2e-ci --parallel=1
+            # e2e-ci requires Nx Cloud. Run the full suites serially because
+            # fixtures such as TypeORM's share workspace files on this runner.
+            yarn nx affected -t e2e --parallel=1
           else
             yarn nx affected -t lint test build typecheck e2e-ci
           fi
