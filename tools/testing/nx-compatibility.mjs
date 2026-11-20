@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -438,7 +439,12 @@ if (mode === 'mixed') {
   assert.deepEqual(connection, AppDataSource.options);
   assert.equal(connection.schema, 'probe');
   assert.equal(connection.synchronize, false);
-  assert.deepEqual(migrations, ['dist/tools/typeorm/migrations/*.js']);
+  assert.deepEqual(migrations, ${JSON.stringify([
+    join(
+      realpathSync(appRoot),
+      'tools/typeorm/migrations/*.{ts,js}'
+    ).replaceAll('\\', '/'),
+  ])});
   assert.equal(migration.isInitialized, false);
   assert.equal(connection.url, mode === 'url' ? url : undefined);
   assert.equal(connection.host, mode === 'discrete' ? '127.0.0.1' : undefined);
