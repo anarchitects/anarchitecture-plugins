@@ -172,7 +172,9 @@ replacements. The existing CJS and build/start regressions remain in the suite.
 ## Application workspace registration
 
 The `application-workspace` scenario begins with no root workspace declarations.
-It generates the default ESM application through the packed plugin, checks that
+It verifies the packed manifest and the plugin's resolved `minimatch` version,
+then generates the default ESM application at `apps/shop/api` with project name
+`api` through the packed plugin. It checks that
 dry-run and `--skipInstall` generation leave the lockfile untouched, and verifies
 repeat safety.
 After a normal Yarn install, Nx must report

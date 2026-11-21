@@ -29,6 +29,16 @@ Independently versioned integrations, such as Swagger, follow their own
 compatibility requirements. Your application owns its framework dependencies and
 platform adapter.
 
+Workspace registration uses the plugin's pinned `minimatch` 11.0.9 dependency.
+This removes its former 9.0.5 dependency from the affected ranges of
+[GHSA-3ppc-4f35-3m26](https://github.com/advisories/GHSA-3ppc-4f35-3m26),
+[GHSA-23c5-xmqv-rm74](https://github.com/advisories/GHSA-23c5-xmqv-rm74),
+[GHSA-7r86-cg39-jmmj](https://github.com/advisories/GHSA-7r86-cg39-jmmj), and
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+The plugin's Node and Nx compatibility ranges are unchanged. Other tools,
+including Nx, may install separate affected versions; this is not a claim that
+the entire consumer dependency tree is free of advisories.
+
 ### Verified HTTP generation
 
 | Selection                                     | Independent application            | Native sub-app (`app` alias)                         | Default behavior |
