@@ -26,6 +26,11 @@ The workspace is organized as independent plugin packages under `packages/`.
 
 ## Plugin Documentation
 
+The proposed [Nest Nx workspace integration ADR](docs/adr/adr-nest-nx-workspace-integration.md)
+and [capability/acceptance matrix](docs/guides/nest-nx-workspace-integration.md)
+track the full workspace lifecycle review. They are design proposals, not shipped
+package capabilities or release/adoption approval.
+
 - Governance plugin: [packages/governance/README.md](packages/governance/README.md)
 - TypeORM plugin: [packages/typeorm/README.md](packages/typeorm/README.md)
 - JS plugin: [packages/js/README.md](packages/js/README.md)
