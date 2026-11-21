@@ -10,6 +10,10 @@ module.exports = {
   testEnvironment: 'node',
   // Nx distributes individual files in CI; limit local consumer installs.
   maxWorkers: 2,
+  reporters: [
+    'default',
+    ...(process.env.CI === 'true' ? ['<rootDir>/progress-reporter.cjs'] : []),
+  ],
   transform: { '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig] },
   moduleFileExtensions: ['ts', 'js'],
   coverageDirectory: 'test-output/jest/coverage',

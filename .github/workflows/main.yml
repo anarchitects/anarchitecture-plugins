@@ -64,7 +64,12 @@ jobs:
             yarn nx affected -t lint test build typecheck
             # e2e-ci requires Nx Cloud. Run the full suites serially because
             # fixtures such as TypeORM's share workspace files on this runner.
-            yarn nx affected -t e2e --parallel=1
+            # Expose fixture command boundaries and runner CPU/memory pressure
+            # while a full suite is running, including before a step timeout.
+            vmstat -w -t 60 &
+            diagnostics_pid=$!
+            trap 'kill "$diagnostics_pid" 2>/dev/null || true' EXIT
+            yarn nx affected -t e2e --parallel=1 --outputStyle=stream
           else
             yarn nx affected -t lint test build typecheck e2e-ci
           fi
