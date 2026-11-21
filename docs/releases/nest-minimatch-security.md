@@ -74,6 +74,7 @@ Local host: macOS arm64, Node 24.22.3, Yarn 4.17.0, Nx 24.0.1.
   Nx 24.0.1 and Node 26.0.0 / Nx 24.0.1 lanes, including Yarn 4.17.0 and the
   Node 24 npm 11.19.1 HTTP lane. Existing documented Node 22 CJS Jest exclusions
   remain exclusions, not new passes.
+
 - Workspace immutable install, changed-file formatting, and final `npm pack`
   inspection passed. The archive contains the patched manifest, README, license,
   generator registry and compiled registration utility.
