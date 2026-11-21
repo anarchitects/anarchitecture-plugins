@@ -108,6 +108,7 @@
       "local-registry": {
         "executor": "@nx/js:verdaccio",
         "options": {
+          "listenAddress": "127.0.0.1",
           "port": 4873,
           "config": ".verdaccio/config.yml",
           "storage": "tmp/local-registry/storage"

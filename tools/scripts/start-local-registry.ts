@@ -16,10 +16,8 @@ export default async () => {
   // storage folder for the local registry
   const workspaceRoot = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
   const storage = join(workspaceRoot, 'tmp/local-registry/storage');
-  const manifestRecords = [
-    'packages/js/package.json',
-    'packages/typeorm/package.json',
-  ].map((relativePath) => {
+  const projects = ['nx-js'];
+  const manifestRecords = ['packages/js/package.json'].map((relativePath) => {
     const path = join(workspaceRoot, relativePath);
     const manifest = JSON.parse(readFileSync(path, 'utf-8')) as {
       version: string;
@@ -58,6 +56,7 @@ export default async () => {
   try {
     global.stopLocalRegistry = await startLocalRegistry({
       localRegistryTarget,
+      listenAddress: '127.0.0.1',
       storage,
       verbose: false,
     });
@@ -69,8 +68,14 @@ export default async () => {
     );
   }
 
+  const originalCwd = process.cwd();
   try {
+    // Jest can run setup from the E2E package, which does not own the Nx binary.
+    // Release preparation commands belong to the repository workspace root.
+    process.chdir(workspaceRoot);
     await releaseVersion({
+      projects,
+      verbose: true,
       specifier: version,
       stageChanges: false,
       gitCommit: false,
@@ -84,10 +89,12 @@ export default async () => {
     process.env.NPM_CONFIG_PROVENANCE = 'false';
 
     await releasePublish({
+      projects,
       tag: 'e2e',
       firstRelease: true,
     });
   } finally {
+    process.chdir(originalCwd);
     for (const record of manifestRecords) {
       const manifest = JSON.parse(readFileSync(record.path, 'utf-8')) as {
         version: string;

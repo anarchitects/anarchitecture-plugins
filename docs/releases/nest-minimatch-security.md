@@ -128,13 +128,37 @@ three-way hash split concentrated five long HTTP suites in one shard. The worker
 cap remains three; this is a measured repository fallback, not a universal shard
 count or a claim that estimated timings replace hosted execution.
 
+The first partitioned run reached previously unexecuted JS and governance suites.
+JS registry preparation ran the root release build from the E2E package directory,
+where Yarn could not resolve `nx`. Preparation now temporarily uses the workspace
+root, selects only `nx-js` for the disposable local release, and exposes nested
+build errors. Docker also reproduced an IPv6-only `localhost` listener while npm
+connected over IPv4; the registry and client now use explicit `127.0.0.1` loopback.
+Governance assertions now use the existing canonical `Nodes`/`Relations` summary,
+and JSON capture uses direct child output to avoid Nx adding newlines at stream
+chunk boundaries inside JSON strings. The workaround is limited to that capture;
+ordinary task execution retains the existing runner configuration.
+The repository maintainer owns this bounded output-capture workaround and should
+revisit it when the supported Nx runner preserves large JSON writes unchanged.
+These test-harness changes preserve the public plugin implementations. The expanded
+scope repeated the full 29 Meta/seven local ADR review at the same revisions;
+Meta 0015 requires reliable, isolated validation, and release authority under
+0013/0016/0017 remains separate from disposable registry testing. Governance's
+existing host/core/adapter boundaries remain unchanged; no accepted conflict arose.
+
+The repaired JS suite passed 3/3 tests and governance passed 10/10 tests in four
+suites in the isolated Linux container. E2E commands executed; only prerequisite
+builds used local cache. Both E2E projects' lint/typecheck targets, changed-file
+formatting and all six workflow regression tests passed. No unrelated package
+manifest remained modified after the scoped disposable registry release.
+
 ### Main-branch gate review (2026-11-21)
 
 The active [main ruleset](https://github.com/anarchitects/anarchitecture-plugins/rules/8545626)
 requires the GitHub Actions `main-ci` status and up-to-date branches. It also
 requires PRs, linear history and squash merges, and blocks deletion/force pushes.
 There is no separate legacy branch-protection configuration. The ruleset's
-existing release-integration bypass remains unchanged.
+existing integration bypass remains unchanged.
 
 `main-ci` is the only required status, but the independent Nx compatibility and
 TypeORM/PostgreSQL workflows are not dependencies of it. Their failures therefore
