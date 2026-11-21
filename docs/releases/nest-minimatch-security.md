@@ -60,7 +60,23 @@ Local host: macOS arm64, Node 24.22.3, Yarn 4.17.0, Nx 24.0.1.
   `apps/shop/api` as project `api`, preserves dry-run/repeat safety, and runs
   native build/test/e2e/lint plus the README compile/serve/resource quickstart.
 - `yarn nx run-many -p nx-nest-e2e -t lint typecheck`: passed.
-- Frozen HTTP, optional-capability and packed-library lanes: validation pending.
+- Frozen HTTP, optional-capability and packed-library lanes: all 36 cases have
+  passing evidence across ten suites. The aggregate run passed 35 cases; Node 26
+  Express CJS encountered `EADDRINUSE` during member HTTP startup. The isolated
+  rerun passed without code changes. Commands:
+
+  ```sh
+  yarn nx run nx-nest-e2e:e2e --testPathPatterns='(http-(node22|node24|node26|npm|capability-.*)|packed-library-node.*)\.spec\.ts$' --maxWorkers=2
+  yarn nx run nx-nest-e2e:e2e-ci--src/nest-scenarios/http-node26.spec.ts --testNamePattern='node26/yarn: runs express cjs' --runInBand
+  ```
+
+  These exercise the existing Node 22.22.3 / Nx 23.2.0, Node 24.21.0 /
+  Nx 24.0.1 and Node 26.0.0 / Nx 24.0.1 lanes, including Yarn 4.17.0 and the
+  Node 24 npm 11.19.1 HTTP lane. Existing documented Node 22 CJS Jest exclusions
+  remain exclusions, not new passes.
+- Workspace immutable install, changed-file formatting, and final `npm pack`
+  inspection passed. The archive contains the patched manifest, README, license,
+  generator registry and compiled registration utility.
 
 Yarn registry unions and all six npm HTTP locks were refreshed from
 package-manager-generated records. Registry integrity and strict peer checks
