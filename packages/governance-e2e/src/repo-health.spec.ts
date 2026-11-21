@@ -38,17 +38,21 @@ describe('nx-governance repo-health', () => {
     expect(existsSync(workspaceGraphPath)).toBe(true);
 
     const workspaceGraph = readFileSync(workspaceGraphPath, 'utf-8');
-    expect(workspaceGraph).toMatch(/Projects:\s+\d+/);
-    expect(workspaceGraph).toMatch(/Dependencies:\s+\d+/);
+    expect(workspaceGraph).toMatch(/Nodes:\s+\d+/);
+    expect(workspaceGraph).toMatch(/Relations:\s+\d+/);
+    expect(workspaceGraph).toMatch(/Dependency Relations:\s+\d+/);
 
     execSync(
-      `yarn nx repo-health --profile=${defaultProfileName} --output=json > governance-report.json`,
+      `yarn nx repo-health --profile=${defaultProfileName} --output=json --outputStyle=static --skip-nx-cache > governance-report.json`,
       {
         cwd: projectDirectory,
         stdio: 'inherit',
         env: {
           ...process.env,
           NX_DAEMON: 'false',
+          // Preserve large JSON writes when capturing the command's stdout.
+          NX_NATIVE_COMMAND_RUNNER: 'false',
+          NX_STREAM_OUTPUT: 'false',
           YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
         },
       }

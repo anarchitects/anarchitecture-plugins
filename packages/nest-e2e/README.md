@@ -171,8 +171,19 @@ replacements. The existing CJS and build/start regressions remain in the suite.
 
 ## Application workspace registration
 
+In CI, the progress reporter prints timestamped `START` / `END` records for
+each spec and a `RUNNING` heartbeat every minute for active specs. These come
+from Jest's parent process, so synchronous fixture subprocesses do not block the
+heartbeat. Main CI's non-Cloud fallback streams Nx task output and samples runner
+CPU, memory and I/O with `vmstat`; this preserves command-boundary diagnostics
+even if the existing step deadline expires. A heartbeat proves the reporter is
+responsive, not that the test itself is making progress. Test coverage, worker
+counts, cache policy and deadlines are unchanged.
+
 The `application-workspace` scenario begins with no root workspace declarations.
-It generates the default ESM application through the packed plugin, checks that
+It verifies the packed manifest and the plugin's resolved `minimatch` version,
+then generates the default ESM application at `apps/shop/api` with project name
+`api` through the packed plugin. It checks that
 dry-run and `--skipInstall` generation leave the lockfile untouched, and verifies
 repeat safety.
 After a normal Yarn install, Nx must report

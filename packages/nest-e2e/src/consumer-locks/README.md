@@ -1,5 +1,23 @@
 # Packed consumer registry fixture
 
+## Minimatch security refresh (#653)
+
+On 2026-11-21 the plugin's direct pin changed from 9.0.5 to 11.0.9.
+The Yarn unions incorporate the required registry records from the normal
+workspace Yarn install, combining descriptors for existing resolutions without
+changing their metadata. Each npm fixture was seeded into a disposable consumer
+with its recorded root/workspace manifests and the newly packed plugin; npm
+`install --package-lock-only --ignore-scripts --strict-peer-deps` regenerated the
+tree. Only run-specific local artifact integrity is omitted. Registry records
+retain package-manager-generated versions, integrity and dependency metadata.
+Existing Nx and other transitive pins remain independently owned.
+
+The original dated audits below describe their original artifacts. The current
+refresh and validation are recorded in
+[`docs/releases/nest-minimatch-security.md`](../../../../docs/releases/nest-minimatch-security.md).
+
+## Packed library fixture
+
 `yarn.lock` pins the registry resolutions used by the three clean packed-library
 lanes. It was produced with Yarn 4.17.0 on 2026-11-14. Local tarball and workspace
 records are omitted because their identities depend on the fresh temporary

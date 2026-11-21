@@ -5,6 +5,57 @@ import { parse } from 'yaml';
 import { planPackageWorkspaceRegistration as plan } from './register-package-workspace';
 
 describe('generated package-manager workspace registration', () => {
+  it.each([
+    ['npm', 'array'],
+    ['yarn', 'array'],
+    ['yarn', 'object'],
+    ['pnpm', 'yaml'],
+  ])(
+    'preserves nested product/host matching for %s %s declarations',
+    (manager, form) => {
+      for (const inclusion of [
+        'apps/shop/api',
+        'apps/*/*',
+        'apps/**',
+        './{apps,packages}/@(shop|admin)/*/',
+      ]) {
+        const tree = createTreeWithEmptyWorkspace();
+        const patterns = [inclusion, '!apps/**/private'];
+        writeJson(tree, 'package.json', {
+          packageManager: `${manager}@1.0.0`,
+          workspaces:
+            form === 'object'
+              ? { packages: patterns, nohoist: ['**/native'] }
+              : patterns,
+        });
+        if (form === 'yaml')
+          tree.write(
+            'pnpm-workspace.yaml',
+            `# preserve policy\npackages: ${JSON.stringify(
+              patterns
+            )}\nhoistPattern: []\n`
+          );
+        const before = tree.listChanges();
+        plan(tree, 'apps/shop/api')();
+        expect(tree.listChanges()).toEqual(before);
+        expect(() => plan(tree, 'apps/shop/private')).toThrow(/excluded/);
+        expect(tree.listChanges()).toEqual(before);
+
+        plan(tree, 'services/shop/worker')();
+        const registered =
+          form === 'yaml'
+            ? parse(tree.read('pnpm-workspace.yaml', 'utf8') ?? '').packages
+            : form === 'object'
+            ? readJson(tree, 'package.json').workspaces.packages
+            : readJson(tree, 'package.json').workspaces;
+        expect(registered).toEqual([...patterns, 'services/shop/worker']);
+        const after = tree.listChanges();
+        plan(tree, 'services/shop/worker')();
+        expect(tree.listChanges()).toEqual(after);
+      }
+    }
+  );
+
   it.each(['npm', 'yarn', 'bun', 'pnpm'])(
     'registers an independent library for %s only after committing the plan',
     (manager) => {
