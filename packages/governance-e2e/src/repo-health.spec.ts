@@ -38,8 +38,9 @@ describe('nx-governance repo-health', () => {
     expect(existsSync(workspaceGraphPath)).toBe(true);
 
     const workspaceGraph = readFileSync(workspaceGraphPath, 'utf-8');
-    expect(workspaceGraph).toMatch(/Projects:\s+\d+/);
-    expect(workspaceGraph).toMatch(/Dependencies:\s+\d+/);
+    expect(workspaceGraph).toMatch(/^Nodes:\s+\d+$/m);
+    expect(workspaceGraph).toMatch(/^Relations:\s+\d+$/m);
+    expect(workspaceGraph).toMatch(/^Dependency Relations:\s+\d+$/m);
 
     execSync(
       `yarn nx repo-health --profile=${defaultProfileName} --output=json > governance-report.json`,
