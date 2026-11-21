@@ -374,11 +374,37 @@ continued through 14m54s. No Nx task failure was reported. The coordinator log
 does not distinguish queued from running tasks for the unfinished Node 26/npm
 lanes, so it does not establish their required execution time.
 
-Main CI now allows 45 minutes for affected tasks and 50 minutes for the whole
-job, including setup, TypeScript compatibility and diagnostics. These are initial
-bounds for the expanded workload, to be reassessed against a completed Linux
-run. The three agents, inferred task splitting, affected selection, caching,
-individual test/subprocess deadlines and failure propagation remain in place.
+Main CI allows 45 minutes per execution step and 50 minutes per worker job,
+including setup and diagnostics. When Nx Cloud is enabled, the three agents and
+inferred task splitting remain in use. When `NX_CLOUD_ENABLED=false`, Nx selects
+affected E2E projects before allocating their runners. Nest's complete Jest suite
+is partitioned with `--shard=1/4`, `2/4`, `3/4` and `4/4`; each other selected E2E project
+runs once on its own runner. At most three E2E jobs run concurrently. Each Nest
+shard retains two Jest workers, while separate checkouts isolate project-owned
+files, registry ports and temporary fixtures. No tests are omitted or allowed to
+pass merely because no tests were found.
+
+The fallback follows measured evidence from
+[PR #654's instrumented run](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/44903029786/job/136842735006):
+all 33 non-E2E tasks and 41 of 43 Nest suites passed before the old combined
+45-minute step expired. Node 26 completed seconds before cancellation, Node 24
+was active, and Node 22 had just started; the other three E2E projects had not
+started. Commands were still completing successfully. The serial workload
+exceeded the budget; it was not idle.
+
+The stable `main-ci` gate requires the checks job and every scheduled E2E job to
+succeed. A valid empty affected selection skips the matrix; a failed selection,
+failed test or cancelled/missing scheduled work fails the gate. Nx still restores
+prerequisite builds and hashes shard arguments separately. The Main CI workflow
+is a shared task input so orchestration changes select validation and invalidate
+old results. Streamed command boundaries, suite heartbeats and resource samples
+remain available. Per-test and subprocess deadlines are unchanged.
+
+Repository maintainers own this fallback while Nx Cloud is unavailable. Revisit
+its partition count and cost after workload changes or when Nx Cloud is enabled;
+the Cloud path continues to use graph-aware scheduling instead of this matrix.
+The [security-fix record](../releases/nest-minimatch-security.md) separates local
+checks from hosted validation of the final candidate.
 The previous 15/20-minute bounds were based on the smaller workload documented
 in the [PR #570 investigation](../ci/pr-570-stall.md).
 

@@ -17,11 +17,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  main-ci:
+  checks:
     runs-on: ubuntu-latest
     # Bound stalls while allowing the full packed-consumer matrix to complete.
     # Timing evidence: docs/guides/nest-http-consumer-matrix.md#ci-execution-budget
     timeout-minutes: 50
+    outputs:
+      e2e_matrix: ${{ steps.e2e.outputs.matrix }}
+      e2e_count: ${{ steps.e2e.outputs.count || '0' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -48,6 +51,29 @@ jobs:
 
       - run: yarn install --immutable
       - uses: nrwl/nx-set-shas@v5
+      - name: Select affected E2E jobs
+        id: e2e
+        if: env.NX_NO_CLOUD == 'true'
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const { appendFileSync } = require('node:fs');
+          const projects = JSON.parse(execFileSync('yarn', [
+            'nx', 'show', 'projects', '--affected', '--withTarget=e2e', '--json',
+          ], { encoding: 'utf8' }));
+          if (!Array.isArray(projects) || projects.some(p => typeof p !== 'string' || !p)) {
+            throw new Error('Nx must return an array of affected E2E project names');
+          }
+          const include = [...new Set(projects)].sort().flatMap(project =>
+            project === 'nx-nest-e2e'
+              ? ['1/4', '2/4', '3/4', '4/4'].map(shard => ({ project, shard }))
+              : [{ project, shard: '' }]
+          );
+          appendFileSync(process.env.GITHUB_OUTPUT,
+            `matrix=${JSON.stringify({ include })}\ncount=${include.length}\n`);
+          console.log(JSON.stringify({ include }, null, 2));
+          NODE
       - name: Check formatting and release workflow handoff
         shell: bash
         run: |
@@ -57,19 +83,12 @@ jobs:
           fi
           "${record[@]}" yarn nx format:check
           "${record[@]}" yarn nx run @anarchitecture-plugins/source:test-release-workflows
+          "${record[@]}" yarn nx run @anarchitecture-plugins/source:test-ci-workflow
       - name: Run affected tasks
         shell: bash
         run: |
           if [[ "$NX_NO_CLOUD" == 'true' ]]; then
             yarn nx affected -t lint test build typecheck
-            # e2e-ci requires Nx Cloud. Run the full suites serially because
-            # fixtures such as TypeORM's share workspace files on this runner.
-            # Expose fixture command boundaries and runner CPU/memory pressure
-            # while a full suite is running, including before a step timeout.
-            vmstat -w -t 60 &
-            diagnostics_pid=$!
-            trap 'kill "$diagnostics_pid" 2>/dev/null || true' EXIT
-            yarn nx affected -t e2e --parallel=1 --outputStyle=stream
           else
             yarn nx affected -t lint test build typecheck e2e-ci
           fi
@@ -78,3 +97,69 @@ jobs:
       - run: yarn dlx -q -p typescript@5.9.3 tsc --project tsconfig.ts5.json --pretty false
       - run: yarn nx fix-ci
         if: always() && env.NX_NO_CLOUD != 'true'
+
+  e2e:
+    name: E2E (${{ matrix.project }} ${{ matrix.shard }})
+    needs: checks
+    if: vars.NX_CLOUD_ENABLED == 'false' && needs.checks.outputs.e2e_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.checks.outputs.e2e_matrix) }}
+    env:
+      NX_NO_CLOUD: 'true'
+      NX_CLOUD_ACCESS_TOKEN: ''
+      E2E_PROJECT: ${{ matrix.project }}
+      E2E_SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          filter: tree:0
+          fetch-depth: 0
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: 'yarn'
+      - run: yarn install --immutable
+      - name: Run E2E project
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          # Each job owns its checkout, ports and fixture files. Nest retains
+          # its two Jest workers; shard arguments are part of the Nx cache key.
+          args=()
+          if [[ -n "$E2E_SHARD" ]]; then
+            args+=("--shard=$E2E_SHARD")
+          fi
+          df -h . /tmp
+          vmstat -w -t 60 &
+          diagnostics_pid=$!
+          trap 'kill "$diagnostics_pid" 2>/dev/null || true; df -h . /tmp' EXIT
+          yarn nx run "$E2E_PROJECT:e2e" "${args[@]}" --outputStyle=stream
+
+  main-ci:
+    # Stable required check: an empty affected selection is valid, but a
+    # failed/cancelled/missing scheduled shard must never become green.
+    needs: [checks, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all selected checks
+        shell: bash
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          E2E_COUNT: ${{ needs.checks.outputs.e2e_count }}
+        run: |
+          echo "checks=$CHECKS_RESULT e2e=$E2E_RESULT scheduled=$E2E_COUNT"
+          [[ "$CHECKS_RESULT" == 'success' ]] || exit 1
+          [[ "$E2E_COUNT" =~ ^[0-9]+$ ]] || exit 1
+          if [[ "$E2E_COUNT" == '0' ]]; then
+            [[ "$E2E_RESULT" == 'skipped' ]] || exit 1
+          else
+            [[ "$E2E_RESULT" == 'success' ]] || exit 1
+          fi

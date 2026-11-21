@@ -64,6 +64,26 @@
       }
     },
     "targets": {
+      "test-ci-workflow": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "{workspaceRoot}/tools/testing/main-ci-workflow.test.cjs",
+          "{workspaceRoot}/.github/workflows/main.yml",
+          "{workspaceRoot}/package.json",
+          "{workspaceRoot}/yarn.lock",
+          {
+            "runtime": "node --version"
+          },
+          {
+            "runtime": "bash --version"
+          }
+        ],
+        "outputs": [],
+        "options": {
+          "command": "node --test tools/testing/main-ci-workflow.test.cjs"
+        }
+      },
       "test-release-workflows": {
         "executor": "nx:run-commands",
         "cache": true,

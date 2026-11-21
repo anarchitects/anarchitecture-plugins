@@ -86,6 +86,74 @@ declared safe by this change. This record is not a whole-tree clean audit.
 
 ## Release handoff
 
+### CI execution follow-up
+
+The first full no-Cloud CI run timed out with buffered E2E output. Instrumented
+[run 44903029786](https://github.com/anarchitects/anarchitecture-plugins/actions/runs/44903029786/job/136842735006)
+confirmed useful work through the 45-minute affected-step deadline: 33 non-E2E
+tasks and 41/43 Nest suites passed, with Node 24/22 unfinished and the other
+three E2E projects not yet started. No completed Nest suite reported a failure.
+The final command completed two seconds before cancellation. This establishes
+an insufficient budget for that serial fallback, not a deadlocked test.
+
+The no-Cloud path now selects E2E projects from the Nx affected graph, gives
+each an isolated runner, and partitions Nest with Jest's four native shards.
+The `main-ci` aggregate rejects failed/cancelled/missing scheduled jobs and accepts
+an intentional empty selection. Existing Cloud execution, prerequisites, caching,
+coverage and test deadlines remain. This orchestration scope re-enumerated and
+read all 29 Meta ADRs at `665fe6b4761e9ec6a8ec47f82d8059474bf28641` and all seven
+local ADRs. Accepted Meta 0015 requires affected selection, valid caching,
+resource isolation and measured scheduling; no conflicting accepted decision
+was identified. Proposed local integration/documentation ADRs remain proposed.
+
+A Docker comparison used Node 24.21.0, Linux ARM64, two CPUs and 7 GiB memory.
+Its initial container lacked init and HTTP cleanup waited on orphaned zombies;
+the complete HTTP application matrix passed 8/8 in 2m43s under Docker's init.
+The full comparison was interrupted for shared Docker disk capacity, with no
+ENOSPC or OOM kills observed; it is not a full-suite pass or an x64 runner replica.
+Use `docker run --init` and sufficient space for concurrent clean installations
+when reproducing these suites. The owned diagnostic container was removed.
+
+Workflow regression checks cover affected admission, all Nest partitions, future
+E2E projects, failed/malformed selection, command argument forwarding, test exit
+codes and aggregate failure/cancellation propagation. Hosted completion of the
+new execution layout is tracked on PR #654; local checks alone do not establish
+a green full CI run.
+
+Local validation of the correction passed all six workflow regression tests,
+actionlint and changed-file formatting. Actual Nx/Jest discovery verified that
+the four shards contain 11, 11, 11 and 10 specs: their union is exactly the 43
+unsharded specs with no duplicates. Four shards were selected after the native
+three-way hash split concentrated five long HTTP suites in one shard. The worker
+cap remains three; this is a measured repository fallback, not a universal shard
+count or a claim that estimated timings replace hosted execution.
+
+### Main-branch gate review (2026-11-21)
+
+The active [main ruleset](https://github.com/anarchitects/anarchitecture-plugins/rules/8545626)
+requires the GitHub Actions `main-ci` status and up-to-date branches. It also
+requires PRs, linear history and squash merges, and blocks deletion/force pushes.
+There is no separate legacy branch-protection configuration. The ruleset's
+existing release-integration bypass remains unchanged.
+
+`main-ci` is the only required status, but the independent Nx compatibility and
+TypeORM/PostgreSQL workflows are not dependencies of it. Their failures therefore
+do not block a merge through that status requirement. PostgreSQL uses workflow
+path filters; making its raw matrix checks required would leave unrelated PRs
+waiting for checks that never start. Prefer one complete aggregate gate using
+reusable validation jobs, or separately required stable compatibility gates with
+explicit successful not-applicable results. Do not require dynamic shard names.
+
+The repository CodeQL workflow is `disabled_inactivity`; the API reports CodeQL
+default setup as `not-configured`. The latest recorded analyses are from
+2026-08-24, so an active system workflow listing is not current scan evidence.
+Restore the existing CodeQL workflow and verify fresh PR analyses before enforcing
+a security rule. Successful scan execution alone is not a finding-severity gate;
+choose the repository's code-scanning rule and thresholds explicitly. This review
+changes neither security settings nor branch-protection rules.
+
+### Publication
+
 Merge review and exact-candidate owner release authorization remain separate.
 After the authorized release, verify the published manifest, installed direct
 resolution, and publication workflow before closing #653's publication criterion.
