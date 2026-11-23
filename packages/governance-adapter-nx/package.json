@@ -73,6 +73,6 @@
   },
   "devDependencies": {
     "@nx/devkit": "24.0.1",
-    "nx": "24.0.1"
+    "nx": "24.0.6"
   }
 }
