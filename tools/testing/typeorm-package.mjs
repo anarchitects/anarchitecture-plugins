@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { verifyTypeormAstDependencies } from './typeorm-ast-dependencies.mjs';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const packageRoot = join(workspaceRoot, 'packages/typeorm');
@@ -28,6 +29,16 @@ try {
   const packedPaths = new Set(artifact.files.map(({ path }) => path));
   const manifest = JSON.parse(
     readFileSync(join(packageRoot, 'package.json'), 'utf8')
+  );
+  const packedManifest = JSON.parse(
+    execFileSync('tar', ['-xOf', archive, 'package/package.json'], {
+      encoding: 'utf8',
+    })
+  );
+  assert.deepEqual(packedManifest.dependencies, manifest.dependencies);
+  assert.deepEqual(packedManifest.peerDependencies, manifest.peerDependencies);
+  console.log(
+    `Packed candidate ${artifact.name}@${artifact.version}: ${artifact.integrity}`
   );
   assert.equal(artifact.name, manifest.name);
   assert(
@@ -78,6 +89,7 @@ function verifyScaffoldPreview(archive, temporary) {
       'dir'
     );
   }
+  verifyTypeormAstDependencies(plugin);
   writeFileSync(
     join(consumer, 'package.json'),
     JSON.stringify({

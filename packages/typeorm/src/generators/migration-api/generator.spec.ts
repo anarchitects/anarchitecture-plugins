@@ -86,11 +86,13 @@ describe('migration-api generator', () => {
       timestamp: 1700000000001,
     });
 
+    const before = tree.listChanges();
     await migrationApiGenerator(tree, {
       project: 'data-access',
       name: 'no-op run',
       timestamp: 1700000000002,
     });
+    expect(tree.listChanges()).toEqual(before);
 
     const migrationFiles = listMigrationFiles(
       tree,
@@ -203,6 +205,7 @@ export class User {
 `
     );
 
+    const before = tree.listChanges();
     await expect(
       migrationApiGenerator(tree, {
         project: 'data-access',
@@ -210,6 +213,7 @@ export class User {
         timestamp: 1700000000001,
       })
     ).rejects.toThrow('explicit table name');
+    expect(tree.listChanges()).toEqual(before);
   });
 });
 

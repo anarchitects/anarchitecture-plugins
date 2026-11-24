@@ -8,6 +8,7 @@ on:
       - 'packages/nest/**'
       - 'tools/testing/typeorm-postgres-compatibility.mjs'
       - 'tools/testing/typeorm-inferred-consumer.mjs'
+      - 'tools/testing/typeorm-ast-dependencies.mjs'
       - '.github/workflows/typeorm-postgres-compatibility.yml'
       - 'package.json'
       - 'yarn.lock'

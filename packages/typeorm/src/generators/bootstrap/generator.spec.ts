@@ -126,6 +126,46 @@ export async function bootstrap() {
     expect(packageJson.devDependencies['@nestjs/typeorm']).toBeUndefined();
   });
 
+  it.each(['module', 'commonjs'])(
+    'preserves entity registration and consumer source on repeated %s bootstrap',
+    async (type) => {
+      addProjectConfiguration(tree, 'api', {
+        root: 'apps/api',
+        sourceRoot: 'apps/api/src',
+        projectType: 'application',
+        targets: {},
+      });
+      tree.write('apps/api/package.json', JSON.stringify({ type }));
+      const modulePath = 'apps/api/src/app.module.ts';
+      tree.write(
+        modulePath,
+        `import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './user.entity${type === 'module' ? '.js' : ''}';
+
+// Consumer-owned entity registration must survive AST edits.
+@Module({ imports: [TypeOrmModule.forFeature([User])], providers: [] })
+export class AppModule {}
+`
+      );
+      const options = {
+        project: 'api',
+        migrationDatasource: true,
+        skipInstall: true,
+      };
+      await bootstrapGenerator(tree, options);
+      const before = tree.listChanges();
+      await bootstrapGenerator(tree, options);
+      expect(tree.listChanges()).toEqual(before);
+      const source = tree.read(modulePath, 'utf-8') ?? '';
+      expect(source).toContain('TypeOrmModule.forFeature([User])');
+      expect(source).toContain('// Consumer-owned entity registration');
+      expect(source.match(/TypeOrmModule\.forRootAsync/g)).toHaveLength(1);
+      expect(source.match(/import \{ TypeOrmModule \}/g)).toHaveLength(1);
+      expect(source).toContain('autoLoadEntities: true');
+    }
+  );
+
   it('patches nested Nest app.module.ts under src/app', async () => {
     addProjectConfiguration(tree, 'api', {
       root: 'apps/api',

@@ -13,6 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import pg from 'pg';
+import { verifyTypeormAstDependencies } from './typeorm-ast-dependencies.mjs';
 
 // Use installed archives and public generators/targets, without patching the
 // generated datasource, module mode, or compiler configuration. The migration
@@ -123,6 +124,11 @@ try {
       )
     );
     archives[directory] = `file:${join(temporary, archive.filename)}`;
+    if (directory === 'typeorm') {
+      console.log(
+        `Packed candidate ${archive.name}@${archive.version}: ${archive.integrity}`
+      );
+    }
   }
   write('package.json', {
     name: 'typeorm-inferred-consumer',
@@ -158,6 +164,9 @@ try {
     'Installing packed TypeORM/Nest plugins in a clean Yarn consumer'
   );
   run('yarn', ['install']);
+  verifyTypeormAstDependencies(
+    join(root, 'node_modules/@anarchitects/nx-typeorm')
+  );
   generate('@anarchitects/nest:init', '--buildTargetName=compile');
   generate('@anarchitects/nx-typeorm:init', '--skipInstall');
   for (const mode of ['esm', 'cjs']) {
